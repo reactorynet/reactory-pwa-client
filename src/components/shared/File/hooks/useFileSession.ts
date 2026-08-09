@@ -108,6 +108,7 @@ export default function useFileSession(
   const lastSavedHashRef = React.useRef(lastSavedHash);
   const baseRevisionRef = React.useRef(baseRevision);
   const sessionIdRef = React.useRef<string | null>(null);
+  const sseOpenedRef = React.useRef<boolean>(false);
   // The canonical on-disk content from the last successful read/save. Lets us
   // restore trailing whitespace that Quill's code-block normalises away on
   // initial render, so dirty-state doesn't false-trigger and saves remain
@@ -142,10 +143,17 @@ export default function useFileSession(
 
   const fileSse = useFileSSE({
     reactory,
-    onOpened: () => setConnectionState('connected'),
-    onReconnecting: () => setConnectionState('reconnecting'),
+    onOpened: () => {
+      sseOpenedRef.current = true;
+      setConnectionState('connected');
+    },
+    onReconnecting: () => {
+      if (sseOpenedRef.current) setConnectionState('reconnecting');
+    },
     onReconnected: () => setConnectionState('connected'),
-    onReconnectFailed: () => setConnectionState('offline'),
+    onReconnectFailed: () => {
+      if (sseOpenedRef.current) setConnectionState('offline');
+    },
     onError: (err) => {
       if ('code' in err && err.code === 'TOKEN_EXPIRED') setConnectionState('expired');
     },
@@ -210,6 +218,7 @@ export default function useFileSession(
   // Re-runs when `path` changes.
   React.useEffect(() => {
     let cancelled = false;
+    sseOpenedRef.current = false;
     setLoading(true);
     setReadOnlyReason('loading');
     setReadOnlyMessage(null);
@@ -233,6 +242,7 @@ export default function useFileSession(
         setBaseRevision(file.revision);
         setReadOnlyReason(null);
         setReadOnlyMessage(null);
+        setConnectionState('connected');
 
         fileSse.connect({
           endpoint: session.endpoint,

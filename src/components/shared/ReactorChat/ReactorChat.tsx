@@ -113,12 +113,12 @@ export default (props) => {
       if (chatContainer) {
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
-    }
+    };
 
     if (message?.role === 'assistant') {
-      setTimeout(doScroll, 1000);
+      requestAnimationFrame(() => setTimeout(doScroll, 100));
     } else {
-      doScroll();
+      requestAnimationFrame(doScroll);
     }
   }, []);
 
@@ -616,12 +616,22 @@ export default (props) => {
       return 'right';
     }
   });
-  const [fileExplorerWorkspace, setFileExplorerWorkspace] = useState<string | null>(
-    () => chatState?.fileExplorer?.activeWorkspace ?? null
-  );
-  const [fileExplorerWorkspaceName, setFileExplorerWorkspaceName] = useState<string | null>(
-    () => chatState?.fileExplorer?.activeWorkspaceName ?? null
-  );
+  const [fileExplorerWorkspace, setFileExplorerWorkspace] = useState<string | null>(() => {
+    if (chatState?.fileExplorer?.activeWorkspace) return chatState.fileExplorer.activeWorkspace;
+    try {
+      return localStorage.getItem('reactorChat.activeWorkspace') || null;
+    } catch {
+      return null;
+    }
+  });
+  const [fileExplorerWorkspaceName, setFileExplorerWorkspaceName] = useState<string | null>(() => {
+    if (chatState?.fileExplorer?.activeWorkspaceName) return chatState.fileExplorer.activeWorkspaceName;
+    try {
+      return localStorage.getItem('reactorChat.activeWorkspaceName') || null;
+    } catch {
+      return null;
+    }
+  });
 
   React.useEffect(() => {
     if (chatState?.fileExplorer) {
@@ -670,6 +680,17 @@ export default (props) => {
     setFileExplorerWorkspace(workspace);
     setFileExplorerWorkspaceName(workspaceName);
     updateChatStateFileExplorer({ activeWorkspace: workspace, activeWorkspaceName: workspaceName });
+    try {
+      if (workspace) {
+        localStorage.setItem('reactorChat.activeWorkspace', workspace);
+        localStorage.setItem('reactorChat.activeWorkspaceName', workspaceName || '');
+      } else {
+        localStorage.removeItem('reactorChat.activeWorkspace');
+        localStorage.removeItem('reactorChat.activeWorkspaceName');
+      }
+    } catch {
+      // localStorage unavailable — ignore
+    }
   }, [updateChatStateFileExplorer]);
 
   const [headerOpen, setHeaderOpen] = useState<boolean>(false);

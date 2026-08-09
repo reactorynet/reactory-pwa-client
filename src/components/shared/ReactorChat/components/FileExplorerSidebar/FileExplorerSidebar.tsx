@@ -25,6 +25,8 @@ function toUserHomeRelative(p: string): string {
 }
 
 const FILE_PREVIEW_WIDTH = 520;
+const MIN_PREVIEW_WIDTH = 320;
+const MAX_PREVIEW_WIDTH = 1200;
 const MIN_SIDEBAR_WIDTH = 240;
 const MAX_SIDEBAR_WIDTH = 800;
 const DRAG_HANDLE_WIDTH = 6;
@@ -196,7 +198,55 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     }
   }, [propsActiveWorkspaceName]);
 
-  // Resizable panel width state
+  // Resizable preview drawer width state
+  const [previewWidth, setPreviewWidth] = React.useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('reactorChat.filePreviewWidth');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= MIN_PREVIEW_WIDTH && val <= MAX_PREVIEW_WIDTH) return val;
+      }
+    } catch { /* ignore */ }
+    return FILE_PREVIEW_WIDTH;
+  });
+
+  const isPreviewDragging = React.useRef(false);
+  const previewRafId = React.useRef<number>(0);
+
+  const handlePreviewMouseDown = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isPreviewDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isPreviewDragging.current) return;
+      if (previewRafId.current) cancelAnimationFrame(previewRafId.current);
+      previewRafId.current = requestAnimationFrame(() => {
+        let newWidth = window.innerWidth - ev.clientX;
+        newWidth = Math.min(Math.floor(window.innerWidth * 0.95), Math.max(MIN_PREVIEW_WIDTH, newWidth));
+        setPreviewWidth(newWidth);
+      });
+    };
+
+    const onMouseUp = () => {
+      isPreviewDragging.current = false;
+      if (previewRafId.current) cancelAnimationFrame(previewRafId.current);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      try {
+        setPreviewWidth((current) => {
+          localStorage.setItem('reactorChat.filePreviewWidth', String(current));
+          return current;
+        });
+      } catch { /* ignore */ }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
   const [sidebarWidth, setSidebarWidth] = React.useState<number>(() => {
     try {
       const saved = localStorage.getItem('reactorChat.fileExplorerWidth');
@@ -261,6 +311,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   React.useEffect(() => {
     return () => {
       if (rafId.current) cancelAnimationFrame(rafId.current);
+      if (previewRafId.current) cancelAnimationFrame(previewRafId.current);
     };
   }, []);
 
@@ -354,7 +405,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
     setExpanded(new Set(['/']));
     loadPath('/', activeWorkspace);
-  }, [open, showHidden, loadPath]);
+  }, [open, showHidden, activeWorkspace, loadPath]);
 
   const handleToggleFolder = React.useCallback((path: string, loaded: boolean) => {
     setExpanded(prev => {
@@ -790,44 +841,89 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
       onClose={() => setPreviewFile(null)}
       PaperProps={{
         sx: {
-          width: isNarrowScreen ? '95vw' : FILE_PREVIEW_WIDTH,
+          width: isNarrowScreen ? '95vw' : previewWidth,
           maxWidth: '95vw',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
+          overflow: 'hidden',
         },
       }}
     >
+      {!isNarrowScreen && (
+        <Box
+          onMouseDown={handlePreviewMouseDown}
+          sx={{
+            width: DRAG_HANDLE_WIDTH,
+            flexShrink: 0,
+            cursor: 'col-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'transparent',
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+            '&:hover .drag-indicator': {
+              opacity: 1,
+            },
+            transition: 'background-color 0.15s',
+            zIndex: 1,
+          }}
+        >
+          <Box
+            className="drag-indicator"
+            sx={{
+              width: 3,
+              height: 40,
+              borderRadius: 1,
+              bgcolor: 'divider',
+              opacity: 0.4,
+              transition: 'opacity 0.15s',
+            }}
+          />
+        </Box>
+      )}
       <Box
         sx={{
+          flex: 1,
           display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          px: 1,
-          py: 0.5,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden',
         }}
       >
-        <Typography
-          variant="subtitle2"
-          sx={{ flex: 1, minWidth: 0 }}
-          noWrap
-          title={previewFile?.name}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 1,
+            py: 0.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
         >
-          {previewFile?.name}
-        </Typography>
-        <IconButton size="small" onClick={() => setPreviewFile(null)} aria-label="close preview">
-          <Close fontSize="small" />
-        </IconButton>
-      </Box>
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {previewFile && (
-          <File
-            key={previewFile.id}
-            path={toUserHomeRelative(previewFile.path)}
-            scope="user"
-          />
-        )}
+          <Typography
+            variant="subtitle2"
+            sx={{ flex: 1, minWidth: 0 }}
+            noWrap
+            title={previewFile?.name}
+          >
+            {previewFile?.name}
+          </Typography>
+          <IconButton size="small" onClick={() => setPreviewFile(null)} aria-label="close preview">
+            <Close fontSize="small" />
+          </IconButton>
+        </Box>
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          {previewFile && (
+            <File
+              key={previewFile.id}
+              path={toUserHomeRelative(previewFile.path)}
+              scope="user"
+            />
+          )}
+        </Box>
       </Box>
     </Drawer>
   );

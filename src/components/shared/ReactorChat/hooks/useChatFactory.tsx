@@ -349,11 +349,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         finishReason: message.data?.finishReason,
       });
 
-      // ── Drain the reasoning buffer synchronously ──────────────────────
-      // The reasoning callback uses a 50ms debounce timer. If the COMPLETE
-      // event arrives before the timer fires, the buffer still holds
-      // un-flushed reasoning text. Drain it now and merge it into the
-      // final thinking text. Also set the completion guard so any stale
+      // ── Drain the reasoning buffer & token buffer synchronously ──────────────────────
+      // The reasoning and token callbacks use a 50ms debounce timer. If the COMPLETE
+      // event arrives before the timer fires, the buffers still hold
+      // un-flushed text. Drain them now and merge into the
+      // final text. Also set the completion guard so any stale
       // timer callbacks become no-ops.
       streamingCompleteRef.current = true;
       if (reasoningFlushTimerRef.current) {
@@ -362,6 +362,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
       const trailingReasoning = reasoningBufferRef.current;
       reasoningBufferRef.current = "";
+
+      if (tokenFlushTimerRef.current) {
+        clearTimeout(tokenFlushTimerRef.current);
+        tokenFlushTimerRef.current = null;
+      }
+      const trailingTokens = tokenBufferRef.current;
+      tokenBufferRef.current = "";
 
       // Update the last assistant message with the final content from the complete event.
       setChatState((prevState) => {
@@ -1219,58 +1226,70 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
 
 
+  const tokenBufferRef = React.useRef<string>("");
+  const tokenFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const onTokenReceived = React.useCallback((token: TokenStreamingEvent) => {
     const eventSessionId = token.conversationId || token.sessionId;
     if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
       return;
     }
-    setChatState((prevState) => {
-      const validSessionId = prevState.id || token.sessionId;
-      if (!validSessionId) {
-        console.error('❌ [useChatFactory] Token received with no sessionId:', token);
-        return prevState;
-      }
-      
-      const history = [...prevState.history];
-      const lastIndex = history.length - 1;
-      
-      if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
-        const lastMessage = history[lastIndex];
-        
-        // Handle different types of streaming messages
-        if (lastMessage.content === "Processing...") {
-          // Start building content from the first token
-          history[lastIndex] = {
-            ...lastMessage,
-            content: token.data.delta || token.data.content || "",
-            timestamp: new Date(),
-          };
-        } else if (lastMessage.content.startsWith("Calling tool:")) {
-          // Keep the tool call message as is, don't update with tokens
-          // The final content will come from the completion event
-        } else {
-          // Regular token accumulation — always append the delta.
-          // The server sends incremental deltas (not accumulated text),
-          // so we always concatenate.
-          history[lastIndex] = {
-            ...lastMessage,
-            content: lastMessage.content + (token.data.delta || token.data.content || ""),
-            timestamp: new Date(),
-          };
-        }
-      }
+    if (streamingCompleteRef.current) return;
 
-      const newState = { 
-        ...prevState,
-        id: validSessionId,
-        history: history,        
-      };
-                
-      return newState;
-    });
+    tokenBufferRef.current += (token.data.delta || token.data.content || "");
+
+    if (!tokenFlushTimerRef.current) {
+      tokenFlushTimerRef.current = setTimeout(() => {
+        if (streamingCompleteRef.current) return;
+
+        const flushChunk = tokenBufferRef.current;
+        tokenBufferRef.current = "";
+        tokenFlushTimerRef.current = null;
+
+        if (!flushChunk) return;
+
+        setChatState((prevState) => {
+          const validSessionId = prevState.id || token.sessionId;
+          if (!validSessionId) {
+            console.error('❌ [useChatFactory] Token received with no sessionId:', token);
+            return prevState;
+          }
+
+          const history = [...prevState.history];
+          const lastIndex = history.length - 1;
+
+          if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+            const lastMessage = history[lastIndex];
+
+            if (lastMessage.content === "Processing...") {
+              history[lastIndex] = {
+                ...lastMessage,
+                content: flushChunk,
+                timestamp: new Date(),
+              };
+            } else if (lastMessage.content.startsWith("Calling tool:")) {
+              // Keep the tool call message as is
+            } else {
+              history[lastIndex] = {
+                ...lastMessage,
+                content: lastMessage.content + flushChunk,
+                timestamp: new Date(),
+              };
+            }
+          }
+
+          return {
+            ...prevState,
+            id: validSessionId,
+            history,
+          };
+        });
+      }, 50); // Flush tokens every 50ms (20fps) to prevent React state lockup
+    }
+
     setIsStreaming(true);
     setWaitingForResponse(false);
-  }, [chatState?.id]);
+  }, []);
 
   const reasoningBufferRef = React.useRef<string>("");
   const reasoningFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null);
