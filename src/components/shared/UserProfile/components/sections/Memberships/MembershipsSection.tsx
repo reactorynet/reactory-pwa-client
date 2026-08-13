@@ -1,5 +1,4 @@
-import React, { useState, useCallback } from 'react';
-import { useOrganizationList } from '@reactory/client-core/components/shared/Organization/hooks';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Paper,
   Typography,
@@ -10,19 +9,12 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress
 } from '@mui/material';
 import { Business, Add } from '@mui/icons-material';
 import { MembershipSectionProps } from '../../../types';
 import { useMemberships } from './hooks';
-import { MembershipCard } from './components';
-import { ReactoryClientCore } from 'components/shared/Organization/types';
+import { MembershipCard, CreateUserMembership } from './components';
 
 /**
  * Memberships Section - Organization memberships and roles management
@@ -38,19 +30,29 @@ export const MembershipsSection: React.FC<MembershipSectionProps> = ({
   reactory
 }) => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newMembership, setNewMembership] = useState({
-    organizationId: '',
-    roles: [] as string[]
-  });
 
-  const { addMembership, removeMembership, loading: membershipLoading } = useMemberships(
+  // Register component in reactory component registry to override any legacy form definition
+  useEffect(() => {
+    if (reactory?.registerComponent) {
+      try {
+        reactory.registerComponent(
+          'core',
+          'ReactoryCreateUserMembership',
+          '1.0.0',
+          CreateUserMembership,
+          ['user', 'membership'],
+          ['ADMIN']
+        );
+      } catch (e) {
+        // Ignored
+      }
+    }
+  }, [reactory]);
+
+  const { removeMembership, loading: membershipLoading } = useMemberships(
     profile?.id,
     reactory
   );
-
-  const { organizations, loading: organizationLoading } = useOrganizationList({reactory: reactory as Reactory.Client.IReactoryApi});
-  
-  const ReactoryCreacteMemberShipComponent = reactory.getComponent<React.FC<any>>('core.ReactoryCreateUserMembership');
 
   // Check permissions
   const canEdit = mode === 'admin' || (mode === 'edit' && profile?.id === reactory.getUser()?.id);
@@ -73,50 +75,24 @@ export const MembershipsSection: React.FC<MembershipSectionProps> = ({
 
   // Handle roles changed
   const handleRolesChanged = useCallback((membership: Reactory.Models.IMembership, roles: string[]) => {
-    // Update the membership in the profile data
-    if (profile.memberships) {
-      const updatedMemberships = profile.memberships.map(m =>
-        m.id === membership.id ? { ...m, roles } : m
-      );
-      // This would typically trigger a refetch or optimistic update
-      if (onRefetch) {
-        onRefetch();
-      }
+    if (onRefetch) {
+      onRefetch();
     }
-  }, [profile.memberships, onRefetch]);
+  }, [onRefetch]);
 
-  // Handle adding new membership
-  const handleAddMembership = useCallback(async () => {
-    if (!newMembership.organizationId) {
-      reactory.createNotification('Please select an organization', { type: 'warning' });
-      return;
+  // Handle membership created successfully
+  const handleMembershipCreated = useCallback(() => {
+    setAddDialogOpen(false);
+    if (onRefetch) {
+      onRefetch();
     }
-
-    const success = await addMembership({
-      organizationId: newMembership.organizationId,
-      roles: newMembership.roles
-    });
-
-    if (success) {
-      setAddDialogOpen(false);
-      setNewMembership({ organizationId: '', roles: [] });
-      if (onRefetch) {
-        onRefetch();
-      }
-    }
-  }, [newMembership, addMembership, onRefetch, reactory]);
-
-  // Get available organizations (this would typically come from a query)
-  const availableOrganizations = [
-    // This should be populated from a GraphQL query
-    { id: 'org1', name: 'Sample Organization 1' },
-    { id: 'org2', name: 'Sample Organization 2' }
-  ];
-
-  // Get available roles
-  const availableRoles = reactory.getApplicationRoles()?.filter(role => role !== 'ANON') || [];
+  }, [onRefetch]);
 
   const memberships = profile?.memberships || [];
+
+  // Fallback to CreateUserMembership if registry component is not present
+  const ReactoryCreateMembershipComponent =
+    reactory?.getComponent<React.FC<any>>('core.ReactoryCreateUserMembership') || CreateUserMembership;
 
   return (
     <>
@@ -157,10 +133,10 @@ export const MembershipsSection: React.FC<MembershipSectionProps> = ({
                   user={profile}
                   reactory={reactory as Reactory.Client.ReactorySDK}
                   canEdit={canEdit}
-                  canDelete={canAdd} // Only admins can delete
+                  canDelete={canAdd}
                   isSelected={selectedMembership?.id === membership.id}
                   onSelect={handleMembershipSelect}
-                  onEdit={() => {}} // Handled internally by the card
+                  onEdit={() => {}}
                   onDelete={handleMembershipDelete}
                   onRolesChanged={handleRolesChanged}
                 />
@@ -180,23 +156,22 @@ export const MembershipsSection: React.FC<MembershipSectionProps> = ({
       <Dialog
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Add New Membership</DialogTitle>
-        <DialogContent>
-          {addDialogOpen && <ReactoryCreacteMemberShipComponent 
-              user={profile}               
-              onMembershipCreated={handleAddMembership}
-            />           
-          }
+        <DialogTitle sx={{ fontWeight: 600 }}>Add New Membership</DialogTitle>
+        <DialogContent dividers>
+          {addDialogOpen && (
+            <CreateUserMembership
+              user={profile}
+              reactory={reactory}
+              onMembershipCreated={handleMembershipCreated}
+              onCancel={() => setAddDialogOpen(false)}
+            />
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>
-            Cancel
-          </Button>          
-        </DialogActions>
       </Dialog>
     </>
   );
 };
+
