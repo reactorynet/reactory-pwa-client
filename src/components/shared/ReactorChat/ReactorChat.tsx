@@ -7,7 +7,7 @@ import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
 import { useProviders } from './hooks/useProviders';
 import { useEffect } from 'react';
-
+import useFeatureFlag from '@reactory/client-core/components/hooks/useFeatureFlag'
 import {
   IAIPersona,
   UXChatMessage,
@@ -106,6 +106,13 @@ export default (props) => {
     getProviderAuthOverride,
     getModelById,
   } = useProviders();
+
+  const Reactor3DAvatarFeature = useFeatureFlag({ 
+    featureId: 'reactor.EnableReactor3DAvatar@1.0.0',
+    groupId: 'default',
+  });
+
+  // const Reactor3DAvatarFeature = { isEnabled : false };
 
   const scrollToBottom = useCallback((message: any) => {
     const doScroll = () => {
@@ -1740,12 +1747,12 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.neuralGraph', { defaultValue: 'Neural Graph Viewer' }),
       clickHandler: handleNeuralGraphViewerToggle,
     },
-    {
+    ...(Reactor3DAvatarFeature.isEnabled ? [ {
       key: 'personaAvatar',
       icon: <Face />,
       title: il8n?.t('reactor.client.chat.personaAvatar', { defaultValue: 'Persona Avatar' }),
       clickHandler: handlePersonaAvatarToggle,
-    },
+    }] : []),
     ...(reactory.isDevelopmentMode() ? [{
       key: 'debug',
       icon: <BugReport />,
@@ -2374,6 +2381,7 @@ export default (props) => {
         </Box>
         <ChatInput
           onSendMessage={handleSendMessage}
+          initialPrompt={props?.initialPrompt}
           disabled={busy}
           placeholder={supportsImageGeneration
             ? "Ask me anything... or describe an image to create"

@@ -59,8 +59,10 @@ export default async (): Promise<JestConfigWithTsJest> => {
     // ESM-only packages that tests exercise for real (stubbing a physics
     // engine would make the GraphExplorer layout tests meaningless). The d3
     // micro-packages are tiny; babel-jest transforms them via the js rule.
+    // `marked` is ESM-only from v16 and is used for real by the static content
+    // format conversion tests, so it is transformed rather than stubbed.
     transformIgnorePatterns: [
-      '/node_modules/(?!(d3-force|d3-quadtree|d3-dispatch|d3-timer)/)',
+      '/node_modules/(?!(d3-force|d3-quadtree|d3-dispatch|d3-timer|marked)/)',
     ],
     moduleNameMapper: {
       // Path aliases

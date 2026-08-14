@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import Reactory from '@reactorynet/reactory-core';
-import { useReactory } from '@reactory/client-core/api';
 /**
  * Content types that can be rendered
  */
@@ -153,8 +152,13 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
    */
   const renderContent = (content: string) => {
     if (!content) return null;
-    const reactory = useReactory();
-    // get the the theme from reactory
+    // `reactory` comes from the hook's own argument. Calling useReactory() here
+    // would be a hook behind an early return: callers that render this
+    // conditionally (a loading state, a preview pane, an empty body) would
+    // change their hook count between renders and React would tear the
+    // component down with "rendered more hooks than during the previous
+    // render". Keeping renderContent hook-free makes it safe to call any
+    // number of times, or not at all.
     const theme = reactory.muiTheme;
     const { palette } = theme;
     const { mode } = palette;

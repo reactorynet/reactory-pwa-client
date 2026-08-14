@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useReactory } from "@reactory/client-core/api";
 import { ChatState, ToolApprovalMode } from '../types';
 import { glassPanelSx } from '../utils';
@@ -27,6 +27,12 @@ interface ChatInputProps {
   toolApprovalMode?: ToolApprovalMode;
   /** Callback when user changes the tool approval mode */
   onToolApprovalModeChange?: (mode: ToolApprovalMode) => void;
+  /**
+   * Pre-fills the composer with a prompt without sending it, so a host can hand
+   * the user a ready-to-review question. Re-applied whenever the value changes,
+   * which lets a host seed a new prompt while the panel stays open.
+   */
+  initialPrompt?: string;
 }
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -47,6 +53,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onRemovePendingImage,
   toolApprovalMode,
   onToolApprovalModeChange,
+  initialPrompt,
 }) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
@@ -79,9 +86,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
   } = Material.MaterialIcons;
 
   // Internal state for the input value
-  const [inputValue, setInputValue] = useState<string>('');
+  const [inputValue, setInputValue] = useState<string>(initialPrompt || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
+
+  // Seed the composer whenever the host supplies a new prompt. Only a
+  // non-empty prompt overwrites the box, so clearing the prop never discards
+  // whatever the user has started typing.
+  useEffect(() => {
+    if (!initialPrompt) return;
+    setInputValue(initialPrompt);
+    inputRef.current?.focus();
+  }, [initialPrompt]);
 
   const toolModeOptions = [
     { mode: ToolApprovalMode.AUTO, icon: 'bolt', label: 'Auto', color: '#4caf50', description: 'Execute all tools without asking' },

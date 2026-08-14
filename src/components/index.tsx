@@ -69,7 +69,7 @@ import { ShellWidget, WorkflowShellConsole, ChatShellTerminal, ChatShellConsole 
 
 
 import DateLabel from './shared/DateLabel';
-import { ReactoryStaticContentComponent as StaticContent } from './shared/StaticContent';
+import { ReactoryStaticContentComponent as StaticContent, CMSContentEditor } from './shared/StaticContent';
 import Label from './shared/Label';
 import AlertDialog from './shared/AlertDialog';
 import HelpMe from './shared/HelpMe';
@@ -702,8 +702,16 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     name: 'StaticContent',
     version: '1.0.0',
     component: StaticContent,
-    description: 'A component for rendering static content from the Reactory content management system.',
-    tags: ['content', 'static', 'cms', 'rendering'],
+    description: 'Renders managed content as markdown, HTML or plain text and lets permitted users edit it in place, with metadata, publishing, translations and AI assistance on adjacent surfaces.',
+    tags: ['content', 'static', 'cms', 'rendering', 'markdown', 'translations', 'inline-editing'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'CMSContentEditor',
+    version: '1.0.0',
+    component: CMSContentEditor,
+    description: 'Standalone content editor for a slug. Hosts the same inline editing surface used by core.StaticContent.',
+    tags: ['content', 'cms', 'editor', 'react', 'translations'],
   },
   {
     nameSpace: 'core',

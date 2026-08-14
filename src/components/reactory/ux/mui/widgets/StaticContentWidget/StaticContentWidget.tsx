@@ -10,8 +10,12 @@ export const StaticContentWidget = (props: any) => {
     React
   } = reactory.getComponents<{ React: Reactory.React, StaticContent: typeof ReactoryStaticContentComponent }>(['core.StaticContent', 'material-ui.MaterialCore', 'react.React']);
 
-  const DefaultOptions: any = { 
+  const DefaultOptions: any = {
     editAction: "inline",
+    // Content is edited on the surface it sits on by default; a form can still
+    // opt into a drawer or modal through ui:options.
+    editDisplayMode: "inline",
+    viewMode: "cms",
     placeHolder: "",
     slug: "default"
   };
@@ -48,6 +52,8 @@ export const StaticContentWidget = (props: any) => {
     slugSourceProps={slugSourceProps}
     propertyBag={{ ...props, reactory }} 
     editAction={ options.editAction } 
+    editDisplayMode={ options.editDisplayMode || options.editAction || 'drawer' }
+    viewMode={ options.viewMode || 'cms' }
     useExpanded={ options.useExpanded || false }
     expanded={ options.expanded || false }
     container={options.container || 'Box' }
