@@ -115,8 +115,22 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [panel, setPanel] = useState<EditorPanel>('none');
-  const [aiIntent, setAiIntent] = useState<AIAssistIntent>('none');
-  const [aiTargetLang, setAiTargetLang] = useState<string | undefined>(undefined);
+  /**
+   * The body and metadata as they were when assistance was requested.
+   *
+   * Held as a snapshot rather than read live: the assistant's component tree is
+   * large, and feeding it the current body would re-render all of it on every
+   * keystroke. It also matches what the author expects — the request describes
+   * the content at the moment they asked for help.
+   */
+  const [aiRequest, setAiRequest] = useState<{
+    intent: AIAssistIntent;
+    content: string;
+    format: ContentFormat;
+    title: string;
+    currentLang: string;
+    targetLang?: string;
+  } | null>(null);
   const [pendingFormat, setPendingFormat] = useState<ContentFormat | null>(null);
 
   const settingsAnchor = useRef<HTMLButtonElement>(null);
@@ -334,11 +348,30 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
     [isDirty, handleSave, panel, onCancel]
   );
 
-  const openAI = useCallback((intent: AIAssistIntent, lang?: string) => {
-    setAiIntent(intent);
-    setAiTargetLang(lang);
-    setPanel('ai');
-  }, []);
+  const openAI = useCallback(
+    (intent: AIAssistIntent, lang?: string) => {
+      setAiRequest({
+        intent,
+        // Translation works from the source body; every other intent works on
+        // whichever language is currently being edited.
+        content: intent === 'translate' ? draft.content : activeBody.content,
+        format: draft.format,
+        title: draft.title,
+        currentLang: draft.locale,
+        targetLang: lang,
+      });
+      setPanel('ai');
+    },
+    [draft.content, draft.format, draft.title, draft.locale, activeBody.content]
+  );
+
+  // Stable identities so the memoised assistant is not re-rendered by a new
+  // closure on every keystroke.
+  const closePanel = useCallback(() => setPanel('none'), []);
+  const applyAIResult = useCallback(
+    (content: string) => setActiveBody({ content }),
+    [setActiveBody]
+  );
 
   const addLanguage = useCallback(
     (lang: string) => {
@@ -691,21 +724,26 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
         hasUnsavedChanges={isDirty}
       />
 
-      <AIAssistPanel
-        open={panel === 'ai'}
-        onClose={() => setPanel('none')}
-        reactory={reactory}
-        aipersona={aipersona}
-        // When translating, the assistant should see the source body, since
-        // that is what needs translating — not the empty target.
-        content={aiIntent === 'translate' ? draft.content : activeBody.content}
-        format={draft.format}
-        title={draft.title}
-        currentLang={draft.locale}
-        targetLang={aiTargetLang}
-        intent={aiIntent}
-        onApply={(content) => setActiveBody({ content })}
-      />
+      {/*
+        Only rendered once assistance has actually been asked for. The panel
+        hosts a very large component tree, so leaving it out of the tree until
+        it is wanted keeps it entirely off the keystroke path.
+      */}
+      {aiRequest && (
+        <AIAssistPanel
+          open={panel === 'ai'}
+          onClose={closePanel}
+          reactory={reactory}
+          aipersona={aipersona}
+          content={aiRequest.content}
+          format={aiRequest.format}
+          title={aiRequest.title}
+          currentLang={aiRequest.currentLang}
+          targetLang={aiRequest.targetLang}
+          intent={aiRequest.intent}
+          onApply={applyAIResult}
+        />
+      )}
 
       <ComponentSelectorDialog
         open={panel === 'components'}

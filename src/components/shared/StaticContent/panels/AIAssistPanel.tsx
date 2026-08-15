@@ -91,8 +91,13 @@ const buildPrompt = (
  *
  * The drawer has no backdrop so the content being edited stays visible and
  * interactive: the author can watch the body while the assistant works on it.
+ *
+ * Memoised, and given a frozen snapshot of the body rather than the live one.
+ * The assistant hosts a very large component tree, so re-rendering it on every
+ * keystroke is what made editing feel sluggish. Freezing is also the correct
+ * semantics: the request describes the content as it was when you asked.
  */
-export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
+const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
   open,
   onClose,
   reactory,
@@ -140,7 +145,12 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
       onClose={onClose}
       // An invisible backdrop keeps the page usable while the panel is open,
       // which is the point of assistance that sits beside your work.
-      ModalProps={{ keepMounted: true, BackdropProps: { invisible: true } }}
+      // Deliberately NOT keepMounted. ReactorChat is a ~13,500 component tree;
+      // keeping it mounted parks all of it inside the editor, where it then
+      // re-renders on every keystroke. Profiling a typing session showed that
+      // costing ~133ms of each ~145ms commit while the panel was closed. With
+      // this off, MUI renders nothing until the panel is first opened.
+      ModalProps={{ BackdropProps: { invisible: true } }}
       PaperProps={{
         sx: { width: { xs: '100%', sm: PANEL_WIDTH }, display: 'flex', flexDirection: 'column' },
       }}
@@ -242,5 +252,12 @@ export const AIAssistPanel: React.FC<AIAssistPanelProps> = ({
     </Drawer>
   );
 };
+
+/**
+ * Every prop this panel takes is either stable or frozen at open time by the
+ * host, so a plain shallow comparison is enough to keep the assistant out of
+ * the editor's keystroke path.
+ */
+export const AIAssistPanel = React.memo(AIAssistPanelComponent);
 
 export default AIAssistPanel;
