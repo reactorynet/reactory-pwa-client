@@ -1,6 +1,12 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
+import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { Box } from '@mui/material';
 import ReactQuill from 'react-quill';
+import {
+  REACTORY_EMBED_CLASS,
+  registerReactoryBlot,
+  toContentHtml,
+  toEditorHtml,
+} from './reactoryBlot';
 // The bubble theme puts the formatting controls in a popover over the current
 // selection, which is what lets the editor sit directly on the host surface
 // without a toolbar band changing the page layout.
@@ -33,13 +39,32 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
   ({ value, onChange, placeholder, minHeight = 120, readOnly = false }, ref) => {
     const quillRef = useRef<any>(null);
 
+    // Must happen before the editor mounts, or Quill will have already decided
+    // it has no blot for a component tag and dropped it.
+    registerReactoryBlot();
+
+    // Component tags are stored as `<reactory />` but shown to Quill as embeds,
+    // since that is the only shape it will keep.
+    const editorValue = useMemo(() => toEditorHtml(value), [value]);
+
+    /**
+     * Converts the editor's HTML back to stored form before handing it up, so
+     * the rest of the system only ever sees `<reactory />` tags.
+     */
+    const handleChange = useCallback(
+      (html: string) => onChange(toContentHtml(html)),
+      [onChange]
+    );
+
     useImperativeHandle(ref, () => ({
       insertHtml: (html: string) => {
         const editor = quillRef.current?.getEditor?.();
         if (!editor) return;
         const range = editor.getSelection(true);
         const index = range ? range.index : editor.getLength();
-        editor.clipboard.dangerouslyPasteHTML(index, html, 'user');
+        // A component tag has to be inserted as its embed; pasted as raw markup
+        // Quill would strip it again.
+        editor.clipboard.dangerouslyPasteHTML(index, toEditorHtml(html), 'user');
       },
       focus: () => quillRef.current?.focus?.(),
     }));
@@ -126,13 +151,31 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
           '& .ql-bubble .ql-editor a': {
             color: (theme) => theme.palette.primary.main,
           },
+          // Component embeds read as a distinct object in the flow of the text,
+          // so it is obvious they are a mounted component rather than prose.
+          [`& .${REACTORY_EMBED_CLASS}`]: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: (theme) => `1px dashed ${theme.palette.primary.main}`,
+            backgroundColor: (theme) => theme.palette.action.hover,
+            color: (theme) => theme.palette.primary.main,
+            fontSize: '0.8125rem',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            userSelect: 'none',
+            cursor: 'default',
+          },
         }}
       >
         <ReactQuill
           ref={quillRef}
           theme="bubble"
-          value={value}
-          onChange={onChange}
+          value={editorValue}
+          onChange={handleChange}
           modules={modules}
           readOnly={readOnly}
           placeholder={placeholder || 'Start writing. Select text to format it.'}

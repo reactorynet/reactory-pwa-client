@@ -481,6 +481,28 @@ export type ChatState = {
    */
   sidePanel?: SidePanelActions
   /**
+   * Host application bindings, letting client macros read the fields the
+   * embedding component has opened for editing and write changes back to it.
+   * Absent when the chat is not embedded in an editing surface.
+   *
+   * Distinct from `host` above, which names the runtime environment.
+   */
+  hostBindings?: HostActions
+  /**
+   * What this conversation is being used for: "standalone", "workflow",
+   * "content", "form", or any application defined string.
+   *
+   * Conversations are scoped by this, so a chat opened beside a content editor
+   * never resumes or lists a chat from elsewhere in the product. Defaults to
+   * "standalone", which is the plain chat experience.
+   */
+  use_case?: ReactorChatUseCase
+  /**
+   * Links from this conversation to workflows, content items or other
+   * conversations.
+   */
+  edges?: ReactorConversationEdge[]
+  /**
    * The persona id persisted on the server session. Set when a session
    * is loaded via loadChat so the UI can reconcile selectedPersona with
    * the actual agent that owns the session (e.g. a sub-agent child).
@@ -690,6 +712,82 @@ export interface SidePanelState {
   /** Whether the side panel drawer is open. */
   isOpen: boolean;
 }
+
+/**
+ * A field on the host application that the agent is allowed to write to.
+ *
+ * Declared by whichever component embeds the chat. The agent discovers these
+ * at runtime rather than having them baked into a tool schema, so a host can
+ * change what is editable — or edit a different record — without the tool
+ * definition going stale.
+ */
+export interface HostEditableField {
+  /**
+   * Stable identifier the agent passes back when updating. The host uses this
+   * to decide which of its fields to write.
+   */
+  key: string;
+  /**
+   * What this field is, written for the agent. This is the only thing it has
+   * to go on, so it should say what the field means and what good content for
+   * it looks like.
+   */
+  description: string;
+  /**
+   * Hint for the shape of the value. Defaults to 'string'.
+   */
+  type?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  /**
+   * Current value, surfaced to the agent so it can revise rather than replace
+   * blindly. Omit for write-only or very large fields.
+   */
+  value?: unknown;
+  /**
+   * Set when the host will reject writes to this field, so the agent can see
+   * it without having to attempt the write.
+   */
+  readOnly?: boolean;
+}
+
+/**
+ * The contract a host exposes to client macros so the agent can write back
+ * into the application it is embedded in.
+ */
+export interface HostActions {
+  /**
+   * The fields currently open for editing. Read at call time, so it always
+   * reflects what the host is showing right now.
+   */
+  getFields: () => HostEditableField[];
+  /**
+   * Applies a change. The host decides what `key` maps to; returning a
+   * rejection reason is preferred over throwing, so the agent can correct
+   * itself rather than seeing a tool error.
+   */
+  applyChange: (key: string, data: unknown) => { accepted: boolean; message?: string };
+}
+
+/**
+ * A link from a conversation to something outside it — the workflow it belongs
+ * to, the content item it is editing, a related conversation.
+ *
+ * Generic on purpose: a new kind of association is a new `edge_type`, not a
+ * schema change on either side of the wire.
+ */
+export interface ReactorConversationEdge {
+  /** Human readable label, e.g. "slug" or "workflowId". */
+  name: string;
+  /** The identifier being pointed at. */
+  value: string;
+  /** What kind of thing is being pointed at, e.g. "content", "workflow". */
+  edge_type: string;
+}
+
+/**
+ * What a conversation is being used for. Any string is valid; these are the
+ * ones the product uses today.
+ */
+export type ReactorChatUseCase = 'standalone' | 'workflow' | 'content' | 'form' | string;
 
 export interface SidePanelActions {
   addItem: (item: SidePanelItem) => void;

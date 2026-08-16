@@ -9,6 +9,7 @@ import ImageMacro from './image.macro';
 import SidePanelStateMacro from './sidePanelState.macro';
 import AmqMacro from './amq.macro';
 import GraphPerspectiveMacro from './graphPerspective.macro';
+import { HostFieldsMacroDefinition, HostFieldUpdateMacroDefinition } from './hostField.macro';
 import { MacroComponentDefinition } from '../../types';
 
 
@@ -24,6 +25,10 @@ const macros: MacroComponentDefinition<unknown>[] = [
   SidePanelStateMacro,
   AmqMacro,
   GraphPerspectiveMacro,
+  // Let the agent read and write the fields of whatever host component the
+  // chat is embedded in. Inert unless the host supplies bindings.
+  HostFieldsMacroDefinition,
+  HostFieldUpdateMacroDefinition,
 ];
 
 export default macros;

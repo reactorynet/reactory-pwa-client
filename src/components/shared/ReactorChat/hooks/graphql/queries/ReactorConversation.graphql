@@ -7,6 +7,8 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       title
       created
       updated
+      use_case
+      edges { name value edge_type }
       user { id firstName lastName }
       systemPrompt
       history {

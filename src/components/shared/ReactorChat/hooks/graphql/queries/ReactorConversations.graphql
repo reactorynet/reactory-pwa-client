@@ -8,6 +8,8 @@ query ReactoryConversations($filter: ReactorConversationFilter) {
     user { id firstName lastName }
     vars
     active
+    use_case
+    edges { name value edge_type }
   }
 }
 

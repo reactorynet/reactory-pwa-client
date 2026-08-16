@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ReactDOM from 'react-dom';
 import { compose } from 'redux';
 import { useParams } from 'react-router';
 import {
@@ -27,9 +26,7 @@ import { useContentRender } from '@reactory/client-core/components/shared/hooks/
 
 import InlineContentEditor from './editor/InlineContentEditor';
 import useStaticContent, { toDraft } from './hooks/useStaticContent';
-import { coerceFormat, markdownToHtml } from './format';
 import {
-  ComponentMountInfo,
   ContentDraft,
   ContentTranslation,
   ReactoryStaticContent as StaticContentRecord,
@@ -39,20 +36,23 @@ import {
 export * from './types';
 
 /**
- * Expands `${...}` template expressions and swaps `<reactory />` tags for mount
- * points, returning the parsed body plus the components to portal into it.
+ * Expands `${...}` template expressions in the body.
+ *
+ * Component tags are deliberately NOT handled here. They are lifted out by the
+ * shared renderer, which turns them into real React elements regardless of
+ * whether the surrounding body is markdown, HTML or plain text. Substituting a
+ * placeholder element here only worked for pipelines that emit raw HTML —
+ * markdown escapes it, so the placeholder never reached the DOM.
  *
  * Pure by design: it performs no state updates so it can be called during a
  * render pass without risking a loop.
  */
-const parseTemplateContent = (
+const expandTemplate = (
   template: string,
   propertyBag: any,
-  reactory: Reactory.Client.ReactorySDK,
-  currentSlug: string
-): { parsedContent: string; components: ComponentMountInfo[] } => {
+  reactory: Reactory.Client.ReactorySDK
+): string => {
   let content: string = template || '';
-  const componentsToMount: ComponentMountInfo[] = [];
 
   if (propertyBag && content && content.indexOf('${') >= 0) {
     try {
@@ -62,82 +62,7 @@ const parseTemplateContent = (
     }
   }
 
-  if (propertyBag && content && content.indexOf('<reactory ') >= 0) {
-    const getNextComponent = (source: string): ComponentMountInfo => {
-      const startPos: number = source.indexOf('<reactory ');
-      if (startPos < 0) return { id: null, component: null, props: null, content: source };
-
-      let endPos: number = source.indexOf(' />', startPos);
-      if (endPos === -1) {
-        endPos = source.indexOf('</reactory>');
-        if (endPos === -1) {
-          throw new Error(`Malformed <reactory /> tag at pos ${startPos} in content slug ${currentSlug}`);
-        }
-        endPos += '</reactory>'.length;
-      }
-
-      const foundTag = source.substring(startPos, endPos);
-      let component = '';
-      const props: Record<string, unknown> = {};
-
-      const parser = new DOMParser();
-      const xmlDoc: Document = parser.parseFromString(foundTag, 'application/xml');
-
-      if (xmlDoc.childNodes.length > 0) {
-        xmlDoc.childNodes.forEach((el: any) => {
-          if (el.nodeName !== 'reactory') return;
-          if (!el?.attributes || el.attributes.length === 0) return;
-
-          for (let attrIdx = 0; attrIdx < el.attributes.length; attrIdx += 1) {
-            const attr = el.attributes[attrIdx];
-            const key = attr.nodeName.split('-')[1];
-            if (key === 'component') {
-              component = attr.value;
-              continue;
-            }
-
-            const value: string = `${attr.value}`.trim();
-            const propName: string = `${attr.nodeName.replace('reactory-props-', '')}`;
-
-            if (value.indexOf('bool:') === 0) {
-              props[propName] = value.split(':')[1].trim() === 'true';
-            } else if (value.indexOf('object:{') === 0) {
-              props[propName] = JSON.parse(value.substring(7));
-            } else if (value.indexOf('int:') === 0) {
-              props[propName] = parseInt(value.split(':')[1].trim(), 10);
-            } else if (value.indexOf('float:') === 0) {
-              props[propName] = parseFloat(value.split(':')[1].trim());
-            } else if (value.indexOf('moment:') === 0) {
-              props[propName] = reactory.utils.moment(value.substring(7));
-            } else if (value.indexOf('date:') === 0) {
-              props[propName] = new Date(value.substring(5));
-            } else {
-              props[propName] = value;
-            }
-          }
-        });
-      }
-
-      const mountpointId = `reactory_component_mount_${currentSlug}_${component}_${reactory.utils.hashCode(
-        JSON.stringify(props)
-      )}`;
-
-      return {
-        id: mountpointId,
-        component,
-        props,
-        content: source.replace(foundTag, `<div id="${mountpointId}"></div>`),
-      };
-    };
-
-    while (content.indexOf('<reactory ') >= 0) {
-      const nextComponent = getNextComponent(content);
-      if (nextComponent.component) componentsToMount.push(nextComponent);
-      content = nextComponent.content;
-    }
-  }
-
-  return { parsedContent: content, components: componentsToMount };
+  return content;
 };
 
 /**
@@ -239,11 +164,6 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
   const viewBodyRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(props.expanded !== undefined ? props.expanded : !useExpanded);
   const [hovering, setHovering] = useState(false);
-  const [components, setComponents] = useState<ComponentMountInfo[]>([]);
-
-  // Keep the mount list in a ref as well, so parsing during render can compare
-  // without scheduling a state update on every pass.
-  const componentsRef = useRef<ComponentMountInfo[]>([]);
 
   const propertyBagKey = useMemo(() => {
     try {
@@ -254,40 +174,28 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
   }, [propertyBag]);
 
   /**
-   * The body to display, after templating and component extraction.
+   * The body to display, after template expansion. Component tags are left in
+   * place for the renderer to lift out.
    */
   const displayBody = useMemo(() => {
     const raw = viewContent?.content ?? '';
-    if (!raw) return { parsedContent: '', components: [] as ComponentMountInfo[] };
-    return parseTemplateContent(raw, propertyBag, reactory, activeSlug);
+    if (!raw) return '';
+    return expandTemplate(raw, propertyBag, reactory);
     // propertyBagKey stands in for propertyBag so an equal-but-new object does
     // not force a re-parse on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewContent?.content, propertyBagKey, reactory, activeSlug]);
-
-  useEffect(() => {
-    const next = displayBody.components;
-    if (JSON.stringify(componentsRef.current) === JSON.stringify(next)) return;
-    componentsRef.current = next;
-    setComponents(next);
-  }, [displayBody.components]);
+  }, [viewContent?.content, propertyBagKey, reactory]);
 
   /**
-   * Renders a body for the editor's preview pane. Markdown and plain text are
-   * handed to the shared renderer as-is; HTML goes through it too so that
-   * sanitisation and component mounting behave the same as the live view.
+   * Renders a body for the editor's preview pane.
+   *
+   * Runs the identical path as the live view so that what an author previews
+   * is what readers get, including how component tags are mounted.
    */
   const renderPreview = useCallback(
-    (body: string) => {
-      const format = coerceFormat(draftSeed.format, body);
-      // The shared renderer detects markdown itself, but an HTML body that
-      // happens to start with a markdown-looking line would be misread, so
-      // markdown is converted up front and everything else passed through.
-      const prepared = format === 'markdown' ? markdownToHtml(body) : body;
-      const { parsedContent } = parseTemplateContent(prepared, propertyBag, reactory, activeSlug);
-      return renderContent(parsedContent);
-    },
-    [draftSeed.format, propertyBag, reactory, activeSlug, renderContent]
+    (body: string) => renderContent(expandTemplate(body, propertyBag, reactory)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [propertyBagKey, reactory, renderContent]
   );
 
   const handleSaveSource = useCallback(
@@ -393,19 +301,6 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
       );
     }
 
-    const portals = components
-      .map((mountInfo) => {
-        const portalContainer = document.getElementById(mountInfo.id);
-        const MountableComponent = reactory.getComponent<any>(mountInfo.component);
-        if (!portalContainer || !MountableComponent) return null;
-        return ReactDOM.createPortal(
-          <MountableComponent {...mountInfo.props} />,
-          portalContainer,
-          mountInfo.id
-        );
-      })
-      .filter(Boolean);
-
     return (
       <>
         <Box
@@ -429,8 +324,8 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
               : undefined
           }
         >
-          {displayBody.parsedContent ? (
-            renderContent(displayBody.parsedContent)
+          {displayBody ? (
+            renderContent(displayBody)
           ) : (
             <Typography variant="body1" color="text.secondary">
               {defaultContent}
@@ -448,8 +343,6 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
             {expanded ? 'Show less' : 'Show more'}
           </Button>
         )}
-
-        {portals}
       </>
     );
   };

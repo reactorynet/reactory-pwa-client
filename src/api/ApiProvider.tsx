@@ -4,7 +4,7 @@ import {  } from 'react-router';
 import { useNavigate } from 'react-router-dom';
 import { compose } from 'redux';
 import ReactoryApi from "./ReactoryApi";
-import { withErrorBoundary } from './ErrorBoundary';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export const ReactoryProvider = ({ children, reactory }) => {
 
@@ -15,39 +15,54 @@ export const ReactoryProvider = ({ children, reactory }) => {
 
 export const ReactoryContext = createContext<Reactory.Client.ReactorySDK>(null);
 
+function ErrorFallback({ error, resetErrorBoundary }) {
+    return (
+        <div role="alert">
+            <p>Something went wrong:</p>
+            <pre>{error.message}</pre>
+        </div>
+    )
+}
+
+/**
+ * Injects the Reactory SDK into a component and wraps it in an error boundary.
+ *
+ * The boundary is rendered as an element rather than built with
+ * `withErrorBoundary` inside the render function. Calling an HOC during render
+ * produces a brand new component *type* on every pass, and React treats a
+ * changed type as a different component: it unmounts the entire subtree and
+ * mounts a fresh one. Measured before this change, a wrapped component logged
+ * six mounts across six parent renders instead of one.
+ *
+ * Every consumer of withReactory paid that cost — state was discarded, effects
+ * re-ran, and anything that fetched on mount refetched on each parent render.
+ * `ErrorBoundary` is a stable class, so rendering it directly keeps the element
+ * type constant and the subtree mounted.
+ */
 export const withReactory = (ComponentToWrap: any | React.Component | Function, id = 'not-set') => {
 
-    function ErrorFallback({ error, resetErrorBoundary }) {
-        return (
-            <div role="alert">
-                <p>Something went wrong:</p>
-                <pre>{error.message}</pre>                
-            </div>
-        )
-    }
+    if (!ComponentToWrap) throw new Error("Component to wrap cannot be null")
 
-
-    return (props: any) => {
+    const WithReactory = (props: any) => {
         const reactory = useContext(ReactoryContext);
-                
-        if(!ComponentToWrap) throw new Error("Component to wrap cannot be null")
 
-        const ComponentWithErrorBoundary = withErrorBoundary(ComponentToWrap, {
-            FallbackComponent: ErrorFallback,
-            onError: (error, info) => {
-                reactory.log(`Error in component ${id}`, {error, info});
-            },
-            id
-        });
+        const onError = React.useCallback((error: Error, info: unknown) => {
+            reactory?.log(`Error in component ${id}`, { error, info });
+        }, [reactory]);
 
-        try {
-            if(id === 'core.Loging@1.0.0') debugger
-            return <ComponentWithErrorBoundary {...props} reactory={reactory} />
-        } catch (error) {
-            return <span>Component: {id}: error: {error.message}</span>
-        }
-    }
+        return (
+            <ErrorBoundary FallbackComponent={ErrorFallback} onError={onError} id={id}>
+                <ComponentToWrap {...props} reactory={reactory} />
+            </ErrorBoundary>
+        );
+    };
 
+    const wrappedName = (ComponentToWrap as any).displayName
+        || (ComponentToWrap as any).name
+        || id;
+    WithReactory.displayName = `withReactory(${wrappedName})`;
+
+    return WithReactory;
 };
 
 

@@ -18,6 +18,10 @@ import {
   SidePanelState,
   SubAgentSummary,
   IFileExplorerState,
+  HostActions,
+  HostEditableField,
+  ReactorChatUseCase,
+  ReactorConversationEdge,
   TODOS_VAR_KEY,
 } from './types';
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
@@ -260,6 +264,33 @@ export default (props) => {
   });
 
   // Non-streaming chat factory
+  /**
+   * What this chat is being used for, and what it is attached to.
+   *
+   * Defaults to "standalone", which is the plain chat experience and keeps the
+   * existing behaviour for every caller that does not set it.
+   */
+  const useCase: ReactorChatUseCase = props?.useCase || 'standalone';
+  const hostEdges: ReactorConversationEdge[] = useMemo(
+    () => props?.edges || [],
+    // Compared by value: a host that rebuilds the array each render would
+    // otherwise re-scope the session on every pass.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(props?.edges || [])]
+  );
+
+  /**
+   * Whether to resume the user's most recent conversation on open.
+   *
+   * The standalone chat picks up where the user left off, which is what makes
+   * it feel continuous. An embedded chat should not: opening the assistant
+   * beside a document is a fresh request about that document, and resuming
+   * last week's unrelated conversation into it would be wrong. Hosts can
+   * override either way.
+   */
+  const autoResume: boolean =
+    props?.autoResume !== undefined ? props.autoResume === true : useCase === 'standalone';
+
   const chatFactory = useChatFactory({
     reactory,
     persona: selectedPersona,
@@ -268,6 +299,8 @@ export default (props) => {
     contextFromSessionId: previousSessionRef.current?.sessionId,
     sessionLogger,
     getProviderAuthOverride,
+    useCase,
+    edges: hostEdges,
   });
 
 
@@ -435,6 +468,70 @@ export default (props) => {
       setChatState((prev) => ({ ...prev, sidePanel: sidePanelActions }));
     }
   }, [chatState?.sidePanel, sidePanelActions, setChatState]);
+
+  /**
+   * Host bindings, letting the agent read and write the fields of whatever
+   * component embedded this chat.
+   *
+   * Held in a ref and read through a stable accessor: the host re-renders as
+   * the user types, and putting the live values straight into chatState would
+   * either churn the session state on every keystroke or leave macros holding
+   * a stale closure over the first render's props.
+   */
+  const hostBindingRef = React.useRef<{
+    onChange?: (key: string, data: unknown) => void;
+    fields?: HostEditableField[] | (() => HostEditableField[]);
+  }>({ onChange: props?.onChange, fields: props?.editableFields });
+
+  hostBindingRef.current = {
+    onChange: props?.onChange,
+    fields: props?.editableFields,
+  };
+
+  /**
+   * The field list may be given as an array or as an accessor. A host that
+   * re-renders as the user types should pass an accessor, so the array
+   * identity does not churn through the memoised panels above this chat.
+   */
+  const readHostFields = (): HostEditableField[] => {
+    const { fields } = hostBindingRef.current;
+    if (typeof fields === 'function') return fields() || [];
+    return fields || [];
+  };
+
+  const hostActions: HostActions = useMemo(
+    () => ({
+      getFields: () => readHostFields(),
+      applyChange: (key: string, data: unknown) => {
+        const { onChange } = hostBindingRef.current;
+        const fields = readHostFields();
+        if (typeof onChange !== 'function') {
+          return { accepted: false, message: 'The host did not supply an onChange handler.' };
+        }
+
+        // The macro checks this too, but the host contract is the last line of
+        // defence against a write to a field that was never offered.
+        const field = (fields || []).find((f) => f.key === key);
+        if (!field) return { accepted: false, message: `"${key}" is not an editable field.` };
+        if (field.readOnly) return { accepted: false, message: `"${key}" is read-only.` };
+
+        onChange(key, data);
+        return { accepted: true };
+      },
+    }),
+    []
+  );
+
+  // Only attached when the host actually offered fields, so a chat that is not
+  // embedded in an editing surface advertises no host capability at all.
+  const hasHostBinding = typeof props?.onChange === 'function';
+
+  React.useEffect(() => {
+    if (!chatState) return;
+    if (hasHostBinding && !chatState.hostBindings) {
+      setChatState((prev) => ({ ...prev, hostBindings: hostActions } as ChatState));
+    }
+  }, [chatState?.hostBindings, hasHostBinding, hostActions, setChatState]);
 
   const {
     findMacroByAlias,
@@ -831,7 +928,13 @@ export default (props) => {
 
     (async () => {
       reactory.log(`ReactorChat: Loading chat list for persona: ${selectedPersona?.name || 'none'}`);
-      const chatList = await listChats({ personaId: selectedPersona?.id });
+      // Scoped to this use case so an embedded chat's history panel shows only
+      // its own conversations, never the user's unrelated standalone ones.
+      const chatList = await listChats({
+        personaId: selectedPersona?.id,
+        use_case: useCase,
+        edges: hostEdges,
+      });
       setChats(chatList as ChatState[]);
 
       // Auto-initialize session when we have personaId but no sessionId in URL.
@@ -849,8 +952,10 @@ export default (props) => {
         autoInitInProgress.current = true;
         isManualNavigation.current = true;
         try {
-          // Resume the most recent chat if one exists.
-          if (chatList && chatList.length > 0) {
+          // Resume the most recent chat if one exists and this use case wants
+          // continuity. When it does not, fall through to a fresh session so
+          // the host's pre-filled prompt starts a new conversation.
+          if (autoResume && chatList && chatList.length > 0) {
             const mostRecentChat = chatList[0]; // sorted most-recent first by server
             reactory.log(`ReactorChat: Resuming latest session ${mostRecentChat.id}`);
             navigate({
@@ -878,7 +983,7 @@ export default (props) => {
         }
       }
     })();
-  }, [selectedPersona?.id, listChats, setChats]);
+  }, [selectedPersona?.id, listChats, setChats, useCase, hostEdges, autoResume]);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 

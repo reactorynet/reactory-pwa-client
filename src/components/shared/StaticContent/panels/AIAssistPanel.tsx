@@ -17,6 +17,7 @@ import {
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { HostEditableField } from '@reactory/client-core/components/shared/ReactorChat/types';
 import { ContentFormat, FORMAT_LABELS } from '../format';
 import { languageLabel } from '../types';
 
@@ -42,6 +43,18 @@ export interface AIAssistPanelProps {
   intent: AIAssistIntent;
   /** Replaces the body being edited with the supplied text. */
   onApply: (content: string) => void;
+  /**
+   * Fields the assistant may write to directly, and the handler that applies
+   * those writes. When supplied, the agent can revise the content in place
+   * rather than the author copying a result across by hand.
+   */
+  editableFields?: HostEditableField[] | (() => HostEditableField[]);
+  onFieldChange?: (key: string, data: unknown) => void;
+  /**
+   * Identifies the content item this assistance is about, so the conversation
+   * is attached to it rather than floating free.
+   */
+  contentSlug?: string;
 }
 
 const PANEL_WIDTH = 460;
@@ -109,6 +122,9 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
   targetLang,
   intent,
   onApply,
+  editableFields,
+  onFieldChange,
+  contentSlug,
 }) => {
   const [tab, setTab] = useState(0);
   const [applyText, setApplyText] = useState('');
@@ -119,6 +135,16 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
   const prompt = useMemo(
     () => buildPrompt(intent, { content, format, title, currentLang, targetLang }),
     [intent, content, format, title, currentLang, targetLang]
+  );
+
+  // Ties the conversation to this content item, so it can be found again and
+  // is never resumed against a different document.
+  const contentEdges = useMemo(
+    () =>
+      contentSlug
+        ? [{ name: 'slug', value: contentSlug, edge_type: 'content' }]
+        : [],
+    [contentSlug]
   );
 
   const copyPrompt = useCallback(async () => {
@@ -206,6 +232,13 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
                 {...(aipersona || {})}
                 personaId={aipersona?.personaId}
                 initialPrompt={prompt}
+                editableFields={editableFields}
+                onChange={onFieldChange}
+                // A content conversation is about the document in front of the
+                // author. It starts fresh with the pre-filled prompt rather
+                // than resuming an unrelated standalone chat.
+                useCase="content"
+                edges={contentEdges}
               />
             ) : (
               <Alert severity="warning" sx={{ m: 2 }}>

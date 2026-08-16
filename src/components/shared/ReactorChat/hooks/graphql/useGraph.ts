@@ -52,6 +52,17 @@ export interface ReactorInitSessionInput {
   contextFromSessionId?: string;
   modelId?: string;
   providerId?: string;
+  /**
+   * What the conversation is for: "standalone", "workflow", "content", "form",
+   * or any application defined string. Scopes the session so it is only
+   * resumed or listed alongside conversations of the same kind.
+   */
+  use_case?: string;
+  /**
+   * Links from this conversation to the thing that opened it — a workflow id,
+   * a content slug, a related conversation.
+   */
+  edges?: { name: string; value: string; edge_type: string }[];
 }
 
 export type ReactorChatResponse =

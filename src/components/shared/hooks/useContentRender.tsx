@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import Reactory from '@reactorynet/reactory-core';
+import { ReactoryTag, splitReactoryTags } from './reactoryTags';
 /**
  * Content types that can be rendered
  */
@@ -148,6 +149,45 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
   };
 
   /**
+   * Renders a single `<reactory />` tag as the live component it names.
+   *
+   * Rendered as a real React element rather than mounted into a placeholder
+   * through a portal. Placeholders only survive pipelines that emit raw HTML,
+   * and markdown is not one of them — react-markdown escapes raw HTML, so a
+   * placeholder element never reached the DOM and the portal had nothing to
+   * attach to. A real element has no such dependency, and it also avoids the
+   * id collisions that a document-wide getElementById lookup invites when the
+   * same component appears twice.
+   */
+  const renderReactoryComponent = (tag: ReactoryTag, key: string) => {
+    const Component = reactory.getComponent<any>(tag.fqn);
+
+    if (!Component) {
+      // Say which component is missing. Rendering nothing here is how a typo
+      // in an FQN turns into a silently blank area of the page.
+      reactory.log(`Content references unregistered component "${tag.fqn}"`, {}, 'warning');
+      return (
+        <span
+          key={key}
+          data-reactory-missing={tag.fqn}
+          style={{
+            display: 'inline-block',
+            padding: '2px 6px',
+            borderRadius: 4,
+            border: `1px dashed ${reactory.muiTheme?.palette?.warning?.main || '#ed6c02'}`,
+            color: reactory.muiTheme?.palette?.text?.secondary,
+            fontSize: '0.8125rem',
+          }}
+        >
+          Unknown component: {tag.fqn}
+        </span>
+      );
+    }
+
+    return <Component key={key} {...tag.props} />;
+  };
+
+  /**
    * Renders content by splitting into blocks (text, markdown, mermaid, code, etc.) and processing top-down
    */
   const renderContent = (content: string) => {
@@ -227,23 +267,29 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
       );
     };
 
+    /**
+     * Renders one run of markup — everything between two component tags —
+     * through the mermaid / code / markdown / HTML pipeline.
+     */
+    const renderMarkup = (markup: string, keyPrefix: string): React.ReactNode => {
     // Regex to match code, mermaid, and markdown blocks
     const blockRegex = /(```mermaid[\s\S]*?```|```[a-zA-Z]*[\s\S]*?```)/g;
     const blocks: string[] = [];
     let lastIndex = 0;
     let match;
-    while ((match = blockRegex.exec(content)) !== null) {
+    while ((match = blockRegex.exec(markup)) !== null) {
       if (match.index > lastIndex) {
-        blocks.push(content.substring(lastIndex, match.index));
+        blocks.push(markup.substring(lastIndex, match.index));
       }
       blocks.push(match[0]);
       lastIndex = match.index + match[0].length;
     }
-    if (lastIndex < content.length) {
-      blocks.push(content.substring(lastIndex));
+    if (lastIndex < markup.length) {
+      blocks.push(markup.substring(lastIndex));
     }
 
-    const children: React.ReactNode[] = blocks.map((block, idx) => {
+    const children: React.ReactNode[] = blocks.map((block, blockIndex) => {
+      const idx = `${keyPrefix}-${blockIndex}`;
       // Mermaid block
       if (/^```mermaid[\s\S]*```$/i.test(block)) {
         const diagram = block.replace(/```mermaid|```/gi, '').trim();
@@ -338,9 +384,27 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
       ));
     });
 
-    return <React.Fragment>{children}</React.Fragment>;
+      return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;
+    };
+
+    // Component tags are lifted out before any markup pipeline runs. Doing it
+    // here rather than inside the markdown/HTML branches is what makes the
+    // mechanism format independent: whatever the surrounding content is
+    // authored in, the component is a sibling React element rather than
+    // something the renderer has to preserve for a later portal.
+    const segments = splitReactoryTags(content);
+
+    return (
+      <React.Fragment>
+        {segments.map((segment, index) =>
+          segment.kind === 'component'
+            ? renderReactoryComponent(segment.tag, `reactory-${index}`)
+            : renderMarkup(segment.value, `segment-${index}`)
+        )}
+      </React.Fragment>
+    );
   };
-  
+
   return { renderContent, detectContentType };
 };
 

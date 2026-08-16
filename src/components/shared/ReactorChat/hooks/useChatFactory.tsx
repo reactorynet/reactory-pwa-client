@@ -137,6 +137,17 @@ interface ChatFactorHookOptions {
    *  to this chat session" flow. When null/empty, no override is sent.
    */
   getProviderAuthOverride?: (chatSessionId: string) => import('./useProviders').ProviderAuthOverride | null;
+  /**
+   * What the conversation is for: "standalone", "workflow", "content", "form",
+   * or any application defined string. Persisted on the session and used to
+   * scope resuming and listing. Defaults to "standalone".
+   */
+  useCase?: import('../types').ReactorChatUseCase;
+  /**
+   * Links from this conversation to the thing that opened it — a workflow id,
+   * a content slug, a related conversation.
+   */
+  edges?: import('../types').ReactorConversationEdge[];
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -1647,6 +1658,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const initSession: ReactorInitSessionInput = {
       personaId: persona.id,
       message: '',
+      // Scope the session to whatever opened it, so it is only ever resumed or
+      // listed alongside conversations of the same kind.
+      use_case: props?.useCase || 'standalone',
+      edges: props?.edges || [],
       macros: clientMacros?.map((macro) => ({
         nameSpace: macro.nameSpace,
         name: macro.name,

@@ -36,6 +36,7 @@ import surfaceMinHeight from './sizing';
 import SettingsPanel from '../panels/SettingsPanel';
 import TranslationsPanel from '../panels/TranslationsPanel';
 import AIAssistPanel, { AIAssistIntent } from '../panels/AIAssistPanel';
+import { HostEditableField } from '@reactory/client-core/components/shared/ReactorChat/types';
 import useContentDraft from '../hooks/useContentDraft';
 import {
   ContentFormat,
@@ -371,6 +372,92 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
   const applyAIResult = useCallback(
     (content: string) => setActiveBody({ content }),
     [setActiveBody]
+  );
+
+  /**
+   * Latest editor values, so the accessor below can keep a stable identity
+   * while still reporting what is on screen right now.
+   *
+   * A live array would change on every keystroke, and it is passed through the
+   * memoised assistant panel — which would re-render the whole chat tree on
+   * each character, the exact cost that memo exists to avoid.
+   */
+  const fieldSourceRef = useRef({ activeBody, draft, isTranslating, editTarget });
+  fieldSourceRef.current = { activeBody, draft, isTranslating, editTarget };
+
+  /**
+   * The fields the assistant may write to, described for the agent rather than
+   * for a developer — the description is the only thing it has to go on.
+   *
+   * Read at call time so `value` reflects the current text, which lets the
+   * agent revise what is there instead of replacing it blind.
+   */
+  const getEditableFields = useCallback((): HostEditableField[] => {
+    const {
+      activeBody: body,
+      draft: current,
+      isTranslating: translating,
+      editTarget: target,
+    } = fieldSourceRef.current;
+
+    const language = translating ? languageLabel(target.lang) : languageLabel(current.locale);
+    const formatName = FORMAT_LABELS[current.format];
+
+    return [
+      {
+        key: 'content',
+        description:
+          `The body of the document, written in ${formatName}, in ${language}. ` +
+          'Return the complete body, not a fragment. Preserve any <reactory ... /> ' +
+          'tags exactly — they mount live components.',
+        type: 'string',
+        value: body.content,
+      },
+      {
+        key: 'title',
+        description: `The document title, in ${language}. A short heading, not a sentence.`,
+        type: 'string',
+        value: body.title,
+      },
+      {
+        key: 'description',
+        description:
+          `A one or two sentence summary of the document, in ${language}. ` +
+          'Used for search results and previews, so it should read on its own.',
+        type: 'string',
+        value: body.description,
+      },
+    ];
+  }, []);
+
+  /**
+   * Applies a write from the assistant to whichever field it named.
+   *
+   * Routed through setActiveBody so an agent edit lands on the language
+   * currently being edited and is marked unsaved, exactly as a keystroke would
+   * be. Nothing is persisted — the author still decides whether to keep it.
+   */
+  const handleAgentFieldChange = useCallback(
+    (key: string, data: unknown) => {
+      const value = typeof data === 'string' ? data : String(data ?? '');
+
+      switch (key) {
+        case 'content':
+          setActiveBody({ content: value });
+          break;
+        case 'title':
+          setActiveBody({ title: value });
+          break;
+        case 'description':
+          setActiveBody({ description: value });
+          break;
+        default:
+          // The macro and the host binding both validate the key, so reaching
+          // here means the field list and this switch have drifted apart.
+          reactory.log(`Assistant wrote to unmapped content field "${key}"`, {}, 'warning');
+      }
+    },
+    [setActiveBody, reactory]
   );
 
   const addLanguage = useCallback(
@@ -742,6 +829,9 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
           targetLang={aiRequest.targetLang}
           intent={aiRequest.intent}
           onApply={applyAIResult}
+          editableFields={getEditableFields}
+          onFieldChange={handleAgentFieldChange}
+          contentSlug={seed.slug}
         />
       )}
 
