@@ -81,6 +81,10 @@ const ChipArray = (props: any) => {
   const canAdd = !isReadOnly && options.allowAdd !== false;
   const canDelete = !isReadOnly && options.allowDelete !== false;
   const canDeleteAll = !isReadOnly && Boolean(options.allowDeleteAll);
+  const size = options.size || 'small';
+  const variant = options.variant || 'outlined';
+  const color = options.color || 'default';
+  const maxDisplay = options.maxDisplay || 5;
 
   // If readOnly and empty, display subtle fallback text
   if (isReadOnly && items.length === 0) {

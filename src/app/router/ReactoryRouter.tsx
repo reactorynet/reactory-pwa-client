@@ -242,10 +242,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               }
             />
           );
-        } else {
-          debugger;
+        } else {        
           const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
-
           //auth token not validated yet in process of checking
           //@ts-ignore
           if (auth_validated === false || authenticating === true) {

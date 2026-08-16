@@ -330,7 +330,7 @@ ACTIONS:
 - "search": Search registered components by name, namespace, type, or tags. Requires "query".
 - "register": Register a new FQN alias for an existing component. Requires "fqn" (new alias) and "sourceFqn" (existing component). Optionally set "tags" and "componentType".
 
-Use the "side_panel_state" tool first to see what is currently mounted and get reference IDs.
+Optional: Use the "side_panel_state" tool first if you need to inspect currently mounted items to update or remove them by referenceId.
 
 EXAMPLES:
 1) Mount a user profile: { "fqn": "core.UserProfile@1.0.0", "props": { "userId": "123" }, "title": "User Profile" }

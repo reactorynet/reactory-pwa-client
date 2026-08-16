@@ -333,7 +333,7 @@ ACTIONS:
 - "search": Search registered form schemas by id, name, namespace, title, or description. Requires "query".
 - "register": Register a form definition with the SDK without opening it. Useful for saving a definition for later use. Requires "schema".
 
-Use the "side_panel_state" tool first to see what is currently mounted and get reference IDs.
+Optional: Use the "side_panel_state" tool first if you need to inspect currently mounted forms to update or remove them by referenceId.
 
 HOW TO BUILD A FORM:
 Provide a "formDefinition" object with a JSON Schema "schema" and an optional "uiSchema".

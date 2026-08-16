@@ -163,7 +163,7 @@ ACTIONS:
 - "update": Update data or config of an existing chart. Requires "referenceId".
 - "remove": Remove a chart from the side panel. Requires "referenceId".
 
-Use the "side_panel_state" tool first to see what is currently mounted and obtain reference IDs.
+Optional: Use the "side_panel_state" tool first if you need to inspect currently mounted visualizations to update or remove them by referenceId.
 
 ──────────────────────────────────────────────────────
 CHART TYPES AND DATA SHAPES

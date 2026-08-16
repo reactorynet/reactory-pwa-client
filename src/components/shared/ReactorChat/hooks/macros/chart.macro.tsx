@@ -291,7 +291,7 @@ ACTIONS:
 - "update": Replace the data, type, or options of an existing chart. Requires "referenceId".
 - "remove": Remove a chart from the side panel. Requires "referenceId".
 
-Use the "side_panel_state" tool first to see what is currently mounted and get reference IDs.
+Optional: Use the "side_panel_state" tool first if you need to inspect currently mounted charts to update or remove them by referenceId.
 
 CHART TYPES:
 - "pie": Proportional slices. Each data item needs { name, value }. Best for showing composition or share.

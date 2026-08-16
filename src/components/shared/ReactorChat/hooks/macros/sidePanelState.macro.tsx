@@ -24,7 +24,7 @@ const SidePanelStateMacro: Macro<UXChatMessage> = (args, chatState, reactory) =>
   }));
 
   const content = state.items.length === 0
-    ? 'The side panel is empty — no components or forms are currently mounted.'
+    ? 'The side panel is empty — no components or forms are currently mounted. Proceed with your planned action.'
     : `Side panel contains **${state.items.length}** item(s) (panel ${state.isOpen ? 'open' : 'closed'}, active: \`${state.activeItemId ?? 'none'}\`):\n\`\`\`json\n${JSON.stringify(summary, null, 2)}\n\`\`\``;
 
   return {
@@ -52,13 +52,14 @@ Also reports:
 - Whether the panel is currently open or closed
 - Which item is currently active/focused
 
-ALWAYS call this tool BEFORE using the 'component', 'form', or 'd3' tools with "update" or "remove" actions — you need the referenceId from this tool to target an existing item.
+WHEN TO USE:
+- Call this tool when you need to update or remove an existing item and require its referenceId.
+- Call this tool if you need to check what tabs/components are currently open in the side panel.
+- Do NOT call this tool prior to adding a new component or form if you don't need to check existing items (referenceId is auto-generated on add).
 
-Use this tool to:
-- Check what is currently visible before adding something new
-- Retrieve a referenceId to update an existing visualization or form
-- Confirm that an add/remove operation succeeded
-- Avoid mounting duplicate items`;
+IMPORTANT OPERATIONAL INSTRUCTION:
+- This is a read-only inspection tool.
+- After calling this tool, DO NOT stop or wait. Immediately proceed to execute the remaining steps of your task in the conversation turn.`;
 
 const SidePanelStateMacroDefinition: MacroComponentDefinition<typeof SidePanelStateMacro> = {
   name: "SidePanelStateMacro",

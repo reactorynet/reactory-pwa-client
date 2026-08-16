@@ -306,7 +306,10 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
           } 
         }
         sessionLogger?.info(`Macro executed successfully: ${macroKey}`, { hasResult: !!result }, 'useMacros');
-        if (onMacroCallResult) {
+        // Only trigger onMacroCallResult for standalone user macro calls (@macro syntax),
+        // NOT when invoked as an AI tool call (callId present). AI tool call results
+        // are persisted and sent to the AI loop below via onClientToolComplete.
+        if (onMacroCallResult && !callId) {
           // first check if the result has a valid tool result structure and
           // that it does not have null tool call results which indicates an error in the macro execution
           if (result && typeof result === 'object' && 'tool_results' in result && (!result.tool_calls || !result.tool_calls.some((call: ReactorToolCall) => call.status === 'error'))) {
