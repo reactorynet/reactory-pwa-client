@@ -152,6 +152,15 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 {model.supportsStreaming && (
                   <Chip label="stream" size="small" variant="outlined" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} />
                 )}
+                {(model.thinking?.mode && model.thinking.mode !== 'none') || model.capabilities?.includes('reasoning') ? (
+                  <Chip
+                    label="thinking"
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    sx={{ ml: 0.5, height: 18, fontSize: '0.65rem' }}
+                  />
+                ) : null}
                 {model.capabilities?.includes('image-generation') && (
                   <Chip
                     icon={<Brush sx={{ fontSize: '0.7rem' }} />}

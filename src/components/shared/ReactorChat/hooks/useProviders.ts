@@ -17,10 +17,25 @@ const GET_PROVIDERS = gql`
         costPerToken
         inputCostPerToken
         outputCostPerToken
+        inputCostPerTokenUsdCents
+        outputCostPerTokenUsdCents
+        rpm
+        itpm
+        otpm
         maxParallelRequests
         supportsStreaming
         supportedTools
         supportedMediaTypes
+        sampling {
+          temperature
+          topP
+          topK
+        }
+        thinking {
+          mode
+          effort
+          display
+        }
       }
       defaultModel
       status {
@@ -79,6 +94,18 @@ const REMOVE_PROVIDER_AUTH = gql`
   }
 `;
 
+export interface ModelSamplingSupport {
+  temperature?: boolean;
+  topP?: boolean;
+  topK?: boolean;
+}
+
+export interface ModelThinkingSupport {
+  mode?: string;
+  effort?: string;
+  display?: string;
+}
+
 export interface ProviderModel {
   id: string;
   providerId: string;
@@ -89,10 +116,17 @@ export interface ProviderModel {
   costPerToken?: number;
   inputCostPerToken?: number;
   outputCostPerToken?: number;
+  inputCostPerTokenUsdCents?: number;
+  outputCostPerTokenUsdCents?: number;
+  rpm?: number;
+  itpm?: number;
+  otpm?: number;
   maxParallelRequests?: number;
   supportsStreaming?: boolean;
   supportedTools?: string[];
   supportedMediaTypes?: string[];
+  sampling?: ModelSamplingSupport;
+  thinking?: ModelThinkingSupport;
 }
 
 export interface ProviderStatus {
