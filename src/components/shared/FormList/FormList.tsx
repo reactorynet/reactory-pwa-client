@@ -45,7 +45,18 @@ const FormList: React.FC<FormListProps> = ({
   // Core state
   const [forms, setForms] = useState<FormItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>(initialSearchQuery);
+
+  // Search states: searchInput for live typing (uncommitted), searchTerm for applied filter + URL sync
+  // Lazy init from ?search query param or initialSearchQuery prop (on first mount only)
+  const [searchInput, setSearchInput] = useState<string>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('search') || initialSearchQuery || '';
+  });
+  const [searchTerm, setSearchTerm] = useState<string>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('search') || initialSearchQuery || '';
+  });
+
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('grid');
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'name' | 'modified' | 'usage'>('name');
@@ -128,16 +139,8 @@ const FormList: React.FC<FormListProps> = ({
     Close
   } = Material.MaterialIcons;
 
-  // Debounced search
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // No debounced auto-search anymore. Search applies only on Enter (or explicit apply).
+  // We will keep searchInput in sync with typing, searchTerm drives the filter + ?search param.
 
   // Load forms data
   const loadForms = useCallback(async () => {
@@ -161,9 +164,9 @@ const FormList: React.FC<FormListProps> = ({
         filteredForms = allForms.filter((form: any) => form.isFavourite);
       }
       
-      // Apply search filter
-      if (debouncedSearchQuery) {
-        const query = debouncedSearchQuery.toLowerCase();
+      // Apply search filter using the committed searchTerm (set on Enter / route init)
+      if (searchTerm) {
+        const query = searchTerm.toLowerCase();
         filteredForms = filteredForms.filter((form: any) => 
           form.name?.toLowerCase().includes(query) ||
           form.title?.toLowerCase().includes(query) ||
@@ -198,12 +201,45 @@ const FormList: React.FC<FormListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [reactory, mode, debouncedSearchQuery, sortBy, sortOrder]);
+  }, [reactory, mode, searchTerm, sortBy, sortOrder]);
 
   // Load forms on mount and when dependencies change
   useEffect(() => {
     loadForms();
   }, [loadForms]);
+
+  // Apply a search: commit the term, update URL ?search param (preserving other params), trigger reload via state
+  const applySearch = useCallback((term: string) => {
+    const trimmed = (term || '').trim();
+    setSearchTerm(trimmed);
+    setSearchInput(trimmed); // keep input in sync with applied value
+
+    // Build new search params preserving existing ones
+    const params = new URLSearchParams(location.search);
+    if (trimmed) {
+      params.set('search', trimmed);
+    } else {
+      params.delete('search');
+    }
+
+    const searchString = params.toString();
+    const newSearch = searchString ? `?${searchString}` : '';
+    const newPath = `${location.pathname}${newSearch}${location.hash || ''}`;
+
+    // Use replace to avoid polluting history for each Enter press; use navigate with replace option
+    navigate(newPath, { replace: true });
+  }, [location.pathname, location.search, location.hash, navigate]);
+
+  // Sync searchTerm from URL when location.search changes (supports back/forward, direct links)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlSearch = params.get('search') || '';
+    // Only update if different to avoid loops
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+      setSearchInput(urlSearch);
+    }
+  }, [location.search]);
 
   // Handle form selection
   const handleFormSelect = useCallback((form: FormItem, action: 'view' | 'edit' | 'develop' = 'view') => {
@@ -511,18 +547,26 @@ const FormList: React.FC<FormListProps> = ({
         {/* Search and filters */}
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
           <TextField
-            placeholder="Search forms..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search forms... (press Enter to search)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                applySearch(searchInput);
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
                   <Search />
                 </InputAdornment>
               ),
-              endAdornment: searchQuery && (
+              endAdornment: searchInput && (
                 <InputAdornment position="end">
-                  <IconButton onClick={() => setSearchQuery('')} size="small">
+                  <IconButton onClick={() => {
+                    setSearchInput('');
+                    applySearch('');
+                  }} size="small">
                     <Close />
                   </IconButton>
                 </InputAdornment>
@@ -626,7 +670,7 @@ const FormList: React.FC<FormListProps> = ({
       {!loading && forms.length === 0 && (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            {debouncedSearchQuery 
+            {searchTerm 
               ? 'No forms found matching your search'
               : mode === 'favourites' 
                 ? 'No favourite forms yet'
@@ -634,7 +678,7 @@ const FormList: React.FC<FormListProps> = ({
             }
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {debouncedSearchQuery 
+            {searchTerm 
               ? 'Try adjusting your search terms'
               : 'Get started by creating your first form'
             }
