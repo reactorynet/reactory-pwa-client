@@ -1,4 +1,4 @@
-import { Tooltip, Collapse, keyframes } from '@mui/material';
+import { Tooltip, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, keyframes } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
@@ -84,9 +84,10 @@ const ChatList = (props: {
   onRateMessage?: (message: UXChatMessage, rating: 'up' | 'down') => void,
   onCopyMessage?: (message: UXChatMessage) => void,
   onDismissError?: (message: UXChatMessage) => void,
+  onDeleteToolCall?: (message: UXChatMessage, callId: string) => void,
 }) => {
 
-  const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError } = props;
+  const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError, onDeleteToolCall } = props;
   const { renderContent } = useContentRender(reactory);
 
   const {
@@ -132,6 +133,51 @@ const ChatList = (props: {
       return next;
     });
   }, []);
+
+  const [deleteConfirm, setDeleteConfirm] = React.useState<{
+    open: boolean;
+    message: UXChatMessage | null;
+    callId: string;
+    name: string;
+  } | null>(null);
+
+  const handleCopyToolResult = React.useCallback((text: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        reactory.log('Tool result copied to clipboard');
+      }).catch((err) => {
+        reactory.error('Failed to copy tool result', err);
+      });
+    }
+  }, [reactory]);
+
+  const activeMaximizedData = React.useMemo(() => {
+    if (!maximizedToolResult) return null;
+    const [msgId, callId] = maximizedToolResult.split(':');
+    const msg = messages.find(m => String(m.id) === msgId);
+    if (!msg || !Array.isArray(msg.tool_calls)) return null;
+    const call = msg.tool_calls.filter(Boolean).find((tc: any, i: number) => (tc.id ?? `${msg.id}-${i}`) === callId);
+    if (!call) return null;
+    // @ts-ignore
+    const name = call.function?.name ?? call.name ?? 'unknown';
+    const callStatus = getToolCallStatus(msg, callId);
+    const resultPayload = msg.tool_results?.find((r: any) => r.id === callId);
+    const errorPayload = msg.tool_errors?.find((e: any) => e.id === callId);
+    const rawContent = errorPayload
+      ? String(errorPayload.error ?? jsonToYaml(errorPayload))
+      : typeof resultPayload?.content === 'string'
+      ? resultPayload.content
+      : jsonToYaml(resultPayload?.content ?? resultPayload);
+
+    return {
+      msg,
+      call,
+      callId,
+      name,
+      callStatus,
+      rawContent,
+    };
+  }, [maximizedToolResult, messages]);
 
   const scrollToBottom = () => {
     if (listRef.current) {
@@ -744,64 +790,88 @@ const ChatList = (props: {
                                         </span>
                                       </Tooltip>
                                     )}
+                                    {onDeleteToolCall && (
+                                      <Tooltip title="Delete tool call & result">
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteConfirm({ open: true, message, callId, name });
+                                          }}
+                                          sx={{
+                                            p: 0.125,
+                                            ml: 0.25,
+                                            color: 'text.disabled',
+                                            '&:hover': { color: 'error.main' },
+                                          }}
+                                        >
+                                          <Icon sx={{ fontSize: '0.85rem' }}>delete_outline</Icon>
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
                                   </Box>
 
                                   {/* Collapsible result panel */}
                                   {isExpanded && (
                                     <Box
-                                      sx={isMaximized ? {
-                                        position: 'fixed',
-                                        top: 6,
-                                        left: 6,
-                                        right: 6,
-                                        bottom: 6,
-                                        zIndex: 1300,
-                                        bgcolor: 'background.paper',
-                                        border: '1px solid',
-                                        borderColor: chipColor,
-                                        borderRadius: 2,
-                                        p: 2,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        boxShadow: 24,
-                                      } : {
-                                        mt: 0.25,
-                                        p: 0.75,
-                                        borderRadius: '4px',
+                                      sx={{
+                                        mt: 0.5,
+                                        p: 1,
+                                        borderRadius: '6px',
                                         bgcolor: chipBg,
                                         border: '1px solid',
                                         borderColor: chipColor,
-                                        width: '80%',
-                                        maxHeight: 240,
+                                        width: '100%',
+                                        maxHeight: 280,
                                         display: 'flex',
                                         flexDirection: 'column',
                                       }}
                                     >
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, borderBottom: isMaximized ? '1px solid' : 'none', borderColor: 'divider', pb: isMaximized ? 1 : 0 }}>
-                                        <Typography variant="caption" sx={{ fontWeight: 600, color: chipColor }}>
-                                          {isMaximized ? `Tool Result: ${name}` : ''}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                          {isMaximized ? (
-                                            <>
-                                              <Tooltip title="Minimize">
-                                                <IconButton size="small" onClick={() => setMaximizedToolResult(null)} sx={{ p: 0.25 }}>
-                                                  <Icon sx={{ fontSize: '1rem', color: chipColor }}>fullscreen_exit</Icon>
-                                                </IconButton>
-                                              </Tooltip>
-                                              <Tooltip title="Close">
-                                                <IconButton size="small" onClick={() => { setMaximizedToolResult(null); toggleToolResult(expandKey); }} sx={{ p: 0.25 }}>
-                                                  <Icon sx={{ fontSize: '1rem', color: chipColor }}>close</Icon>
-                                                </IconButton>
-                                              </Tooltip>
-                                            </>
-                                          ) : (
-                                            <Tooltip title="Maximize">
-                                              <IconButton size="small" onClick={() => setMaximizedToolResult(expandKey)} sx={{ p: 0.25 }}>
-                                                <Icon sx={{ fontSize: '1rem', color: chipColor }}>fullscreen</Icon>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, pb: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                          <Icon sx={{ fontSize: '0.9rem', color: chipColor }}>{callIcon}</Icon>
+                                          <Typography variant="caption" sx={{ fontWeight: 600, color: chipColor, fontFamily: 'monospace' }}>
+                                            Result: {name}
+                                          </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                          <Tooltip title="Copy result">
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => {
+                                                const textToCopy = errorPayload
+                                                  ? String(errorPayload.error ?? jsonToYaml(errorPayload))
+                                                  : typeof resultPayload?.content === 'string'
+                                                  ? resultPayload.content
+                                                  : jsonToYaml(resultPayload?.content ?? resultPayload);
+                                                handleCopyToolResult(textToCopy);
+                                              }}
+                                              sx={{ p: 0.25 }}
+                                            >
+                                              <Icon sx={{ fontSize: '0.95rem', color: chipColor }}>content_copy</Icon>
+                                            </IconButton>
+                                          </Tooltip>
+                                          {onDeleteToolCall && (
+                                            <Tooltip title="Delete tool call & result">
+                                              <IconButton
+                                                size="small"
+                                                onClick={() => setDeleteConfirm({ open: true, message, callId, name })}
+                                                sx={{ p: 0.25, '&:hover': { color: 'error.main' } }}
+                                              >
+                                                <Icon sx={{ fontSize: '0.95rem', color: 'error.main' }}>delete_outline</Icon>
                                               </IconButton>
                                             </Tooltip>
                                           )}
+                                          <Tooltip title="Maximize to full view">
+                                            <IconButton size="small" onClick={() => setMaximizedToolResult(expandKey)} sx={{ p: 0.25 }}>
+                                              <Icon sx={{ fontSize: '1rem', color: chipColor }}>fullscreen</Icon>
+                                            </IconButton>
+                                          </Tooltip>
+                                          <Tooltip title="Collapse">
+                                            <IconButton size="small" onClick={() => toggleToolResult(expandKey)} sx={{ p: 0.25 }}>
+                                              <Icon sx={{ fontSize: '1rem', color: chipColor }}>expand_less</Icon>
+                                            </IconButton>
+                                          </Tooltip>
                                         </Box>
                                       </Box>
                                       <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
@@ -810,7 +880,8 @@ const ChatList = (props: {
                                           component="pre"
                                           sx={{
                                             fontFamily: 'monospace',
-                                            fontSize: isMaximized ? '0.8rem' : '0.65rem',
+                                            fontSize: '0.72rem',
+                                            lineHeight: 1.4,
                                             color: callStatus === 'error' ? 'error.main' : 'text.secondary',
                                             whiteSpace: 'pre-wrap',
                                             wordBreak: 'break-all',
@@ -1024,6 +1095,178 @@ const ChatList = (props: {
           </React.Fragment>
         ))}
       </List>
+
+      {/* Maximized Tool Result Dialog */}
+      {activeMaximizedData && (
+        <Dialog
+          open={Boolean(maximizedToolResult)}
+          onClose={() => setMaximizedToolResult(null)}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: {
+              height: '85vh',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              bgcolor: 'background.paper',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 24,
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              py: 1.5,
+              px: 2.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Icon
+                sx={{
+                  fontSize: '1.25rem',
+                  color:
+                    activeMaximizedData.callStatus === 'success' ? 'success.main' :
+                    activeMaximizedData.callStatus === 'error' ? 'error.main' :
+                    'warning.main',
+                }}
+              >
+                {activeMaximizedData.callStatus === 'success' ? 'check_circle' :
+                 activeMaximizedData.callStatus === 'error' ? 'error' : 'build'}
+              </Icon>
+              <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '1rem' }}>
+                Tool Result: {activeMaximizedData.name}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Copy to clipboard">
+                <IconButton
+                  size="small"
+                  onClick={() => handleCopyToolResult(activeMaximizedData.rawContent)}
+                >
+                  <Icon sx={{ fontSize: '1.2rem' }}>content_copy</Icon>
+                </IconButton>
+              </Tooltip>
+              {onDeleteToolCall && (
+                <Tooltip title="Delete tool call & result">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setDeleteConfirm({
+                        open: true,
+                        message: activeMaximizedData.msg,
+                        callId: activeMaximizedData.callId,
+                        name: activeMaximizedData.name,
+                      });
+                    }}
+                    sx={{ color: 'error.main' }}
+                  >
+                    <Icon sx={{ fontSize: '1.2rem' }}>delete_outline</Icon>
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title="Close">
+                <IconButton size="small" onClick={() => setMaximizedToolResult(null)}>
+                  <Icon sx={{ fontSize: '1.2rem' }}>close</Icon>
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </DialogTitle>
+          <DialogContent
+            sx={{
+              flex: 1,
+              overflowY: 'auto',
+              p: 2.5,
+              bgcolor: mode === 'dark' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.02)',
+            }}
+          >
+            <Typography
+              component="pre"
+              sx={{
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                lineHeight: 1.5,
+                color: activeMaximizedData.callStatus === 'error' ? 'error.main' : 'text.primary',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                m: 0,
+              }}
+            >
+              {activeMaximizedData.rawContent}
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 2.5, py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button
+              onClick={() => handleCopyToolResult(activeMaximizedData.rawContent)}
+              startIcon={<Icon>content_copy</Icon>}
+              size="small"
+            >
+              Copy
+            </Button>
+            <Button
+              onClick={() => setMaximizedToolResult(null)}
+              variant="contained"
+              size="small"
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* Delete Tool Call Confirmation Dialog */}
+      {deleteConfirm && (
+        <Dialog
+          open={deleteConfirm.open}
+          onClose={() => setDeleteConfirm(null)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Icon sx={{ color: 'error.main' }}>delete_outline</Icon>
+            Delete Tool Call
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              Are you sure you want to delete the tool call <strong>"{deleteConfirm.name}"</strong> and its result from this conversation?
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setDeleteConfirm(null)} size="small">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const { message, callId } = deleteConfirm;
+                if (maximizedToolResult === `${message?.id}:${callId}`) {
+                  setMaximizedToolResult(null);
+                }
+                setExpandedToolResults(prev => {
+                  const next = new Set(prev);
+                  next.delete(`${message?.id}:${callId}`);
+                  return next;
+                });
+                if (message && callId) {
+                  onDeleteToolCall?.(message, callId);
+                }
+                setDeleteConfirm(null);
+              }}
+              color="error"
+              variant="contained"
+              size="small"
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </div>
   );
 };

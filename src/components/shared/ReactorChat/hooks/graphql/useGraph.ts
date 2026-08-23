@@ -18,6 +18,7 @@ import REACTOR_SET_TOOL_APPROVAL_MODE from "./mutations/ReactorSetChatToolApprov
 import REACTOR_ATTACH_FILE from "./mutations/ReactorAttachFile.graphql";
 import REACTOR_ASK_AUDIO from "./mutations/ReactorAskQuestionAudio.graphql";
 import REACTOR_DELETE_CHAT from "./mutations/ReactorDeleteChatSession.graphql";
+import REACTOR_DELETE_TOOL_CALL from "./mutations/ReactorDeleteToolCall.graphql";
 import REACTOR_COMPACT_CONVERSATION from "./mutations/ReactorCompactConversation.graphql";
 import REACTOR_EXECUTE_MACRO from "./mutations/ReactorExecuteMacro.graphql";
 import REACTOR_EXECUTE_TOOL from "./mutations/ReactorExecuteTool.graphql";
@@ -296,6 +297,18 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorDeleteChatSession ?? false;
   };
 
+  const deleteToolCall = async (
+    chatSessionId: string,
+    toolCallId: string,
+    messageId?: string
+  ): Promise<boolean> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorDeleteToolCall: boolean },
+      { chatSessionId: string; toolCallId: string; messageId?: string }
+    >(REACTOR_DELETE_TOOL_CALL as any, { chatSessionId, toolCallId, messageId });
+    return response?.data?.ReactorDeleteToolCall ?? false;
+  };
+
   const compactConversation = async (chatSessionId: string): Promise<{
     success: boolean;
     messagesArchived: number;
@@ -526,6 +539,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     attachFile,
     askQuestionAudio,
     deleteChatSession,
+    deleteToolCall,
     compactConversation,
     getConversation,
     patchSystemPrompt,

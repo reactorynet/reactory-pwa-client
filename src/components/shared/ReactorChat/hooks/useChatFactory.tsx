@@ -32,6 +32,8 @@ interface ChatFactoryHookResult {
   setChats: React.Dispatch<React.SetStateAction<any[]>>
   // function to delete a chat by id
   deleteChat: (chatSessionId: string) => Promise<void>
+  /** Deletes a tool call and its result from the active chat history */
+  deleteToolCall: (toolCallId: string, messageId?: string) => Promise<void>
   // sends an audio file to the chat session
   sendAudio: (audio: File | Blob, chatSessionId: string) => Promise<void>
   // uploads a file to the chat session
@@ -1999,6 +2001,60 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
+  const deleteToolCall = async (toolCallId: string, messageId?: string) => {
+    sessionLogger?.info('Deleting tool call', { toolCallId, messageId, sessionId: chatState?.id }, 'useChatFactory');
+
+    // Optimistically update local chatState so UI updates immediately
+    setChatState((prevState) => {
+      if (!prevState?.history) return prevState;
+      const updatedHistory = prevState.history
+        .map((msg: any) => {
+          const isTarget = messageId ? (msg.id?.toString() === messageId || msg.id === messageId) : true;
+          if (isTarget && Array.isArray(msg.tool_calls) && msg.tool_calls.some((tc: any) => tc.id === toolCallId)) {
+            const remainingCalls = msg.tool_calls.filter((tc: any) => tc.id !== toolCallId);
+            const remainingResults = (msg.tool_results || []).filter((r: any) => r.id !== toolCallId && r.toolCallId !== toolCallId);
+            const remainingErrors = (msg.tool_errors || []).filter((e: any) => e.id !== toolCallId);
+
+            return {
+              ...msg,
+              tool_calls: remainingCalls,
+              tool_results: remainingResults,
+              tool_errors: remainingErrors,
+            };
+          }
+          return msg;
+        })
+        .filter((msg: any) => {
+          // Remove standalone tool message if it corresponds to this tool call
+          if (msg.role === 'tool' && (msg.tool_call_id === toolCallId || msg.id === toolCallId)) {
+            return false;
+          }
+          // Remove assistant messages that only had this tool call and have no other content
+          if (msg.role === 'assistant' &&
+            (!msg.content || (typeof msg.content === 'string' && (msg.content.trim().length === 0 || msg.content.startsWith('Calling tool:') || msg.content === 'Processing...'))) &&
+            (!msg.tool_calls || msg.tool_calls.length === 0) &&
+            (!msg.thinking || msg.thinking.trim().length === 0) &&
+            (!msg.images || msg.images.length === 0)) {
+            return false;
+          }
+          return true;
+        });
+
+      return {
+        ...prevState,
+        history: updatedHistory,
+      };
+    });
+
+    try {
+      if (chatState?.id) {
+        await graph.deleteToolCall(chatState.id, toolCallId, messageId);
+      }
+    } catch (error) {
+      onError(error);
+    }
+  };
+
   const newChat = async (): Promise<string | null> => {
     sessionLogger?.info('Starting new chat', { personaId: persona?.id }, 'useChatFactory');
     setBusy(true);
@@ -3562,6 +3618,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     chats,
     setChats,
     deleteChat,
+    deleteToolCall,
     uploadFile,
     pinUserFileForChat,
     unpinUserFileForChat,

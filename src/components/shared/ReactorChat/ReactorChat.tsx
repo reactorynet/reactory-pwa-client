@@ -323,6 +323,7 @@ export default (props) => {
     chats,
     setChats,
     deleteChat,
+    deleteToolCall,
     isInitialized,
     isStreaming = false,
     currentStreamingMessage = '',
@@ -411,6 +412,10 @@ export default (props) => {
       history: prevState.history.filter((msg) => msg.id !== message.id),
     }));
   }, [setChatState]);
+
+  const handleDeleteToolCall = React.useCallback((message: any, callId: string) => {
+    deleteToolCall(callId, message?.id);
+  }, [deleteToolCall]);
 
   // Persist side panel state to server (debounced by useSidePanel)
   const handleSidePanelPersist = React.useCallback((state: SidePanelState) => {
@@ -2146,6 +2151,7 @@ export default (props) => {
                   onRateMessage={handleRateMessage}
                   onCopyMessage={handleCopyMessage}
                   onDismissError={handleDismissError}
+                  onDeleteToolCall={handleDeleteToolCall}
                 />
               )}
             </Paper>

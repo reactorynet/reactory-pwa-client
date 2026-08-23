@@ -1,0 +1,3 @@
+mutation ReactorDeleteToolCall($chatSessionId: String!, $toolCallId: String!, $messageId: String) {
+  ReactorDeleteToolCall(chatSessionId: $chatSessionId, toolCallId: $toolCallId, messageId: $messageId)
+}
