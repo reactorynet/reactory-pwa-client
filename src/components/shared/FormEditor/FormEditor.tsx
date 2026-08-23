@@ -43,6 +43,92 @@ const stripTypename = (value: any): any => {
   return value;
 };
 
+/**
+ * The General tab renders the form's base configuration through a ReactoryForm.
+ * A flat wall of 13 inputs reads poorly, so the schema groups the fields into
+ * four sections and the layout engine renders each group as its own titled
+ * panel (a nested `GridLayout` field per group, see `getUISchema('base')`).
+ *
+ * The editor state and the `ReactoryFormInput` save payload are both flat, so
+ * the base config is projected into these groups on the way into the form and
+ * flattened again on the way out.
+ */
+const GENERAL_SECTIONS: Record<string, string[]> = {
+  identity: ['nameSpace', 'name', 'version', 'id'],
+  presentation: ['title', 'description', 'icon', 'avatar'],
+  behaviour: ['uiFramework', 'registerAsComponent', 'backButton'],
+  metadata: ['roles', 'components', 'tags', 'helpTopics'],
+};
+
+/** Base config fields that must always reach the form as an array. */
+const GENERAL_ARRAY_FIELDS = ['roles', 'components', 'tags', 'helpTopics'];
+/** Base config fields that must always reach the form as a boolean. */
+const GENERAL_BOOLEAN_FIELDS = ['registerAsComponent', 'backButton'];
+
+/** Projects the flat base config onto the grouped shape the General form uses. */
+const toGeneralFormData = (flat: any = {}): Record<string, any> => {
+  const grouped: Record<string, any> = {};
+  Object.keys(GENERAL_SECTIONS).forEach((section) => {
+    const values: Record<string, any> = {};
+    GENERAL_SECTIONS[section].forEach((key) => {
+      const value = flat?.[key];
+      if (GENERAL_ARRAY_FIELDS.includes(key)) values[key] = Array.isArray(value) ? value : [];
+      else if (GENERAL_BOOLEAN_FIELDS.includes(key)) values[key] = value === true;
+      else values[key] = value;
+    });
+    grouped[section] = values;
+  });
+  return grouped;
+};
+
+/** Flattens the grouped General form data back to the flat base config shape. */
+const fromGeneralFormData = (grouped: any = {}): Record<string, any> => {
+  const flat: Record<string, any> = {};
+  Object.keys(GENERAL_SECTIONS).forEach((section) => {
+    const values = grouped?.[section];
+    if (!values || typeof values !== 'object') return;
+    GENERAL_SECTIONS[section].forEach((key) => {
+      if (values[key] !== undefined) flat[key] = values[key];
+    });
+  });
+  return flat;
+};
+
+/**
+ * Grid sizes. MaterialGridField defaults every breakpoint it is not given to
+ * 12, so a partial set (e.g. `{ sm: 6 }`) silently widens back to full width at
+ * the next breakpoint up - each size therefore spells out every breakpoint.
+ */
+const SIZE_FULL = { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 };
+const SIZE_HALF = { xs: 12, sm: 6, md: 6, lg: 6, xl: 6 };
+const SIZE_THIRD = { xs: 12, sm: 4, md: 4, lg: 4, xl: 4 };
+const SIZE_TWO_THIRDS = { xs: 12, sm: 8, md: 8, lg: 8, xl: 8 };
+
+/** Renders a section group as an outlined card rather than the default Paper. */
+const SECTION_GRID_OPTIONS = {
+  container: 'Paper',
+  spacing: 2,
+  containerStyles: {},
+  containerProps: {
+    elevation: 0,
+    variant: 'outlined',
+    sx: {
+      p: 2.5,
+      borderRadius: 2,
+      width: '100%',
+    },
+  },
+};
+
+/** Tones the section heading down from the TitleField default of h5. */
+const SECTION_TITLE_STYLE = {
+  fontSize: '0.9375rem',
+  fontWeight: 600,
+  letterSpacing: '0.02em',
+  textTransform: 'uppercase' as const,
+  marginBottom: '2px',
+};
+
 interface FormEditorProps {
   /** The id of an existing form to load and edit. Use "new" (or omit) for a blank form. */
   formId?: string;
@@ -436,25 +522,58 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   const getSchema = useCallback((which: string): any => {
     switch(which) {
       case 'base': {
+        // Grouped into the four sections the layout engine renders as panels.
+        // Section titles / descriptions are rendered by the nested GridLayout
+        // field (TitleField + DescriptionField); field descriptions become the
+        // helper text under each input.
         return {
           type: 'object',
-          title: 'Form Base Config',
-          description: 'Use base configuration input to edit basics for your form',
-          required: ['id', 'name', 'nameSpace', 'version'],
           properties: {
-            id: { title: 'ID', type: 'string', description: 'Provide a unique id for your form' },
-            nameSpace: { type: 'string', title: 'Namespace', description: 'Form namespace (e.g. "core", "my-app")' },
-            name: { type: 'string', title: 'Name', description: 'Form name' },
-            version: { type: 'string', title: 'Version', description: 'Semantic version (e.g. 1.0.0)' },
-            title: { type: 'string', title: 'Form title' },
-            description: { type: 'string', title: 'Form Description' },
-            uiFramework: { type: 'string', title: 'UI Framework', description: 'Select the UI Framework for your form' },
-            icon: { type: 'string', title: 'Icon'},
-            avatar: { type: 'string', title: 'Avatar / Image' },
-            registerAsComponent: { type: 'boolean', title: 'Register as Component', description: 'Should this form be registered as a component?' },
-            roles: { type: 'array', title: 'Allowed Roles', items: { type: 'string' } },
-            components: { type: 'array', title: 'Required Components', items: { type: 'string' } }
-          }
+            identity: {
+              type: 'object',
+              title: 'Identity',
+              description: 'Namespace, name and version address the form in the registry. The id is the key used for routes and for the YAML overlay this editor writes.',
+              required: ['nameSpace', 'name', 'version', 'id'],
+              properties: {
+                nameSpace: { type: 'string', title: 'Namespace', description: 'Groups related forms, e.g. core or my-app' },
+                name: { type: 'string', title: 'Name', description: 'Form name in PascalCase, e.g. UserProfile' },
+                version: { type: 'string', title: 'Version', description: 'Semantic version, e.g. 1.0.0' },
+                id: { type: 'string', title: 'Form ID', description: 'Unique id for the form. Convention: namespace.Name@version' },
+              },
+            },
+            presentation: {
+              type: 'object',
+              title: 'Presentation',
+              description: 'How the form introduces itself in lists, headers and navigation.',
+              properties: {
+                title: { type: 'string', title: 'Display title', description: 'Shown in headers and in the form list. Falls back to the form name.' },
+                icon: { type: 'string', title: 'Icon' },
+                description: { type: 'string', title: 'Description', description: 'A sentence or two describing what the form is for.' },
+                avatar: { type: 'string', title: 'Avatar / image' },
+              },
+            },
+            behaviour: {
+              type: 'object',
+              title: 'Behaviour',
+              description: 'Runtime rendering and navigation options.',
+              properties: {
+                uiFramework: { type: 'string', title: 'UI Framework', description: 'The widget package used to render the form' },
+                registerAsComponent: { type: 'boolean', title: 'Register as component', description: 'Expose the form in the component registry so other forms can embed it' },
+                backButton: { type: 'boolean', title: 'Show back button', description: 'Render a back button in the form toolbar' },
+              },
+            },
+            metadata: {
+              type: 'object',
+              title: 'Access & metadata',
+              description: 'Who may load the form, what it depends on, and how it is catalogued.',
+              properties: {
+                roles: { type: 'array', title: 'Allowed roles', items: { type: 'string' } },
+                components: { type: 'array', title: 'Required components', items: { type: 'string' } },
+                tags: { type: 'array', title: 'Tags', items: { type: 'string' } },
+                helpTopics: { type: 'array', title: 'Help topics', items: { type: 'string' } },
+              },
+            },
+          },
         };
       }
       case 'preview': {
@@ -469,73 +588,169 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     switch(which) {
       case 'base': {
         return {
-          "ui:options": {
-            // The editor owns persistence via its own Save button, so the base
-            // config form should not render a submit or refresh button. The
-            // help button remains available for field guidance.
+          // The editor owns persistence via its own Save / Reload toolbar, so
+          // the base config form renders no toolbar of its own - every button
+          // is off and the bar is collapsed rather than left empty. Field
+          // guidance now comes from the schema descriptions (rendered as helper
+          // text) instead of the help button, which had no content behind the
+          // `form-editor-help-base` topic. `componentType: div` keeps this out
+          // of a nested <form> element - the editor is already rendered inside
+          // the tab panel of a larger surface.
+          "ui:form": {
+            componentType: 'div',
             showSubmit: false,
             showRefresh: false,
-            showHelp: true
+            showHelp: false,
+            toolbarPosition: 'bottom',
+            toolbarStyle: { display: 'none', height: 0 },
+            style: { width: '100%' },
           },
+          // Root layout: one grid row holding the four section groups so a
+          // single container owns the vertical rhythm between the panels.
           "ui:field": "GridLayout",
+          "ui:grid-options": {
+            container: 'div',
+            spacing: 3,
+            containerStyles: {},
+          },
           "ui:grid-layout": [
             {
-              nameSpace: { xs: 12, sm: 4 },
-              name: { xs: 12, sm: 4 },
-              version: { xs: 12, sm: 4 }
+              identity: { size: SIZE_FULL },
+              presentation: { size: SIZE_FULL },
+              behaviour: { size: SIZE_FULL },
+              metadata: { size: SIZE_FULL },
             },
-            {
-              id: { xs: 12, sm: 12, md: 6 },
-              title: { xs: 12, sm: 12, md: 6 }
-            },
-            {
-              description: { xs: 12, sm: 12, md: 12, lg: 12 }
-            },
-            {
-              uiFramework: { xs: 12, sm: 12, md: 6, lg: 3 },
-              icon: { xs: 12, sm: 12, md: 6, lg: 3 },
-              avatar: { 
-                xs: 12, sm: 12, md: 12, lg: 12, sx: {
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                  outline: '1px solid #ddd'
-                } 
-              }
-            },
-            {
-              registerAsComponent: { xs: 12 }
-            },
-            {
-              roles: { xs: 12, sm: 6 },
-              components: { xs: 12, sm: 6 }
-            }
           ],
-          avatar: {
-            "ui:title": "",
-            "ui:widget": "ImageWidget",
-            "ui:options": {
-              variant: "image",
-              size: "medium"
-            }
+
+          identity: {
+            "ui:field": "GridLayout",
+            "ui:title": { title: 'Identity', jss: SECTION_TITLE_STYLE },
+            "ui:grid-options": SECTION_GRID_OPTIONS,
+            "ui:grid-layout": [
+              {
+                nameSpace: { size: SIZE_THIRD },
+                name: { size: SIZE_THIRD },
+                version: { size: SIZE_THIRD },
+              },
+              {
+                id: { size: SIZE_FULL },
+              },
+            ],
           },
-          icon: {            
-            "ui:widget": "IconPickerWidget",
-            "ui:options": {
-              label: "Select Icon",
-              variant: "popover"
-            }
+
+          presentation: {
+            "ui:field": "GridLayout",
+            "ui:title": { title: 'Presentation', jss: SECTION_TITLE_STYLE },
+            "ui:grid-options": SECTION_GRID_OPTIONS,
+            "ui:grid-layout": [
+              {
+                title: { size: SIZE_TWO_THIRDS },
+                icon: { size: SIZE_THIRD },
+              },
+              {
+                description: { size: SIZE_FULL },
+              },
+              {
+                avatar: { size: SIZE_HALF },
+              },
+            ],
+            // Multiline needs the TextField renderer; the field template skips
+            // its own helper text for that renderer, so it is passed through.
+            description: {
+              "ui:options": {
+                component: 'TextField',
+                componentProps: {
+                  multiline: true,
+                  minRows: 3,
+                  helperText: 'A sentence or two describing what the form is for.',
+                },
+              },
+            },
+            // IconPicker renders its own labelled input - suppress the field
+            // template label so it is not shown twice.
+            icon: {
+              "ui:widget": "IconPickerWidget",
+              "ui:options": {
+                showLabel: false,
+                variant: "popover",
+              },
+            },
+            // The field template's un-shrunk label would sit over the image
+            // box, so the widget names itself through its placeholder instead.
+            avatar: {
+              "ui:widget": "ImageWidget",
+              "ui:options": {
+                showLabel: false,
+                variant: "avatar",
+                avatarVariant: "rounded",
+                size: "large",
+                rootPath: "/images",
+                placeholder: "Avatar / image",
+              },
+            },
           },
-          uiFramework: {
-            "ui:widget": "SelectWidget",
-            "ui:options": {
-              selectOptions: [
-                { key: 'material', value: 'material', label: 'Material UI' },
-                { key: 'bootstrap', value: 'bootstrap', label: 'Bootstrap' },
-              ]
-            }
-          }
+
+          behaviour: {
+            "ui:field": "GridLayout",
+            "ui:title": { title: 'Behaviour', jss: SECTION_TITLE_STYLE },
+            "ui:grid-options": SECTION_GRID_OPTIONS,
+            "ui:grid-layout": [
+              {
+                uiFramework: { size: SIZE_THIRD },
+                registerAsComponent: { size: SIZE_THIRD },
+                backButton: { size: SIZE_THIRD },
+              },
+            ],
+            uiFramework: {
+              "ui:widget": "SelectWidget",
+              "ui:options": {
+                selectOptions: [
+                  { key: 'material', value: 'material', label: 'Material UI' },
+                  { key: 'bootstrap', value: 'bootstrap', label: 'Bootstrap' },
+                ],
+              },
+            },
+            registerAsComponent: {
+              "ui:options": { yesLabel: 'Registered', noLabel: 'Not registered' },
+            },
+            backButton: {
+              "ui:options": { yesLabel: 'Shown', noLabel: 'Hidden' },
+            },
+          },
+
+          metadata: {
+            "ui:field": "GridLayout",
+            "ui:title": { title: 'Access & metadata', jss: SECTION_TITLE_STYLE },
+            "ui:grid-options": SECTION_GRID_OPTIONS,
+            "ui:grid-layout": [
+              {
+                roles: { size: SIZE_HALF },
+                components: { size: SIZE_HALF },
+              },
+              {
+                tags: { size: SIZE_HALF },
+                helpTopics: { size: SIZE_HALF },
+              },
+            ],
+            // Arrays get no label from the field template, so the chip arrays
+            // opt in to rendering the schema title themselves.
+            roles: {
+              "ui:widget": "ChipArrayWidget",
+              "ui:options": { showLabel: true, placeholder: 'Add a role and press Enter...' },
+            },
+            components: {
+              "ui:widget": "ChipArrayWidget",
+              "ui:options": { showLabel: true, placeholder: 'Add a component FQN and press Enter...' },
+            },
+            tags: {
+              "ui:widget": "ChipArrayWidget",
+              "ui:options": { showLabel: true, placeholder: 'Add a tag and press Enter...' },
+            },
+            helpTopics: {
+              "ui:widget": "ChipArrayWidget",
+              "ui:options": { showLabel: true, placeholder: 'Add a help topic and press Enter...' },
+            },
+          },
         };
       }
       case 'preview': {
@@ -573,6 +788,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   const getDataMap = useCallback((which: string): any => {
     switch(which) {
       case 'base':
+        // Flat base config, grouped for the form by toGeneralFormData.
         return {
           id: state.reactoryForm.id,
           nameSpace: state.reactoryForm.nameSpace,
@@ -580,12 +796,15 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           version: state.reactoryForm.version,
           title: state.reactoryForm.title,
           description: state.reactoryForm.description,
-          uiFramework: state.reactoryForm.uiFramework,
+          uiFramework: state.reactoryForm.uiFramework || 'material',
           icon: state.reactoryForm.icon,
           avatar: state.reactoryForm.avatar,
           registerAsComponent: state.reactoryForm.registerAsComponent,
+          backButton: state.reactoryForm.backButton,
           roles: state.reactoryForm.roles || [],
-          components: state.reactoryForm.components || []
+          components: state.reactoryForm.components || [],
+          tags: state.reactoryForm.tags || [],
+          helpTopics: state.reactoryForm.helpTopics || []
         };
       default:
         return {};
@@ -612,14 +831,69 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     []
   );
 
-  // Snapshot the base form data once per loaded form. Keeping this reference
-  // stable across re-renders prevents the child form from resetting its own
-  // internal state while the user is editing other tabs.
+  // Snapshot the base form data, projected onto the grouped shape the General
+  // layout expects. The reference stays stable while the user types, which is
+  // what stops the child form resetting its own internal state mid-edit.
+  //
+  // TabPanel unmounts the General form when another tab is selected, so the
+  // snapshot is also rebuilt on tab change and layers the pending edits held in
+  // generalDataRef over the loaded definition. Without that, returning to the
+  // tab redisplayed the originally loaded values while the ref (and therefore
+  // the save payload) still held the edits.
   const generalFormData = useMemo(
-    () => getDataMap('base'),
+    () => toGeneralFormData({ ...getDataMap('base'), ...(generalDataRef.current || {}) }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [generalInstanceKey]
+    [generalInstanceKey, activeTab]
   );
+
+  // Stable handler for the General form. Recreating this on every render would
+  // change the child's props identity - see the generalForm memo below for why
+  // that matters.
+  const handleGeneralChange = useCallback((formData: any) => {
+    // The layout groups the base config into sections, so flatten it back
+    // before merging. Edits accumulate in a ref only – no setState here – so
+    // the child form is not re-rendered / reset while the user is typing.
+    const flattened = fromGeneralFormData(formData);
+    generalDataRef.current = {
+      ...(generalDataRef.current || {}),
+      ...flattened
+    };
+    markDirty();
+    onChange?.(flattened);
+  }, [markDirty, onChange]);
+
+  // The rendered element is memoized, not just its props.
+  //
+  // ReactoryForm's data manager re-runs its initial fetch whenever the props
+  // *object identity* it was given changes (useDataManager's getData effect
+  // depends on `props.props`). JSX allocates a fresh props object on every
+  // render of this component, so any re-render here re-initialised the General
+  // form - visible as the whole tab reloading. It happened on the first edit
+  // only because that is the one edit that flips isDirty (and so re-renders
+  // this component); markDirty is a no-op from then on.
+  //
+  // Holding the element itself lets React skip the subtree entirely when
+  // nothing it depends on has changed, which keeps the props object identical.
+  const generalForm = useMemo(() => (
+    <ReactoryForm
+      key={`form-editor-general-${generalInstanceKey}`}
+      formDef={generalFormDef}
+      formData={generalFormData}
+      onChange={handleGeneralChange}
+    />
+  ), [generalInstanceKey, generalFormDef, generalFormData, handleGeneralChange]);
+
+  // Same reasoning for the preview: `getFormDefinition('preview')` and an
+  // inline `formData={{}}` allocated new objects on every render, so the
+  // preview re-fetched and remounted continuously.
+  const previewFormDef = useMemo(
+    () => getFormDefinition('preview'),
+    [getFormDefinition]
+  );
+  const previewFormData = useMemo(() => ({}), []);
+  const previewForm = useMemo(() => (
+    <ReactoryForm formDef={previewFormDef} formData={previewFormData} />
+  ), [previewFormDef, previewFormData]);
 
   return (
     <>
@@ -715,24 +989,15 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </Box>
 
       <TabPanel value={activeTab} index={0}>
-        <Typography variant="h6" gutterBottom>
-          Form Configuration
-        </Typography>
-        <ReactoryForm
-          key={`form-editor-general-${generalInstanceKey}`}
-          formDef={generalFormDef}
-          formData={generalFormData}
-          onChange={(formData) => {
-            // Accumulate edits in a ref only – no setState here – so the child
-            // form is not re-rendered / reset while the user is typing.
-            generalDataRef.current = {
-              ...(generalDataRef.current || {}),
-              ...(formData as object)
-            };
-            markDirty();
-            onChange?.(formData);
-          }}
-        />
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="h6">
+            Form configuration
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            The base definition of the form. Identity fields are required before the form can be saved.
+          </Typography>
+        </Box>
+        {generalForm}
       </TabPanel>
 
       <TabPanel value={activeTab} index={1}>
@@ -871,10 +1136,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
             <Typography variant="subtitle1" gutterBottom>
               Live Form Preview:
             </Typography>
-            <ReactoryForm
-              formDef={getFormDefinition('preview')}
-              formData={{}}
-            />
+            {previewForm}
           </Paper>
         ) : (
           <Paper elevation={1} sx={{ p: 3, mt: 2, textAlign: 'center' }}>

@@ -45,6 +45,13 @@ export default (props) => {
   const yesIconOptions = options.yesIconOptions || {};
   const noIconOptions = options.noIconOptions || {};
 
+  // The GridLayout / SchemaField chain does not pass a `title` prop down to the
+  // field, so relying on it alone rendered an empty FormLabel. Fall back to the
+  // ui:title override and then the schema title so the toggle is always named.
+  const fieldTitle = title
+    || (typeof uiSchema?.['ui:title'] === 'string' ? uiSchema['ui:title'] : undefined)
+    || schema?.title;
+
 
   if (uiSchema["ui:widget"]) {
     const Widget = registry.widgets[uiSchema["ui:widget"]]      
@@ -85,7 +92,7 @@ export default (props) => {
   if (!isReadOnly) {
     return (
       <FormControl>
-        <FormLabel>{title}</FormLabel>
+        {fieldTitle ? <FormLabel>{fieldTitle}</FormLabel> : null}
         <FormControlLabel
           control={
             <Switch
@@ -105,7 +112,7 @@ export default (props) => {
   // Readonly: just show the label and icon
   return (
     <FormControl>
-      <FormLabel>{title}</FormLabel>
+      {fieldTitle ? <FormLabel>{fieldTitle}</FormLabel> : null}
       {getLabel(formData)}          
     </FormControl>
   );

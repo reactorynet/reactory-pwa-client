@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { pullAt } from 'lodash';
 import {
   Chip,
+  FormLabel,
   IconButton,
   Icon,
   TextField,
@@ -86,12 +87,23 @@ const ChipArray = (props: any) => {
   const color = options.color || 'default';
   const maxDisplay = options.maxDisplay || 5;
 
+  // Arrays are not given a label by the field template, so a chip array in a
+  // multi-field layout renders without any indication of what it holds. The
+  // label is opt-in (set `label`, or `showLabel: true` to use the schema title)
+  // so existing consumers keep their current, unlabelled appearance.
+  const label: string | undefined = typeof options.label === 'string' && options.label.length > 0
+    ? options.label
+    : (options.showLabel === true ? schema?.title : undefined);
+
   // If readOnly and empty, display subtle fallback text
   if (isReadOnly && items.length === 0) {
     return (
-      <Typography variant="body2" color="textSecondary" style={{ fontStyle: 'italic', padding: '4px 0' }}>
-        (None)
-      </Typography>
+      <Root>
+        {label ? <FormLabel component="legend">{label}</FormLabel> : null}
+        <Typography variant="body2" color="textSecondary" style={{ fontStyle: 'italic', padding: '4px 0' }}>
+          (None)
+        </Typography>
+      </Root>
     );
   }
 
@@ -164,7 +176,18 @@ const ChipArray = (props: any) => {
     );
   });
 
-  const AddItemComponentWrapper = () => {
+  /**
+   * Renders the "add an item" input.
+   *
+   * This MUST stay a plain render function that is *called*, not a component
+   * that is rendered as <AddItemComponentWrapper />. Declaring a component
+   * inside the render body gives it a new function identity on every render, so
+   * React treats it as a different element type and unmounts / remounts the
+   * whole subtree - which tore down the TextField (and its focus and caret) on
+   * every keystroke. Calling it returns the same element type each time, so the
+   * input keeps its DOM node and only re-renders.
+   */
+  const renderAddItem = () => {
     if (options.addComponentFqn && reactory) {
       let AddItemComponent = reactory.getComponent(options.addComponentFqn);
       if (AddItemComponent) {
@@ -232,6 +255,9 @@ const ChipArray = (props: any) => {
 
   return (
     <Root>
+      {label ? (
+        <FormLabel component="legend" sx={{ fontSize: '0.75rem', mb: 0.5 }}>{label}</FormLabel>
+      ) : null}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', width: '100%' }}>
         {chips}
         {items.length > 0 && canDeleteAll && (
@@ -242,7 +268,7 @@ const ChipArray = (props: any) => {
           </Tooltip>
         )}
       </Box>
-      {canAdd && <AddItemComponentWrapper />}
+      {canAdd && renderAddItem()}
     </Root>
   );
 };

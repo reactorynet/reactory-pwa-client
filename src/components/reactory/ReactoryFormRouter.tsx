@@ -9,6 +9,7 @@ import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
 import { ReactoryForm } from './ReactoryForm';
 import FormList from '../shared/FormList';
+import type { FormListAction, FormItem } from '../shared/FormList';
 
 type ReactoryFormRouterDependecies = {
   MaterialCore: Reactory.Client.Web.MaterialCore;
@@ -122,54 +123,39 @@ const ReactoryFormRouter = (props) => {
     mode
   });
 
+  // FormList is rendered from several route shapes ("", /list, /favourites and
+  // the unmatched fallback). It is the single source of truth for a selection
+  // and it hands us the action it wants, so we perform exactly one navigation
+  // here. Previously each call site navigated to /view regardless of the action
+  // *in addition to* FormList's own navigate, which pushed two history entries
+  // and bounced /edit straight back to /view.
+  const renderFormList = (listMode: 'list' | 'favourites') => (
+    <FormList
+      mode={listMode}
+      routePrefix={routePrefix}
+      onFormSelect={(form: FormItem, action: FormListAction = 'view') => {
+        navigate(buildPath(`/${form.id}/${action}`));
+      }}
+      onCreateNew={() => {
+        navigate(buildPath('/new/develop'));
+      }}
+    />
+  );
+
   // Determine what to render based on the relative path
   const renderComponent = () => {
-    // Handle empty path or just "/"
+    // Handle empty path, just "/" or an explicit /list
     if (relativePath.length === 0) {
-      return (
-        <FormList 
-          mode="list" 
-          routePrefix={routePrefix}
-          onFormSelect={(form) => {
-            navigate(buildPath(`/${form.id}/view`));
-          }}
-          onCreateNew={() => {
-            navigate(buildPath('/new/develop'));
-          }}
-        />
-      );
+      return renderFormList('list');
     }
 
-    // Handle /list
     if (relativePath.length === 1 && relativePath[0] === 'list') {
-      return (
-        <FormList 
-          mode="list" 
-          routePrefix={routePrefix}
-          onFormSelect={(form) => {
-            navigate(buildPath(`/${form.id}/view`));
-          }}
-          onCreateNew={() => {
-            navigate(buildPath('/new/develop'));
-          }}
-        />
-      );
+      return renderFormList('list');
     }
 
     // Handle /favourites
     if (relativePath.length === 1 && relativePath[0] === 'favourites') {
-      return (
-        <FormList 
-          mode="favourites" 
-          routePrefix={routePrefix}
-          onFormSelect={(form) => {
-            navigate(buildPath(`/${form.id}/view`));
-          }}
-          onCreateNew={() => {
-            navigate(buildPath('/new/develop'));
-          }}
-        />
-      );
+      return renderFormList('favourites');
     }
 
     // Handle /new/develop
@@ -301,16 +287,7 @@ const ReactoryFormRouter = (props) => {
         <h3>Unmatched Route</h3>
         <p>Path: {location.pathname}</p>
         <p>Relative Path: {relativePath.join('/')}</p>
-        <FormList 
-          mode="list" 
-          routePrefix={routePrefix}
-          onFormSelect={(form) => {
-            navigate(buildPath(`/${form.id}/view`));
-          }}
-          onCreateNew={() => {
-            navigate(buildPath('/new/develop'));
-          }}
-        />
+        {renderFormList('list')}
       </div>
     );
   };

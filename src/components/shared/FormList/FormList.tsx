@@ -2,15 +2,25 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReactory } from '@reactory/client-core/api';
 
+/** The actions a form card / row can dispatch. */
+export type FormListAction = 'view' | 'edit' | 'develop';
+
 export interface FormListProps {
   mode?: 'list' | 'favourites';
   routePrefix?: string;
   searchQuery?: string;
-  onFormSelect?: (form: any) => void;
+  /**
+   * Selection handler. When supplied the consumer owns navigation and the list
+   * will NOT navigate itself - this avoids pushing two history entries (and two
+   * renders of the target route) for a single click. The requested action is
+   * forwarded so the consumer can route to view / edit / develop.
+   */
+  onFormSelect?: (form: FormItem, action: FormListAction) => void;
+  /** Create handler. When supplied the consumer owns navigation. */
   onCreateNew?: () => void;
 }
 
-interface FormItem {
+export interface FormItem {
   id: string;
   name: string;
   nameSpace: string;
@@ -241,29 +251,33 @@ const FormList: React.FC<FormListProps> = ({
     }
   }, [location.search]);
 
-  // Handle form selection
-  const handleFormSelect = useCallback((form: FormItem, action: 'view' | 'edit' | 'develop' = 'view') => {
+  // Handle form selection.
+  // Exactly one navigation must happen per selection. When a consumer supplies
+  // onFormSelect it owns the navigation (it knows the mount point of the route)
+  // and we hand it the requested action; otherwise we navigate ourselves using
+  // routePrefix. Doing both pushed two history entries - which made "back" need
+  // two presses and made an "edit" click land on the view route.
+  const handleFormSelect = useCallback((form: FormItem, action: FormListAction = 'view') => {
     reactory.log(`Form selected: ${form.name} for action: ${action}`);
-    const baseRoute = routePrefix ? `/${routePrefix}` : '';
-    const route = `${baseRoute}/${form.id}/${action}`;
-    
-    navigate(route);
-    
-    if (onFormSelect) {
-      onFormSelect(form);
-    }
-  }, [navigate, routePrefix, onFormSelect]);
 
-  // Handle create new form
-  const handleCreateNew = useCallback(() => {
+    if (onFormSelect) {
+      onFormSelect(form, action);
+      return;
+    }
+
     const baseRoute = routePrefix ? `/${routePrefix}` : '';
-    const route = `${baseRoute}/new/develop`;
-    
-    navigate(route);
-    
+    navigate(`${baseRoute}/${form.id}/${action}`);
+  }, [reactory, navigate, routePrefix, onFormSelect]);
+
+  // Handle create new form - same single-owner rule as handleFormSelect.
+  const handleCreateNew = useCallback(() => {
     if (onCreateNew) {
       onCreateNew();
+      return;
     }
+
+    const baseRoute = routePrefix ? `/${routePrefix}` : '';
+    navigate(`${baseRoute}/new/develop`);
   }, [navigate, routePrefix, onCreateNew]);
 
   // Handle favourite toggle
