@@ -64,14 +64,13 @@ const MaterialFieldTemplateFunction = (props) => {
   const reactory = useReactory();
   const theme = reactory.muiTheme;
   
-  
+  if (hidden === true || uiWidget === "HiddenWidget" || uiWidget === "hidden") {
+    return <>{children}</>
+  }
+
   if (uiOptions !== null) {
     showLabel = uiOptions.showLabel !== undefined && uiOptions.showLabel !== null ? uiOptions.showLabel === true : true;
     let _props = { ...props };
-
-    if (hidden === true || uiWidget === "HiddenWidget") {
-      return <>{children}</>
-    }
 
     if (uiOptions.componentFqn) {
       Widget = reactory.getComponent(uiOptions.componentFqn);            
