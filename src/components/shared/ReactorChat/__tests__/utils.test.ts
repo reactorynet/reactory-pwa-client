@@ -7,6 +7,7 @@ import {
   summarizeContext,
   getSystemPromptInfo,
   formatCount,
+  arePanelPropsEqual,
 } from '../utils';
 
 describe('toCamelCaseLabel', () => {
@@ -325,5 +326,47 @@ describe('formatCount', () => {
     expect(formatCount(999)).toBe('999');
     expect(formatCount(12400)).toBe('12.4k');
     expect(formatCount(2_500_000)).toBe('2.50M');
+  });
+});
+
+// ──────────────────────────────────────────────
+// arePanelPropsEqual — the React.memo comparator for the sliding panels. The
+// panels stay mounted and are hidden with a CSS transform, so this is what
+// keeps them from re-rendering on every streamed token while off screen.
+// ──────────────────────────────────────────────
+describe('arePanelPropsEqual', () => {
+  it('skips the render when the panel is closed before and after', () => {
+    expect(arePanelPropsEqual(
+      { open: false, chats: [1], chatState: { id: 'a' } } as any,
+      { open: false, chats: [2], chatState: { id: 'b' } } as any,
+    )).toBe(true);
+  });
+
+  it('renders on open', () => {
+    expect(arePanelPropsEqual({ open: false } as any, { open: true } as any)).toBe(false);
+  });
+
+  it('renders on close, so the exit animation runs', () => {
+    expect(arePanelPropsEqual({ open: true } as any, { open: false } as any)).toBe(false);
+  });
+
+  it('compares shallowly while open', () => {
+    const chats = [{ id: 'a' }];
+    expect(arePanelPropsEqual({ open: true, chats } as any, { open: true, chats } as any)).toBe(true);
+    expect(arePanelPropsEqual(
+      { open: true, chats } as any,
+      { open: true, chats: [{ id: 'a' }] } as any,
+    )).toBe(false);
+  });
+
+  it('renders when a prop is added or removed while open', () => {
+    expect(arePanelPropsEqual(
+      { open: true, a: 1 } as any,
+      { open: true, a: 1, b: 2 } as any,
+    )).toBe(false);
+  });
+
+  it('treats an absent open prop as closed', () => {
+    expect(arePanelPropsEqual({ chats: [1] } as any, { chats: [2] } as any)).toBe(true);
   });
 });

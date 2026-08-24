@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatState, IAIPersona, SubAgentSummary } from '../types';
-import { glassPanelSx } from '../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../utils';
 
 interface SubAgentsPanelProps {
   open: boolean;
@@ -250,4 +250,6 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
   );
 };
 
-export default SubAgentsPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(SubAgentsPanel, arePanelPropsEqual);

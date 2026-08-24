@@ -44,7 +44,7 @@ import AgentToolWindowBar from './components/AgentToolWindowBar';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
-import NeuralBrainBackground, { graphSignature } from './components/NeuralBrainBackground';
+import NeuralBrainBackground, { graphSignature, toolResultSignature } from './components/NeuralBrainBackground';
 
 export default (props) => {
   const { formData } = props;
@@ -1151,6 +1151,14 @@ export default (props) => {
     setChatHistoryPanelOpen(false);
   }, []);
 
+  // Hoisted out of the JSX: as an inline arrow this prop was new on every
+  // render, so ChatHistoryPanel could never be skipped by its memo.
+  const handleChatHistorySearch = useCallback((query: string) => {
+    listChats({ search: query }).then((chatList) => {
+      setChats(chatList as ChatState[]);
+    });
+  }, [listChats, setChats]);
+
   const handleRecordingPanelToggle = useCallback(() => {
     // Close other panels first
     setPersonaPanelOpen(false);
@@ -1659,6 +1667,24 @@ export default (props) => {
     });
   }, []);
 
+  /**
+   * A `messages` reference for the neural graph that only changes when a tool
+   * result does.
+   *
+   * The graph is derived purely from tool results, but `chatState.history` gets
+   * a new array identity on every streamed token. That identity was defeating
+   * NeuralBrainBackground's `React.memo` and — through `neuralGraphViewerProps`
+   * below — driving `sidePanelActions.updateItem` twenty times a second while
+   * the side-panel viewer was mounted.
+   */
+  const graphMessagesSignature = useMemo(
+    () => toolResultSignature(chatState?.history),
+    [chatState?.history],
+  );
+  // Intentionally keyed on the signature, not on the history array itself.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const graphMessages = useMemo(() => chatState?.history, [graphMessagesSignature]);
+
   const neuralGraphViewerProps = useMemo(() => ({
     reactory,
     backgroundMode: false,
@@ -1668,10 +1694,10 @@ export default (props) => {
     secondaryColor: themeColors.secondary,
     backgroundColor: mode === 'dark' ? '#0b0d17' : '#f0f2f8',
     graphData: backgroundGraphData,
-    messages: chatState?.history,
+    messages: graphMessages,
     sessionId: activeSessionId,
     onPinPerspective: handlePinGraphPerspective,
-  }), [reactory, mode, themeColors.primary, themeColors.secondary, backgroundGraphData, chatState?.history, activeSessionId, handlePinGraphPerspective]);
+  }), [reactory, mode, themeColors.primary, themeColors.secondary, backgroundGraphData, graphMessages, activeSessionId, handlePinGraphPerspective]);
 
   const handleNeuralGraphViewerToggle = useCallback(() => {
     const state = sidePanelActions.getState();
@@ -1895,7 +1921,7 @@ export default (props) => {
         secondaryColor={themeColors.secondary}
         mode={mode}
         graphData={backgroundGraphData}
-        messages={chatState?.history}
+        messages={graphMessages}
       />
       {/* All chat content sits above the background layer */}
       <Box
@@ -2214,11 +2240,7 @@ export default (props) => {
               getPersona={getPersona}
               onChatSelect={handleChatSelect}
               onDeleteChat={deleteChat}
-              onSearch={(query) => {
-                listChats({ search: query }).then((chatList) => {
-                  setChats(chatList as ChatState[]);
-                });
-              }}
+              onSearch={handleChatHistorySearch}
               Material={Material}
               il8n={il8n}
             />

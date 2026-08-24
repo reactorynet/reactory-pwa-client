@@ -5,7 +5,7 @@ import { Provider, ProviderAuthStatus } from '../hooks/useProviders';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
 import { max } from 'lodash';
 import { border } from '@mui/system';
-import { glassPanelSx } from '../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../utils';
 interface ToolsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -851,4 +851,6 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   );
 };
 
-export default ToolsPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(ToolsPanel, arePanelPropsEqual);

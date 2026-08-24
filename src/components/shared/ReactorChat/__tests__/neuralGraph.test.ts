@@ -1,4 +1,4 @@
-import { extractAgentGraphFromMessages } from '../components/NeuralBrainBackground';
+import { extractAgentGraphFromMessages, toolResultSignature } from '../components/NeuralBrainBackground';
 
 // ──────────────────────────────────────────────
 // extractAgentGraphFromMessages — synthesizes the agent's graph perspective
@@ -138,5 +138,64 @@ describe('extractAgentGraphFromMessages', () => {
     };
     const graph = extractAgentGraphFromMessages([msg([searchResult]), msg([searchResult])]);
     expect(graph.nodes).toHaveLength(1);
+  });
+});
+
+// ──────────────────────────────────────────────
+// toolResultSignature — the cheap key that decides when the expensive
+// extractAgentGraphFromMessages pass is allowed to re-run. It must be stable
+// across streamed tokens (which only mutate assistant text) and must change
+// whenever a tool result appears, changes or is removed.
+// ──────────────────────────────────────────────
+describe('toolResultSignature', () => {
+  const withResults = (toolResults: any[]) => ({ role: 'assistant', tool_results: toolResults });
+
+  it('is empty for empty or undefined history', () => {
+    expect(toolResultSignature(undefined)).toBe('');
+    expect(toolResultSignature(null)).toBe('');
+    expect(toolResultSignature([])).toBe('');
+  });
+
+  it('ignores messages that carry no tool results', () => {
+    expect(toolResultSignature([
+      { role: 'user', content: 'hello' },
+      { role: 'assistant', content: 'hi' },
+    ])).toBe('');
+  });
+
+  it('is unchanged when a streamed token appends to assistant text', () => {
+    const results = [{ id: 'call-1', content: '{"tool":"graph"}' }];
+    const before = [withResults(results), { role: 'assistant', content: 'Th' }];
+    const after = [withResults(results), { role: 'assistant', content: 'Thinking about it' }];
+    expect(toolResultSignature(after)).toBe(toolResultSignature(before));
+  });
+
+  it('is unchanged when only the array identity changes', () => {
+    const history = [withResults([{ id: 'call-1', content: 'abc' }])];
+    expect(toolResultSignature([...history])).toBe(toolResultSignature(history));
+  });
+
+  it('changes when a new tool result arrives', () => {
+    const before = [withResults([{ id: 'call-1', content: 'abc' }])];
+    const after = [withResults([{ id: 'call-1', content: 'abc' }, { id: 'call-2', content: 'def' }])];
+    expect(toolResultSignature(after)).not.toBe(toolResultSignature(before));
+  });
+
+  it('changes when an existing tool result is filled in place', () => {
+    const before = [withResults([{ id: 'call-1', content: '' }])];
+    const after = [withResults([{ id: 'call-1', content: '{"tool":"graph"}' }])];
+    expect(toolResultSignature(after)).not.toBe(toolResultSignature(before));
+  });
+
+  it('changes when a tool result is deleted', () => {
+    const before = [withResults([{ id: 'call-1', content: 'abc' }, { id: 'call-2', content: 'def' }])];
+    const after = [withResults([{ id: 'call-1', content: 'abc' }])];
+    expect(toolResultSignature(after)).not.toBe(toolResultSignature(before));
+  });
+
+  it('falls back to toolCallId when id is absent', () => {
+    const a = [withResults([{ toolCallId: 'call-9', content: 'abc' }])];
+    const b = [withResults([{ toolCallId: 'call-8', content: 'abc' }])];
+    expect(toolResultSignature(a)).not.toBe(toolResultSignature(b));
   });
 });

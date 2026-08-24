@@ -562,3 +562,31 @@ export const getSystemPromptInfo = (
     tokens: parts.reduce((total, part) => total + part.tokens, 0),
   };
 };
+
+/**
+ * `React.memo` comparator shared by the sliding panels (chat history, tools,
+ * files, todos, sub-agents, debug, persona selection).
+ *
+ * These panels are never unmounted — they are shown and hidden with a CSS
+ * transform — so they re-rendered on every pass of the parent. While a
+ * response streams the parent re-renders roughly twenty times a second, which
+ * meant seven off-screen panels were regrouping and re-sorting lists that
+ * nobody could see, on the same main thread that has to service clicks.
+ *
+ * A panel that is closed both before and after has nothing on screen to
+ * update, so we skip it entirely. Any change to `open` re-renders, which is
+ * what pulls in fresh props for the panel being revealed. Every effect inside
+ * these panels is already gated on `open`, so skipping a hidden render never
+ * suppresses work that needed to happen.
+ */
+export const arePanelPropsEqual = <P extends { open?: boolean }>(prev: P, next: P): boolean => {
+  // An open/close transition must always render — that is the animation.
+  if (prev.open !== next.open) return false;
+  // Both closed: invisible, so whatever changed can wait until it opens.
+  if (!prev.open && !next.open) return true;
+  // Open: fall back to the shallow comparison React.memo would have done.
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(next);
+  if (prevKeys.length !== nextKeys.length) return false;
+  return prevKeys.every((key) => Object.is(prev[key], next[key]));
+};

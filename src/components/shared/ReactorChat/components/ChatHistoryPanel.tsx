@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatState, IAIPersona } from '../types';
-import { glassPanelSx } from '../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../utils';
 
 interface ChatHistoryPanelProps {
   open: boolean;
@@ -379,4 +379,6 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   );
 };
 
-export default ChatHistoryPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(ChatHistoryPanel, arePanelPropsEqual);

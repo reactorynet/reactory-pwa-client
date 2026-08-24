@@ -121,9 +121,22 @@ const fetchPersonas = async () => {
   }
 }
 
-  const getPersona = (personaId: string): IAIPersona | undefined => {
+  // Stable identity: this is handed to ChatHistoryPanel, where it keys the
+  // `groupedChats` memo. As a plain function it was new on every render, so the
+  // whole chat list was regrouped and re-sorted on every pass of the parent.
+  const getPersona = React.useCallback((personaId: string): IAIPersona | undefined => {
     return personas.find(persona => persona.id === personaId);
-  };
+  }, [personas]);
+
+  // Likewise stable — ReactorChat lists this in two effect dependency arrays.
+  const selectPersona = React.useCallback((personaId: string) => {
+    const selected = personas.find(persona => persona.id === personaId);
+    if (selected) {
+      setActivePersona(selected);
+      // Note: Don't call setSearchParams here as it will cause loops.
+      // The URL management should be handled by the parent component.
+    }
+  }, [personas]);
 
   // Fetch personas on mount
 
@@ -138,15 +151,7 @@ return {
     loading,
     isLoaded,
     error,
-    selectPersona: (personaId: string) => {
-      // Logic to select a persona
-      const selectedPersona = personas.find(persona => persona.id === personaId);
-      if (selectedPersona) {
-        setActivePersona(selectedPersona);
-        // Note: Don't call setSearchParams here as it will cause loops
-        // The URL management should be handled by the parent component
-      }
-    },
+    selectPersona,
     activePersona,
     getPersona,
   }

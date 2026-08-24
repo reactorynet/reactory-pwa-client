@@ -2013,7 +2013,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }, [chatState.history, chatState.tools, chatState.macros]);
 
-  const fetchConversations = async (filter: any) => {
+  const fetchConversationsImpl = async (filter: any) => {
     try {
       const list = await graph.listConversations(filter);
       setChats(list || []);
@@ -2025,17 +2025,36 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
-  const deleteChat = async (id: string | string[]) => {
+  const deleteChatImpl = async (id: string | string[]) => {
     const deleteId = Array.isArray(id) ? id[0] : id;
     sessionLogger?.info(`Deleting chat session`, { chatSessionId: deleteId }, 'useChatFactory');
     try {
       // Only single id supported by schema
       await graph.deleteChatSession(deleteId);
-      await fetchConversations({}); // Refresh the chat list after deletion
+      await fetchConversationsImpl({}); // Refresh the chat list after deletion
     } catch (error) {
       onError(error);
     }
   };
+
+  // Stable wrappers over the latest implementation, for the same reason as
+  // `loadChat`: both are handed to ChatHistoryPanel as props and both appear in
+  // consumer dependency arrays (`handleChatHistoryPanelToggle` lists
+  // `listChats`), so a fresh identity each render defeated every memo
+  // downstream of them.
+  const fetchConversationsImplRef = React.useRef(fetchConversationsImpl);
+  fetchConversationsImplRef.current = fetchConversationsImpl;
+  const fetchConversations = React.useCallback(
+    (filter: any) => fetchConversationsImplRef.current(filter),
+    [],
+  );
+
+  const deleteChatImplRef = React.useRef(deleteChatImpl);
+  deleteChatImplRef.current = deleteChatImpl;
+  const deleteChat = React.useCallback(
+    (id: string | string[]) => deleteChatImplRef.current(id),
+    [],
+  );
 
   const deleteToolCall = async (toolCallId: string, messageId?: string) => {
     sessionLogger?.info('Deleting tool call', { toolCallId, messageId, sessionId: chatState?.id }, 'useChatFactory');

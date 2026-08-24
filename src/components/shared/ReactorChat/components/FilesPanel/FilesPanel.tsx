@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { gql } from '@apollo/client';
 import { IAIPersona, ChatState } from '../../types';
 import UserHomeFolder from '../../../UserHomeFolder/UserHomeFolder';
-import { glassPanelSx } from '../../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../../utils';
 
 // Import SelectedItem interface from UserHomeFolder
 interface SelectedItem {
@@ -2059,4 +2059,6 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   );
 };
 
-export default FilesPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(FilesPanel, arePanelPropsEqual);

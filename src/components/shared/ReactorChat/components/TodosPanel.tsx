@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatState, TodoList, TodoItem, TodoStatus, TODOS_VAR_KEY } from '../types';
-import { glassPanelSx } from '../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../utils';
 
 interface TodosPanelProps {
   open: boolean;
@@ -273,4 +273,6 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
   );
 };
 
-export default TodosPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(TodosPanel, arePanelPropsEqual);

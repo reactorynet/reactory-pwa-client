@@ -3,6 +3,7 @@ import { ChatState, SessionLogger, TODOS_VAR_KEY, TodoList } from '../types';
 import {
   formatCount,
   getSystemPromptInfo,
+  arePanelPropsEqual,
   glassPanelSx,
   summarizeContext,
   summarizeToolCosts,
@@ -762,4 +763,6 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   );
 };
 
-export default DebugPanel;
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(DebugPanel, arePanelPropsEqual);

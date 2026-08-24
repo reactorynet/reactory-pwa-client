@@ -1,7 +1,7 @@
 import React from 'react';
 import { IAIPersona } from '../types';
 import PersonaCard from './PersonaCard';
-import { glassPanelSx } from '../utils';
+import { arePanelPropsEqual, glassPanelSx } from '../utils';
 
 interface PersonaSelectorProps {
   open: boolean;
@@ -98,4 +98,6 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   );
 };
 
-export default PersonaSelector; 
+// Memoised with the shared panel comparator: while closed this panel skips
+// the parent's re-renders entirely (see `arePanelPropsEqual`).
+export default React.memo(PersonaSelector, arePanelPropsEqual); 

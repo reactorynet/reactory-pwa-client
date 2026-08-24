@@ -222,6 +222,32 @@ export const extractAgentGraphFromMessages = (messages: any[]): NeuralGraphData 
   return { nodes: [...nodes.values()], edges: [...edges.values()] };
 };
 
+/**
+ * Cheap signature over just the parts of a conversation that can change the
+ * agent graph.
+ *
+ * `extractAgentGraphFromMessages` has to `JSON.parse` every tool result in the
+ * history, which is the single most expensive thing on the main thread during
+ * a response: streaming appends to `history` roughly twenty times a second, and
+ * each new array identity re-ran the whole parse over every tool result in the
+ * conversation. Only `tool_results` feed the graph, and token deltas only ever
+ * mutate the last assistant message's text — so keying on the result ids plus
+ * their content lengths re-runs the parse exactly when a tool result appears or
+ * changes, and never for a token.
+ */
+export const toolResultSignature = (messages: any[] | null | undefined): string => {
+  if (!messages || messages.length === 0) return '';
+  let sig = '';
+  for (const msg of messages) {
+    const results = msg?.tool_results;
+    if (!results || results.length === 0) continue;
+    for (const r of results) {
+      sig += `${r?.id ?? r?.toolCallId ?? ''}:${typeof r?.content === 'string' ? r.content.length : 0}|`;
+    }
+  }
+  return sig;
+};
+
 /** Stable signature so identical graph payloads don't trigger scene rebuilds. */
 export const graphSignature = (g: NeuralGraphData): string =>
   `${g.nodes.map((n) => String(n.id)).sort().join(',')}|${g.edges
@@ -364,11 +390,19 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     setAgentGraph(g.nodes.length > 0 ? g : null);
   }, []);
 
+  // Always-current view of `messages` for effects that must not re-run when the
+  // array identity changes (which it does on every streamed token).
+  const messagesRef = React.useRef(messages);
+  messagesRef.current = messages;
+
   // Agent perspective from live chat history (when hosted by ReactorChat).
+  // Keyed on the tool-result signature rather than on `messages` — see
+  // `toolResultSignature` for why.
+  const messagesToolSignature = React.useMemo(() => toolResultSignature(messages), [messages]);
   React.useEffect(() => {
-    if (!messages) return;
-    applyAgentGraph(extractAgentGraphFromMessages(messages));
-  }, [messages, applyAgentGraph]);
+    if (!messagesRef.current) return;
+    applyAgentGraph(extractAgentGraphFromMessages(messagesRef.current));
+  }, [messagesToolSignature, applyAgentGraph]);
 
   // Stand-alone mode: self-fetch the conversation subgraph and synthesize the
   // agent perspective from the cached session history.
@@ -385,7 +419,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         if (!activeSessionId) return;
 
         // Agent perspective from the cached history (no server round-trip).
-        if (!messages && Array.isArray(cachedChatState?.history)) {
+        if (!messagesRef.current && Array.isArray(cachedChatState?.history)) {
           applyAgentGraph(extractAgentGraphFromMessages(cachedChatState.history));
         }
 
@@ -450,7 +484,14 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       active = false;
       clearInterval(interval);
     };
-  }, [externalGraphData, reactory, messages, sessionId, applyAgentGraph]);
+    // `messages` is deliberately absent: it is read through `messagesRef`.
+    // Listing it tore this effect down and re-ran it — clearing the 10s
+    // interval, re-firing `fetchGraph` and its two GraphQL queries — on every
+    // streamed token, which flooded the browser's connection pool and queued
+    // real requests (including the `getConversation` for a session the user had
+    // just clicked) behind hundreds of pending subgraph lookups.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalGraphData, reactory, sessionId, applyAgentGraph]);
 
   // ── Perspective plumbing (interactive mode) ────────────────────────────────
 
