@@ -293,6 +293,8 @@ export type UXChatMessage = ChatMessage & {
   isActivity?: boolean;
   /** Tracks how many times the same error has occurred (for deduplication in the UI). */
   errorCount?: number;
+  /** Optional voice key for text-to-speech synthesis */
+  voice?: string;
 }
 
 export interface MCPClient {

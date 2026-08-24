@@ -689,6 +689,8 @@ export default (props) => {
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [chatHistoryPanelOpen, setChatHistoryPanelOpen] = useState<boolean>(false);
   const [recordingPanelOpen, setRecordingPanelOpen] = useState<boolean>(false);
+  const [speechTranscript, setSpeechTranscript] = useState<string>('');
+  const [recordingCountdown, setRecordingCountdown] = useState<number | null>(null);
   const [filesPanelOpen, setFilesPanelOpen] = useState<boolean>(false);
   const [todosPanelOpen, setTodosPanelOpen] = useState<boolean>(false);
   const [debugPanelOpen, setDebugPanelOpen] = useState<boolean>(false);
@@ -1548,6 +1550,8 @@ export default (props) => {
   const handleSendMessage = useCallback((message: string, images?: string[]) => {
     sendMessage(message, chatState?.id, images);
     setPendingImages([]);
+    setSpeechTranscript('');
+    setRecordingCountdown(null);
   }, [sendMessage, chatState?.id]);
 
   const handleStreamingToggle = useCallback((enabled: boolean) => {
@@ -2313,6 +2317,18 @@ export default (props) => {
               voicePlaying={speech.state.playing}
               onStopPlayback={speech.stopPlayback}
               onRecordingComplete={handleVoiceRecordingComplete}
+              onTranscript={(text) => setSpeechTranscript(text)}
+              onCountdownChange={(seconds) => setRecordingCountdown(seconds)}
+              onStopCountdown={() => setRecordingCountdown(null)}
+              onAutoSend={(text) => {
+                const msg = (text || speechTranscript).trim();
+                if (msg) {
+                  handleSendMessage(msg);
+                }
+                setSpeechTranscript('');
+                setRecordingCountdown(null);
+                setRecordingPanelOpen(false);
+              }}
             />
 
             {/* Network Status Indicator — floating pill chip, visible to all users */}
@@ -2519,6 +2535,9 @@ export default (props) => {
         <ChatInput
           onSendMessage={handleSendMessage}
           initialPrompt={props?.initialPrompt}
+          speechTranscript={speechTranscript}
+          countdown={recordingCountdown}
+          onCancelCountdown={() => setRecordingCountdown(null)}
           disabled={busy}
           placeholder={supportsImageGeneration
             ? "Ask me anything... or describe an image to create"

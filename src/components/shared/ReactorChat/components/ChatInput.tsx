@@ -33,6 +33,12 @@ interface ChatInputProps {
    * which lets a host seed a new prompt while the panel stays open.
    */
   initialPrompt?: string;
+  /** Streaming speech transcript to populate composer */
+  speechTranscript?: string;
+  /** Countdown seconds remaining (5..1) for auto-sending after silence */
+  countdown?: number | null;
+  /** Callback to cancel/stop the auto-send countdown and keep editing */
+  onCancelCountdown?: () => void;
 }
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -54,6 +60,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   toolApprovalMode,
   onToolApprovalModeChange,
   initialPrompt,
+  speechTranscript,
+  countdown,
+  onCancelCountdown,
 }) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
@@ -79,14 +88,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
     ListItemText,
     Icon,
     Tooltip,
+    Chip,
   } = Material.MaterialCore;
 
   const {
     Mic,
   } = Material.MaterialIcons;
 
-  // Internal state for the input value
-  const [inputValue, setInputValue] = useState<string>(initialPrompt || '');
+  // Internal state for the input value — kept strictly local to prevent parent re-renders while typing
+  const [inputValue, setInputValue] = useState<string>(initialPrompt || speechTranscript || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
 
@@ -99,6 +109,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
     inputRef.current?.focus();
   }, [initialPrompt]);
 
+  // Sync with speech transcript when speech services produce results
+  useEffect(() => {
+    if (speechTranscript !== undefined && speechTranscript !== '') {
+      setInputValue(speechTranscript);
+    }
+  }, [speechTranscript]);
+
   const toolModeOptions = [
     { mode: ToolApprovalMode.AUTO, icon: 'bolt', label: 'Auto', color: '#4caf50', description: 'Execute all tools without asking' },
     { mode: ToolApprovalMode.SAFE_AUTO, icon: 'verified_user', label: 'Safe Auto', color: '#ffc107', description: 'Auto-approve safe tools, prompt for dangerous' },
@@ -107,10 +124,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
   ];
   const currentMode = toolModeOptions.find(o => o.mode === toolApprovalMode) || toolModeOptions[0];
 
-  // Handle input change - only updates internal state
+  // Handle input change - updates purely local state for instant typing with zero parent lag; cancels countdown if active
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-  }, []);
+    if (countdown != null && onCancelCountdown) {
+      onCancelCountdown();
+    }
+  }, [countdown, onCancelCountdown]);
 
   // Handle send on Enter key
   const handleSend = useCallback(() => {
@@ -311,6 +331,25 @@ const ChatInput: React.FC<ChatInputProps> = ({
               },
               endAdornment: (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
+                  {countdown != null && countdown > 0 && (
+                    <Chip
+                      size="small"
+                      icon={<span className="material-icons" style={{ fontSize: 14, color: '#ed6c02' }}>timer</span>}
+                      label={`Auto-send ${countdown}s`}
+                      onClick={onCancelCountdown}
+                      onDelete={onCancelCountdown}
+                      deleteIcon={<span className="material-icons" style={{ fontSize: 14 }}>close</span>}
+                      title="Click or edit text to cancel timer"
+                      sx={{
+                        height: 24,
+                        fontSize: '0.75rem',
+                        backgroundColor: 'rgba(237, 108, 2, 0.15)',
+                        color: theme.palette.text.primary,
+                        border: '1px solid rgba(237, 108, 2, 0.4)',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  )}
                   {onVoiceModeToggle && (
                     <IconButton
                       aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}

@@ -388,6 +388,8 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
   tools: [
     {
       type: "function",
+      safeForAutoExecution: true,
+      runat: "client",
       function: {
         name: "form",
         icon: "dynamic_form",

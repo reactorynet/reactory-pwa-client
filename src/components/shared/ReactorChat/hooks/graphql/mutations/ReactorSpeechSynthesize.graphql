@@ -1,0 +1,8 @@
+mutation ReactorSpeechSynthesize($input: SpeechSynthesizeInput!) {
+  SpeechSynthesize(input: $input) {
+    audioBase64
+    duration
+    format
+    sampleRate
+  }
+}

@@ -159,6 +159,8 @@ const RuntimeMacroDefinition: MacroComponentDefinition<typeof RuntimeMacro> = {
   tools: [
     {
       type: "function",
+      safeForAutoExecution: true,
+      runat: "client",
       function: {
         name: "macros",
         description: TOOL_DESCRIPTION,

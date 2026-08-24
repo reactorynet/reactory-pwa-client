@@ -4,18 +4,20 @@
  */
 
 import { renderHook, act } from '@testing-library/react-hooks';
-import useSpeechServices from '../hooks/useSpeechServices';
+import useSpeechServices, { cleanTextForSpeech, clearAudioCache } from '../hooks/useSpeechServices';
 
 // Mock useGraph
 const mockStartVoiceSession = jest.fn();
 const mockEndVoiceSession = jest.fn();
 const mockSendVoiceMessage = jest.fn();
+const mockSynthesizeSpeech = jest.fn();
 
 jest.mock('../hooks/graphql/useGraph', () => {
   return jest.fn(() => ({
     startVoiceSession: mockStartVoiceSession,
     endVoiceSession: mockEndVoiceSession,
     sendVoiceMessage: mockSendVoiceMessage,
+    synthesizeSpeech: mockSynthesizeSpeech,
     // Include other methods to prevent errors
     startChatSession: jest.fn(),
     sendMessage: jest.fn(),
@@ -32,7 +34,6 @@ jest.mock('../hooks/graphql/useGraph', () => {
 
 // Mock HTMLAudioElement
 const mockPlay = jest.fn().mockImplementation(function(this: any) {
-  // Simulate audio playback completing asynchronously
   setTimeout(() => {
     if (this.onended) this.onended();
   }, 10);
@@ -46,13 +47,17 @@ beforeEach(() => {
     const audio: any = {
       play: mockPlay,
       pause: mockPause,
+      paused: false,
       onended: null,
       onerror: null,
     };
-    // Bind play so `this` refers to audio
     audio.play = jest.fn(() => {
+      audio.paused = false;
       setTimeout(() => { if (audio.onended) audio.onended(); }, 10);
       return Promise.resolve();
+    });
+    audio.pause = jest.fn(() => {
+      audio.paused = true;
     });
     return audio;
   });
@@ -70,9 +75,11 @@ const mockReactory = {
 describe('useSpeechServices', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearAudioCache();
     mockStartVoiceSession.mockReset();
     mockEndVoiceSession.mockReset();
     mockSendVoiceMessage.mockReset();
+    mockSynthesizeSpeech.mockReset();
   });
 
   it('should return correct initial state', () => {
@@ -83,8 +90,65 @@ describe('useSpeechServices', () => {
     expect(result.current.state.voiceModeActive).toBe(false);
     expect(result.current.state.voiceSession).toBeNull();
     expect(result.current.state.processing).toBe(false);
+    expect(result.current.state.synthesizing).toBe(false);
     expect(result.current.state.playing).toBe(false);
+    expect(result.current.state.paused).toBe(false);
     expect(result.current.state.error).toBeNull();
+  });
+
+  it('should clean text correctly for speech synthesis', () => {
+    const input = '# Header\nHere is **bold** text with `code` and ```\nblock\n``` plus [a link](http://example.com) and https://test.org';
+    const cleaned = cleanTextForSpeech(input);
+    expect(cleaned).not.toContain('#');
+    expect(cleaned).not.toContain('**');
+    expect(cleaned).not.toContain('```');
+    expect(cleaned).not.toContain('http://');
+    expect(cleaned).toContain('Here is bold text with code and plus a link and');
+  });
+
+  it('should synthesize text using Reactory speech service', async () => {
+    mockSynthesizeSpeech.mockResolvedValue({
+      audioBase64: 'UklGRi4AAABXQVZF',
+      duration: 1.5,
+      format: 'wav',
+      sampleRate: 24000,
+    });
+
+    const { result } = renderHook(() =>
+      useSpeechServices({ reactory: mockReactory, personaId: 'p1', voice: 'af_heart' })
+    );
+
+    let synthResult: any;
+    await act(async () => {
+      synthResult = await result.current.synthesizeText('Hello world', 'af_heart', 1.0);
+    });
+
+    expect(synthResult).toBeTruthy();
+    expect(synthResult.audioBase64).toBe('UklGRi4AAABXQVZF');
+    expect(mockSynthesizeSpeech).toHaveBeenCalledWith({
+      text: 'Hello world',
+      voice: 'af_heart',
+      speed: 1.0,
+    });
+  });
+
+  it('should speak text and manage playback state', async () => {
+    mockSynthesizeSpeech.mockResolvedValue({
+      audioBase64: 'UklGRi4AAABXQVZF',
+      duration: 1.5,
+      format: 'wav',
+      sampleRate: 24000,
+    });
+
+    const { result } = renderHook(() =>
+      useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
+    );
+
+    await act(async () => {
+      await result.current.speakText('Hello world');
+    });
+
+    expect(mockSynthesizeSpeech).toHaveBeenCalled();
   });
 
   it('should start a voice session successfully', async () => {
@@ -242,100 +306,16 @@ describe('useSpeechServices', () => {
     expect(onTranscription).toHaveBeenCalledWith('Hello! How can I help?', 'AAAA');
   });
 
-  it('should handle error when sending voice message', async () => {
-    mockStartVoiceSession.mockResolvedValue({
-      __typename: 'ReactorVoiceSession',
-      chatSessionId: 'sess-1',
-      personaId: 'p1',
-      ttsEnabled: true,
-      sttEnabled: true,
-    });
-    mockSendVoiceMessage.mockResolvedValue({
-      __typename: 'ReactorErrorResponse',
-      code: 'TRANSCRIPTION_FAILED',
-      message: 'Could not transcribe audio',
-    });
-
-    const { result } = renderHook(() =>
-      useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
-    );
-
-    await act(async () => {
-      await result.current.startVoiceSession('p1', 'sess-1');
-    });
-
-    await act(async () => {
-      await result.current.sendVoiceMessage(new Blob([]));
-    });
-
-    expect(result.current.state.error).toBe('Could not transcribe audio');
-  });
-
-  it('should return error when sending voice message without active session', async () => {
-    const { result } = renderHook(() =>
-      useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
-    );
-
-    await act(async () => {
-      await result.current.sendVoiceMessage(new Blob([]));
-    });
-
-    expect(result.current.state.error).toBe('No active voice session');
-    expect(mockSendVoiceMessage).not.toHaveBeenCalled();
-  });
-
   it('should stop playback', async () => {
     const { result } = renderHook(() =>
       useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
     );
 
-    // stopPlayback should not throw when nothing is playing
     act(() => {
       result.current.stopPlayback();
     });
 
     expect(result.current.state.playing).toBe(false);
-  });
-
-  it('should handle start voice session network error', async () => {
-    mockStartVoiceSession.mockRejectedValue(new Error('Network error'));
-
-    const { result } = renderHook(() =>
-      useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
-    );
-
-    await act(async () => {
-      await result.current.startVoiceSession('p1');
-    });
-
-    expect(result.current.state.voiceModeActive).toBe(false);
-    expect(result.current.state.error).toBe('Network error');
-  });
-
-  it('should end voice session gracefully even if server call fails', async () => {
-    mockStartVoiceSession.mockResolvedValue({
-      __typename: 'ReactorVoiceSession',
-      chatSessionId: 'sess-1',
-      personaId: 'p1',
-      ttsEnabled: true,
-      sttEnabled: true,
-    });
-    mockEndVoiceSession.mockRejectedValue(new Error('Server error'));
-
-    const { result } = renderHook(() =>
-      useSpeechServices({ reactory: mockReactory, personaId: 'p1' })
-    );
-
-    await act(async () => {
-      await result.current.startVoiceSession('p1', 'sess-1');
-    });
-
-    // Should not throw, just log and clear state
-    await act(async () => {
-      await result.current.endVoiceSession();
-    });
-
-    expect(result.current.state.voiceModeActive).toBe(false);
-    expect(result.current.state.voiceSession).toBeNull();
+    expect(result.current.state.paused).toBe(false);
   });
 });

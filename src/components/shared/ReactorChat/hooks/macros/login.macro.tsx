@@ -96,6 +96,8 @@ const LoginMacroDefinition: MacroComponentDefinition<typeof LoginMacro> = {
   tools: [
     {
       type: "function",
+      safeForAutoExecution: false,
+      runat: "client",
       function: {
         name: "login",
         icon: "login",

@@ -37,6 +37,7 @@ import REACTOR_PIN_GRAPH_PERSPECTIVE from "./mutations/ReactorPinGraphPerspectiv
 import REACTOR_UNPIN_FOLDER from "./mutations/ReactorUnpinFolderFromSession.graphql";
 import REACTOR_SESSION_LOG from "./mutations/ReactorSessionLog.graphql";
 import REACTOR_PATCH_SYSTEM_PROMPT from "./mutations/ReactorSystemPromptPatch.graphql";
+import REACTOR_SPEECH_SYNTHESIZE from "./mutations/ReactorSpeechSynthesize.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -149,6 +150,19 @@ export interface VoiceMessageInput {
   personaId: string;
   synthesizeResponse?: boolean;
   voice?: string;
+}
+
+export interface SpeechSynthesizeInput {
+  text: string;
+  voice?: string;
+  speed?: number;
+}
+
+export interface SpeechSynthesisResult {
+  audioBase64: string;
+  duration?: number;
+  format: string;
+  sampleRate?: number;
 }
 
 export type VoiceSessionResult =
@@ -421,6 +435,44 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSendVoiceMessage as VoiceChatResult;
   };
 
+  const transcribeAudio = async (
+    audioBase64: string,
+    language?: string
+  ): Promise<string> => {
+    try {
+      const response = await reactory.graphqlMutation<
+        { SpeechTranscribe: { text: string } },
+        { input: { audioBase64: string; language?: string } }
+      >(
+        `mutation SpeechTranscribe($input: SpeechTranscribeInput!) {
+          SpeechTranscribe(input: $input) {
+            text
+          }
+        }` as any,
+        { input: { audioBase64, language } }
+      );
+      return (response?.data?.SpeechTranscribe as any)?.text || '';
+    } catch (err) {
+      reactory.log(`transcribeAudio error: ${err}`, { level: 'warn' });
+      return '';
+    }
+  };
+
+  const synthesizeSpeech = async (
+    input: SpeechSynthesizeInput
+  ): Promise<SpeechSynthesisResult | null> => {
+    try {
+      const response = await reactory.graphqlMutation<
+        { SpeechSynthesize: SpeechSynthesisResult },
+        { input: SpeechSynthesizeInput }
+      >(REACTOR_SPEECH_SYNTHESIZE as any, { input });
+      return response?.data?.SpeechSynthesize || null;
+    } catch (err) {
+      reactory.log(`synthesizeSpeech error: ${err}`, { level: 'warn' });
+      return null;
+    }
+  };
+
   const setChatModelProvider = async (
     chatSessionId: string,
     modelId?: string,
@@ -528,7 +580,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSetSidePanelState;
   };
 
-  return useMemo(() => ({
+  return {
     startChatSession,
     sendMessage,
     setChatToolApprovalMode,
@@ -556,7 +608,9 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     unpinFolderFromSession,
     sendSessionLog,
     setSidePanelState,
-  }), [reactory]);
+    transcribeAudio,
+    synthesizeSpeech,
+  };
 };
 
 export default useGraph;

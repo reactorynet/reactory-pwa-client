@@ -3,6 +3,7 @@ import { alpha } from '@mui/material/styles';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
 import { jsonToYaml } from '../utils';
+import TextToSpeechButton from '../components/TextToSpeechButton';
 
 const isProcessingMessage = (message: UXChatMessage) =>
   message.role === 'assistant' && message.content === 'Processing...';
@@ -1044,7 +1045,7 @@ const ChatList = (props: {
 
                       {/* Feedback buttons for regular assistant messages */}
                       {shouldShowFeedbackButtons(message, idx) && (
-                        <Box sx={{ display: 'inline-flex', gap: 0.5, ml: 1 }}>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
                           <IconButton
                             size="small"
                             sx={{ fontSize: '0.875rem' }}
@@ -1069,12 +1070,22 @@ const ChatList = (props: {
                           >
                             <Icon sx={{ fontSize: '1rem' }}>content_copy</Icon>
                           </IconButton>
+                          {typeof message.content === 'string' && message.content.trim().length > 0 && (
+                            <TextToSpeechButton
+                              text={message.content}
+                              reactory={reactory}
+                              personaId={selectedPersona?.id}
+                              voice={message.voice || selectedPersona?.appearance?.voice?.[0] || (selectedPersona as any)?.voice}
+                              chatSessionId={chatState?.id}
+                              size="small"
+                            />
+                          )}
                         </Box>
                       )}
 
                       {/* Retry button for user messages */}
                       {shouldShowRetryButton(message) && (
-                        <Box sx={{ display: 'inline-flex' }}>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                           <Tooltip title="Retry this message">
                             <IconButton
                               size="small"
@@ -1084,6 +1095,14 @@ const ChatList = (props: {
                               <Icon sx={{ fontSize: '1rem' }}>refresh</Icon>
                             </IconButton>
                           </Tooltip>
+                          {typeof message.content === 'string' && message.content.trim().length > 0 && (
+                            <TextToSpeechButton
+                              text={message.content}
+                              reactory={reactory}
+                              chatSessionId={chatState?.id}
+                              size="small"
+                            />
+                          )}
                         </Box>
                       )}
                     </Box>

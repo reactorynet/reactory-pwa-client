@@ -99,6 +99,8 @@ const ImageMacroDefinition: MacroComponentDefinition<typeof ImageMacro> = {
   tools: [
     {
       type: "function",
+      safeForAutoExecution: true,
+      runat: "client",
       function: {
         name: "image",
         icon: "image",

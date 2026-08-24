@@ -21,14 +21,18 @@ const PassthroughIcon: React.FC<any> = ({ children, sx }) => (
   <span role="img" aria-label={typeof children === 'string' ? children : undefined}>{children}</span>
 );
 
-const PassthroughTextField: React.FC<any> = ({ label, value, onChange, inputProps, ...rest }) => (
-  <input
-    aria-label={label}
-    value={value}
-    onChange={onChange}
-    {...inputProps}
-    {...rest}
-  />
+const PassthroughTextField: React.FC<any> = ({ label, value, onChange, inputProps, InputProps, fullWidth, multiline, maxRows, inputRef, ...rest }) => (
+  <div>
+    {InputProps?.startAdornment}
+    <input
+      aria-label={label}
+      value={value}
+      onChange={onChange}
+      {...inputProps}
+      {...rest}
+    />
+    {InputProps?.endAdornment}
+  </div>
 );
 
 const PassthroughIconButton: React.FC<any> = ({ children, onClick, sx, size }) => (
@@ -40,6 +44,14 @@ const PassthroughFade: React.FC<any> = ({ children, in: inProp }) =>
 
 const PassthroughCircularProgress: React.FC<any> = ({ size }) => (
   <span role="progressbar" aria-label="loading" />
+);
+
+const PassthroughChip: React.FC<any> = ({ label, children, onClick, onDelete, icon, deleteIcon, ...rest }) => (
+  <div onClick={onClick} {...rest}>
+    {icon}
+    <span>{label || children}</span>
+    {deleteIcon}
+  </div>
 );
 
 export const mockMaterial = {
@@ -54,11 +66,17 @@ export const mockMaterial = {
     TextField: PassthroughTextField,
     // Not used in the simple components but kept for completeness
     Paper: Passthrough,
-    Chip: Passthrough,
+    Chip: PassthroughChip,
+    Grid: Passthrough,
+    Menu: Passthrough,
+    MenuItem: Passthrough,
+    ListItemIcon: Passthrough,
     Tooltip: ({ children }: any) => <>{children}</>,
     Divider: () => <hr />,
   },
-  MaterialIcons: {},
+  MaterialIcons: {
+    Mic: () => <span role="img" aria-label="mic">mic</span>,
+  },
 };
 
 /** A minimal il8n stub that returns the defaultValue from options. */

@@ -51,6 +51,8 @@ const LogoutMacroDefinition: MacroComponentDefinition<typeof LogoutMacro> = {
   tools: [
     {
       type: "function",
+      safeForAutoExecution: false,
+      runat: "client",
       function: {
         name: "logout",
         description: TOOL_DESCRIPTION,

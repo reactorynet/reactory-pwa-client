@@ -3085,7 +3085,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       // Non-streaming: the AI response is returned directly
       const aiMessage = data as unknown as UXChatMessage;
-      if (aiMessage) {
+      if (aiMessage && continueProcessing) {
         setChatState((prevState) => ({
           ...prevState,
           history: [...prevState.history, aiMessage as any],
