@@ -10,9 +10,13 @@ import { chatShellBus } from '../components/Shell/chatShellBus';
 interface ChatFactoryHookResult {
   // represents the chat state
   chatState: ChatState
-  // indicates if the chat is busy loading or waiting 
-  // for a response.
+  // indicates if the chat is busy loading or waiting
+  // for a response. This is `agentBusy || opBusy` — true for ANY in-flight
+  // work, so it must not be used to decide whether the agent is running.
   busy: boolean
+  /** True only while the model is generating or its tool loop is running.
+   *  Use this — not `busy` — for anything that reacts to agent activity. */
+  agentBusy: boolean
   // function used to send a message to the active chat.
   sendMessage: (message: string, sessionId?: string, images?: string[]) => Promise<void>
   // function used to rate a message in the chat history
@@ -313,6 +317,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   } = props;
 
   const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
+  /** Session id currently being fetched by `loadChat`, or null. Re-entrancy guard. */
+  const loadInFlightRef = React.useRef<string | null>(null);
 
   const resolveAuthOverride = (chatSessionId?: string) => {
     if (!chatSessionId || !getProviderAuthOverride) return undefined;
@@ -460,7 +466,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         clearTimeout(sseInactivityTimerRef.current);
         sseInactivityTimerRef.current = null;
       }
-      setBusy(false);
+      setAgentBusy(false);
 
       // Now process any tool_calls that were accumulated during streaming.
       const accumulated = pendingToolCallsRef.current;
@@ -613,7 +619,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
   const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
-    setBusy(true);
+    setAgentBusy(true);
     sessionLogger?.info(`Sending message (${message.length} chars)`, { hasImages: !!images?.length }, 'useChatFactory');
     // Clear any lingering network error when the user tries sending again
     if (networkStatus === 'error') {
@@ -625,7 +631,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (!message || message.trim() === "") {
         const error = new Error("Message cannot be empty");
         onError(error);
-        setBusy(false);
+        setAgentBusy(false);
         return;
       }
 
@@ -640,7 +646,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sessionId = newSessionId; // Use the session ID from initialization
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setAgentBusy(false);
           return;
         }
       }
@@ -652,17 +658,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (!macro) {
           const error = new Error(`Macro not found: ${message}`);
           onError(error);
-          setBusy(false);
+          setAgentBusy(false);
           return;
         }
 
         try {
           await executeMacro(macro.macro, macro.args);
-          setBusy(false);
+          setAgentBusy(false);
           return;
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setAgentBusy(false);
           return;
         }
 
@@ -731,7 +737,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           setIsStreaming(false);
           setWaitingForResponse(false);
           onError(new Error(resp.message));
-          setBusy(false);
+          setAgentBusy(false);
           return;
         }
 
@@ -770,7 +776,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 setIsStreaming(false);
                 setWaitingForResponse(false);
                 onError(new Error((sseResp as any).message));
-                setBusy(false);
+                setAgentBusy(false);
                 return;
               }
 
@@ -887,7 +893,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         onError(error as Error);
       }
     } finally {
-      setBusy(false);
+      setAgentBusy(false);
     }
   }
 
@@ -996,7 +1002,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     existingSession?.chatState || getInitialChatState()
   );
 
-  const [busy, setBusy] = React.useState<boolean>(false);
+  /**
+   * Agent activity: the model is generating, or its tool loop is running.
+   * Owned exclusively by the streaming path (sendMessage / sendAudio /
+   * continueToolExecution / SSE events / the inactivity watchdog).
+   */
+  const [agentBusy, setAgentBusy] = React.useState<boolean>(false);
+  /**
+   * A transient CRUD round-trip is in flight — loading a session, pinning a
+   * file, changing the approval mode. Deliberately separate from `agentBusy`:
+   * these operations used to share one flag, so pinning a file mid-response
+   * cleared the streaming state on its way out, and a background refresh made
+   * the UI look like the agent was still working.
+   */
+  const [opBusy, setOpBusy] = React.useState<boolean>(false);
+  /** Anything is in flight. Use for input affordances, never as an agent signal. */
+  const busy = agentBusy || opBusy;
   const [chatLoading, setChatLoading] = React.useState<boolean>(false);
   const [isInitialized, setIsInitialized] = React.useState<boolean>(
     existingSession?.isInitialized || false
@@ -1024,8 +1045,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // already finished processing (e.g. the complete event was missed).
   const SSE_INACTIVITY_TIMEOUT_MS = 15_000;
   const sseInactivityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const busyRef = React.useRef(busy);
-  busyRef.current = busy;
+  const agentBusyRef = React.useRef(agentBusy);
+  agentBusyRef.current = agentBusy;
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -1397,7 +1418,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         clearTimeout(sseInactivityTimerRef.current);
         sseInactivityTimerRef.current = null;
       }
-      setBusy(false);
+      setAgentBusy(false);
     }, [reactory]);
 
     const onInterruptedReceived = React.useCallback((event: InterruptedStreamingEvent) => {
@@ -1411,7 +1432,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         clearTimeout(sseInactivityTimerRef.current);
         sseInactivityTimerRef.current = null;
       }
-      setBusy(false);
+      setAgentBusy(false);
     }, [reactory]);
 
     /**
@@ -1511,8 +1532,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // ensure the busy indicator is active. This covers the reconnect case
         // where the user navigated away and came back while the server is
         // still processing.
-        if (!busyRef.current) {
-          setBusy(true);
+        if (!agentBusyRef.current) {
+          setAgentBusy(true);
         }
 
         // Reset the inactivity watchdog every time we receive activity.
@@ -1523,7 +1544,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sseInactivityTimerRef.current = null;
           // No events for 15 seconds — assume the server finished or the
           // stream stalled. Clear the busy indicator so the UI isn't stuck.
-          setBusy(false);
+          setAgentBusy(false);
           setIsStreaming(false);
           setWaitingForResponse(false);
         }, SSE_INACTIVITY_TIMEOUT_MS);
@@ -1534,15 +1555,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     activeSessionIdRef.current = chatState?.id || null;
     // Reset session-specific states when switching to a different chat session
     // to prevent "stuck" indicators (e.g. thinking widget showing in new sessions)
-    setBusy(false);
+    setAgentBusy(false);
     setIsStreaming(false);
     setWaitingForResponse(false);
     setToolIterationLimitInfo(null);
     setPendingToolCallResume(null);
     setCompactionInfo(null);
-    if (sse && typeof sse.disconnect === 'function') {
-      sse.disconnect();
-    }
+    // NOTE: this effect deliberately does NOT touch the SSE transport.
+    // It runs *after* the session-changing function has already decided what
+    // the transport should be, so disconnecting here tore down connections
+    // that had just been opened — `initializeChat` connects synchronously
+    // right after setting the new id, and `loadChat`'s reconnect probe could
+    // land first on a warm response. Teardown belongs to whoever changes the
+    // session: `loadChat` and `newChat` disconnect up front, and `sendMessage`
+    // / `continueToolExecution` disconnect immediately before reconnecting.
   }, [chatState?.id]);
 
   // Re-establish SSE connection on page reload when an existing session is loaded.
@@ -1871,12 +1897,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const type = (error as any)?.type;
     sessionLogger?.error(`Error: ${errorMessage}`, { type }, 'useChatFactory');
 
-    // Clear the SSE inactivity watchdog and busy state on errors
-    if (sseInactivityTimerRef.current) {
-      clearTimeout(sseInactivityTimerRef.current);
-      sseInactivityTimerRef.current = null;
+    // Only a streaming-class failure means the agent stopped. `onError` is also
+    // the error sink for every CRUD operation (pin a file, change the approval
+    // mode, load a session); those clear their own `opBusy` in a `finally` and
+    // must not tear down the agent-busy state of a run that is still going.
+    const isStreamFailure = type === 'SSE_ERROR' || type === 'PARSE_ERROR'
+      || type === 'SESSION_EXPIRED' || type === 'STREAM_ERROR';
+    if (isStreamFailure) {
+      // Clear the SSE inactivity watchdog — the stream is over.
+      if (sseInactivityTimerRef.current) {
+        clearTimeout(sseInactivityTimerRef.current);
+        sseInactivityTimerRef.current = null;
+      }
+      setAgentBusy(false);
+      setIsStreaming(false);
+      setWaitingForResponse(false);
     }
-    setBusy(false);
 
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
@@ -2057,7 +2093,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const newChat = async (): Promise<string | null> => {
     sessionLogger?.info('Starting new chat', { personaId: persona?.id }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       // Full reset for a true "New Chat" - addresses the bug where history was not cleared
       const initialState = getInitialChatState();
@@ -2097,14 +2133,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error as Error);
       throw error;
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   }
 
 
   // Upload file to chat session
   const uploadFile = async (file: File, chatSessionId: string) => {
-    setBusy(true);
+    setOpBusy(true);
     try {
       // Initialize chat session on first file upload if not already initialized
       let sessionId = chatState.id || chatSessionId;
@@ -2126,7 +2162,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }));
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setOpBusy(false);
           return;
         }
       }
@@ -2201,7 +2237,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
@@ -2245,7 +2281,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     options?: { referenceOnly?: boolean }
   ) => {
     sessionLogger?.info(`Pinning user file to chat`, { fileId, path, referenceOnly: options?.referenceOnly }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       const sessionId = await ensureSessionForAttachments();
       if (!sessionId) throw new Error("No chat session");
@@ -2263,13 +2299,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
   const unpinUserFileForChat = async (fileId: string, path: string) => {
     sessionLogger?.info(`Unpinning user file from chat`, { fileId, path }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       const sessionId = chatState.id;
       if (!sessionId) throw new Error("No chat session");
@@ -2287,13 +2323,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
   const pinFolderForChat = async (folderPath: string, folderName: string) => {
     sessionLogger?.info(`Pinning folder to chat`, { folderPath, folderName }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       const sessionId = await ensureSessionForAttachments();
       if (!sessionId) throw new Error("No chat session");
@@ -2310,7 +2346,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
@@ -2323,7 +2359,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     nodeType?: string;
   }) => {
     sessionLogger?.info(`Pinning graph perspective to chat`, { perspective }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       const sessionId = await ensureSessionForAttachments();
       if (!sessionId) throw new Error("No chat session");
@@ -2348,13 +2384,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error);
       throw error;
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
   const unpinFolderForChat = async (folderPath: string, folderName: string) => {
     sessionLogger?.info(`Unpinning folder from chat`, { folderPath, folderName }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       const sessionId = chatState.id;
       if (!sessionId) throw new Error("No chat session");
@@ -2371,13 +2407,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
   // Send audio to chat session
   const sendAudio = async (audio: File | Blob, chatSessionId: string) => {
-    setBusy(true);
+    setAgentBusy(true);
     try {
       // Initialize chat session on first audio message if not already initialized
       let sessionId = chatState.id || chatSessionId;
@@ -2390,7 +2426,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sessionId = newSessionId; // Use the session ID from initialization
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setAgentBusy(false);
           return;
         }
       }
@@ -2444,13 +2480,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setAgentBusy(false);
     }
   };
 
   const setToolApprovalMode = async (mode: ToolApprovalMode) => {
     sessionLogger?.info(`Tool approval mode changing to ${mode}`, { mode, chatSessionId: chatState.id }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       // Initialize chat session on first tool approval mode change if not already initialized
       let sessionId = chatState.id;
@@ -2463,7 +2499,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sessionId = newSessionId; // Use the session ID from initialization
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setOpBusy(false);
           return;
         }
       }
@@ -2493,13 +2529,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   }
 
   const setMaxToolIterations = async (maxIterations: number) => {
     sessionLogger?.info(`Max tool iterations changing to ${maxIterations}`, { maxIterations, chatSessionId: chatState.id }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     try {
       let sessionId = chatState.id;
 
@@ -2511,7 +2547,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sessionId = newSessionId;
         } catch (error) {
           onError(error);
-          setBusy(false);
+          setOpBusy(false);
           return;
         }
       }
@@ -2532,12 +2568,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     } catch (error) {
       onError(error);
     } finally {
-      setBusy(false);
+      setOpBusy(false);
     }
   };
 
   const continueToolExecution = async (newMaxIterations?: number) => {
-    setBusy(true);
+    setAgentBusy(true);
     setToolIterationLimitInfo(null);
     try {
       const sessionId = chatState.id;
@@ -2601,7 +2637,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setWaitingForResponse(false);
       onError(error as Error);
     } finally {
-      setBusy(false);
+      setAgentBusy(false);
     }
   };
 
@@ -2619,10 +2655,33 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
-  const loadChat = async (chatSessionId: string) => {
+  /**
+   * The load implementation. Not exposed directly — `loadChat` below is a
+   * stable wrapper around the latest version of this closure. See the note
+   * there for why that matters.
+   */
+  const loadChatImpl = async (chatSessionId: string) => {
+    if (!chatSessionId) return;
+    // Re-entrancy guard. `loadChat` is reached from a click handler, a URL
+    // effect and the auto-resume path, all of which can fire before the first
+    // load has committed its `chatState`; without this the same session is
+    // fetched several times over and the responses race to set state.
+    if (loadInFlightRef.current === chatSessionId) {
+      reactory.debug(`ChatFactory: load already in flight for ${chatSessionId}`);
+      return;
+    }
+    loadInFlightRef.current = chatSessionId;
+
     sessionLogger?.info(`Loading chat session`, { chatSessionId }, 'useChatFactory');
-    setBusy(true);
+    setOpBusy(true);
     setChatLoading(true);
+
+    // Tear down the outgoing session's transport before we adopt the new one.
+    // This function owns the teardown: the effect keyed on `chatState.id` used
+    // to do it, but that runs after we have already re-established SSE for the
+    // incoming session and could close the fresh connection instead.
+    sse.disconnect();
+
     try {
       const result = await graph.getConversation(chatSessionId);
       if (result) {
@@ -2787,7 +2846,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // the server has no active transport for this conversation.
           // Sending an empty SSE-mode message triggers the server to return
           // ReactorInitiateSSE without processing or calling the AI provider.
-          if (protocol === 'sse' && !sse.connected) {
+          // Always re-establish. This used to be gated on `!sse.connected`,
+          // but `connected` is a render-time value: when the user switched
+          // sessions mid-response it still read `true` for the *outgoing*
+          // stream, so the probe was skipped and the session the user had just
+          // opened was left with no transport at all.
+          if (protocol === 'sse') {
             graph.sendMessage({
               message: '',
               personaId: (result as any)?.personaId || persona.id,
@@ -2814,10 +2878,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       reactory.error(`ChatFactory: Error loading chat session ${chatSessionId}`, error);
       onError(error);
     } finally {
-      setBusy(false);
+      if (loadInFlightRef.current === chatSessionId) loadInFlightRef.current = null;
+      setOpBusy(false);
       setChatLoading(false);
     }
   };
+
+  /**
+   * Stable `loadChat` that always runs the newest implementation.
+   *
+   * `loadChatImpl` is re-created every render and closes over `chatState`,
+   * `persona`, `protocol` and `sse`. Handing that straight to consumers caused
+   * two separate bugs: callers that memoised it without listing it as a
+   * dependency invoked a closure frozen several renders back, and callers that
+   * *did* list it re-ran their effect on every single render — twenty times a
+   * second while tokens stream.
+   */
+  const loadChatImplRef = React.useRef(loadChatImpl);
+  loadChatImplRef.current = loadChatImpl;
+  const loadChat = React.useCallback(
+    (chatSessionId: string) => loadChatImplRef.current(chatSessionId),
+    [],
+  );
 
   /**
    * Fetch a lightweight summary of another session (e.g. the parent of the
@@ -3608,6 +3690,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   return {
     busy,
+    agentBusy,
     chatState,
     newChat,
     sendMessage,
@@ -3643,7 +3726,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     compactConversation: async () => {
       const sessionId = chatState.id;
       if (!sessionId) return;
-      setBusy(true);
+      setOpBusy(true);
       try {
         const result = await graph.compactConversation(sessionId);
         if (!result.success && result.error) {
@@ -3652,7 +3735,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       } catch (err: any) {
         onError(err);
       } finally {
-        setBusy(false);
+        setOpBusy(false);
       }
     },
     /**

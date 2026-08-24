@@ -384,6 +384,15 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
    * never goes stale even though event listeners are bound once.
    */
   const handleMessage = React.useCallback((event: MessageEvent) => {
+    // EventSource dispatches its own transport failures as an `error` event
+    // that carries no `data`. Because we also subscribe to server-sent
+    // `event: error` frames under the same name, those transport events land
+    // here too. Ignore them — `es.onerror` owns reconnection. Without this
+    // guard `JSON.parse(undefined)` throws and we raise a phantom PARSE_ERROR,
+    // which the consumer treats as a real stream failure and uses to clear the
+    // agent-busy state mid-run.
+    if (typeof event?.data !== 'string') return;
+
     try {
       const data = JSON.parse(event.data);
 

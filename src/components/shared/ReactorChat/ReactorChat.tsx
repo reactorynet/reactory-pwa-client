@@ -307,6 +307,7 @@ export default (props) => {
   const {
     chatState,
     busy,
+    agentBusy = false,
     sendMessage,
     sendAudio,
     uploadFile,
@@ -352,13 +353,12 @@ export default (props) => {
     chatLoading = false,
   } = {
     ...chatFactory,
-    isStreaming: false,
     currentStreamingMessage: '',
   };
 
   // Derived chat activity status
   const chatStatusInfo = useChatStatus({
-    busy,
+    busy: agentBusy,
     isStreaming,
     toolIterationLimitInfo,
     pendingToolCallResume: !!pendingToolCallResume,
@@ -892,15 +892,14 @@ export default (props) => {
     console.log('ReactorChat: Chat loading useEffect triggered', {
       sessionId: queryParams.sessionId,
       currentChatId: chatState?.id,
-      busy,
+      agentBusy,
       isManualNavigation: isManualNavigation.current
     });
 
-    if (busy) {
-      reactory.log('ReactorChat: Skipping chat load - system is busy');
-      return; // Prevent loading if already busy
-    }
-
+    // Deliberately NOT gated on agent activity. Switching conversation while a
+    // response streams is a legitimate thing to do — `loadChat` tears the old
+    // transport down and the session id filter in useChatFactory drops any
+    // events still in flight for the session we left.
     if (isManualNavigation.current) {
       console.log('ReactorChat: Skipping chat load - manual navigation in progress');
       return;
@@ -910,7 +909,7 @@ export default (props) => {
       reactory.log(`ReactorChat: Loading chat from URL param: ${queryParams.sessionId}`);
       loadChat(queryParams.sessionId);
     }
-  }, [queryParams.sessionId, chatState?.id, busy, loadChat]);
+  }, [queryParams.sessionId, chatState?.id, loadChat]);
 
   const autoInitInProgress = React.useRef(false);
   // Track whether the initial chat list has been loaded for the current persona
@@ -1006,7 +1005,7 @@ export default (props) => {
       chatId: chat.id,
       currentChatId: chatState?.id,
       isManualNavigation: isManualNavigation.current,
-      busy
+      agentBusy
     });
 
     handleChatMenuClose(async () => {
@@ -1016,9 +1015,14 @@ export default (props) => {
         return;
       }
 
-      // Prevent operation if already in progress
-      if (isManualNavigation.current || busy) {
-        console.log('ReactorChat: Operation in progress, skipping', { isManualNavigation: isManualNavigation.current, busy });
+      // Only a navigation already in progress blocks this. It used to also bail
+      // when `busy` was set, which meant that while the agent was working the
+      // row was silently dead: the handler returned before `navigate()`, so the
+      // URL never changed and the URL-driven loader had nothing to pick up once
+      // the agent finished. Deleting a chat had no such guard, which is why
+      // delete worked and select did not.
+      if (isManualNavigation.current) {
+        console.log('ReactorChat: Navigation already in progress, skipping');
         return;
       }
 
@@ -1044,7 +1048,7 @@ export default (props) => {
         console.log('ReactorChat: Manual navigation flag reset');
       }
     });
-  }, [chatState?.id, busy, queryParams.personaId, navigate, location.pathname, handleChatMenuClose]);
+  }, [chatState?.id, queryParams.personaId, navigate, location.pathname, handleChatMenuClose, loadChat]);
 
   const handlePersonaPanelToggle = useCallback(() => {
     // Close other panels first
@@ -1259,7 +1263,7 @@ export default (props) => {
 
   const handleSelectChildSession = useCallback((child: SubAgentSummary) => {
     if (!child?.id) return;
-    if (busy || isManualNavigation.current) return;
+    if (isManualNavigation.current) return;
     // Load the sub-agent conversation in place. This is NOT a page navigation:
     // we only replace the `sessionId` query param on the current pathname so a
     // minimized/hosted ReactorChat stays exactly where it is. We deliberately
@@ -1280,7 +1284,7 @@ export default (props) => {
       .finally(() => {
         isManualNavigation.current = false;
       });
-  }, [busy, navigate, location.pathname, loadChat, reactory]);
+  }, [navigate, location.pathname, loadChat, reactory]);
 
   const handleNavigateToParent = useCallback(() => {
     const parentId = chatState?.parentSessionId;
@@ -2466,7 +2470,7 @@ export default (props) => {
               mode={mode}
             />
           </Box>
-          {busy && (
+          {agentBusy && (
             (chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
               chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
               <Tooltip title="Stop execution">
