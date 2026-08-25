@@ -97,6 +97,16 @@ describe('RecordingAudioBar & ChatInput speech improvements', () => {
       );
 
       expect(input.value).toBe('Hello agent, what is the status?');
+
+      // Once audio/message is sent and speechTranscript is reset to empty string
+      rerender(
+        <ChatInput
+          onSendMessage={onSendMessage}
+          speechTranscript=""
+        />
+      );
+
+      expect(input.value).toBe('');
     });
 
     it('displays countdown chip and cancels timer when user types or clicks cancel', () => {

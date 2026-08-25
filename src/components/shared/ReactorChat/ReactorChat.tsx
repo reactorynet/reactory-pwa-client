@@ -1228,8 +1228,20 @@ export default (props) => {
     speech.speakText(lastMsg.content, voiceKey);
   }, [messages, autoSpeakEnabled, isStreaming, chatLoading, selectedPersona, speech]);
 
+  const clearAutoSendTimer = useCallback(() => {
+    if (autoSendTimerRef.current) {
+      clearInterval(autoSendTimerRef.current);
+      autoSendTimerRef.current = null;
+    }
+    setRecordingCountdown(null);
+  }, []);
+
   // Called when a recording finishes — sends audio through voice pipeline or as a message
   const handleVoiceRecordingComplete = useCallback(async (audioBlob: Blob) => {
+    setSpeechTranscript('');
+    clearAutoSendTimer();
+    setRecordingCountdown(null);
+
     if (!speech.state.voiceModeActive) {
       if (chatState?.id) {
         await sendAudio(audioBlob, chatState.id);
@@ -1265,7 +1277,7 @@ export default (props) => {
         }));
       }
     });
-  }, [speech, chatState?.id, setChatState, reactory, sendAudio]);
+  }, [speech, chatState?.id, setChatState, reactory, sendAudio, clearAutoSendTimer]);
 
   const handleFilesPanelToggle = useCallback(() => {
     // Close other panels first
@@ -1592,14 +1604,6 @@ export default (props) => {
 
   // Countdown timer for voice/speech auto-send
   const autoSendTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  const clearAutoSendTimer = useCallback(() => {
-    if (autoSendTimerRef.current) {
-      clearInterval(autoSendTimerRef.current);
-      autoSendTimerRef.current = null;
-    }
-    setRecordingCountdown(null);
-  }, []);
 
   const handleStartAutoSendCountdown = useCallback((initialSeconds: number = 5) => {
     if (autoSendTimerRef.current) {

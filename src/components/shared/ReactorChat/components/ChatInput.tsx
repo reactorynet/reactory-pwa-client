@@ -111,6 +111,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState<string>(initialPrompt || speechTranscript || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
+  const isFirstRenderRef = useRef<boolean>(true);
+  const prevTranscriptRef = useRef<string | undefined>(speechTranscript);
 
   // Seed the composer whenever the host supplies a new prompt. Only a
   // non-empty prompt overwrites the box, so clearing the prop never discards
@@ -121,11 +123,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
     inputRef.current?.focus();
   }, [initialPrompt]);
 
-  // Sync with speech transcript when speech services produce results
+  // Sync with speech transcript when speech services produce results, or clear input when transcript is reset/cleared
   useEffect(() => {
-    if (speechTranscript !== undefined && speechTranscript !== '') {
-      setInputValue(speechTranscript);
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevTranscriptRef.current = speechTranscript;
+      return;
     }
+
+    if (speechTranscript !== undefined) {
+      if (speechTranscript !== '') {
+        setInputValue(speechTranscript);
+      } else if (prevTranscriptRef.current !== undefined && prevTranscriptRef.current !== '') {
+        // Speech transcript was cleared after having text -> clear the input box
+        setInputValue('');
+      }
+    }
+    prevTranscriptRef.current = speechTranscript;
   }, [speechTranscript]);
 
   const toolModeOptions = [
