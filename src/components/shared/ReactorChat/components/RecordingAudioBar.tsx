@@ -288,6 +288,12 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
       await startRecording();
     } else {
       stopRecording();
+      const text = transcriptRef.current?.trim();
+      if (text) {
+        onTranscriptRef.current?.(text);
+        onCountdownChangeRef.current?.(5);
+      }
+      onClose();
     }
   };
 
@@ -300,7 +306,15 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
     onClose();
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount & auto-start on open
+  React.useEffect(() => {
+    if (open && !state.isRecording) {
+      startRecording();
+    } else if (!open && state.isRecording) {
+      stopRecording();
+    }
+  }, [open]);
+
   React.useEffect(() => {
     return () => {
       stopSpeechRecognition();

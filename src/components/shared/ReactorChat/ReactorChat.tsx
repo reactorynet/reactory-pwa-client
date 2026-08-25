@@ -1590,12 +1590,64 @@ export default (props) => {
     return model?.capabilities?.includes('image-generation') ?? false;
   }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
 
+  // Countdown timer for voice/speech auto-send
+  const autoSendTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const clearAutoSendTimer = useCallback(() => {
+    if (autoSendTimerRef.current) {
+      clearInterval(autoSendTimerRef.current);
+      autoSendTimerRef.current = null;
+    }
+    setRecordingCountdown(null);
+  }, []);
+
+  const handleStartAutoSendCountdown = useCallback((initialSeconds: number = 5) => {
+    if (autoSendTimerRef.current) {
+      clearInterval(autoSendTimerRef.current);
+    }
+    setRecordingCountdown(initialSeconds);
+
+    let remaining = initialSeconds;
+    autoSendTimerRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        if (autoSendTimerRef.current) {
+          clearInterval(autoSendTimerRef.current);
+          autoSendTimerRef.current = null;
+        }
+        setRecordingCountdown(null);
+        setSpeechTranscript((currentTranscript) => {
+          const trimmed = currentTranscript.trim();
+          if (trimmed) {
+            sendMessage(trimmed, chatState?.id);
+          }
+          return '';
+        });
+      } else {
+        setRecordingCountdown(remaining);
+      }
+    }, 1000);
+  }, [sendMessage, chatState?.id]);
+
+  const handleCountdownChange = useCallback((seconds: number | null) => {
+    if (seconds == null) {
+      clearAutoSendTimer();
+    } else {
+      handleStartAutoSendCountdown(seconds);
+    }
+  }, [clearAutoSendTimer, handleStartAutoSendCountdown]);
+
+  const handleStopCountdown = useCallback(() => {
+    clearAutoSendTimer();
+  }, [clearAutoSendTimer]);
+
   const handleSendMessage = useCallback((message: string, images?: string[]) => {
+    clearAutoSendTimer();
     sendMessage(message, chatState?.id, images);
     setPendingImages([]);
     setSpeechTranscript('');
     setRecordingCountdown(null);
-  }, [sendMessage, chatState?.id]);
+  }, [clearAutoSendTimer, sendMessage, chatState?.id]);
 
   const handleStreamingToggle = useCallback((enabled: boolean) => {
     setStreamingEnabled(enabled);
@@ -2361,15 +2413,15 @@ export default (props) => {
               onStopPlayback={speech.stopPlayback}
               onRecordingComplete={handleVoiceRecordingComplete}
               onTranscript={(text) => setSpeechTranscript(text)}
-              onCountdownChange={(seconds) => setRecordingCountdown(seconds)}
-              onStopCountdown={() => setRecordingCountdown(null)}
+              onCountdownChange={handleCountdownChange}
+              onStopCountdown={handleStopCountdown}
               onAutoSend={(text) => {
                 const msg = (text || speechTranscript).trim();
                 if (msg) {
                   handleSendMessage(msg);
                 }
                 setSpeechTranscript('');
-                setRecordingCountdown(null);
+                clearAutoSendTimer();
                 setRecordingPanelOpen(false);
               }}
             />
@@ -2580,7 +2632,7 @@ export default (props) => {
           initialPrompt={props?.initialPrompt}
           speechTranscript={speechTranscript}
           countdown={recordingCountdown}
-          onCancelCountdown={() => setRecordingCountdown(null)}
+          onCancelCountdown={handleStopCountdown}
           disabled={busy}
           placeholder={supportsImageGeneration
             ? "Ask me anything... or describe an image to create"
