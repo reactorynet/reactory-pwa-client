@@ -35,8 +35,8 @@ const PassthroughTextField: React.FC<any> = ({ label, value, onChange, inputProp
   </div>
 );
 
-const PassthroughIconButton: React.FC<any> = ({ children, onClick, sx, size }) => (
-  <button onClick={onClick} data-size={size}>{children}</button>
+const PassthroughIconButton: React.FC<any> = ({ children, onClick, sx, size, ...rest }) => (
+  <button onClick={onClick} data-size={size} {...rest}>{children}</button>
 );
 
 const PassthroughFade: React.FC<any> = ({ children, in: inProp }) =>

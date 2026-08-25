@@ -1179,11 +1179,54 @@ export default (props) => {
   }, []);
 
   // Voice mode toggle — starts or ends a voice session
+  // Auto-speak responses state — persisted to localStorage
+  const [autoSpeakEnabled, setAutoSpeakEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('reactorChat.autoSpeak') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleAutoSpeakToggle = useCallback(() => {
+    setAutoSpeakEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('reactorChat.autoSpeak', String(next));
+      } catch {
+        // localStorage unavailable
+      }
+      return next;
+    });
+  }, []);
+
   const handleVoiceModeToggle = useCallback(async () => {
     if (!selectedPersona?.id) return;
     sessionLogger?.info('Voice mode toggled', { personaId: selectedPersona.id, chatSessionId: chatState?.id }, 'ReactorChat');
+    const wasActive = speech.state.voiceModeActive;
+    if (!wasActive) {
+      setAutoSpeakEnabled(true);
+    }
     await speech.toggleVoiceMode(selectedPersona.id, chatState?.id);
   }, [selectedPersona?.id, chatState?.id, speech]);
+
+  // Track last spoken message ID to avoid repeating speech for the same message
+  const lastSpokenMessageIdRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!autoSpeakEnabled || isStreaming || chatLoading) return;
+    if (!messages || messages.length === 0) return;
+
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== 'assistant') return;
+    if (!lastMsg.content || typeof lastMsg.content !== 'string' || !lastMsg.content.trim()) return;
+    if (lastMsg.id === 'streaming-temp') return;
+    if (lastSpokenMessageIdRef.current === lastMsg.id) return;
+
+    lastSpokenMessageIdRef.current = lastMsg.id;
+    const voiceKey = lastMsg.voice || selectedPersona?.appearance?.voice?.[0] || (selectedPersona as any)?.voice;
+    speech.speakText(lastMsg.content, voiceKey);
+  }, [messages, autoSpeakEnabled, isStreaming, chatLoading, selectedPersona, speech]);
 
   // Called when a recording finishes — sends audio through voice pipeline or as a message
   const handleVoiceRecordingComplete = useCallback(async (audioBlob: Blob) => {
@@ -2546,6 +2589,10 @@ export default (props) => {
           recordingPanelOpen={recordingPanelOpen}
           voiceModeActive={speech.state.voiceModeActive}
           onVoiceModeToggle={handleVoiceModeToggle}
+          autoSpeakEnabled={autoSpeakEnabled}
+          onAutoSpeakToggle={handleAutoSpeakToggle}
+          isSpeaking={speech.state.playing}
+          onStopSpeaking={speech.stopPlayback}
           onFileUpload={React.useCallback(async (file: File) => {
             // Let uploadFile handle session initialization if needed
             if (uploadFile) {

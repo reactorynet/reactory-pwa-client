@@ -15,6 +15,14 @@ interface ChatInputProps {
   voiceModeActive?: boolean;
   /** Toggle voice mode on/off */
   onVoiceModeToggle?: () => void;
+  /** Whether auto-speech output for responses is enabled */
+  autoSpeakEnabled?: boolean;
+  /** Toggle auto-speech output on/off */
+  onAutoSpeakToggle?: () => void;
+  /** Whether audio is currently actively speaking/playing */
+  isSpeaking?: boolean;
+  /** Stop any currently playing audio */
+  onStopSpeaking?: () => void;
   /** Whether the active model supports image input */
   supportsImages?: boolean;
   /** Pending images accumulated from paste/drop, managed by parent */
@@ -53,6 +61,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   chatState,
   voiceModeActive = false,
   onVoiceModeToggle,
+  autoSpeakEnabled = false,
+  onAutoSpeakToggle,
+  isSpeaking = false,
+  onStopSpeaking,
   supportsImages = false,
   pendingImages = [],
   onPastedImages,
@@ -350,46 +362,100 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       }}
                     />
                   )}
+                  {/* Auto-Speech Output Toggle Button */}
+                  {onAutoSpeakToggle && (
+                    <Tooltip
+                      title={
+                        isSpeaking
+                          ? "Speaking response... (click to stop)"
+                          : autoSpeakEnabled
+                          ? "Auto-speech output enabled (click to disable)"
+                          : "Enable auto-speech output for responses"
+                      }
+                    >
+                      <IconButton
+                        aria-label={
+                          isSpeaking
+                            ? "Stop speaking"
+                            : autoSpeakEnabled
+                            ? "Disable auto-speech output"
+                            : "Enable auto-speech output"
+                        }
+                        onClick={isSpeaking && onStopSpeaking ? onStopSpeaking : onAutoSpeakToggle}
+                        disabled={disabled}
+                        size="small"
+                        sx={{
+                          p: 0.1,
+                          fontSize: '1rem',
+                          color: isSpeaking
+                            ? (theme?.palette?.primary?.main || '#1976d2')
+                            : autoSpeakEnabled
+                            ? (theme?.palette?.secondary?.main || '#dc004e')
+                            : (theme?.palette?.text?.disabled || '#888'),
+                          ...(isSpeaking && {
+                            animation: 'reactorChatPulse 1.2s ease-in-out infinite',
+                            '@keyframes reactorChatPulse': {
+                              '0%, 100%': { transform: 'scale(1)', opacity: 0.9 },
+                              '50%': { transform: 'scale(1.2)', opacity: 1 },
+                            },
+                          }),
+                          '&:hover': {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <span className="material-icons" style={{ fontSize: 18 }}>
+                          {isSpeaking ? 'graphic_eq' : autoSpeakEnabled ? 'volume_up' : 'volume_off'}
+                        </span>
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {/* Voice Mode Toggle Button */}
                   {onVoiceModeToggle && (
+                    <Tooltip title={voiceModeActive ? "Voice mode on (click to disable)" : "Voice mode off (click to enable)"}>
+                      <IconButton
+                        aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}
+                        onClick={onVoiceModeToggle}
+                        disabled={disabled}
+                        size="small"
+                        sx={{
+                          p: 0.1,
+                          fontSize: '1rem',
+                          color: voiceModeActive
+                            ? theme.palette.secondary.main
+                            : theme.palette.text.disabled,
+                          '&:hover': {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <span className="material-icons" style={{ fontSize: 18 }}>
+                          {voiceModeActive ? 'record_voice_over' : 'voice_over_off'}
+                        </span>
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {/* Recording Audio Button */}
+                  <Tooltip title={recordingPanelOpen ? "Close recording bar" : "Record audio"}>
                     <IconButton
-                      aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}
-                      onClick={onVoiceModeToggle}
+                      aria-label="Record audio"
+                      onClick={onRecordingToggle}
                       disabled={disabled}
                       size="small"
                       sx={{
                         p: 0.1,
                         fontSize: '1rem',
-                        color: voiceModeActive
-                          ? theme.palette.secondary.main
-                          : theme.palette.text.disabled,
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: recordingPanelOpen ? theme.palette.primary.main : theme.palette.text.primary,
                         '&:hover': {
                           backgroundColor: theme.palette.action.hover,
                         },
                       }}
-                      title={voiceModeActive ? "Voice mode on" : "Voice mode off"}
                     >
-                      <span className="material-icons" style={{ fontSize: 18 }}>
-                        {voiceModeActive ? 'record_voice_over' : 'voice_over_off'}
-                      </span>
+                      <Mic fontSize="small" />
                     </IconButton>
-                  )}
-                  <IconButton
-                    aria-label="Record audio"
-                    onClick={onRecordingToggle}
-                    disabled={disabled}
-                    sx={{
-                      p: 0.1,
-                      fontSize: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: recordingPanelOpen ? theme.palette.primary.main : theme.palette.text.primary,
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <Mic fontSize="small" />
-                  </IconButton>
+                  </Tooltip>
                 </Box>
               ),
             }}

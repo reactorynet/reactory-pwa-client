@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import RecordingAudioBar from '../components/RecordingAudioBar';
 import ChatInput from '../components/ChatInput';
 import { mockMaterial, mockIl8n } from './mockMaterial';
@@ -18,6 +18,7 @@ const mockReactory = {
   muiTheme: {
     palette: {
       mode: 'dark',
+      primary: { main: '#1976d2' },
       text: { primary: '#fff', disabled: '#888' },
       secondary: { main: '#dc004e' },
       divider: '#333',
@@ -120,6 +121,52 @@ describe('RecordingAudioBar & ChatInput speech improvements', () => {
 
       expect(onCancelCountdown).toHaveBeenCalled();
       expect(input.value).toBe('Streaming voice text edited');
+    });
+
+    it('renders and toggles auto-speech output button', () => {
+      const onAutoSpeakToggle = jest.fn();
+      const onStopSpeaking = jest.fn();
+
+      const { rerender } = render(
+        <ChatInput
+          onSendMessage={jest.fn()}
+          autoSpeakEnabled={false}
+          onAutoSpeakToggle={onAutoSpeakToggle}
+        />
+      );
+
+      const speakBtn = screen.getByLabelText('Enable auto-speech output');
+      expect(speakBtn).toBeInTheDocument();
+
+      fireEvent.click(speakBtn);
+      expect(onAutoSpeakToggle).toHaveBeenCalled();
+
+      // When auto-speak is enabled
+      rerender(
+        <ChatInput
+          onSendMessage={jest.fn()}
+          autoSpeakEnabled={true}
+          onAutoSpeakToggle={onAutoSpeakToggle}
+        />
+      );
+
+      expect(screen.getByLabelText('Disable auto-speech output')).toBeInTheDocument();
+
+      // When actively speaking
+      rerender(
+        <ChatInput
+          onSendMessage={jest.fn()}
+          autoSpeakEnabled={true}
+          isSpeaking={true}
+          onStopSpeaking={onStopSpeaking}
+          onAutoSpeakToggle={onAutoSpeakToggle}
+        />
+      );
+
+      const stopSpeakBtn = screen.getByLabelText('Stop speaking');
+      expect(stopSpeakBtn).toBeInTheDocument();
+      fireEvent.click(stopSpeakBtn);
+      expect(onStopSpeaking).toHaveBeenCalled();
     });
   });
 });
