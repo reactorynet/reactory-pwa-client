@@ -3078,8 +3078,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
 
       if (data.__typename === "ReactorInitiateSSE") {
-        // SSE mode — the server will stream the AI continuation.
-        // The SSE handler will pick up the response.
+        // SSE mode — the server created a new streaming session for the AI continuation.
+        // Connect to the new SSE stream to receive the streamed AI response.
+        const sseData = data as any;
+        sse.disconnect();
+        setIsStreaming(true);
+        setWaitingForResponse(true);
+        setAgentBusy(true);
+        sse.connect({
+          endpoint: sseData.endpoint,
+          sessionId: sseData.sessionId,
+          token: sseData.token,
+          headers: sseData.headers,
+          expiry: sseData.expiry,
+        });
         return null;
       }
 
@@ -3097,7 +3109,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       reactory.error('Error completing client tool calls', error);
       return null;
     }
-  }, [chatState?.id, persona?.id, protocol, reactory]);
+  }, [chatState?.id, persona?.id, protocol, reactory, sse, setIsStreaming, setWaitingForResponse, setAgentBusy]);
 
   // Keep the ref in sync so useMacros' executeMacro always calls the latest version.
   completeClientToolCallsRef.current = completeClientToolCalls;
