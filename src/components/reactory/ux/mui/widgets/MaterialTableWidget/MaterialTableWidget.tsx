@@ -815,14 +815,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               response.data = $data;
             } else {
               if ($data.data && isArray($data.data) === true) response.data = $data.data;
-              if ($data.paging) response.paging = $data.paging;
+              if ($data.paging) response.paging = { ...response.paging, ...$data.paging };
             }
 
             if ($data.data && $data.paging) {
               response.data = $data.data;
-              response.paging = $data.paging;
+              response.paging = { ...response.paging, ...$data.paging };
             } else if (isArray($data)) {
               response.data = $data;
+            }
+
+            if (!response.paging.total && response.data && response.data.length > 0) {
+              response.paging.total = response.data.length;
             }
           }
 
