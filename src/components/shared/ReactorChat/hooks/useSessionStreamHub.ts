@@ -59,8 +59,9 @@ export const useSessionStreamHub = ({
   maxBackgroundConnections = 5,
 }: UseSessionStreamHubOptions): UseSessionStreamHubResult => {
   const [sessionStates, setSessionStates] = useState<Record<string, TrackedSession>>({});
-  const eventSourcesRef = useRef<Record<string, EventSource>>({});
-  const connectingRef = useRef<Record<string, boolean>>({});
+  const eventSourcesRef = useRef<Map<string, EventSource>>(new Map());
+  const connectingRef = useRef<Set<string>>(new Set());
+  const failedRef = useRef<Set<string>>(new Set());
   const getPersonaRef = useRef(getPersona);
   getPersonaRef.current = getPersona;
 
@@ -98,7 +99,6 @@ export const useSessionStreamHub = ({
             };
             changed = true;
           } else {
-            // Update persona/title if missing
             if (!next[sub.id].persona && persona) {
               next[sub.id].persona = persona;
               changed = true;
@@ -138,18 +138,20 @@ export const useSessionStreamHub = ({
     });
   }, [chats, subAgents, activeSessionId, resolvePersona]);
 
-  // When activeSessionId changes, clear unread for active session and disconnect its background SSE if any
+  // When activeSessionId changes, clear unread for active session and disconnect any background SSE for it
   useEffect(() => {
     if (!activeSessionId) return;
 
-    if (eventSourcesRef.current[activeSessionId]) {
+    const existingEs = eventSourcesRef.current.get(activeSessionId);
+    if (existingEs) {
       try {
-        eventSourcesRef.current[activeSessionId].close();
+        existingEs.close();
       } catch (e) {
         // ignore
       }
-      delete eventSourcesRef.current[activeSessionId];
+      eventSourcesRef.current.delete(activeSessionId);
     }
+    connectingRef.current.delete(activeSessionId);
 
     setSessionStates((prev) => {
       if (!prev[activeSessionId] || !prev[activeSessionId].unread) return prev;
@@ -228,14 +230,12 @@ export const useSessionStreamHub = ({
   // Establish background SSE listeners for background sessions
   useEffect(() => {
     const candidateSessions = Object.values(sessionStates).filter(
-      (s) => s.sessionId !== activeSessionId
+      (s) => s.sessionId && s.sessionId !== activeSessionId && !eventSourcesRef.current.has(s.sessionId) && !connectingRef.current.has(s.sessionId) && !failedRef.current.has(s.sessionId)
     );
 
     candidateSessions.slice(0, maxBackgroundConnections).forEach(async (session) => {
       const { sessionId } = session;
-      if (eventSourcesRef.current[sessionId] || connectingRef.current[sessionId]) return;
-
-      connectingRef.current[sessionId] = true;
+      connectingRef.current.add(sessionId);
 
       try {
         let sseEndpoint = '';
@@ -243,13 +243,13 @@ export const useSessionStreamHub = ({
           const sessionData = await createStreamingSession(reactory as any, sessionId);
           sseEndpoint = sessionData.endpoint;
         } catch (e) {
-          // Fallback to direct url if createStreamingSession is not supported
-          const urlRoot = (window as any)?.REACTORY_API_URI_ROOT || process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
-          sseEndpoint = `${urlRoot}/reactor-chat/streaming/sse/${sessionId}`;
+          failedRef.current.add(sessionId);
+          connectingRef.current.delete(sessionId);
+          return;
         }
 
-        if (!sseEndpoint) {
-          delete connectingRef.current[sessionId];
+        if (!sseEndpoint || sessionId === activeSessionId) {
+          connectingRef.current.delete(sessionId);
           return;
         }
 
@@ -281,15 +281,17 @@ export const useSessionStreamHub = ({
 
         es.onerror = () => {
           if (es.readyState === EventSource.CLOSED) {
-            delete eventSourcesRef.current[sessionId];
+            try { es.close(); } catch (e) {}
+            eventSourcesRef.current.delete(sessionId);
+            failedRef.current.add(sessionId);
           }
         };
 
-        eventSourcesRef.current[sessionId] = es;
+        eventSourcesRef.current.set(sessionId, es);
       } catch (err) {
-        reactory.debug?.('[useSessionStreamHub] Failed to bind background SSE:', err);
+        failedRef.current.add(sessionId);
       } finally {
-        delete connectingRef.current[sessionId];
+        connectingRef.current.delete(sessionId);
       }
     });
   }, [sessionStates, activeSessionId, maxBackgroundConnections, reactory, handleSSEEvent]);
@@ -297,14 +299,15 @@ export const useSessionStreamHub = ({
   // Teardown all background EventSources on unmount
   useEffect(() => {
     return () => {
-      Object.values(eventSourcesRef.current).forEach((es) => {
+      eventSourcesRef.current.forEach((es) => {
         try {
           es.close();
         } catch (e) {
           // ignore
         }
       });
-      eventSourcesRef.current = {};
+      eventSourcesRef.current.clear();
+      connectingRef.current.clear();
     };
   }, []);
 
