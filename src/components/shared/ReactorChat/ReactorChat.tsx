@@ -41,6 +41,8 @@ import SidePanel from './components/SidePanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import AgentToolWindowBar from './components/AgentToolWindowBar';
+import ActiveSessionsAvatarStack from './components/ActiveSessionsAvatarStack';
+import useSessionStreamHub from './hooks/useSessionStreamHub';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
@@ -363,6 +365,44 @@ export default (props) => {
     toolIterationLimitInfo,
     pendingToolCallResume: !!pendingToolCallResume,
   });
+
+  // Track multi-session and sub-agent background streams and unread statuses
+  const {
+    backgroundSessions,
+    activePersonaSessionCount,
+    clearUnread,
+  } = useSessionStreamHub({
+    reactory,
+    activeSessionId: chatState?.id,
+    activePersonaId: selectedPersona?.id,
+    chats,
+    subAgents: chatState?.chats,
+    getPersona,
+  });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+    // Parse query params for personaId and sessionId
+  const queryParams = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      personaId: params.get('personaId'),
+      sessionId: params.get('sessionId'),
+    };
+  }, [location.search]);
+
+  const handleSessionSwitch = useCallback((sessionId: string, personaId?: string) => {
+    clearUnread(sessionId);
+    if (chatState?.id === sessionId) return;
+    const pId = personaId || queryParams.personaId || selectedPersona?.id;
+    const searchQuery = `?sessionId=${sessionId}&personaId=${pId}`;
+    navigate({
+      pathname: location.pathname,
+      search: searchQuery,
+    });
+    loadChat(sessionId);
+  }, [clearUnread, chatState?.id, queryParams.personaId, selectedPersona?.id, navigate, location.pathname, loadChat]);
 
   // Keep session ID in sync so useSessionLogger picks it up
   React.useEffect(() => {
@@ -846,18 +886,6 @@ export default (props) => {
     setChatMenuAnchor(null);
     setHeaderOpen(false);
   }, [selectedPersona?.id, chatState?.id]);
-
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Parse query params for personaId and sessionId
-  const queryParams = React.useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return {
-      personaId: params.get('personaId'),
-      sessionId: params.get('sessionId'),
-    };
-  }, [location.search]);
 
   // Set active persona from query param if personas loaded
   React.useEffect(() => {
@@ -2498,9 +2526,38 @@ export default (props) => {
         />
       )}
 
+      {/* Active background sessions avatar stack */}
+      <ActiveSessionsAvatarStack
+        sessions={backgroundSessions}
+        onSelectSession={handleSessionSwitch}
+        mode={mode}
+        bottomOffset={
+          personaPanelOpen ||
+          toolsPanelOpen ||
+          chatHistoryPanelOpen ||
+          recordingPanelOpen ||
+          filesPanelOpen ||
+          todosPanelOpen ||
+          debugPanelOpen ||
+          subAgentsPanelOpen
+            ? 112
+            : 118
+        }
+        rightOffset={12}
+      />
+
       {/* Persona agent toolwindow shortcut bar - Bottom Right */}
       <AgentToolWindowBar
-        mainSize="small"
+        mainSize="medium"
+        isBusy={agentBusy || isStreaming || chatStatusInfo.status !== 'idle'}
+        statusColor={
+          chatStatusInfo.status === 'thinking' ? '#00e5ff' :
+          chatStatusInfo.status === 'streaming' ? '#2979ff' :
+          chatStatusInfo.status === 'executing_tools' ? '#ff9100' :
+          '#4caf50'
+        }
+        mainBadgeContent={activePersonaSessionCount > 1 ? activePersonaSessionCount : undefined}
+        mainBadgeColor="primary"
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
           label: action.title,
@@ -2512,8 +2569,8 @@ export default (props) => {
             src={selectedPersona?.avatar}
             alt={selectedPersona?.name}
             sx={{
-              width: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 28 : 32,
-              height: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 28 : 32,
+              width: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 30 : 36,
+              height: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 30 : 36,
               transition: 'all 0.3s ease-in-out',
             }}
           />

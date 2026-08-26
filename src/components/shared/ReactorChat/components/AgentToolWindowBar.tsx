@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   Fab,
+  Badge,
   Tooltip,
   TooltipProps,
   Box,
@@ -42,6 +43,10 @@ export interface AgentToolWindowBarProps {
   onMainClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   mainClickLabel?: string;
   mode?: 'dark' | 'light' | string;
+  mainBadgeContent?: number | string;
+  mainBadgeColor?: 'inherit' | 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning';
+  isBusy?: boolean;
+  statusColor?: string;
 }
 
 const SLOTS_PER_PAGE = 8;
@@ -79,6 +84,10 @@ const AgentToolWindowBar: React.FC<AgentToolWindowBarProps> = ({
   mainSx,
   onMainClick,
   mode = 'dark',
+  mainBadgeContent,
+  mainBadgeColor = 'primary',
+  isBusy = false,
+  statusColor = '#00e5ff',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLongPressed, setIsLongPressed] = useState(false);
@@ -377,25 +386,58 @@ const AgentToolWindowBar: React.FC<AgentToolWindowBarProps> = ({
         </Paper>
       )}
 
-      <Fab
-        color={mainColor}
-        size={mainSize}
-        onClick={handleMainClick}
-        disabled={disabled}
-        aria-label={mainLabel}
+      <Badge
+        badgeContent={mainBadgeContent}
+        color={mainBadgeColor as any}
+        invisible={!mainBadgeContent || mainBadgeContent === 0}
+        overlap="circular"
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         sx={{
-          position: 'relative',
           zIndex: 1001,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'scale(1.1)',
-            boxShadow: (t) => t.shadows[8],
+          '& .MuiBadge-badge': {
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            height: 20,
+            minWidth: 20,
+            padding: '0 4px',
+            boxShadow: (t) => t.shadows[4],
           },
-          ...mainSx,
         }}
       >
-        {mainIcon}
-      </Fab>
+        <Fab
+          color={mainColor}
+          size={mainSize}
+          onClick={handleMainClick}
+          disabled={disabled}
+          aria-label={mainLabel}
+          sx={{
+            position: 'relative',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              transform: 'scale(1.08)',
+              boxShadow: (t) => t.shadows[8],
+            },
+            ...(isBusy && {
+              animation: 'activeMainFabPulse 1.6s infinite ease-in-out',
+              border: `2px solid ${statusColor}`,
+              boxShadow: `0 0 16px ${alpha(statusColor, 0.75)}`,
+              '@keyframes activeMainFabPulse': {
+                '0%, 100%': {
+                  boxShadow: `0 0 8px ${alpha(statusColor, 0.5)}`,
+                  transform: 'scale(1)',
+                },
+                '50%': {
+                  boxShadow: `0 0 20px ${alpha(statusColor, 0.95)}`,
+                  transform: 'scale(1.05)',
+                },
+              },
+            }),
+            ...mainSx,
+          }}
+        >
+          {mainIcon}
+        </Fab>
+      </Badge>
     </Box>
   );
 };

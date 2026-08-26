@@ -12,7 +12,8 @@ export enum StreamingEventType {
   INTERRUPTED = 'interrupted',
   RETRY = 'retry',
   COMPACTION = 'compaction',
-  SHELL = 'shell'
+  SHELL = 'shell',
+  START= 'start',
 }
 
 /**

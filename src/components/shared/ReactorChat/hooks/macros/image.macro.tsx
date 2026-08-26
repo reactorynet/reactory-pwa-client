@@ -1,57 +1,112 @@
 import { Macro, MacroComponentDefinition, UXChatMessage } from "../../types";
 
 /**
+ * Attempts to parse a value as JSON if it's a string.
+ * This handles cases where models send serialized JSON strings for objects.
+ */
+const tryParseJSON = (val: unknown): unknown => {
+  if (typeof val !== 'string') return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return val;
+  }
+};
+
+/**
  * Image Macro for ReactorChat
- * Renders images using the ImageWidget
+ * Displays images using the core ImageComponent (core.ImageComponent@1.0.0)
+ * and provides markdown fallback for history/streaming contexts.
  */
 //@ts-ignore
 const ImageMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
-  // Default image configuration
-  const defaultConfig = {
-    alt: "Image",
-    src: "", // Empty by default, will need to be provided
-    caption: "",
-    options: {
-      width: "auto",
-      height: "auto",
-      maxWidth: "100%",
-      variant: "img"
-    }
-  };
+  const parsed = (args && typeof args === 'object' && !Array.isArray(args))
+    ? (args as Record<string, any>)
+    : {};
 
-  // Merge provided args with defaults
-  const imageConfig = (args && typeof args === 'object' && !Array.isArray(args))
-    ? { ...defaultConfig, ...(args as any) }
-    : defaultConfig;
+  // Extract raw fields with parsing support
+  const src: string = parsed.src || (Array.isArray(args) ? args[0] : "") || "";
+  const alt: string = parsed.alt || "Image";
+  const caption: string = parsed.caption || "";
+  const rawOptions = tryParseJSON(parsed.options) || {};
+  const options: Record<string, any> = typeof rawOptions === 'object' && rawOptions !== null
+    ? rawOptions
+    : {};
 
   // Validate that we have an image source
-  if (!imageConfig.src) {
+  if (!src) {
     return {
       __typename: "ReactorChatMessage",
       role: "assistant",
-      content: "An image source URL is required to display an image.",
+      content: "An image source URL or data URI is required to display an image.",
       id: reactory.utils.uuid(),
       rating: 0,
       timestamp: new Date(),
-      tool_calls: []
+      tool_calls: [],
     };
   }
+
+  // Resolve safe CDN URL if relative path or local disk path
+  let resolvedSrc = src;
+  if (!resolvedSrc.startsWith('http://') && !resolvedSrc.startsWith('https://') && !resolvedSrc.startsWith('data:')) {
+    if (resolvedSrc.includes('reactory-data/')) {
+      resolvedSrc = resolvedSrc.substring(resolvedSrc.indexOf('reactory-data/') + 'reactory-data/'.length);
+    } else if (resolvedSrc.includes('${APP_DATA_ROOT}/')) {
+      resolvedSrc = resolvedSrc.substring(resolvedSrc.indexOf('${APP_DATA_ROOT}/') + '${APP_DATA_ROOT}/'.length);
+    }
+
+    if (resolvedSrc.startsWith('/cdn/')) {
+      resolvedSrc = resolvedSrc.substring(4); // leaves '/...'
+    } else if (resolvedSrc.startsWith('cdn/')) {
+      resolvedSrc = resolvedSrc.substring(3); // leaves '/...'
+    }
+
+    if (!resolvedSrc.startsWith('/')) {
+      resolvedSrc = `/${resolvedSrc}`;
+    }
+
+    // @ts-ignore
+    resolvedSrc = reactory.utils?.safeCDNUrl ? reactory.utils.safeCDNUrl(resolvedSrc) : `http://localhost:4000/cdn${resolvedSrc}`;
+  }
+
+  // Format resilient markdown fallback content
+  const markdownContent = caption
+    ? `![${alt}](${resolvedSrc})\n\n*${caption}*`
+    : `![${alt}](${resolvedSrc})`;
+
+  const variant = options.variant === 'avatar' || options.variant === 'div'
+    ? options.variant
+    : 'img';
+
+  const style: React.CSSProperties = {
+    ...(options.width !== undefined && { width: options.width }),
+    ...(options.height !== undefined && { height: options.height }),
+    ...(options.maxWidth !== undefined && { maxWidth: options.maxWidth }),
+    ...(options.style || {}),
+  };
 
   return {
     __typename: "ReactorChatMessage",
     role: "assistant",
-    content: imageConfig.caption || 'Displaying image...',
-    component: 'widgets.ImageWidget',
+    content: markdownContent,
+    component: 'core.ImageComponent@1.0.0',
     props: {
-      src: imageConfig.src,
-      alt: imageConfig.alt,
-      caption: imageConfig.caption,
-      ...imageConfig.options,
+      value: resolvedSrc,
+      src: resolvedSrc,
+      alt,
+      caption,
+      variant,
+      avatarVariant: options.avatarVariant || 'rounded',
+      size: options.size,
+      style: Object.keys(style).length > 0 ? style : undefined,
+      className: options.className,
+      editable: false,
+      disabled: false,
     },
     id: reactory.utils.uuid(),
     rating: 0,
     timestamp: new Date(),
-    tool_calls: []
+    tool_calls: [],
   };
 };
 
