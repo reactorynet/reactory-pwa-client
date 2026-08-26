@@ -2,12 +2,207 @@ import React, { useEffect, useRef } from 'react';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import Reactory from '@reactorynet/reactory-core';
 import { ReactoryTag, splitReactoryTags } from './reactoryTags';
+
+/**
+ * Mapping of common LaTeX math and arrow symbols to Unicode characters.
+ */
+export const LATEX_SYMBOL_MAP: Record<string, string> = {
+  // Arrows
+  rightarrow: '→',
+  to: '→',
+  leftarrow: '←',
+  gets: '←',
+  leftrightarrow: '↔',
+  longleftrightarrow: '⟷',
+  longrightarrow: '⟶',
+  longleftarrow: '⟵',
+  Rightarrow: '⇒',
+  implies: '⇒',
+  Leftarrow: '⇐',
+  Leftrightarrow: '⇔',
+  iff: '⇔',
+  uparrow: '↑',
+  downarrow: '↓',
+  updownarrow: '↕',
+  Uparrow: '⇑',
+  Downarrow: '⇓',
+  nearrow: '↗',
+  searrow: '↘',
+  swarrow: '↙',
+  nwarrow: '↖',
+  mapsto: '↦',
+  longmapsto: '⟼',
+  hookrightarrow: '↪',
+  rightharpoonup: '⇀',
+  rightharpoondown: '⇁',
+  leftharpoonup: '↼',
+  leftharpoondown: '↽',
+
+  // Comparisons and Relations
+  le: '≤',
+  leq: '≤',
+  ge: '≥',
+  geq: '≥',
+  neq: '≠',
+  ne: '≠',
+  approx: '≈',
+  equiv: '≡',
+  sim: '∼',
+  simeq: '≃',
+  cong: '≅',
+  propto: '∝',
+  ll: '≪',
+  gg: '≫',
+  asymp: '≍',
+
+  // Operators and Arithmetic
+  pm: '±',
+  mp: '∓',
+  times: '×',
+  div: '÷',
+  cdot: '·',
+  circ: '∘',
+  bullet: '•',
+  star: '⋆',
+  oplus: '⊕',
+  ominus: '⊖',
+  otimes: '⊗',
+  oslash: '⊘',
+  odot: '⊙',
+
+  // Logic and Sets
+  forall: '∀',
+  exists: '∃',
+  nexists: '∄',
+  in: '∈',
+  notin: '∉',
+  subset: '⊂',
+  subseteq: '⊆',
+  supset: '⊃',
+  supseteq: '⊇',
+  cap: '∩',
+  cup: '∪',
+  setminus: '∖',
+  emptyset: '∅',
+  varnothing: '∅',
+  land: '∧',
+  lor: '∨',
+  neg: '¬',
+  top: '⊤',
+  bot: '⊥',
+  perp: '⊥',
+  vdash: '⊢',
+  dashv: '⊣',
+  models: '⊨',
+
+  // Punctuation and Miscellaneous
+  dots: '…',
+  ldots: '…',
+  cdots: '…',
+  vdots: '⋮',
+  ddots: '⋱',
+  infty: '∞',
+  checkmark: '✓',
+  degree: '°',
+  angle: '∠',
+  nabla: '∇',
+  partial: '∂',
+  square: '□',
+  triangle: '△',
+
+  // Greek lowercase
+  alpha: 'α',
+  beta: 'β',
+  gamma: 'γ',
+  delta: 'δ',
+  epsilon: 'ε',
+  varepsilon: 'ε',
+  zeta: 'ζ',
+  eta: 'η',
+  theta: 'θ',
+  vartheta: 'ϑ',
+  iota: 'ι',
+  kappa: 'κ',
+  lambda: 'λ',
+  mu: 'μ',
+  nu: 'ν',
+  xi: 'ξ',
+  pi: 'π',
+  varpi: 'ϖ',
+  rho: 'ρ',
+  varrho: 'ϱ',
+  sigma: 'σ',
+  varsigma: 'ς',
+  tau: 'τ',
+  upsilon: 'υ',
+  phi: 'φ',
+  varphi: 'ϕ',
+  chi: 'χ',
+  psi: 'ψ',
+  omega: 'ω',
+
+  // Greek uppercase
+  Gamma: 'Γ',
+  Delta: 'Δ',
+  Theta: 'Θ',
+  Lambda: 'Λ',
+  Xi: 'Ξ',
+  Pi: 'Π',
+  Sigma: 'Σ',
+  Upsilon: 'Υ',
+  Phi: 'Φ',
+  Psi: 'Ψ',
+  Omega: 'Ω',
+};
+
+/**
+ * Replaces LaTeX math and arrow symbols (e.g. $\rightarrow$, \rightarrow, $\le$, etc.)
+ * with their corresponding Unicode characters while protecting inline code spans.
+ */
+export const replaceMathSymbols = (text: string): string => {
+  if (!text) return text;
+
+  // Protect inline code spans (`...`) so code blocks remain verbatim
+  const codeSpans: string[] = [];
+  const withCodePlaceholders = text.replace(/(`+)([\s\S]*?)\1/g, (match) => {
+    codeSpans.push(match);
+    return `__REACTORY_CODE_SPAN_${codeSpans.length - 1}__`;
+  });
+
+  // 1. Replace single-symbol inline math expressions: $\rightarrow$, $$\rightarrow$$, etc.
+  let processed = withCodePlaceholders.replace(
+    /\${1,2}\s*\\([a-zA-Z]+)\s*\${1,2}/g,
+    (match, cmd) => LATEX_SYMBOL_MAP[cmd] || match
+  );
+
+  // 2. Replace multi-symbol inline math blocks containing LaTeX symbol commands, e.g. $a \rightarrow b$
+  processed = processed.replace(/\${1,2}([^$\n]+?)\${1,2}/g, (match, inner) => {
+    const replaced = inner.replace(/\\([a-zA-Z]+)(?![a-zA-Z])/g, (m: string, cmd: string) => {
+      return LATEX_SYMBOL_MAP[cmd] !== undefined ? LATEX_SYMBOL_MAP[cmd] : m;
+    });
+    // If it contained a recognized LaTeX symbol command and no complex unhandled LaTeX (e.g. \frac), unwrap $
+    if (replaced !== inner && !/\\[a-zA-Z]+/.test(replaced)) {
+      return replaced.trim();
+    }
+    return match;
+  });
+
+  // 3. Replace standalone \command (e.g. \rightarrow, \leq) not wrapped in $
+  processed = processed.replace(/(?<!\\)\\([a-zA-Z]+)(?![a-zA-Z])/g, (match, cmd) => {
+    return LATEX_SYMBOL_MAP[cmd] !== undefined ? LATEX_SYMBOL_MAP[cmd] : match;
+  });
+
+  // Restore code spans
+  return processed.replace(/__REACTORY_CODE_SPAN_(\d+)__/g, (_, idx) => {
+    return codeSpans[Number(idx)] || '';
+  });
+};
+
 /**
  * Content types that can be rendered
  */
 export enum ContentType {
   PLAIN_TEXT = 'text/plain',
-
   HTML = 'text/html',
   MARKDOWN = 'text/markdown',
   CODE = 'application/code',
@@ -25,11 +220,11 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
     DOMPurify,
     PrismCode,
   } = reactory.getComponents<{
-    Material: Reactory.Client.Web.IMaterialModule 
-    Markdown: any,
-    MarkdownGfm: any,
-    DOMPurify: any,
-    PrismCode: any,
+    Material: Reactory.Client.Web.IMaterialModule;
+    Markdown: any;
+    MarkdownGfm: any;
+    DOMPurify: any;
+    PrismCode: any;
   }>(["material-ui.Material", "core.Markdown", "core.MarkdownGfm", "core.DOMPurify", "core.PrismCode"]);
 
   // Mermaid re-init logic
@@ -69,7 +264,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
       /^> /, // Blockquotes
       /`{3}[\s\S]*`{3}/, // Code blocks
       /!\[.+\]\(.+\)/, // Images
-      /^\|.+\|\n\|[-:|]+\|/m, // Tables (multiline flag so ^ matches line start)
+      /^\|.+\|\r?\n\|[-:| ]+\|/m, // Tables (multiline flag so ^ matches line start)
     ];
     
     if (markdownPatterns.some(pattern => pattern.test(content))) {
@@ -95,76 +290,25 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
   };
 
   // Card wrapper for Mermaid diagrams with dynamic actions
-  const MermaidCard = ({ diagram, message }: { diagram: string, message?: string }) => {
-    // Access Material UI components from MaterialCore/MaterialIcons
-    const { Card, CardContent, CardActions } = MaterialCore;
-    const { IconButton, Tooltip } = MaterialCore;
-    const { PlayArrow, Storage, Schema } = MaterialIcons;
-    // Disabling actions for now, but keeping the structure for future use
-    // // Detect diagram type
-    // let diagramType = 'generic';
-    // let actions: React.ReactNode[] = [];
-    // if (/^(flowchart|graph|stateDiagram|sequenceDiagram|gantt|journey|mindmap|timeline)/i.test(diagram)) {
-    //   diagramType = 'process';
-    //   actions.push(
-    //     <Tooltip title="Execute" key="execute">
-    //       <IconButton size="small">
-    //         <PlayArrow fontSize="small" />
-    //       </IconButton>
-    //     </Tooltip>
-    //   );
-    // }
-    // if (/^erDiagram/i.test(diagram)) {
-    //   diagramType = 'er';
-    //   actions.push(
-    //     <Tooltip title="Database" key="database">
-    //       <IconButton size="small">
-    //         <Storage fontSize="small" />
-    //       </IconButton>
-    //     </Tooltip>
-    //   );
-    // }
-    // if (/^classDiagram/i.test(diagram)) {
-    //   diagramType = 'class';
-    //   actions.push(
-    //     <Tooltip title="Schema" key="schema">
-    //       <IconButton size="small">
-    //         <Schema fontSize="small" />
-    //       </IconButton>
-    //     </Tooltip>
-    //   );
-    // }
-    // // ...add more types/actions as needed
+  const MermaidCard = ({ diagram, message }: { diagram: string; message?: string }) => {
+    const { Card, CardContent } = MaterialCore;
 
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ p: 2 }}>
           <MermaidDiagram>{diagram}</MermaidDiagram>
         </CardContent>
-        {/* {actions.length > 0 && (
-          <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>{actions}</CardActions>
-        )} */}
       </Card>
     );
   };
 
   /**
    * Renders a single `<reactory />` tag as the live component it names.
-   *
-   * Rendered as a real React element rather than mounted into a placeholder
-   * through a portal. Placeholders only survive pipelines that emit raw HTML,
-   * and markdown is not one of them — react-markdown escapes raw HTML, so a
-   * placeholder element never reached the DOM and the portal had nothing to
-   * attach to. A real element has no such dependency, and it also avoids the
-   * id collisions that a document-wide getElementById lookup invites when the
-   * same component appears twice.
    */
   const renderReactoryComponent = (tag: ReactoryTag, key: string) => {
     const Component = reactory.getComponent<any>(tag.fqn);
 
     if (!Component) {
-      // Say which component is missing. Rendering nothing here is how a typo
-      // in an FQN turns into a silently blank area of the page.
       reactory.log(`Content references unregistered component "${tag.fqn}"`, {}, 'warning');
       return (
         <span
@@ -192,28 +336,51 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
    */
   const renderContent = (content: string) => {
     if (!content) return null;
-    // `reactory` comes from the hook's own argument. Calling useReactory() here
-    // would be a hook behind an early return: callers that render this
-    // conditionally (a loading state, a preview pane, an empty body) would
-    // change their hook count between renders and React would tear the
-    // component down with "rendered more hooks than during the previous
-    // render". Keeping renderContent hook-free makes it safe to call any
-    // number of times, or not at all.
+
     const theme = reactory.muiTheme;
     const { palette } = theme;
     const { mode } = palette;
-    const { primary, secondary, error, warning, info, success } = palette;
+
+    /**
+     * Helper to render markdown cell content (bold, italic, code, links, math symbols)
+     * without unwanted paragraph wrapper margins.
+     */
+    const renderTableCellContent = (cellContent: string) => {
+      const formatted = replaceMathSymbols(cellContent);
+      if (!Markdown) return formatted;
+      return (
+        <Markdown
+          components={{
+            p: ({ children }: any) => <span>{children}</span>,
+            a: ({ children, href }: any) => (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ),
+          }}
+        >
+          {formatted}
+        </Markdown>
+      );
+    };
     
     /**
      * Parses a markdown table string into an HTML table element.
-     * Handles header rows, separator rows, and alignment markers.
+     * Handles header rows, separator rows, alignment markers, and rich cell content.
      */
     const renderMarkdownTable = (tableStr: string, key: string) => {
-      const lines = tableStr.trim().split('\n').filter(l => l.trim().length > 0);
+      const lines = tableStr.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
       if (lines.length < 2) return null;
 
-      const parseRow = (line: string) =>
-        line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+      const parseRow = (line: string) => {
+        const placeholder = '__REACTORY_PIPE_ESCAPED__';
+        const cleanLine = line.replace(/\\\|/g, placeholder);
+        return cleanLine
+          .replace(/^\|/, '')
+          .replace(/\|$/, '')
+          .split('|')
+          .map(cell => cell.split(placeholder).join('|').trim());
+      };
 
       const headers = parseRow(lines[0]);
 
@@ -245,7 +412,9 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
                     textAlign: alignments[i] || 'left',
                     backgroundColor: mode === 'dark' ? '#333' : '#f5f5f5',
                     fontWeight: 600,
-                  }}>{h}</th>
+                  }}>
+                    {renderTableCellContent(h)}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -257,7 +426,9 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
                       border: `1px solid ${mode === 'dark' ? '#555' : '#ddd'}`,
                       padding: '6px 12px',
                       textAlign: alignments[ci] || 'left',
-                    }}>{cell}</td>
+                    }}>
+                      {renderTableCellContent(cell)}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -272,126 +443,121 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
      * through the mermaid / code / markdown / HTML pipeline.
      */
     const renderMarkup = (markup: string, keyPrefix: string): React.ReactNode => {
-    // Regex to match code, mermaid, and markdown blocks
-    const blockRegex = /(```mermaid[\s\S]*?```|```[a-zA-Z]*[\s\S]*?```)/g;
-    const blocks: string[] = [];
-    let lastIndex = 0;
-    let match;
-    while ((match = blockRegex.exec(markup)) !== null) {
-      if (match.index > lastIndex) {
-        blocks.push(markup.substring(lastIndex, match.index));
-      }
-      blocks.push(match[0]);
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < markup.length) {
-      blocks.push(markup.substring(lastIndex));
-    }
-
-    const children: React.ReactNode[] = blocks.map((block, blockIndex) => {
-      const idx = `${keyPrefix}-${blockIndex}`;
-      // Mermaid block
-      if (/^```mermaid[\s\S]*```$/i.test(block)) {
-        const diagram = block.replace(/```mermaid|```/gi, '').trim();
-        return (
-          <div ref={mermaidRef} key={`mermaid-${idx}`}>
-            <MermaidCard diagram={diagram} />
-          </div>
-        );
-      }
-      // Code block
-      if (/^```[a-zA-Z]*[\s\S]*```$/.test(block)) {
-        const codeBlock = block.replace(/```/g, '');
-        let language = 'javascript';
-        const firstLineBreak = codeBlock.indexOf('\n');
-        if (firstLineBreak > 0) {
-          const potentialLang = codeBlock.substring(0, firstLineBreak).trim();
-          if (potentialLang && !potentialLang.includes(' ')) {
-            language = potentialLang;
-          }
+      // Regex to match code, mermaid, and markdown blocks
+      const blockRegex = /(```mermaid[\s\S]*?```|```[a-zA-Z]*[\s\S]*?```)/g;
+      const blocks: string[] = [];
+      let lastIndex = 0;
+      let match;
+      while ((match = blockRegex.exec(markup)) !== null) {
+        if (match.index > lastIndex) {
+          blocks.push(markup.substring(lastIndex, match.index));
         }
-        const code = codeBlock.replace(language, '').trim();
-        return (
-          <pre style={{ backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto' }} key={`code-${idx}`}>
-            <code dangerouslySetInnerHTML={{
-              __html: code
-            }} />
-          </pre>
-        );
+        blocks.push(match[0]);
+        lastIndex = match.index + match[0].length;
       }
-      // Markdown block (if it looks like markdown)
-      if (detectContentType(block) === ContentType.MARKDOWN) {
-        // Split the block into table vs non-table sub-blocks so that
-        // tables are rendered natively (remark-gfm v4 is incompatible
-        // with react-markdown v8 and crashes on table parsing).
-        const tableRegex = /^(\|.+\|\n\|[-:| ]+\|(?:\n\|.+\|)*)/gm;
-        const subParts: React.ReactNode[] = [];
-        let lastEnd = 0;
-        let tableMatch: RegExpExecArray | null;
-        let subIdx = 0;
+      if (lastIndex < markup.length) {
+        blocks.push(markup.substring(lastIndex));
+      }
 
-        while ((tableMatch = tableRegex.exec(block)) !== null) {
-          // Text before the table
-          if (tableMatch.index > lastEnd) {
-            const before = block.substring(lastEnd, tableMatch.index);
-            if (before.trim()) {
+      const children: React.ReactNode[] = blocks.map((block, blockIndex) => {
+        const idx = `${keyPrefix}-${blockIndex}`;
+        // Mermaid block
+        if (/^```mermaid[\s\S]*```$/i.test(block)) {
+          const diagram = block.replace(/```mermaid|```/gi, '').trim();
+          return (
+            <div ref={mermaidRef} key={`mermaid-${idx}`}>
+              <MermaidCard diagram={diagram} />
+            </div>
+          );
+        }
+        // Code block
+        if (/^```[a-zA-Z]*[\s\S]*```$/.test(block)) {
+          const codeBlock = block.replace(/```/g, '');
+          let language = 'javascript';
+          const firstLineBreak = codeBlock.indexOf('\n');
+          if (firstLineBreak > 0) {
+            const potentialLang = codeBlock.substring(0, firstLineBreak).trim();
+            if (potentialLang && !potentialLang.includes(' ')) {
+              language = potentialLang;
+            }
+          }
+          const code = codeBlock.replace(language, '').trim();
+          return (
+            <pre style={{ backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto' }} key={`code-${idx}`}>
+              <code dangerouslySetInnerHTML={{
+                __html: code
+              }} />
+            </pre>
+          );
+        }
+        // Markdown block (if it looks like markdown)
+        if (detectContentType(block) === ContentType.MARKDOWN) {
+          // Split the block into table vs non-table sub-blocks so that
+          // tables are rendered natively (remark-gfm v4 is incompatible
+          // with react-markdown v8 and crashes on table parsing).
+          const tableRegex = /^(\|.+\|\r?\n\|[-:| ]+\|(?:\r?\n\|.+\|)*)/gm;
+          const subParts: React.ReactNode[] = [];
+          let lastEnd = 0;
+          let tableMatch: RegExpExecArray | null;
+          let subIdx = 0;
+
+          while ((tableMatch = tableRegex.exec(block)) !== null) {
+            // Text before the table
+            if (tableMatch.index > lastEnd) {
+              const before = block.substring(lastEnd, tableMatch.index);
+              if (before.trim()) {
+                subParts.push(
+                  <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
+                    <Markdown>{replaceMathSymbols(before)}</Markdown>
+                  </div>
+                );
+              }
+            }
+            // The table itself
+            const tableNode = renderMarkdownTable(tableMatch[1], `md-${idx}-tbl-${subIdx++}`);
+            if (tableNode) subParts.push(tableNode);
+            lastEnd = tableMatch.index + tableMatch[0].length;
+          }
+
+          // Remaining text after the last table (or all text if no tables)
+          if (lastEnd < block.length) {
+            const remainder = block.substring(lastEnd);
+            if (remainder.trim()) {
               subParts.push(
-                <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  <Markdown>{before}</Markdown>
+                <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
+                  <Markdown>{replaceMathSymbols(remainder)}</Markdown>
                 </div>
               );
             }
           }
-          // The table itself
-          const tableNode = renderMarkdownTable(tableMatch[1], `md-${idx}-tbl-${subIdx++}`);
-          if (tableNode) subParts.push(tableNode);
-          lastEnd = tableMatch.index + tableMatch[0].length;
-        }
 
-        // Remaining text after the last table (or all text if no tables)
-        if (lastEnd < block.length) {
-          const remainder = block.substring(lastEnd);
-          if (remainder.trim()) {
-            subParts.push(
-              <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                <Markdown>{remainder}</Markdown>
-              </div>
-            );
-          }
+          return (
+            <div style={{ width: '100%', height: '100%', overflow: 'auto' }}
+              className="reactor-markdown-content"
+              key={`md-${idx}`}>
+              {subParts}
+            </div>
+          );
         }
-
-        return (
-          <div style={{ width: '100%', height: '100%', overflow: 'auto' }}
-            className="reactor-markdown-content"
-            key={`md-${idx}`}>
-            {subParts}
-          </div>
-        );
-      }
-      // HTML block
-      if (/<[a-z][\s\S]*>/i.test(block)) {
-        return (
-          <div key={`html-${idx}`}
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(block)
-            }}
-          />
-        );
-      }
-      // Plain text fallback
-      return block.split('\n').map((line, lineIdx) => (
-        <React.Fragment key={`text-${idx}-${lineIdx}`}>{line}{'\n'}</React.Fragment>
-      ));
-    });
+        // HTML block
+        if (/<[a-z][\s\S]*>/i.test(block)) {
+          return (
+            <div key={`html-${idx}`}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(block)
+              }}
+            />
+          );
+        }
+        // Plain text fallback
+        return block.split('\n').map((line, lineIdx) => (
+          <React.Fragment key={`text-${idx}-${lineIdx}`}>{line}{'\n'}</React.Fragment>
+        ));
+      });
 
       return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;
     };
 
-    // Component tags are lifted out before any markup pipeline runs. Doing it
-    // here rather than inside the markdown/HTML branches is what makes the
-    // mechanism format independent: whatever the surrounding content is
-    // authored in, the component is a sibling React element rather than
-    // something the renderer has to preserve for a later portal.
     const segments = splitReactoryTags(content);
 
     return (

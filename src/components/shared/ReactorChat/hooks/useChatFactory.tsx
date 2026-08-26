@@ -30,6 +30,15 @@ interface ChatFactoryHookResult {
   // function use to return all the available chats for the
   // current user.
   listChats(filter?: any): Promise<any[]>
+  /**
+   * Most-recently-updated conversations for the user, across every persona.
+   *
+   * Unlike `listChats` this does NOT write to the `chats` state — `chats` is the
+   * persona-scoped list the history panel renders, and clobbering it here would
+   * change what the panel shows. Used by the multi-session hub, which tracks
+   * whatever the user last touched regardless of which agent owns it.
+   */
+  listRecentChats(limit?: number): Promise<any[]>
   // expose chats state
   chats: any[]
   // expose setChats function
@@ -2025,6 +2034,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  /**
+   * Read-only recency probe: the server sorts by `updated` descending and
+   * omitting `personaId` spans every agent. Deliberately does not touch the
+   * `chats` state — see the interface docs.
+   */
+  const fetchRecentConversationsImpl = async (limit: number = 10) => {
+    try {
+      const list = await graph.listConversations({
+        limit,
+        ...(props?.useCase ? { use_case: props.useCase } : {}),
+        ...(Array.isArray(props?.edges) && props.edges.length > 0 ? { edges: props.edges } : {}),
+      } as any);
+      return list || [];
+    } catch (error) {
+      reactory.log('[useChatFactory] failed to list recent conversations', { error }, 'warning');
+      return [];
+    }
+  }
+
   const deleteChatImpl = async (id: string | string[]) => {
     const deleteId = Array.isArray(id) ? id[0] : id;
     sessionLogger?.info(`Deleting chat session`, { chatSessionId: deleteId }, 'useChatFactory');
@@ -2046,6 +2074,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   fetchConversationsImplRef.current = fetchConversationsImpl;
   const fetchConversations = React.useCallback(
     (filter: any) => fetchConversationsImplRef.current(filter),
+    [],
+  );
+
+  const fetchRecentConversationsImplRef = React.useRef(fetchRecentConversationsImpl);
+  fetchRecentConversationsImplRef.current = fetchRecentConversationsImpl;
+  const fetchRecentConversations = React.useCallback(
+    (limit?: number) => fetchRecentConversationsImplRef.current(limit),
     [],
   );
 
@@ -3728,6 +3763,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     loadChat,
     fetchConversationMeta,
     listChats: fetchConversations,
+    listRecentChats: fetchRecentConversations,
     setToolApprovalMode,
     chats,
     setChats,
