@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatState, MacroToolDefinition, ToolApprovalMode } from '../types';
 import ModelSelector, { ModelOverride } from './ModelSelector';
 import { Provider, ProviderAuthStatus } from '../hooks/useProviders';
@@ -95,7 +95,23 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [applyToSessionOnly, setApplyToSessionOnly] = useState(false);
   const [selectedToolbelt, setSelectedToolbelt] = useState<string>('All Tools');
   const [expandedProfile, setExpandedProfile] = useState<string | null>('All Tools');
+  const [localMaxIterations, setLocalMaxIterations] = useState<number | string>(chatState?.maxToolIterations ?? 100);
   const { renderContent } = useContentRender(reactory);
+
+  useEffect(() => {
+    setLocalMaxIterations(chatState?.maxToolIterations ?? 100);
+  }, [chatState?.maxToolIterations]);
+
+  const handleCommitMaxIterations = () => {
+    const parsed = typeof localMaxIterations === 'string' ? parseInt(localMaxIterations, 10) : localMaxIterations;
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 500) {
+      if (parsed !== chatState?.maxToolIterations && onMaxToolIterationsChange) {
+        onMaxToolIterationsChange(parsed);
+      }
+    } else {
+      setLocalMaxIterations(chatState?.maxToolIterations ?? 100);
+    }
+  };
 
   const getProfileToolsAndGroup = (profileToolsNames: string[]) => {
     const filteredTools = (chatState?.tools || []).filter((tool) => {
@@ -569,19 +585,37 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
             {il8n?.t('reactor.client.tools.maxIterations', { defaultValue: 'Max Auto Tool Calls' })}
           </Typography>
-          <TextField
-            type="number"
-            size="small"
-            value={chatState?.maxToolIterations ?? 100}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              if (val >= 1 && val <= 500 && onMaxToolIterationsChange) {
-                onMaxToolIterationsChange(val);
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <TextField
+              type="number"
+              size="small"
+              value={localMaxIterations}
+              onChange={(e) => {
+                setLocalMaxIterations(e.target.value);
+              }}
+              onBlur={handleCommitMaxIterations}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCommitMaxIterations();
+                }
+              }}
+              inputProps={{ min: 1, max: 500 }}
+              sx={{ width: 120 }}
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleCommitMaxIterations}
+              disabled={
+                Number(localMaxIterations) === (chatState?.maxToolIterations ?? 100) ||
+                isNaN(Number(localMaxIterations)) ||
+                Number(localMaxIterations) < 1 ||
+                Number(localMaxIterations) > 500
               }
-            }}
-            inputProps={{ min: 1, max: 500 }}
-            sx={{ width: 120 }}
-          />
+            >
+              {il8n?.t('reactor.client.common.update', { defaultValue: 'Update' })}
+            </Button>
+          </Box>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
             {il8n?.t('reactor.client.tools.maxIterations.description', {
               defaultValue: 'Maximum number of tool calls the agent can make automatically before pausing for confirmation.'
