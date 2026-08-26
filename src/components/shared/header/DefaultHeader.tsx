@@ -310,6 +310,40 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     const apiStatus = reactory.$user;
     const { server } = apiStatus;
 
+    const getMenuTitle = (rawTitle: string): string => {
+      if (!rawTitle) return '';
+      if (reactory.i18n && typeof reactory.i18n.t === 'function') {
+        const translated = reactory.i18n.t(rawTitle);
+        if (translated && translated !== rawTitle && !translated.startsWith('reactory.menu.')) {
+          return translated;
+        }
+        const stripped = rawTitle.replace(/^[^:]+:/, '');
+        const strippedTranslated = reactory.i18n.t(stripped);
+        if (strippedTranslated && strippedTranslated !== stripped && !strippedTranslated.startsWith('reactory.menu.')) {
+          return strippedTranslated;
+        }
+      }
+      const fallbacks: Record<string, string> = {
+        'reactory.menu.my-owned-courses': 'Courses Owned',
+        'reactory.menu.classes': 'Classes & Cohorts',
+        'reactory.menu.create-course': 'Create Course',
+        'reactory.menu.create-assignment': 'Create Assignment',
+        'reactory.menu.course-enroll': 'Course Enrollment',
+        'reactory.menu.my-schedule': 'Schedule',
+        'reactory.menu.my-courses': 'My Courses',
+        'reactory.menu.my-tutors': 'My Tutors',
+        'reactory.menu.my-students': 'My Students',
+        'reactory.menu.assignments': 'Assignments',
+        'reactory.menu.home': 'Home',
+        'reactory.menu.library': 'Library',
+        'reactory.menu.courses': 'Courses',
+        'reactory.menu.my-profile': 'Profile',
+        'reactory.menu.markbook': 'Classroom Markbook',
+      };
+      const key = rawTitle.replace(/^[^:]+:/, '');
+      return fallbacks[key] || rawTitle;
+    };
+
     if (apiStatus?.menus?.length) {
       apiStatus.menus.forEach((menu) => {
         if (menu.target === 'left-nav') {
@@ -348,7 +382,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                             <ListItemIcon>
                               {menu.icon && <Icon color="inherit" {...menu.iconProps}>{menu.icon}</Icon>}
                             </ListItemIcon>
-                            <ListItemText primary={menu.title} />
+                            <ListItemText primary={getMenuTitle(menu.title)} />
                           </ListItem>
                         );
 
@@ -401,7 +435,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                   <ListItemIcon>
                     <Icon color="inherit" {...menuItem.iconProps}>{menuItem.icon}</Icon>
                   </ListItemIcon>
-                  <ListItemText primary={menuItem.title} />
+                  <ListItemText primary={getMenuTitle(menuItem.title)} />
                   {expandButton}
                 </ListItem>
               );
