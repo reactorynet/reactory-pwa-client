@@ -10,9 +10,20 @@
 type ReactorySDK = Reactory.Client.ReactorySDK & {
   API_ROOT: string;
   CLIENT_KEY: string;
+  CLIENT_PWD: string;
   getAuthToken: () => string | null;
 };
 
+/**
+ * Auth headers for a REST call, matching ReactoryApolloClient exactly.
+ *
+ * `x-client-pwd` is not optional: the ReactoryClient middleware resolves the
+ * partner with `validatePassword(clientPwd)` and answers 401 without it. It
+ * keeps a five-minute cache of validated client keys, so a request missing the
+ * header only appears to work while some other call (a GraphQL query) has
+ * recently warmed that cache — which is exactly the kind of bug that shows up
+ * as "works while I'm chatting, dead after a restart".
+ */
 function authHeaders(reactory: ReactorySDK): Record<string, string> {
   const token = reactory.getAuthToken?.();
   return {
@@ -20,6 +31,7 @@ function authHeaders(reactory: ReactorySDK): Record<string, string> {
     Accept: 'application/json',
     authorization: token ? `Bearer ${token}` : '',
     'x-client-key': reactory.CLIENT_KEY,
+    'x-client-pwd': reactory.CLIENT_PWD,
   };
 }
 

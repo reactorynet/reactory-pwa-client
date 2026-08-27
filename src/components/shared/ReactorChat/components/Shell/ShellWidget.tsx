@@ -6,6 +6,7 @@ import { openShell, sendInput, resizeShell, closeShell, OpenShellResult } from '
 type ReactorySDK = Reactory.Client.ReactorySDK & {
   API_ROOT: string;
   CLIENT_KEY: string;
+  CLIENT_PWD: string;
   getAuthToken: () => string | null;
 };
 

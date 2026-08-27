@@ -311,6 +311,8 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [localGraphData, setLocalGraphData] = React.useState<NeuralGraphData | null>(null);
   const localSigRef = useRef('');
+  /** Whether the conversation has a graph node yet — drives the poll cadence. */
+  const graphNodeFoundRef = useRef(false);
   const [agentGraph, setAgentGraph] = React.useState<NeuralGraphData | null>(null);
   const agentSigRef = useRef('');
 
@@ -425,16 +427,17 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
 
         // 1. Search for the node representing the conversation
         const searchRes = await reactory.graphqlQuery<any, any>(`
-          query GetConversationNode($term: String!) {
-            ReactorNodesByTerm(term: $term) {
+          query GetConversationNode($conversationId: String!) {
+            ReactorConversationNode(conversationId: $conversationId) {
               id
               name
               type
             }
           }
-        `, { term: activeSessionId });
+        `, { conversationId: activeSessionId });
 
-        const node = searchRes.data?.ReactorNodesByTerm?.[0];
+        const node = searchRes.data?.ReactorConversationNode;
+        graphNodeFoundRef.current = !!node;
         if (!node || !active) return;
 
         // 2. Fetch its neighborhood subgraph
@@ -475,14 +478,21 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       }
     };
 
-    fetchGraph();
-
-    // Re-check periodically
-    const interval = setInterval(fetchGraph, 10000);
+    // Self-scheduling rather than a fixed interval: until the conversation has
+    // been graphed there is nothing to refresh, so back off hard. Every poll
+    // here costs a socket, and this component has previously queued real
+    // requests behind its own lookups (see the note below).
+    let timer: number | null = null;
+    const tick = async () => {
+      await fetchGraph();
+      if (!active) return;
+      timer = window.setTimeout(tick, graphNodeFoundRef.current ? 10000 : 60000);
+    };
+    tick();
 
     return () => {
       active = false;
-      clearInterval(interval);
+      if (timer !== null) window.clearTimeout(timer);
     };
     // `messages` is deliberately absent: it is read through `messagesRef`.
     // Listing it tore this effect down and re-ran it — clearing the 10s

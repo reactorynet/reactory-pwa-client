@@ -6,6 +6,7 @@ import { ShellEventData } from './shellApi';
 type ReactorySDK = Reactory.Client.ReactorySDK & {
   API_ROOT: string;
   CLIENT_KEY: string;
+  CLIENT_PWD: string;
   getAuthToken: () => string | null;
 };
 

@@ -183,6 +183,8 @@ export default (props) => {
   // State to hold custom graph data for the visual neuron background
   const [backgroundGraphData, setBackgroundGraphData] = React.useState<any>(null);
   const backgroundGraphSigRef = React.useRef('');
+  /** Whether the active conversation has a graph node yet — drives the poll cadence. */
+  const graphNodeFoundRef = React.useRef(false);
 
   // Fetch the conversation's neighborhood subgraph to feed the neuron
   // background and the side-panel neural graph viewer. Polls while the
@@ -190,6 +192,7 @@ export default (props) => {
   // conversation ~60s after each completed turn; signature comparison keeps
   // state identity stable (and the WebGL scene intact) when nothing changed.
   React.useEffect(() => {
+    graphNodeFoundRef.current = false;
     if (!activeSessionId) {
       backgroundGraphSigRef.current = '';
       setBackgroundGraphData(null);
@@ -201,16 +204,17 @@ export default (props) => {
       try {
         // 1. Search for the node representing the conversation
         const searchRes = await reactory.graphqlQuery<any, any>(`
-          query GetConversationNode($term: String!) {
-            ReactorNodesByTerm(term: $term) {
+          query GetConversationNode($conversationId: String!) {
+            ReactorConversationNode(conversationId: $conversationId) {
               id
               name
               type
             }
           }
-        `, { term: activeSessionId });
+        `, { conversationId: activeSessionId });
 
-        const node = searchRes.data?.ReactorNodesByTerm?.[0];
+        const node = searchRes.data?.ReactorConversationNode;
+        graphNodeFoundRef.current = !!node;
         if (!node || !active) return;
 
         // 2. Fetch its neighborhood subgraph
@@ -250,11 +254,20 @@ export default (props) => {
       }
     };
 
-    fetchGraph();
-    const interval = setInterval(fetchGraph, 15000);
+    // Self-scheduling rather than a fixed interval: a conversation is only
+    // graphed ~60s after a completed turn, so until a node exists there is
+    // nothing to refresh and polling hard just burns round-trips.
+    let timer: number | null = null;
+    const tick = async () => {
+      await fetchGraph();
+      if (!active) return;
+      timer = window.setTimeout(tick, graphNodeFoundRef.current ? 15000 : 60000);
+    };
+    tick();
+
     return () => {
       active = false;
-      clearInterval(interval);
+      if (timer !== null) window.clearTimeout(timer);
     };
   }, [activeSessionId, reactory]);
 
@@ -322,6 +335,7 @@ export default (props) => {
     loadChat,
     fetchConversationMeta,
     listChats,
+    listRecentChats,
     setToolApprovalMode,
     chats,
     setChats,
@@ -366,6 +380,20 @@ export default (props) => {
     pendingToolCallResume: !!pendingToolCallResume,
   });
 
+  /**
+   * The user's most recently touched conversations, across every persona. The
+   * FAB stack tracks these rather than `chats`, which is scoped to the selected
+   * persona and so only ever showed the current agent's own history.
+   */
+  const [recentSessions, setRecentSessions] = React.useState<ChatState[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    listRecentChats(10).then((list) => {
+      if (!cancelled) setRecentSessions((list || []) as ChatState[]);
+    });
+    return () => { cancelled = true; };
+  }, [listRecentChats, chatState?.id]);
+
   // Track multi-session and sub-agent background streams and unread statuses
   const {
     backgroundSessions,
@@ -376,8 +404,20 @@ export default (props) => {
     activeSessionId: chatState?.id,
     activePersonaId: selectedPersona?.id,
     chats,
+    recentSessions,
     subAgents: chatState?.chats,
     getPersona,
+    // Hand a running turn's status over to the background tracker when the user
+    // navigates away, so the session's FAB stays busy through the handover.
+    activeSessionStatus:
+      chatStatusInfo.status === 'thinking' ||
+      chatStatusInfo.status === 'streaming' ||
+      chatStatusInfo.status === 'executing_tools'
+        ? chatStatusInfo.status
+        : 'idle',
+    // Loading a conversation needs the socket budget for its GraphQL calls.
+    deferConnections: chatLoading,
+    sessionLogger,
   });
 
   const navigate = useNavigate();
