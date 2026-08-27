@@ -76,6 +76,60 @@ export interface UseWorkflowInstanceResult {
 }
 
 /**
+ * Resolves the step execution result/output slice from instance data for a given step/pointer.
+ */
+export function resolveStepResultData(instanceData: any, pointer: any, designerStepId?: string): unknown {
+  if (!instanceData) return undefined;
+  const stepResults = instanceData.stepResults || {};
+  const outputs = instanceData.outputs || {};
+
+  const candidateKeys: string[] = [];
+
+  if (designerStepId) candidateKeys.push(designerStepId);
+  if (pointer?.stepName) {
+    if (!candidateKeys.includes(pointer.stepName)) candidateKeys.push(pointer.stepName);
+
+    // camelCase conversion (e.g. "Log Start" -> "logStart")
+    const camel = pointer.stepName
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_: string, chr: string) => chr.toUpperCase())
+      .replace(/^[A-Z]/, (c: string) => c.toLowerCase());
+    if (camel && !candidateKeys.includes(camel)) candidateKeys.push(camel);
+
+    // Lowercase without spaces (e.g. "logstart")
+    const lowerNoSpaces = pointer.stepName.toLowerCase().replace(/\s+/g, '');
+    if (lowerNoSpaces && !candidateKeys.includes(lowerNoSpaces)) candidateKeys.push(lowerNoSpaces);
+  }
+  if (pointer?.stepId !== undefined && pointer?.stepId !== null) {
+    const stepIdStr = String(pointer.stepId);
+    if (!candidateKeys.includes(stepIdStr)) candidateKeys.push(stepIdStr);
+  }
+
+  // 1. Check stepResults container
+  for (const k of candidateKeys) {
+    if (stepResults[k] !== undefined && stepResults[k] !== null) {
+      return stepResults[k];
+    }
+  }
+
+  // 2. Check outputs container
+  for (const k of candidateKeys) {
+    if (outputs[k] !== undefined && outputs[k] !== null) {
+      return outputs[k];
+    }
+  }
+
+  // 3. Check top-level instance data
+  const reservedKeys = new Set(['stepResults', 'outputs', 'inputs', 'variables', 'env', '__workflow', '__identity']);
+  for (const k of candidateKeys) {
+    if (!reservedKeys.has(k) && instanceData[k] !== undefined && instanceData[k] !== null) {
+      return instanceData[k];
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Loads a single workflow execution instance (and its log file) for the
  * WorkflowDesigner's instance-viewer mode. Enabled only when `instanceId` is
  * provided and `enabled` is true.
@@ -221,10 +275,7 @@ export function useWorkflowInstance(
       const designerStepId = stepByKey.get(key) ?? (steps.some(s => s.id === key) ? key : undefined);
       if (!designerStepId) continue;
 
-      const stepResult =
-        stepResults[pointer.stepName] ??
-        stepResults[pointer.stepId] ??
-        undefined;
+      const stepResult = resolveStepResultData(instance.data, pointer, designerStepId);
 
       const status: InstanceStepStatus = {
         stepId: designerStepId,

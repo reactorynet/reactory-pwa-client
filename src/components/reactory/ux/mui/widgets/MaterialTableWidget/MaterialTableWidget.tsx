@@ -582,6 +582,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [error, setError] = useState(null);
   const [query, setQuery] = useState<MaterialTableQuery>({ page: 1, pageSize: 10, search: "" });
   const [searchInput, setSearchInput] = useState<string>(searchText);
+  const [isClientSidePaged, setIsClientSidePaged] = useState<boolean>(false);
+  const [clientPagedTotal, setClientPagedTotal] = useState<number>(0);
 
   const [data, setData] = useState<MaterialTableRemoteDataReponse>({
     data: formData || [],
@@ -805,28 +807,56 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         if (queryResult?.data) {
-          const $data: any = reactory.utils.objectMapper(
-            reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]),
-            uiOptions.resultMap || queryDefinition.resultMap
-          );
+          const rawResultData = queryResult.data[queryDefinition.name];
+          let $data: any = null;
+
+          if (isArray(rawResultData)) {
+            $data = { data: rawResultData };
+          } else if (rawResultData) {
+            $data = reactory.utils.objectMapper(
+              reactory.utils.lodash.cloneDeep(rawResultData),
+              uiOptions.resultMap || queryDefinition.resultMap
+            );
+          }
           
           if ($data) {
+            let allItems: any[] = [];
             if (isArray($data) === true) {
-              response.data = $data;
+              allItems = $data;
+            } else if ($data.data && isArray($data.data) === true) {
+              allItems = $data.data;
+            }
+
+            const hasServerPaging = $data.paging && typeof $data.paging.total === 'number' && $data.paging.total > 0;
+
+            if (!hasServerPaging && allItems.length > 0) {
+              // Local client-side paging mode for flat unpaginated array payloads
+              const totalItems = allItems.length;
+              const pageIdx = typeof query.page === 'number' ? query.page : 0;
+              const pageSize = typeof query.pageSize === 'number' ? query.pageSize : (uiOptions.options?.pageSize || 10);
+              const start = pageIdx * pageSize;
+              const end = start + pageSize;
+
+              response.data = allItems.slice(start, end);
+              response.paging = {
+                page: pageIdx,
+                pageSize,
+                total: totalItems,
+                hasNext: end < totalItems,
+              };
+
+              if (isMountedRef.current) {
+                setIsClientSidePaged(true);
+                setClientPagedTotal(totalItems);
+              }
             } else {
-              if ($data.data && isArray($data.data) === true) response.data = $data.data;
-              if ($data.paging) response.paging = { ...response.paging, ...$data.paging };
-            }
-
-            if ($data.data && $data.paging) {
-              response.data = $data.data;
-              response.paging = { ...response.paging, ...$data.paging };
-            } else if (isArray($data)) {
-              response.data = $data;
-            }
-
-            if (!response.paging.total && response.data && response.data.length > 0) {
-              response.paging.total = response.data.length;
+              response.data = allItems;
+              if ($data.paging) {
+                response.paging = { ...response.paging, ...$data.paging };
+              }
+              if (isMountedRef.current) {
+                setIsClientSidePaged(false);
+              }
             }
           }
 
@@ -2385,6 +2415,25 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             </Box>
           )}
         </Box>
+        {isClientSidePaged && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 2,
+              py: 0.75,
+              bgcolor: 'action.hover',
+              borderTop: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Icon sx={{ color: 'warning.main', fontSize: 18 }}>warning_amber</Icon>
+            <Typography variant="caption" color="text.secondary">
+              <strong>Notice:</strong> This table is currently using client-side pagination ({clientPagedTotal} total records). Consider updating the GraphQL query and resolver to support server-side pagination for optimal performance.
+            </Typography>
+          </Box>
+        )}
         {getPagination()}
         {confirmDialog}
       </>
