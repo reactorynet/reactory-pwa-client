@@ -545,7 +545,7 @@ export default (props) => {
         setSidePanelState({ items: [], activeItemId: undefined, isOpen: false });
       }
     }
-  }, [selectedPersona?.id, chatState?.id, setSidePanelState]);
+  }, [selectedPersona?.id, chatState?.id, (chatState as any)?.sidePanelState, setSidePanelState, reactory]);
 
   // Inject side panel actions into chatState so client macros can access them
   React.useEffect(() => {

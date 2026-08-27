@@ -183,6 +183,7 @@ export type MacroToolDefinition = {
         items?: {
           type: string;
           properties?: Record<string, unknown>;
+          required?: string[];
         };
       }>;
       required?: string[];
