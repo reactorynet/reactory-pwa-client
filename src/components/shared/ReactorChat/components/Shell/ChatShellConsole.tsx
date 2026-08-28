@@ -16,13 +16,23 @@ const ChatShellConsole: React.FC = () => {
     chatShellBus.sessions().filter((s) => s.source === 'macro').map((s) => s.shellSessionId),
   );
 
+  const seed = React.useCallback(() => {
+    setIds(chatShellBus.sessions().filter((s) => s.source === 'macro').map((s) => s.shellSessionId));
+  }, []);
+
   React.useEffect(() => {
     const unsubscribe = chatShellBus.subscribe((event) => {
       if (event.source !== 'macro') return;
       setIds((prev) => (prev.includes(event.shellSessionId) ? prev : [...prev, event.shellSessionId]));
     });
-    return unsubscribe;
-  }, []);
+    // Re-seed when the user switches chats: the list held the previous agent's
+    // runs, and the bus is now scoped to a different conversation.
+    const unsubscribeConversation = chatShellBus.subscribeToConversationChange(() => seed());
+    return () => {
+      unsubscribe();
+      unsubscribeConversation();
+    };
+  }, [seed]);
 
   const commandFor = React.useCallback((shellSessionId: string): string | undefined => {
     return chatShellBus.getBuffer(shellSessionId).find((e) => e.phase === 'start')?.command;

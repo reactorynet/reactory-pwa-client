@@ -237,6 +237,33 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
+/**
+ * Identity for an SSE connection, so the server can say *who* is subscribed.
+ *
+ * Two live transports on one conversation is legitimate — the transport manager
+ * supports it deliberately — but nothing in the logs distinguished "two browser
+ * tabs" from "two chat components mounted in one tab" from "a leaked stream",
+ * which cost a lot of forensics to rule out one at a time. The tab half comes
+ * from sessionStorage (per-tab, survives reload); the suffix is per hook
+ * instance. Same tab id with different suffixes means two mounted components;
+ * different tab ids mean different tabs.
+ */
+const CLIENT_INSTANCE_KEY = 'reactory.sse.clientInstanceId';
+let hookInstanceCounter = 0;
+
+const tabInstanceId = (): string => {
+  try {
+    let id = sessionStorage.getItem(CLIENT_INSTANCE_KEY);
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 10);
+      sessionStorage.setItem(CLIENT_INSTANCE_KEY, id);
+    }
+    return id;
+  } catch {
+    return 'no-storage';
+  }
+};
+
 const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onInterrupted, onRetry, onCompaction, onShell, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
@@ -244,6 +271,15 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const [isReconnecting, setIsReconnecting] = React.useState(false);
   const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
   const eventSourceRef = React.useRef<EventSource | null>(null);
+  /** `<tab>:<mount>` — see tabInstanceId. */
+  const clientInstanceRef = React.useRef<string>(`${tabInstanceId()}:${++hookInstanceCounter}`);
+
+  /** Build the connection URL, tagging it so the server can log who connected. */
+  const streamUrl = React.useCallback((endpoint: string): string => {
+    const url = new URL(endpoint);
+    url.searchParams.set('client-instance', clientInstanceRef.current);
+    return url.toString();
+  }, []);
   const sessionRef = React.useRef<string | null>(null);
 
   // Callback refs — always point to the latest callback so SSE event
@@ -586,8 +622,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     }
 
     try {
-      const sseUrl = new URL(opts.endpoint);
-      const es = new EventSource(sseUrl.toString());
+      const es = new EventSource(streamUrl(opts.endpoint));
 
       es.onopen = () => {
         reactory.log(`useSSE: reconnected (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
@@ -668,10 +703,10 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     setConnected(true);
 
     try {
-      const sseUrl = new URL(endpoint);
-      sessionLogger?.info('SSE connecting', { endpoint: sseUrl.toString(), sessionId }, 'useSSE');
-      reactory.log(`useSSE: connecting to ${sseUrl.toString()}`, 'info');
-      const es = new EventSource(sseUrl.toString());
+      const target = streamUrl(endpoint);
+      sessionLogger?.info('SSE connecting', { endpoint: target, sessionId, clientInstance: clientInstanceRef.current }, 'useSSE');
+      reactory.log(`useSSE: connecting to ${target}`, 'info');
+      const es = new EventSource(target);
 
       es.onopen = () => {
         sessionLogger?.info('SSE connection opened', { sessionId }, 'useSSE');
@@ -740,6 +775,12 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    // Drop the connect options too. `reconnectNow` rebuilds a stream from them
+    // and only its *callers* check `hasCompletedRef`, so leaving them in place
+    // left a window where an already-scheduled reconnect could resurrect a
+    // stream the caller had explicitly torn down — and a revived stream feeds
+    // the previous conversation's events into whatever chat is now on screen.
+    lastConnectOptsRef.current = null;
     setIsStreaming(false);
     setCurrentStreamingMessage('');
     sessionRef.current = null;
