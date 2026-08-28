@@ -1,4 +1,5 @@
 import React, { useEffect } from "react"
+import { isEventForSession } from './sessionRouting';
 import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
@@ -326,6 +327,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   } = props;
 
   const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
+
+  /**
+   * Does a streaming event belong to the chat window currently on screen?
+   * See `sessionRouting.ts` — the rule fails closed on an unlabelled event.
+   */
+  const isForActiveSession = (eventSessionId?: string): boolean =>
+    isEventForSession(eventSessionId, activeSessionIdRef.current);
+
   /** Session id currently being fetched by `loadChat`, or null. Re-entrancy guard. */
   const loadInFlightRef = React.useRef<string | null>(null);
 
@@ -366,9 +375,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
     const eventSessionId = message.conversationId || message.sessionId;
-    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-      return;
-    }
+    if (!isForActiveSession(eventSessionId)) return;
     if (message.type === StreamingEventType.COMPLETE) {
       sessionLogger?.info('SSE stream complete', { contentLength: message.data?.content?.length || 0, finishReason: message.data?.finishReason }, 'useSSE');
       console.log('📩 [useChatFactory] onSSEMessageReceived COMPLETE', {
@@ -1095,9 +1102,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
     const eventSessionId = toolCall.conversationId || toolCall.sessionId;
-    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-      return;
-    }
+    if (!isForActiveSession(eventSessionId)) return;
     const validSessionId = chatState.id || eventSessionId;
     if (!validSessionId) {
       console.error('❌ [useChatFactory] Tool call missing sessionId:', toolCall);
@@ -1274,9 +1279,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onTokenReceived = React.useCallback((token: TokenStreamingEvent) => {
     const eventSessionId = token.conversationId || token.sessionId;
-    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-      return;
-    }
+    if (!isForActiveSession(eventSessionId)) return;
     if (streamingCompleteRef.current) return;
 
     tokenBufferRef.current += (token.data.delta || token.data.content || "");
@@ -1343,9 +1346,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onReasoningReceived = React.useCallback((reasoning: ReasoningStreamingEvent) => {
     const eventSessionId = reasoning.conversationId || reasoning.sessionId;
-    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-      return;
-    }
+    if (!isForActiveSession(eventSessionId)) return;
     // Skip if streaming already completed (stale event from reconnect, etc.)
     if (streamingCompleteRef.current) return;
 
@@ -1395,9 +1396,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    */
     const onToolIterationLimitReceived = React.useCallback((event: ToolIterationLimitStreamingEvent) => {
       const eventSessionId = event.conversationId || event.sessionId;
-      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-        return;
-      }
+      if (!isForActiveSession(eventSessionId)) return;
       reactory.log('[useChatFactory] Tool iteration limit reached', event.data, 'warning');
 
       // Update the last assistant message with partial content if available
@@ -1432,9 +1431,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
     const onInterruptedReceived = React.useCallback((event: InterruptedStreamingEvent) => {
       const eventSessionId = event.conversationId || event.sessionId;
-      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-        return;
-      }
+      if (!isForActiveSession(eventSessionId)) return;
       reactory.log('[useChatFactory] Execution interrupted by user', event.data, 'info');
       setWaitingForResponse(false);
       if (sseInactivityTimerRef.current) {
@@ -1450,9 +1447,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
      */
     const onRetryReceived = React.useCallback((event: RetryStreamingEvent) => {
       const eventSessionId = event.conversationId || event.sessionId;
-      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-        return;
-      }
+      if (!isForActiveSession(eventSessionId)) return;
       const { attempt, maxAttempts, retryAfterMs, reason } = event.data;
       const delaySec = Math.round(retryAfterMs / 1000);
       reactory.log(
@@ -1478,9 +1473,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
     const onCompactionReceived = React.useCallback((event: CompactionStreamingEvent) => {
       const eventSessionId = event.conversationId || event.sessionId;
-      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
-        return;
-      }
+      if (!isForActiveSession(eventSessionId)) return;
       reactory.log(
         `[useChatFactory] Compaction event: ${event.data.phase}`,
         event.data,
@@ -1521,7 +1514,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onCompaction: onCompactionReceived,
       // Forward one-shot `shell` macro output (streamed on the chat channel)
       // to the shell bus; ReactorChat mounts a read-only terminal for it.
-      onShell: (event) => { chatShellBus.push(event.data); },
+      onShell: (event) => {
+        // The active window is the gatekeeper: shell output belongs to the
+        // agent that ran the command, not to whichever chat is on screen.
+        // ShellStreamPublisher labels these with the conversation, and the
+        // transport manager stamps any that arrive unlabelled.
+        const eventSessionId = event.conversationId || event.sessionId;
+        if (!isForActiveSession(eventSessionId)) return;
+        const owner = eventSessionId || activeSessionIdRef.current;
+        if (!owner) return;
+        chatShellBus.push(owner, event.data);
+      },
       onReconnecting: (attempt, maxAttempts) => {
         setNetworkStatus('reconnecting');
         setNetworkReconnectAttempt(attempt);
@@ -1562,6 +1565,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   React.useEffect(() => {
     activeSessionIdRef.current = chatState?.id || null;
+    // Scope the shell console to this conversation. Without it the console kept
+    // showing every agent's terminals for the lifetime of the page.
+    chatShellBus.setActiveConversation(chatState?.id || null);
     // Reset session-specific states when switching to a different chat session
     // to prevent "stuck" indicators (e.g. thinking widget showing in new sessions)
     setAgentBusy(false);
@@ -2801,9 +2807,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                       if (parsed.success && parsed.data && parsed.data.shellSessionId) {
                         const { shellSessionId, command, workingDir, stdout, stderr, exitCode, timedOut } = parsed.data;
                         
-                        const existingBuffer = chatShellBus.getBuffer(shellSessionId);
+                        const existingBuffer = chatShellBus.getConversationBuffer(chatSessionId, shellSessionId);
                         if (existingBuffer.length === 0) {
-                          chatShellBus.push({
+                          chatShellBus.push(chatSessionId, {
                             shellSessionId,
                             phase: 'start',
                             source: 'macro',
@@ -2812,7 +2818,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                           });
 
                           if (stdout) {
-                            chatShellBus.push({
+                            chatShellBus.push(chatSessionId, {
                               shellSessionId,
                               phase: 'stdout',
                               source: 'macro',
@@ -2821,7 +2827,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                           }
 
                           if (stderr) {
-                            chatShellBus.push({
+                            chatShellBus.push(chatSessionId, {
                               shellSessionId,
                               phase: 'stderr',
                               source: 'macro',
@@ -2829,7 +2835,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                             });
                           }
 
-                          chatShellBus.push({
+                          chatShellBus.push(chatSessionId, {
                             shellSessionId,
                             phase: 'exit',
                             source: 'macro',
