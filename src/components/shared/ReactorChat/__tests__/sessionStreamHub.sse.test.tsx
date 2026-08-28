@@ -487,3 +487,116 @@ describe('useSessionStreamHub session tracking', () => {
     expect(sub?.parentSessionId).toBe('sess-a');
   });
 });
+
+describe('useSessionStreamHub update coalescing', () => {
+  beforeEach(() => {
+    (global as any).EventSource = FakeEventSource;
+    FakeEventSource.instances = [];
+    createStreamingSessionMock.mockReset();
+    createStreamingSessionMock.mockImplementation(async (_r: any, channelId: string) => ({
+      sessionId: `sse-${channelId}`,
+      channelId,
+      endpoint: `http://localhost:4000/reactor-chat/streaming/sse/sse-${channelId}`,
+      expiresAt: '',
+    }));
+  });
+
+  /** Get the stream the hub opened for a backgrounded session. */
+  const backgroundStreamFor = (id: string) =>
+    FakeEventSource.instances.find((es) => es.url.includes(`sse-${id}`))!;
+
+  /**
+   * The hub sits inside ReactorChat and ChatList is not memoised, so one state
+   * update per streamed token means one full-tree render per token. A slow
+   * provider does not reduce that cost, it just spaces the stalls out.
+   */
+  it('does not re-render per streamed token', async () => {
+    const { result, rerender } = renderHub({ active: 'session-a' });
+    await settle();
+    rerender({ active: 'session-b' });
+    await settle();
+
+    const stream = backgroundStreamFor('session-a');
+    // First token moves idle -> streaming, which flushes immediately.
+    act(() => { stream.emit('token', { content: 'a' }); });
+    const rendersAfterFirstToken = result.all.length;
+
+    // 40 further tokens change nothing a user perceives.
+    act(() => {
+      for (let i = 0; i < 40; i++) stream.emit('token', { content: 'x' });
+    });
+
+    expect(result.all.length).toBe(rendersAfterFirstToken);
+    expect(result.current.backgroundSessions[0].status).toBe('streaming');
+  });
+
+  it('publishes the accumulated preview once the window elapses', async () => {
+    jest.useFakeTimers();
+    const { result, rerender } = renderHub({ active: 'session-a' });
+    await settle();
+    rerender({ active: 'session-b' });
+    await settle();
+
+    const stream = backgroundStreamFor('session-a');
+    act(() => { stream.emit('token', { content: 'Hello' }); });
+    act(() => { stream.emit('token', { content: ' world' }); });
+
+    // Coalesced: the tail is not visible yet.
+    expect(result.current.backgroundSessions[0].lastMessage).toBe('Hello');
+
+    act(() => { jest.advanceTimersByTime(300); });
+    expect(result.current.backgroundSessions[0].lastMessage).toBe('Hello world');
+    jest.useRealTimers();
+  });
+
+  it('flushes a status change immediately', async () => {
+    const { result, rerender } = renderHub({ active: 'session-a' });
+    await settle();
+    rerender({ active: 'session-b' });
+    await settle();
+
+    const stream = backgroundStreamFor('session-a');
+    act(() => { stream.emit('token', { content: 'x' }); });
+    expect(result.current.backgroundSessions[0].status).toBe('streaming');
+
+    // streaming -> executing_tools is a visible change, so no waiting.
+    act(() => { stream.emit('tool_call', { name: 'grep' }); });
+    expect(result.current.backgroundSessions[0].status).toBe('executing_tools');
+    expect(result.current.backgroundSessions[0].lastToolName).toBe('grep');
+  });
+
+  it('flushes a finished turn immediately, preview included', async () => {
+    const { result, rerender } = renderHub({ active: 'session-a' });
+    await settle();
+    rerender({ active: 'session-b' });
+    await settle();
+
+    const stream = backgroundStreamFor('session-a');
+    act(() => { stream.emit('token', { content: 'partial' }); });
+    act(() => { stream.emit('complete', { content: 'Done at last.' }); });
+
+    const a = result.current.backgroundSessions[0];
+    expect(a.status).toBe('completed');
+    expect(a.unread).toBe(true);
+    expect(a.lastMessage).toBe('Done at last.');
+  });
+
+  it('keeps accumulating across a flush without losing text', async () => {
+    jest.useFakeTimers();
+    const { result, rerender } = renderHub({ active: 'session-a' });
+    await settle();
+    rerender({ active: 'session-b' });
+    await settle();
+
+    const stream = backgroundStreamFor('session-a');
+    act(() => { stream.emit('token', { content: 'one ' }); });
+    act(() => { jest.advanceTimersByTime(300); });
+    act(() => { stream.emit('token', { content: 'two ' }); });
+    act(() => { jest.advanceTimersByTime(300); });
+    act(() => { stream.emit('token', { content: 'three' }); });
+    act(() => { jest.advanceTimersByTime(300); });
+
+    expect(result.current.backgroundSessions[0].lastMessage).toBe('one two three');
+    jest.useRealTimers();
+  });
+});

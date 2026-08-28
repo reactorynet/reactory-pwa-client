@@ -85,6 +85,22 @@ export interface UseSessionStreamHubResult {
  */
 const SAME_ORIGIN_STREAM_LIMIT = 1;
 
+/**
+ * How long background status updates are coalesced before reaching React state.
+ *
+ * The hub lives inside ReactorChat, so every `setSessionStates` re-renders that
+ * whole tree — and ChatList is not memoised, so the entire message history
+ * re-renders with it. Applying an update per streamed token therefore costs a
+ * full-tree render per token, per background session; a slow provider does not
+ * make that cheaper, it just spreads the same stalls out.
+ *
+ * Nothing in the stack needs per-token fidelity: a ring colour and a truncated
+ * tooltip preview. So token traffic accumulates in a ref and lands at most once
+ * per window, while the things a user actually notices — a status change, a
+ * finished turn — still flush immediately.
+ */
+const PREVIEW_FLUSH_MS = 250;
+
 /** Maximum number of connect attempts before a session is left alone. */
 const MAX_CONNECT_ATTEMPTS = 4;
 
@@ -230,6 +246,69 @@ export const useSessionStreamHub = ({
 
   const closeStreamRef = useRef(closeStream);
   closeStreamRef.current = closeStream;
+
+  /**
+   * Running accumulator of stream-driven values, and the ids whose accumulated
+   * values have not yet been published to React state. `pending` is never
+   * cleared on flush — it stays the authoritative base for the next event, so a
+   * token arriving between a flush and its commit cannot lose accumulated text.
+   */
+  const pendingRef = useRef<Map<string, {
+    status: TrackedSessionStatus;
+    unread: boolean;
+    lastMessage?: string;
+    lastToolName?: string;
+  }>>(new Map());
+  const dirtyRef = useRef<Set<string>>(new Set());
+  const flushTimerRef = useRef<number | null>(null);
+  /** Mirror of the committed state, so event handling can read it without subscribing. */
+  const publishedRef = useRef<Record<string, TrackedSession>>({});
+
+  /** Publish accumulated values for every dirty session in one state update. */
+  const flushPending = useCallback(() => {
+    if (flushTimerRef.current !== null) {
+      window.clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    if (dirtyRef.current.size === 0) return;
+
+    const dirty = Array.from(dirtyRef.current);
+    dirtyRef.current.clear();
+
+    setSessionStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const sessionId of dirty) {
+        const curr = prev[sessionId];
+        const acc = pendingRef.current.get(sessionId);
+        if (!curr || !acc) continue;
+        if (
+          curr.status === acc.status &&
+          curr.unread === acc.unread &&
+          curr.lastMessage === acc.lastMessage &&
+          curr.lastToolName === acc.lastToolName
+        ) continue;
+        next[sessionId] = {
+          ...curr,
+          status: acc.status,
+          unread: acc.unread,
+          lastMessage: acc.lastMessage,
+          lastToolName: acc.lastToolName,
+          lastUpdated: new Date(),
+        };
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimerRef.current !== null) return;
+    flushTimerRef.current = window.setTimeout(() => {
+      flushTimerRef.current = null;
+      flushPending();
+    }, PREVIEW_FLUSH_MS);
+  }, [flushPending]);
 
   /**
    * Whether a session is worth one of the browser's six per-host sockets.
@@ -448,94 +527,125 @@ export const useSessionStreamHub = ({
       || type === StreamingEventType.INTERRUPTED
       || type === StreamingEventType.TOOL_ITERATION_LIMIT;
 
-    setSessionStates((prev) => {
-      const curr = prev[sessionId];
-      if (!curr) return prev;
+    const committed = publishedRef.current[sessionId];
+    // Not tracked (pruned, or now the active session) — nothing to update.
+    if (!committed) return;
 
-      // Read the live value: listeners are bound once when the stream opens, so
-      // a captured `activeSessionId` would be stale for the rest of the stream.
-      const currentActiveSessionId = activeSessionIdRef.current;
+    const base = pendingRef.current.get(sessionId) || {
+      status: committed.status,
+      unread: committed.unread,
+      lastMessage: committed.lastMessage,
+      lastToolName: committed.lastToolName,
+    };
 
-      let nextStatus = curr.status;
-      let nextUnread = curr.unread;
-      let lastMsg = curr.lastMessage;
-      let lastTool = curr.lastToolName;
+    // Read the live value: listeners are bound once when the stream opens, so a
+    // captured `activeSessionId` would be stale for the rest of the stream.
+    const currentActiveSessionId = activeSessionIdRef.current;
 
-      switch (type) {
-        // The server has no turn-level `start` event (its StreamingEventType
-        // enum has none) — the first signal of a live turn is a token, a tool
-        // call or one of the long-running phases below. `start` is handled
-        // anyway in case one is ever added.
-        case StreamingEventType.START: {
-          nextStatus = 'thinking';
-          break;
-        }
-        case StreamingEventType.TOKEN:
-        case StreamingEventType.REASONING: {
-          nextStatus = 'streaming';
-          if (rawData?.content) {
-            lastMsg = (lastMsg || '') + rawData.content;
-            if (lastMsg.length > 80) lastMsg = lastMsg.slice(-80);
-          }
-          break;
-        }
-        case StreamingEventType.TOOL_CALL: {
-          nextStatus = 'executing_tools';
-          lastTool = rawData?.name || 'Tool Execution';
-          break;
-        }
-        // Long-running phases that are emitted with no token traffic around
-        // them. Without these a background agent compacting its context,
-        // waiting out a provider retry, or streaming shell output reads as idle.
-        case StreamingEventType.SHELL: {
-          nextStatus = 'executing_tools';
-          lastTool = rawData?.command || lastTool || 'Shell';
-          break;
-        }
-        case StreamingEventType.COMPACTION: {
-          nextStatus = 'thinking';
-          lastTool = 'Compacting context';
-          break;
-        }
-        case StreamingEventType.RETRY: {
-          nextStatus = 'thinking';
-          lastTool = 'Retrying';
-          break;
-        }
-        case StreamingEventType.COMPLETE: {
-          nextStatus = 'completed';
-          nextUnread = sessionId !== currentActiveSessionId;
-          if (rawData?.content) {
-            lastMsg = rawData.content.slice(0, 100);
-          }
-          break;
-        }
-        case StreamingEventType.ERROR:
-        case StreamingEventType.TOOL_ITERATION_LIMIT:
-        case StreamingEventType.INTERRUPTED: {
-          nextStatus = type === StreamingEventType.ERROR ? 'error' : 'completed';
-          nextUnread = sessionId !== currentActiveSessionId;
-          break;
-        }
+    let nextStatus = base.status;
+    let nextUnread = base.unread;
+    let lastMsg = base.lastMessage;
+    let lastTool = base.lastToolName;
+
+    switch (type) {
+      // The server has no turn-level `start` event (its StreamingEventType enum
+      // has none) — the first signal of a live turn is a token, a tool call or
+      // one of the long-running phases below. `start` is handled anyway in case
+      // one is ever added.
+      case StreamingEventType.START: {
+        nextStatus = 'thinking';
+        break;
       }
+      case StreamingEventType.TOKEN:
+      case StreamingEventType.REASONING: {
+        nextStatus = 'streaming';
+        if (rawData?.content) {
+          lastMsg = (lastMsg || '') + rawData.content;
+          if (lastMsg.length > 80) lastMsg = lastMsg.slice(-80);
+        }
+        break;
+      }
+      case StreamingEventType.TOOL_CALL: {
+        nextStatus = 'executing_tools';
+        lastTool = rawData?.name || 'Tool Execution';
+        break;
+      }
+      // Long-running phases that are emitted with no token traffic around them.
+      // Without these a background agent compacting its context, waiting out a
+      // provider retry, or streaming shell output reads as idle.
+      case StreamingEventType.SHELL: {
+        nextStatus = 'executing_tools';
+        lastTool = rawData?.command || lastTool || 'Shell';
+        break;
+      }
+      case StreamingEventType.COMPACTION: {
+        nextStatus = 'thinking';
+        lastTool = 'Compacting context';
+        break;
+      }
+      case StreamingEventType.RETRY: {
+        nextStatus = 'thinking';
+        lastTool = 'Retrying';
+        break;
+      }
+      case StreamingEventType.COMPLETE: {
+        nextStatus = 'completed';
+        nextUnread = sessionId !== currentActiveSessionId;
+        if (rawData?.content) {
+          lastMsg = rawData.content.slice(0, 100);
+        }
+        break;
+      }
+      case StreamingEventType.ERROR:
+      case StreamingEventType.TOOL_ITERATION_LIMIT:
+      case StreamingEventType.INTERRUPTED: {
+        nextStatus = type === StreamingEventType.ERROR ? 'error' : 'completed';
+        nextUnread = sessionId !== currentActiveSessionId;
+        break;
+      }
+      default:
+        return; // nothing this hub reacts to
+    }
 
-      return {
-        ...prev,
-        [sessionId]: {
-          ...curr,
-          status: nextStatus,
-          unread: nextUnread,
-          lastMessage: lastMsg,
-          lastToolName: lastTool,
-          lastUpdated: new Date(),
-        },
-      };
+    pendingRef.current.set(sessionId, {
+      status: nextStatus,
+      unread: nextUnread,
+      lastMessage: lastMsg,
+      lastToolName: lastTool,
     });
+    dirtyRef.current.add(sessionId);
+
+    // Flush immediately for the things a user perceives — a ring changing
+    // colour, a turn finishing. Coalesce the rest, which at token frequency is
+    // just preview text nobody is reading character by character.
+    const statusChanged = nextStatus !== committed.status;
+    const unreadChanged = nextUnread !== committed.unread;
+    if (isTurnTerminal || statusChanged || unreadChanged) {
+      flushPending();
+    } else {
+      scheduleFlush();
+    }
 
     if (isTurnTerminal) {
       // Outside the updater: this is an SSE listener, not a render.
       closeStreamRef.current(sessionId, `turn ended (${type})`);
     }
+  }, [flushPending, scheduleFlush]);
+
+  // Mirror committed state for the event handler, and drop accumulator entries
+  // for sessions that are no longer tracked.
+  useEffect(() => {
+    publishedRef.current = sessionStates;
+    for (const sessionId of Array.from(pendingRef.current.keys())) {
+      if (sessionStates[sessionId]) continue;
+      pendingRef.current.delete(sessionId);
+      dirtyRef.current.delete(sessionId);
+    }
+  }, [sessionStates]);
+
+  // Never leave a scheduled flush behind.
+  useEffect(() => () => {
+    if (flushTimerRef.current !== null) window.clearTimeout(flushTimerRef.current);
   }, []);
 
   // Establish background SSE listeners for background sessions
