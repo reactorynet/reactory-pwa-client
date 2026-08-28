@@ -899,7 +899,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return response;
   }, [query, formContext.graphql, uiOptions.query, uiOptions.variables, uiOptions.resultMap, uiOptions.disablePaging, formContext.$selectedRows, reactory]);
 
-  const rows = uiOptions.remoteData === true ? data?.data : formData;
+  const rows = (data?.data && Array.isArray(data.data) && data.data.length > 0) ? data.data : (Array.isArray(formData) && formData.length > 0 ? formData : (data?.data || []));
 
   // Extract unique breakpoints from columns for responsive filtering
   // This must be done at the top level to comply with Rules of Hooks
@@ -1998,10 +1998,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }, []);  // setQuery is always stable
 
   const onToolbarDataChange = useCallback((filteredData: any[]) => {
-    if (uiOptions.remoteData !== true) {
-      setData(prev => ({ ...prev, data: filteredData }));
-    }
-  }, [uiOptions.remoteData]);
+    setData(prev => ({ ...prev, data: filteredData }));
+  }, []);
 
   const getToolbar = () => {
 

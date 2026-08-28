@@ -438,6 +438,11 @@ export type ChatState = {
   active?: boolean;
 
   /**
+   * Indicates whether the server is currently processing a message or executing tool calls.
+   */
+  processing?: boolean;
+
+  /**
    * A list of MCP Clients
    */
   mcpClients?: MCPClient[],

@@ -2782,6 +2782,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             maxTokens: (result as any).maxTokens,
             toolApprovalMode: (result as any).toolApprovalMode,
             maxToolIterations: (result as any).maxToolIterations,
+            processing: !!(result as any).processing,
             files: (result as any).files ?? prevState.files,
             folders: (result as any).folders ?? prevState.folders,
             sidePanelState: (result as any).sidePanelState ?? null,
@@ -2847,13 +2848,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }
 
           // Detect pending tool calls that were not completed (e.g. user navigated away)
-          if (serverHistory.length > 0) {
+          const isServerProcessing = !!(result as any).processing;
+
+          if (isServerProcessing) {
+            reactory.log('🔧 [useChatFactory] Server is actively processing tool calls — maintaining busy state.');
+            setAgentBusy(true);
+            setPendingToolCallResume(null);
+          } else if (serverHistory.length > 0) {
             const lastAssistantWithTools = [...serverHistory].reverse().find(
               (msg: any) => msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0
             );
             if (lastAssistantWithTools) {
+              const existingResultIds = new Set<string>();
+              if (Array.isArray(lastAssistantWithTools.tool_results)) {
+                lastAssistantWithTools.tool_results.forEach((r: any) => {
+                  if (r?.id) existingResultIds.add(r.id);
+                });
+              }
+              serverHistory.forEach((msg: any) => {
+                if (msg.role === 'tool' && msg.tool_call_id) {
+                  existingResultIds.add(msg.tool_call_id);
+                }
+              });
+
               const pending = lastAssistantWithTools.tool_calls.filter(
-                (tc: any) => tc && (tc.status === 'pending' || tc.status === 'running')
+                (tc: any) => tc &&
+                  tc.status !== 'success' &&
+                  tc.status !== 'error' &&
+                  !existingResultIds.has(tc.id)
               );
               if (pending.length > 0) {
                 const toolApprovalMode = (result as any).toolApprovalMode;
