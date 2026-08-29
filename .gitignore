@@ -28,6 +28,7 @@ yarn.lock
 !/config/env.ts
 !/config/env/README.MD
 !/config/env/reactory.local
+!/config/env/**/Dockerfile*
 
 # certificates
 /certificates/*
