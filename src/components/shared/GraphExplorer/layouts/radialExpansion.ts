@@ -67,3 +67,69 @@ export const radialExpansionLayout: GraphLayoutEngine = {
 };
 
 export default radialExpansionLayout;
+
+// ============================================================================
+// 3D variant
+// ============================================================================
+
+/**
+ * Places `count` children around `center` for the 3D renderer.
+ *
+ * Small fans stay in the horizontal plane (x/z — y is up in the orbit view)
+ * on an arc centred on `baseAzimuth`, exactly like the 2D fan seen from
+ * above. As the fan grows the arc widens to a full ring and the ring opens
+ * into latitude bands above and below the plane, until very large fans cover
+ * an evenly-spaced sphere shell (golden-angle spiral, equal-area in
+ * elevation). Returns positions in insertion order.
+ */
+export const sphericalFan = (
+  count: number,
+  center: { x: number; y: number; z: number },
+  radius: number,
+  baseAzimuth: number,
+  opts: { ringOnly?: boolean } = {}
+): Array<{ x: number; y: number; z: number }> => {
+  const out: Array<{ x: number; y: number; z: number }> = [];
+  if (count <= 0) return out;
+  // Up to this many children: a flat arc/ring. Beyond FULL_SPHERE_COUNT the
+  // shell covers the whole sphere; in between the elevation band grows.
+  const FLAT_COUNT = 8;
+  const FULL_SPHERE_COUNT = 40;
+  const spread = opts.ringOnly
+    ? 0
+    : Math.min(1, Math.max(0, (count - FLAT_COUNT) / (FULL_SPHERE_COUNT - FLAT_COUNT)));
+
+  if (spread === 0) {
+    // Flat: sector for small fans, full ring once it would get crowded.
+    const arc = count <= 5 ? FAN_ARC : Math.PI * 2;
+    const step = count === 1 ? 0 : arc >= Math.PI * 2 ? arc / count : arc / (count - 1);
+    // A lone child continues straight out; sectors centre on the azimuth.
+    const start = count === 1 || arc >= Math.PI * 2 ? baseAzimuth : baseAzimuth - arc / 2;
+    for (let i = 0; i < count; i++) {
+      const a = start + step * i;
+      out.push({ x: center.x + radius * Math.cos(a), y: center.y, z: center.z + radius * Math.sin(a) });
+    }
+    return out;
+  }
+
+  // Golden-angle spiral, equal-area in elevation, limited to ±spread of the
+  // full hemisphere so the fan grows out of the plane gradually.
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const maxSin = spread; // sin(max elevation) — 1 = poles reachable
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count; // 0..1
+    const sinElev = maxSin * (2 * t - 1);
+    const cosElev = Math.sqrt(Math.max(0, 1 - sinElev * sinElev));
+    const a = baseAzimuth + i * golden;
+    out.push({
+      x: center.x + radius * cosElev * Math.cos(a),
+      y: center.y + radius * sinElev,
+      z: center.z + radius * cosElev * Math.sin(a),
+    });
+  }
+  return out;
+};
+
+/** Radius for a fan of `count` children (shared with the 2D layout). */
+export const fanRadius = (count: number): number =>
+  EXPANSION_RADIUS_BASE + Math.floor(count / 10) * EXPANSION_RADIUS_PER_10_CHILDREN;

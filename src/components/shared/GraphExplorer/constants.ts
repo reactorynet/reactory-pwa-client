@@ -152,3 +152,25 @@ export const VIEWPORT_ANIMATION_MS = 380;
 
 /** Spatial hash cell size (world units) for culling + hit tests. */
 export const SPATIAL_HASH_CELL_SIZE = 128;
+
+// ============================================================================
+// 3D renderer
+// ============================================================================
+
+/** Default orbit distance from the target (world units — same scale as 2D). */
+export const CAMERA_3D_DISTANCE = 900;
+export const CAMERA_3D_MIN_DISTANCE = 60;
+export const CAMERA_3D_MAX_DISTANCE = 6000;
+export const CAMERA_3D_FOV = 55;
+/** Vertical spacing between containment depths when spreading a 2D layout into 3D. */
+export const Z_LAYER_SPACING = 140;
+/** Node sphere radius multiplier relative to the 2D radius. */
+export const NODE_3D_RADIUS_SCALE = 1.0;
+/** Distance (world units) beyond which 3D labels are hidden. */
+export const LABEL_3D_MAX_DISTANCE = 1400;
+/** Hard cap on simultaneously visible 3D labels. */
+export const MAX_VISIBLE_LABELS_3D = 120;
+/** Default 3D scene background (dark navy, matching the chat viewer). */
+export const SPACE_BACKGROUND = 0x0b0d17;
+/** Overlay (host-injected) nodes render with this accent. */
+export const OVERLAY_ACCENT_COLOR = 0xfff8e1;

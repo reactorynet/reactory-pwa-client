@@ -1,11 +1,14 @@
 /**
- * useGraphWebGLCanvas — three.js lifecycle glue for the graph canvas.
+ * useGraphWebGLCanvas — three.js lifecycle glue for the 2D graph canvas.
  *
  * Mirrors the proven useWebGLCanvas pattern from the WorkflowDesigner: all
  * managers live in refs, geometry is pushed imperatively when the store or
  * the PositionStore version changes, and a single rAF loop (SceneManager's)
  * drives WebGL + CSS2D rendering. React state is only touched for things the
- * DOM shell needs (hover id, metrics).
+ * DOM shell needs (hover id, zoom readout, marquee rectangle).
+ *
+ * Implements the renderer-agnostic GraphCanvasController contract shared with
+ * the 3D canvas so the shell never branches on the renderer.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,17 +26,22 @@ import {
   LOD_LABEL_RADIUS_PX,
   NODE_TYPE_COLORS,
   NODE_TYPE_RADII,
+  OVERLAY_ACCENT_COLOR,
   SELECTION_RING_COLOR,
+  VIEWPORT_ANIMATION_MS,
 } from '../constants';
 import {
+  Bounds,
+  GraphCameraState,
+  GraphCanvasController,
   GraphEdge,
   GraphNode,
+  GraphPoint,
   GraphSelection,
   Point,
   PositionStore,
 } from '../types';
 import { PositionAnimator } from '../utils/positionAnimator';
-import { VIEWPORT_ANIMATION_MS } from '../constants';
 import { SpatialHash } from '../utils/spatialHash';
 import { NodeRenderer } from '../renderers/NodeRenderer';
 import { EdgeRenderer } from '../renderers/EdgeRenderer';
@@ -47,7 +55,7 @@ import {
 } from '../renderers/types';
 import { createSteppingForceLayout, LayoutRequest, SteppingForceLayout } from '../layouts';
 
-export interface UseGraphWebGLCanvasProps {
+export interface UseGraphCanvasProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
   positions: PositionStore;
@@ -56,26 +64,42 @@ export interface UseGraphWebGLCanvasProps {
   selection: GraphSelection;
   focusNodeId: number | null;
   expanded: Set<number>;
+  /** Nodes with saved/user-dragged positions — "tidy" leaves them alone. */
+  pinned: Set<number>;
   events: Partial<GraphCanvasEvents>;
+  /** Mount/unmount the renderer without unmounting the hook's owner. */
+  active?: boolean;
 }
 
-export interface UseGraphWebGLCanvasReturn {
-  containerRef: React.RefObject<HTMLDivElement>;
-  hoveredNodeId: number | null;
+export interface UseGraphWebGLCanvasReturn extends GraphCanvasController {
   viewport: CanvasViewport;
   setViewport(viewport: CanvasViewport): void;
-  fitToContent(): void;
-  focusOn(position: Point): void;
-  /** Start a chunked global force relayout ("tidy graph"). */
-  runForceLayout(): void;
-  setEdgePreview(from: Point | null, to?: Point): void;
-  worldToScreen(position: Point): Point;
 }
 
 const nodeRadius = (node: GraphNode): number =>
   NODE_TYPE_RADII[node.type] ?? DEFAULT_NODE_RADIUS;
 
-export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWebGLCanvasReturn {
+/** World point at the viewport centre + zoom  <->  pan offsets. */
+const cameraFromViewport = (v: CanvasViewport): GraphCameraState => ({
+  target: {
+    x: (v.bounds.width / 2 - v.panX) / v.zoom,
+    y: (v.bounds.height / 2 - v.panY) / v.zoom,
+    z: 0,
+  },
+  zoom: v.zoom,
+});
+
+const viewportFromCamera = (camera: GraphCameraState, bounds: Bounds): CanvasViewport => {
+  const zoom = Math.min(4, Math.max(0.05, camera.zoom || 1));
+  return {
+    zoom,
+    panX: bounds.width / 2 - camera.target.x * zoom,
+    panY: bounds.height / 2 - camera.target.y * zoom,
+    bounds,
+  };
+};
+
+export function useGraphWebGLCanvas(props: UseGraphCanvasProps): UseGraphWebGLCanvasReturn {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneManager | null>(null);
   const gridRef = useRef<GridRenderer | null>(null);
@@ -90,12 +114,14 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
     to: CanvasViewport;
     start: number;
   } | null>(null);
+  const edgePreviewFromRef = useRef<number | null>(null);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
+  const [marquee, setMarquee] = useState<Bounds | null>(null);
   const [viewport, setViewportState] = useState<CanvasViewport>({
     zoom: 1,
-    panX: 0,
-    panY: 0,
+    panX: 400,
+    panY: 300,
     bounds: { x: 0, y: 0, width: 800, height: 600 },
   });
 
@@ -105,6 +131,7 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
   const lastPositionsVersion = useRef(-1);
+  const active = props.active !== false;
 
   // -- Geometry sync ---------------------------------------------------------
 
@@ -117,7 +144,7 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
     const labelRenderer = labelRendererRef.current;
     if (!nodeRenderer || !edgeRenderer) return;
 
-    const byId = new Map<number, { node: GraphNode; position: Point; radius: number }>();
+    const byId = new Map<number, { node: GraphNode; position: GraphPoint; radius: number }>();
     const nodeGeometry: NodeGeometryData[] = [];
 
     for (const node of nodes) {
@@ -133,7 +160,10 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
       const focused = focusNodeId === node.id;
       const collapsed = node.hasChildren && !propsRef.current.expanded.has(node.id);
 
-      const accent = NODE_TYPE_COLORS[node.type] ?? NODE_TYPE_COLORS.UNKNOWN;
+      const accent =
+        node.origin === 'overlay'
+          ? OVERLAY_ACCENT_COLOR
+          : NODE_TYPE_COLORS[node.type] ?? NODE_TYPE_COLORS.UNKNOWN;
       nodeGeometry.push({
         id: node.id,
         position,
@@ -151,16 +181,11 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
       });
     }
 
-    // Prune hash entries for removed nodes.
+    // Evict hash entries for nodes no longer rendered — otherwise removed or
+    // hidden nodes stay clickable at their last position.
     if (hash.size > nodes.length) {
-      const present = new Set(nodes.map((n) => n.id));
-      for (const geometry of nodeGeometry) present.add(geometry.id);
-      // SpatialHash has no iteration API; rebuild when counts diverge a lot.
-      if (hash.size > nodes.length * 1.5 + 16) {
-        hash.clear();
-        for (const { node, position, radius } of byId.values()) {
-          hash.set(node.id, position.x, position.y, radius);
-        }
+      for (const id of Array.from(hash.ids())) {
+        if (!byId.has(id)) hash.remove(id);
       }
     }
 
@@ -186,8 +211,11 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
           x: target.position.x - ux * target.radius,
           y: target.position.y - uy * target.radius,
         },
-        color: LINK_TYPE_COLORS[primaryType] ?? LINK_TYPE_COLORS.UNKNOWN,
-        width: 1.5,
+        color:
+          edge.origin === 'overlay'
+            ? OVERLAY_ACCENT_COLOR
+            : LINK_TYPE_COLORS[primaryType] ?? LINK_TYPE_COLORS.UNKNOWN,
+        width: selection.edgeIds.has(edge.id) ? 3 : 1.5,
         directed: primaryType !== 'CONTAINS' && primaryType !== 'CONNECTION',
         dashed: edge.types.some((t) => DASHED_LINK_TYPES.includes(t)),
         selected: selection.edgeIds.has(edge.id),
@@ -254,7 +282,9 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
   }, [animateViewportTo]);
 
   const focusOn = useCallback(
-    (position: Point) => {
+    (nodeId: number) => {
+      const position = propsRef.current.positions.get(nodeId);
+      if (!position) return;
       const { bounds, zoom } = viewportRef.current;
       const targetZoom = Math.max(zoom, 0.8);
       animateViewportTo({
@@ -267,27 +297,58 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
     [animateViewportTo]
   );
 
+  const getCamera = useCallback((): GraphCameraState => {
+    // Read the tween target when one is running so a save mid-animation
+    // persists where the camera is going, not where it started.
+    const v = viewportTweenRef.current?.to ?? viewportRef.current;
+    return cameraFromViewport({ ...v, bounds: viewportRef.current.bounds });
+  }, []);
+
+  const setCamera = useCallback(
+    (camera: GraphCameraState, animate = true) => {
+      const next = viewportFromCamera(camera, viewportRef.current.bounds);
+      if (animate) animateViewportTo(next);
+      else applyViewport(next);
+    },
+    [animateViewportTo, applyViewport]
+  );
+
   // -- Chunked global force layout --------------------------------------------
 
   const runForceLayout = useCallback(() => {
-    const { nodes, edges, positions } = propsRef.current;
+    const { nodes, edges, positions, pinned: pinnedIds } = propsRef.current;
+    // Seed with current positions; user-dragged / perspective-restored nodes
+    // stay fixed so "tidy" never undoes deliberate placement.
     const pinned = new Map<number, Point>();
-    // Seed the simulation with current positions but let everything move —
-    // pins are respected by expansion layouts; "tidy" reflows the whole graph.
+    const seeds = new Map<number, Point>();
+    for (const n of nodes) {
+      const p = positions.get(n.id);
+      if (!p) continue;
+      seeds.set(n.id, p);
+      if (pinnedIds.has(n.id)) pinned.set(n.id, p);
+    }
+    // If everything is pinned the layout would be a no-op — let it move all.
+    const effectivePinned = pinned.size >= nodes.length ? new Map<number, Point>() : pinned;
     const request: LayoutRequest = {
       nodes: nodes.map((n) => ({ id: n.id, radius: nodeRadius(n) })),
       edges: edges.map((e) => ({ source: e.source, target: e.target })),
-      pinned,
+      pinned: effectivePinned,
+      seeds,
     };
     forceLayoutRef.current?.stop();
     forceLayoutRef.current = createSteppingForceLayout(request);
+  }, []);
+
+  const setEdgePreview = useCallback((fromNodeId: number | null) => {
+    edgePreviewFromRef.current = fromNodeId;
+    if (fromNodeId === null) edgeRendererRef.current?.setPreview(null);
   }, []);
 
   // -- Initialization ----------------------------------------------------------
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return undefined;
+    if (!container || !active) return undefined;
 
     // PCB theme: dark green board with copper-mask grid lines.
     const scene = new SceneManager({}, { backgroundColor: BOARD_BACKGROUND });
@@ -318,11 +379,30 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
       container.clientHeight || 600
     );
     labelRendererRef.current = labelRenderer;
+
+    // Initial viewport: keep the current camera framing at the real size.
+    const initialBounds = {
+      x: 0,
+      y: 0,
+      width: container.clientWidth || 800,
+      height: container.clientHeight || 600,
+    };
+    const initial = viewportFromCamera(cameraFromViewport(viewportRef.current), initialBounds);
+    viewportRef.current = initial;
+    setViewportState(initial);
+    scene.setViewport(initial);
+    grid.update(initial);
+
     scene.setResizeCallback((width, height) => {
       labelRenderer.resize(width, height);
-      const next = { ...viewportRef.current, bounds: { ...viewportRef.current.bounds, width, height } };
+      // Preserve the world centre across resizes.
+      const camera = cameraFromViewport(viewportRef.current);
+      const next = viewportFromCamera(camera, { ...viewportRef.current.bounds, width, height });
       viewportRef.current = next;
       setViewportState(next);
+      scene.setViewport(next);
+      gridRef.current?.update(next);
+      syncGeometry();
     });
 
     const interaction = new GraphInteractionManager();
@@ -341,7 +421,8 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
         onNodeDrag: (id, position, phase) => {
           // A user drag overrides any in-flight tween for the node.
           propsRef.current.animator.cancel(id);
-          propsRef.current.positions.set(id, position);
+          const existing = propsRef.current.positions.get(id);
+          propsRef.current.positions.set(id, { ...position, z: existing?.z });
           propsRef.current.events.onNodeDrag?.(id, position, phase);
           syncGeometry();
         },
@@ -349,6 +430,18 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
         onCanvasClick: (p, e) => propsRef.current.events.onCanvasClick?.(p, e),
         onCanvasContextMenu: (p, e) => propsRef.current.events.onCanvasContextMenu?.(p, e),
         onMarqueeSelect: (bounds, e) => propsRef.current.events.onMarqueeSelect?.(bounds, e),
+        onMarqueeUpdate: (bounds) => {
+          setMarquee(bounds);
+          propsRef.current.events.onMarqueeUpdate?.(bounds);
+        },
+        onCanvasPointerMove: (world) => {
+          const from = edgePreviewFromRef.current;
+          if (from !== null) {
+            const origin = propsRef.current.positions.get(from);
+            if (origin) edgeRendererRef.current?.setPreview(origin, world);
+          }
+          propsRef.current.events.onCanvasPointerMove?.(world);
+        },
         onViewportChange: (v) => applyViewport(v),
       });
     }
@@ -362,9 +455,14 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
 
       const stepping = forceLayoutRef.current;
       if (stepping) {
-        const active = stepping.step(FORCE_FRAME_BUDGET_MS);
-        propsRef.current.positions.setMany(Array.from(stepping.positions().entries()));
-        if (!active) forceLayoutRef.current = null;
+        const running = stepping.step(FORCE_FRAME_BUDGET_MS);
+        const entries: Array<[number, GraphPoint]> = [];
+        for (const [id, p] of stepping.positions()) {
+          const existing = propsRef.current.positions.get(id);
+          entries.push([id, { ...p, z: existing?.z }]);
+        }
+        propsRef.current.positions.setMany(entries);
+        if (!running) forceLayoutRef.current = null;
       }
 
       const tween = viewportTweenRef.current;
@@ -398,6 +496,7 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
     });
 
     scene.startRenderLoop();
+    syncGeometry();
 
     return () => {
       forceLayoutRef.current?.stop();
@@ -407,41 +506,37 @@ export function useGraphWebGLCanvas(props: UseGraphWebGLCanvasProps): UseGraphWe
       nodeRenderer.dispose();
       grid.dispose();
       scene.dispose();
+      spatialHashRef.current.clear();
       sceneRef.current = null;
       gridRef.current = null;
       nodeRendererRef.current = null;
       edgeRendererRef.current = null;
       labelRendererRef.current = null;
       interactionRef.current = null;
+      setMarquee(null);
+      setHoveredNodeId(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [active]);
 
   // Re-sync when the store-derived render set changes.
   useEffect(() => {
     syncGeometry();
   }, [props.nodes, props.edges, props.selection, props.focusNodeId, props.expanded, syncGeometry]);
 
-  const setEdgePreview = useCallback((from: Point | null, to?: Point) => {
-    edgeRendererRef.current?.setPreview(from, to);
-  }, []);
-
-  const worldToScreen = useCallback(
-    (position: Point): Point =>
-      interactionRef.current?.worldToScreen(position) ?? position,
-    []
-  );
-
   return {
     containerRef,
     hoveredNodeId,
     viewport,
     setViewport: applyViewport,
+    getCamera,
+    setCamera,
     fitToContent,
     focusOn,
     runForceLayout,
     setEdgePreview,
-    worldToScreen,
+    marquee,
+    zoom: viewport.zoom,
   };
 }
 

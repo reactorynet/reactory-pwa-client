@@ -192,7 +192,18 @@ export class GraphInteractionManager {
     const screen = this.screenFromEvent(e);
 
     if (this.dragType === 'none') {
-      // Hover tracking only.
+      // Hover tracking only (ignore moves outside the canvas).
+      const rect = this.canvas.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (!inside) {
+        if (this.hoveredNodeId !== null) {
+          this.hoveredNodeId = null;
+          this.handlers.onNodeHover?.(null);
+        }
+        return;
+      }
+      this.handlers.onCanvasPointerMove?.(this.screenToWorld(screen));
       const hit = this.hitTest(screen);
       const nodeId = hit.type === 'node' ? hit.nodeId! : null;
       if (nodeId !== this.hoveredNodeId) {
@@ -231,10 +242,18 @@ export class GraphInteractionManager {
         }
         break;
       }
-      case 'marquee':
-        // The canvas hook draws the marquee from pointerDownWorld to current;
+      case 'marquee': {
+        // Emit the live rectangle (screen space) so the shell can draw it;
         // final selection is emitted on mouseup.
+        const start = this.pointerDownScreen;
+        this.handlers.onMarqueeUpdate?.({
+          x: Math.min(start.x, screen.x),
+          y: Math.min(start.y, screen.y),
+          width: Math.abs(screen.x - start.x),
+          height: Math.abs(screen.y - start.y),
+        });
         break;
+      }
     }
   }
 
@@ -255,6 +274,7 @@ export class GraphInteractionManager {
           height: Math.abs(current.y - this.marqueeStart.y),
         };
         this.handlers.onMarqueeSelect?.(bounds, event);
+        this.handlers.onMarqueeUpdate?.(null);
       }
     } else {
       // Click (no drag): node / edge / canvas, with double-click detection.

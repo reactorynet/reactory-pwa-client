@@ -33,29 +33,22 @@ sequenceDiagram
 
 ---
 
-## 2. Component Intent & Capabilities (`NeuralBrainBackground.tsx`)
+## 2. Component Intent & Capabilities
 
-The **Neural Background** is a high-fidelity, interactive, three-dimensional WebGL visualization designed to represent the "living mind" of the Reactor AI assistant. It serves as:
-1.  An **immersive base layer** for the main chat interface (`backgroundMode` default `true`: pointer-events off, auto-orbiting camera).
-2.  An **interactive diagnostic tool** in the side panel representing the active developer session's context (`backgroundMode={false}`, the default when mounted via the `reactor.NeuralBackground@1.0.0` registry entry).
+The neural graph surface is split into two components that share one data model:
+
+1.  **`NeuralBrainBackground.tsx`** — the **ambient base layer** behind the chat. Pointer events off, auto-orbiting camera, no GraphQL. It renders the conversation graph the host passes in (`graphData`) plus the agent's touched nodes extracted from the chat history (`messages`). Decoration only.
+2.  **`NeuralGraphViewer.tsx`** — the **interactive viewer** registered as `reactor.NeuralBackground@1.0.0` (side panel, `loadGraphPerspective` tool). It is a thin adapter over the shared **GraphExplorer** engine (`src/components/shared/GraphExplorer`, see its README) running in **3D mode**, so the chat viewer and the 2D `/reactor/graph` explorer have identical capabilities: lazy expansion, dependency/dependent traversal, path finding, search-jump, edge create/edit/delete, node data editing, hide/unhide, type filters, layouts, and the full perspective lifecycle (save / save-as / rename / duplicate / share / default / delete) with node positions, camera, filters and view mode persisted server-side.
 
 ### Dual Graph Perspective
-The scene overlays two data perspectives, merged and deduplicated by node id:
-*   **Conversation graph** (`origin: 'conversation'`): the synthesized subgraph around the conversation node, produced server-side by `ProcessConversationWorkflow` and fetched via `ReactorSubgraph`.
-*   **Agent perspective** (`origin: 'agent'` / `'both'`): the nodes and edges the agent has touched through the reactor graph tools (`searchGraph`, `exploreGraph`, `getGraphNode`, `graphChildren`, `graphLinks`, `createNodeEdge`) during the active session. These are extracted client-side from `tool_results` in the chat history by the exported `extractAgentGraphFromMessages()` helper — no extra server round-trips. Agent-perspective neurons render larger and brighter (lerped toward white), their axons glow hotter, and in interactive mode they receive labels with a warm tint, so the agent's *current focus* visibly stands out from the ambient conversation memory.
+Both components overlay two data perspectives:
+*   **Conversation graph** (`origin: 'conversation'` / GraphExplorer root): the synthesized subgraph around the conversation node, produced server-side by `ProcessConversationWorkflow`. The viewer resolves it through `ReactorConversationNode` → `ReactorSubgraph` (depth 2) using the shared data layer; the background receives it from `ReactorChat` as `graphData`.
+*   **Agent perspective** (`origin: 'agent'` / GraphExplorer `overlay`): the nodes and edges the agent has touched through the reactor graph tools (`searchGraph`, `exploreGraph`, `getGraphNode`, `graphChildren`, `graphLinks`, `createNodeEdge`) during the active session, extracted client-side from `tool_results` by the exported `extractAgentGraphFromMessages()` helper — no extra server round-trips. Re-derivation is keyed on `toolResultSignature()` so streamed tokens never trigger a re-parse. Agent nodes render brighter (background) / in the agent accent colour with an "agent" chip in the inspector (viewer).
 
-`ReactorChat` feeds the live history via the `messages` prop; in standalone mode the component falls back to the cached session history in `localStorage` (`reactorChat.cachedSession`).
+### Viewer props (`reactor.NeuralBackground@1.0.0`)
+`ReactorChat` keeps the side-panel item fed with `reactory, mode, primaryColor, secondaryColor, backgroundColor, graphData, messages, sessionId, onPinPerspective`; the `loadGraphPerspective` macro sets `perspective` (`'conversation' | 'agent' | <project or saved perspective name> | { rootId, depth, label }`). `NeuralGraphViewer` maps these onto GraphExplorer props (`conversationId`, `overlay`, `perspective`, `onPinPerspective`) — see `GraphExplorer/types.ts` for the contract.
 
-### Interactive Mode Controls (`backgroundMode={false}`)
-*   **Pause / resume** (⏸/▶): freezes the simulation clock (camera drift, pulses, breathing) without tearing down the scene — implemented via a ref so toggling never rebuilds the WebGL resources.
-*   **Label toggle** (Aa): shows/hides billboard labels at runtime.
-*   **Reset view** (⟲): returns the camera to the auto-orbit rig.
-*   **Camera**: drag to orbit, shift-drag or right-drag to pan, mouse wheel to zoom (clamped 4–60 units). The spherical rig seeds itself from the auto-orbit position on first grab, so there is no visual jump. Auto-orbit continues until the user takes control.
-
-### Key Visual & Technical Features:
-*   **Dual-Mode Operation**:
-    *   *Prop-Driven*: Receives flat arrays of `nodes` and `edges` directly from a parent component.
-    *   *Self-Sufficient (Standalone)*: If mounted without data (e.g., in the Side Panel), it uses the injected `reactory` SDK to read the active session ID from `localStorage`, queries the subgraph from the server, and sets up a 10s auto-refresh polling loop.
+### Key Visual & Technical Features (ambient background):
 *   **Stable 3D Clustering**: Groups graph nodes by type (`TOPIC`, `FILE`, `FOLDER`, `PROJECT`, `SYSTEM`) and clusters them around dedicated 3D coordinate centers. It uses a **seed-based pseudo-random function** (`seedRandom`) to ensure that the same file or topic always renders in the exact same spot across page refreshes, providing visual continuity.
 *   **Billboard Canvas Labels**: Spawns 2D HTML canvas-textured sprites floating above major hub neurons and project nodes. These labels automatically billboard (rotate to face the camera) and feature custom outline shadows to ensure maximum legibility against busy dark or light backgrounds.
 *   **Interactive Synapses**: Renders glowing axons (`LineSegments`) linking related nodes. It pools animated electrochemical signal spheres (`SphereGeometry`) that travel along active axons.
@@ -109,7 +102,7 @@ The WebGL background subsystem spans across multiple areas of the monorepo:
     *   Removed the strict `typeof component === 'function'` check, which was causing memoized components (wrapped in `React.memo` or `React.forwardRef`) to be rejected as "invalid components".
 4.  **`src/components/index.tsx`**:
     *   The central component registry.
-    *   Registered `reactor.NeuralBackground@1.0.0` mapping to `NeuralBrainBackground`.
+    *   Registers `reactor.NeuralBackground@1.0.0` → `NeuralGraphViewerComponentDefinition` (`NeuralGraphViewer.tsx`, GraphExplorer in 3D). `NeuralBrainBackground` is imported directly by `ReactorChat` for the ambient layer.
 
 ### Express Server (`reactory-express-server`)
 1.  **`src/modules/reactory-reactor/workflow/steps/ProcessConversationStep.ts`**:

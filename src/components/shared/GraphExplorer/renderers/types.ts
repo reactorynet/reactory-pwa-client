@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { Bounds, CanvasViewport, GraphInteractionEvent, Point } from '../types';
+import { Bounds, CanvasViewport, GraphInteractionEvent, GraphPoint, Point } from '../types';
 
 // ============================================================================
 // Geometry
@@ -105,5 +105,9 @@ export interface GraphCanvasEvents {
   onCanvasClick(position: Point, event: GraphInteractionEvent): void;
   onCanvasContextMenu(position: Point, event: GraphInteractionEvent): void;
   onMarqueeSelect(bounds: Bounds, event: GraphInteractionEvent): void;
+  /** Live marquee rectangle (screen space) while shift-dragging; null when done. */
+  onMarqueeUpdate(bounds: Bounds | null): void;
+  /** Pointer moved over the canvas (world space) — drives the edge-preview ghost. */
+  onCanvasPointerMove(position: GraphPoint): void;
   onViewportChange(viewport: CanvasViewport): void;
 }

@@ -115,20 +115,34 @@ export class SpatialHash {
    * so small nodes stay clickable over large overlapping ones).
    */
   hitTest(point: Point, tolerance = 0): number | null {
-    const cell = this.cells.get(
-      this.cellKey(Math.floor(point.x / this.cellSize), Math.floor(point.y / this.cellSize))
-    );
-    if (!cell) return null;
+    // Entries are registered in every cell their circle touches, so the
+    // point's own cell is enough for the circle itself; the tolerance may
+    // reach into neighbouring cells, so probe the covering range.
+    const [minX, minY, maxX, maxY] = this.cellRange(point.x, point.y, tolerance);
     let best: Entry | null = null;
-    for (const id of cell) {
-      const e = this.entries.get(id)!;
-      const dx = point.x - e.x;
-      const dy = point.y - e.y;
-      const r = e.radius + tolerance;
-      if (dx * dx + dy * dy <= r * r) {
-        if (!best || e.radius < best.radius) best = e;
+    const seen = new Set<number>();
+    for (let cx = minX; cx <= maxX; cx++) {
+      for (let cy = minY; cy <= maxY; cy++) {
+        const cell = this.cells.get(this.cellKey(cx, cy));
+        if (!cell) continue;
+        for (const id of cell) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const e = this.entries.get(id)!;
+          const dx = point.x - e.x;
+          const dy = point.y - e.y;
+          const r = e.radius + tolerance;
+          if (dx * dx + dy * dy <= r * r) {
+            if (!best || e.radius < best.radius) best = e;
+          }
+        }
       }
     }
     return best?.id ?? null;
+  }
+
+  /** Ids currently indexed (for eviction of removed nodes). */
+  ids(): IterableIterator<number> {
+    return this.entries.keys();
   }
 }

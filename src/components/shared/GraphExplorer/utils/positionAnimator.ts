@@ -7,7 +7,7 @@
  * pull collapsed subtrees back in, and settle layout refinements smoothly.
  */
 
-import { Point, PositionStore } from '../types';
+import { GraphPoint as Point, PositionStore } from '../types';
 import { ANIMATION_DURATION_MS } from '../constants';
 
 interface Tween {
@@ -78,13 +78,17 @@ export const createPositionAnimator = (): PositionAnimator => {
       for (const [id, tween] of tweens) {
         const t = Math.min(1, (now - tween.start) / tween.duration);
         const eased = easeOutCubic(t);
-        updates.push([
-          id,
-          {
-            x: tween.from.x + (tween.to.x - tween.from.x) * eased,
-            y: tween.from.y + (tween.to.y - tween.from.y) * eased,
-          },
-        ]);
+        const next: Point = {
+          x: tween.from.x + (tween.to.x - tween.from.x) * eased,
+          y: tween.from.y + (tween.to.y - tween.from.y) * eased,
+        };
+        // z only exists in the 3D renderer; tween it when either end has it.
+        if (tween.from.z !== undefined || tween.to.z !== undefined) {
+          const fz = tween.from.z ?? 0;
+          const tz = tween.to.z ?? fz;
+          next.z = fz + (tz - fz) * eased;
+        }
+        updates.push([id, next]);
         if (t >= 1) {
           tweens.delete(id);
           completed.push(tween);
