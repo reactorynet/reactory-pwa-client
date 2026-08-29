@@ -367,6 +367,9 @@ export default (props) => {
     resumePendingToolCalls = (async () => {}) as () => Promise<void>,
     dismissPendingToolCalls = (() => {}) as () => void,
     chatLoading = false,
+    waitingClientToolCalls = [],
+    hasWaitingClientToolCalls = false,
+    drainWaitingClientToolCalls = (async () => {}) as () => Promise<void>,
   } = {
     ...chatFactory,
     currentStreamingMessage: '',
@@ -378,6 +381,7 @@ export default (props) => {
     isStreaming,
     toolIterationLimitInfo,
     pendingToolCallResume: !!pendingToolCallResume,
+    waitingClientToolCount: waitingClientToolCalls?.length || 0,
   });
 
   /**
@@ -2594,10 +2598,14 @@ export default (props) => {
           chatStatusInfo.status === 'thinking' ? '#00e5ff' :
           chatStatusInfo.status === 'streaming' ? '#2979ff' :
           chatStatusInfo.status === 'executing_tools' ? '#ff9100' :
+          chatStatusInfo.status === 'waiting_focus' ? '#ff9800' :
           '#4caf50'
         }
-        mainBadgeContent={activePersonaSessionCount > 1 ? activePersonaSessionCount : undefined}
-        mainBadgeColor="primary"
+        mainBadgeContent={
+          hasWaitingClientToolCalls ? '!' :
+          (activePersonaSessionCount > 1 ? activePersonaSessionCount : undefined)
+        }
+        mainBadgeColor={hasWaitingClientToolCalls ? 'warning' : 'primary'}
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
           label: action.title,

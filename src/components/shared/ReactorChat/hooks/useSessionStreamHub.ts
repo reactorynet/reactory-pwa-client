@@ -4,7 +4,7 @@ import { ChatState, IAIPersona, SessionLogger, SubAgentSummary } from '../types'
 import { StreamingEventType } from './useSSE';
 import { createStreamingSession } from '../components/Shell/shellApi';
 
-export type TrackedSessionStatus = 'idle' | 'thinking' | 'streaming' | 'executing_tools' | 'completed' | 'error';
+export type TrackedSessionStatus = 'idle' | 'thinking' | 'streaming' | 'executing_tools' | 'waiting_focus' | 'completed' | 'error';
 
 export interface TrackedSession {
   sessionId: string;
@@ -18,6 +18,8 @@ export interface TrackedSession {
   lastUpdated: Date;
   isSubAgent?: boolean;
   parentSessionId?: string;
+  waitingToolCallCount?: number;
+  hasWaitingToolCalls?: boolean;
 }
 
 export interface UseSessionStreamHubOptions {
@@ -258,6 +260,8 @@ export const useSessionStreamHub = ({
     unread: boolean;
     lastMessage?: string;
     lastToolName?: string;
+    waitingToolCallCount?: number;
+    hasWaitingToolCalls?: boolean;
   }>>(new Map());
   const dirtyRef = useRef<Set<string>>(new Set());
   const flushTimerRef = useRef<number | null>(null);
@@ -286,7 +290,9 @@ export const useSessionStreamHub = ({
           curr.status === acc.status &&
           curr.unread === acc.unread &&
           curr.lastMessage === acc.lastMessage &&
-          curr.lastToolName === acc.lastToolName
+          curr.lastToolName === acc.lastToolName &&
+          curr.waitingToolCallCount === acc.waitingToolCallCount &&
+          curr.hasWaitingToolCalls === acc.hasWaitingToolCalls
         ) continue;
         next[sessionId] = {
           ...curr,
@@ -294,6 +300,8 @@ export const useSessionStreamHub = ({
           unread: acc.unread,
           lastMessage: acc.lastMessage,
           lastToolName: acc.lastToolName,
+          waitingToolCallCount: acc.waitingToolCallCount,
+          hasWaitingToolCalls: acc.hasWaitingToolCalls,
           lastUpdated: new Date(),
         };
         changed = true;
@@ -536,6 +544,8 @@ export const useSessionStreamHub = ({
       unread: committed.unread,
       lastMessage: committed.lastMessage,
       lastToolName: committed.lastToolName,
+      waitingToolCallCount: committed.waitingToolCallCount,
+      hasWaitingToolCalls: committed.hasWaitingToolCalls,
     };
 
     // Read the live value: listeners are bound once when the stream opens, so a
@@ -546,6 +556,8 @@ export const useSessionStreamHub = ({
     let nextUnread = base.unread;
     let lastMsg = base.lastMessage;
     let lastTool = base.lastToolName;
+    let waitingCount = base.waitingToolCallCount || 0;
+    let hasWaiting = base.hasWaitingToolCalls || false;
 
     switch (type) {
       // The server has no turn-level `start` event (its StreamingEventType enum
@@ -566,7 +578,15 @@ export const useSessionStreamHub = ({
         break;
       }
       case StreamingEventType.TOOL_CALL: {
-        nextStatus = 'executing_tools';
+        const isWaitingFocus = rawData?.status === 'waiting_focus' || rawData?.waitingFocus === true;
+        if (isWaitingFocus) {
+          nextStatus = 'waiting_focus';
+          waitingCount = (waitingCount || 0) + 1;
+          hasWaiting = true;
+          nextUnread = sessionId !== currentActiveSessionId;
+        } else {
+          nextStatus = 'executing_tools';
+        }
         lastTool = rawData?.name || 'Tool Execution';
         break;
       }
@@ -612,6 +632,8 @@ export const useSessionStreamHub = ({
       unread: nextUnread,
       lastMessage: lastMsg,
       lastToolName: lastTool,
+      waitingToolCallCount: waitingCount,
+      hasWaitingToolCalls: hasWaiting,
     });
     dirtyRef.current.add(sessionId);
 
@@ -882,8 +904,10 @@ export const useSessionStreamHub = ({
         [sessionId]: {
           ...curr,
           status,
-          unread: sessionId !== activeSessionIdRef.current && (status === 'completed' || status === 'error' || curr.unread),
+          unread: sessionId !== activeSessionIdRef.current && (status === 'completed' || status === 'error' || status === 'waiting_focus' || curr.unread),
           lastMessage: preview || curr.lastMessage,
+          waitingToolCallCount: status === 'waiting_focus' ? (curr.waitingToolCallCount || 1) : curr.waitingToolCallCount,
+          hasWaitingToolCalls: status === 'waiting_focus' ? true : curr.hasWaitingToolCalls,
           lastUpdated: new Date(),
         },
       };

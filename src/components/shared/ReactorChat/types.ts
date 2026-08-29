@@ -136,6 +136,7 @@ export type ChatActivityStatus =
   | 'thinking'        // AI is processing (busy but not streaming yet)
   | 'streaming'       // AI response is being streamed
   | 'executing_tools' // Tools are being executed
+  | 'waiting_focus'   // Waiting for chat window focus before executing client tool(s)
   | 'paused'          // Paused at iteration limit, awaiting user decision
   | 'pending_resume'; // Loaded conversation with unfinished tool calls
 
@@ -230,7 +231,20 @@ export type ChatMessage = OpenAI.ChatCompletionMessage |
 /**
  * Represents the execution status of a tool call.
  */
-export type ReactorToolCallStatus = 'pending' | 'running' | 'success' | 'error';
+export type ReactorToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'waiting_focus';
+
+/**
+ * Client-side tool call queued while the chat window is not in focus.
+ */
+export interface WaitingClientToolCall {
+  id: string;
+  name: string;
+  args: any;
+  sessionId: string;
+  calledBy: 'auto' | 'user';
+  macro: MacroComponentDefinition<unknown>;
+  receivedAt: Date;
+}
 
 /**
  * Represents the function details within a tool call.
@@ -527,6 +541,11 @@ export type ChatState = {
    * on parent sessions; the UI lists these in the Sub-agents panel.
    */
   chats?: SubAgentSummary[]
+  /**
+   * Client-side tool calls that are waiting for the chat window to gain focus
+   * before they can execute.
+   */
+  waitingClientToolCalls?: WaitingClientToolCall[]
 }
 
 export interface QuestionHandlerResponse {

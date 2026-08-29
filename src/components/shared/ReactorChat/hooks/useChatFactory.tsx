@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import { isEventForSession } from './sessionRouting';
-import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus } from "../types"
+import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus, WaitingClientToolCall } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
@@ -118,6 +118,10 @@ interface ChatFactoryHookResult {
   networkStatus: NetworkStatus
   networkError: string | null
   reconnectAttempt: number
+  // client tool calls waiting for window focus
+  waitingClientToolCalls: WaitingClientToolCall[]
+  hasWaitingClientToolCalls: boolean
+  drainWaitingClientToolCalls: () => Promise<void>
   retryConnection: () => void
   dismissNetworkError: () => void
   /** True only while a chat session is being loaded — distinct from `busy`
@@ -365,6 +369,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // as a batch once the completion event arrives.
   const pendingToolCallsRef = React.useRef<any[]>([]);
 
+  // Waiting client-side tool calls queue (when chat window is blurred/unfocused)
+  const [waitingClientToolCalls, setWaitingClientToolCalls] = React.useState<WaitingClientToolCall[]>([]);
+  const waitingClientToolCallsRef = React.useRef<WaitingClientToolCall[]>([]);
+  waitingClientToolCallsRef.current = waitingClientToolCalls;
+  const isDrainingClientToolsRef = React.useRef<boolean>(false);
+
+  const isChatFocused = React.useCallback((): boolean => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return true;
+    return document.visibilityState === 'visible' && document.hasFocus();
+  }, []);
+
   // Ref to always access the latest completeClientToolCalls — assigned after
   // it's defined. This avoids stale closures in useMacros' executeMacro,
   // which is bound before completeClientToolCalls is created.
@@ -509,84 +524,138 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         });
 
         if (clientOnlyTools.length > 0) {
-          console.log('🔧 [useChatFactory] AUTO+SSE: Executing', clientOnlyTools.length, 'client-side tool(s) and reporting results');
+          if (!isChatFocused()) {
+            console.log('🔧 [useChatFactory] AUTO+SSE: Chat window not focused, queueing', clientOnlyTools.length, 'client-side tool(s)');
+            sessionLogger?.info('Chat window not focused, queueing client-side tool(s)', { count: clientOnlyTools.length }, 'useChatFactory');
+            const newWaiting: WaitingClientToolCall[] = clientOnlyTools.map((tc: any) => {
+              const name = tc.function?.name;
+              const args = tc.function?.arguments;
+              let macro = findMacroByAlias(name);
+              if (!macro) {
+                macro = chatState.macros?.find(
+                  (m: any) => m.name === name || m.alias === name
+                ) ?? null;
+              }
+              return {
+                id: tc.id,
+                name,
+                args,
+                sessionId: eventSessionId || chatState.id,
+                calledBy: 'auto',
+                macro,
+                receivedAt: new Date(),
+              };
+            });
 
-          let hasClientTools = false;
+            // Mark status on message tool_calls as 'waiting_focus' in state
+            setChatState((prevState) => {
+              const history = [...prevState.history];
+              for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
+                  const tcs = (history[i].tool_calls as any[]).map((t: any) => {
+                    if (newWaiting.some(w => w.id === t.id)) {
+                      return { ...t, status: 'waiting_focus' as const };
+                    }
+                    return t;
+                  });
+                  history[i] = { ...history[i], tool_calls: tcs };
+                }
+              }
+              return {
+                ...prevState,
+                history,
+                waitingClientToolCalls: [...(prevState.waitingClientToolCalls || []), ...newWaiting],
+                updated: new Date(),
+              };
+            });
 
-          for (const toolCall of clientOnlyTools) {
-            const name = toolCall.function?.name;
-            const args = toolCall.function?.arguments;
-            let macro = findMacroByAlias(name);
-            if (!macro) {
-              macro = chatState.macros?.find(
-                (m: any) => m.name === name || m.alias === name
-              ) ?? null;
-            }
+            setWaitingClientToolCalls((prev) => {
+              const existingIds = new Set(prev.map(w => w.id));
+              const additions = newWaiting.filter(w => !existingIds.has(w.id));
+              const updated = [...prev, ...additions];
+              waitingClientToolCallsRef.current = updated;
+              return updated;
+            });
+          } else {
+            console.log('🔧 [useChatFactory] AUTO+SSE: Executing', clientOnlyTools.length, 'client-side tool(s) and reporting results');
 
-            if (macro) {
-              try {
-                // executeMacro now persists the result via onClientToolComplete
-                const result = await executeMacro(macro, args, 'auto', toolCall.id);
-                const resultContent = result?.content
-                  || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
-                  || `Client tool "${name}" executed successfully (no content returned).`;
-                hasClientTools = true;
+            let hasClientTools = false;
 
-                // Update UI: mark tool as success
-                setChatState((prevState) => {
-                  const history = [...prevState.history];
-                  for (let i = history.length - 1; i >= 0; i--) {
-                    if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
-                      const tcs = history[i].tool_calls as any[];
-                      const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
-                      if (idx >= 0) {
-                        tcs[idx] = { ...tcs[idx], status: 'success' };
-                        const existingResults = (history[i] as any).tool_results || [];
-                        history[i] = {
-                          ...history[i],
-                          tool_calls: [...tcs],
-                          tool_results: [...existingResults, {
-                            id: toolCall.id,
-                            name,
-                            content: resultContent,
-                            timestamp: new Date(),
-                          }],
-                        };
-                        break;
+            for (const toolCall of clientOnlyTools) {
+              const name = toolCall.function?.name;
+              const args = toolCall.function?.arguments;
+              let macro = findMacroByAlias(name);
+              if (!macro) {
+                macro = chatState.macros?.find(
+                  (m: any) => m.name === name || m.alias === name
+                ) ?? null;
+              }
+
+              if (macro) {
+                try {
+                  // executeMacro now persists the result via onClientToolComplete
+                  const result = await executeMacro(macro, args, 'auto', toolCall.id);
+                  const resultContent = result?.content
+                    || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+                    || `Client tool "${name}" executed successfully (no content returned).`;
+                  hasClientTools = true;
+
+                  // Update UI: mark tool as success
+                  setChatState((prevState) => {
+                    const history = [...prevState.history];
+                    for (let i = history.length - 1; i >= 0; i--) {
+                      if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
+                        const tcs = history[i].tool_calls as any[];
+                        const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
+                        if (idx >= 0) {
+                          tcs[idx] = { ...tcs[idx], status: 'success' };
+                          const existingResults = (history[i] as any).tool_results || [];
+                          history[i] = {
+                            ...history[i],
+                            tool_calls: [...tcs],
+                            tool_results: [...existingResults, {
+                              id: toolCall.id,
+                              name,
+                              content: resultContent,
+                              timestamp: new Date(),
+                            }],
+                          };
+                          break;
+                        }
                       }
                     }
-                  }
-                  return { ...prevState, history, updated: new Date() };
-                });
-              } catch (error: any) {
+                    return { ...prevState, history, updated: new Date() };
+                  });
+                } catch (error: any) {
+                  hasClientTools = true;
+                  // executeMacro's catch block also persists errors via onClientToolComplete
+                }
+              } else {
+                // Macro not found — persist the error directly since executeMacro wasn't called
                 hasClientTools = true;
-                // executeMacro's catch block also persists errors via onClientToolComplete
-              }
-            } else {
-              // Macro not found — persist the error directly since executeMacro wasn't called
-              hasClientTools = true;
-              try {
-                await completeClientToolCalls([{
-                  toolCallId: toolCall.id,
-                  toolName: name,
-                  isError: true,
-                  error: `Client macro not found: ${name}`,
-                }], false);
-              } catch (err) {
-                console.error('[useChatFactory] Error persisting macro-not-found error:', err);
+                try {
+                  await completeClientToolCalls([{
+                    toolCallId: toolCall.id,
+                    toolName: name,
+                    isError: true,
+                    error: `Client macro not found: ${name}`,
+                  }], false);
+                } catch (err) {
+                  console.error('[useChatFactory] Error persisting macro-not-found error:', err);
+                }
               }
             }
-          }
 
-          // All client tool results are already persisted by executeMacro via
-          // onClientToolComplete. Now trigger AI continuation with an empty
-          // results array so the server picks up the persisted results and
-          // continues the conversation without duplicating tool result entries.
-          if (hasClientTools) {
-            try {
-              await completeClientToolCalls([], true);
-            } catch (error) {
-              console.error('[useChatFactory] Error triggering AI continuation after client tools:', error);
+            // All client tool results are already persisted by executeMacro via
+            // onClientToolComplete. Now trigger AI continuation with an empty
+            // results array so the server picks up the persisted results and
+            // continues the conversation without duplicating tool result entries.
+            if (hasClientTools) {
+              try {
+                await completeClientToolCalls([], true);
+              } catch (error) {
+                console.error('[useChatFactory] Error triggering AI continuation after client tools:', error);
+              }
             }
           }
         }
@@ -3772,6 +3841,124 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // Keep the ref in sync so onToolCallReceived always calls the latest version
   processToolCallsRef.current = processToolCallsMemoized;
 
+  // Drain queued client-side tool calls when chat window gains focus
+  const drainWaitingClientToolCalls = React.useCallback(async () => {
+    if (isDrainingClientToolsRef.current || waitingClientToolCallsRef.current.length === 0) return;
+    if (!isChatFocused()) return;
+
+    isDrainingClientToolsRef.current = true;
+    try {
+      const queue = [...waitingClientToolCallsRef.current];
+      setWaitingClientToolCalls([]);
+      waitingClientToolCallsRef.current = [];
+
+      setChatState((prevState) => ({
+        ...prevState,
+        waitingClientToolCalls: [],
+        updated: new Date(),
+      }));
+
+      let hasClientTools = false;
+      for (const toolCall of queue) {
+        const name = toolCall.name;
+        const args = toolCall.args;
+        let macro = toolCall.macro || findMacroByAlias(name);
+        if (!macro) {
+          macro = chatState.macros?.find(
+            (m: any) => m.name === name || m.alias === name
+          ) ?? null;
+        }
+
+        if (macro) {
+          try {
+            sessionLogger?.info(`Executing queued client tool: ${name} (callId: ${toolCall.id})`, {}, 'useChatFactory');
+            const result = await executeMacro(macro, args, toolCall.calledBy || 'auto', toolCall.id);
+            const resultContent = result?.content
+              || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+              || `Client tool "${name}" executed successfully (no content returned).`;
+            hasClientTools = true;
+
+            // Update UI: mark tool as success
+            setChatState((prevState) => {
+              const history = [...prevState.history];
+              for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
+                  const tcs = history[i].tool_calls as any[];
+                  const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
+                  if (idx >= 0) {
+                    tcs[idx] = { ...tcs[idx], status: 'success' };
+                    const existingResults = (history[i] as any).tool_results || [];
+                    history[i] = {
+                      ...history[i],
+                      tool_calls: [...tcs],
+                      tool_results: [...existingResults, {
+                        id: toolCall.id,
+                        name,
+                        content: resultContent,
+                        timestamp: new Date(),
+                      }],
+                    };
+                    break;
+                  }
+                }
+              }
+              return { ...prevState, history, updated: new Date() };
+            });
+          } catch (error: any) {
+            hasClientTools = true;
+            sessionLogger?.error(`Failed to execute waiting client tool ${name}: ${error?.message || String(error)}`, { toolCallId: toolCall.id }, 'useChatFactory');
+          }
+        } else {
+          hasClientTools = true;
+          if (completeClientToolCallsRef.current) {
+            try {
+              await completeClientToolCallsRef.current([{
+                toolCallId: toolCall.id,
+                toolName: name,
+                isError: true,
+                error: `Client macro not found: ${name}`,
+              }], false);
+            } catch (err) {
+              console.error('[useChatFactory] Error persisting macro-not-found error:', err);
+            }
+          }
+        }
+      }
+
+      if (hasClientTools && completeClientToolCallsRef.current) {
+        try {
+          await completeClientToolCallsRef.current([], true);
+        } catch (error) {
+          console.error('[useChatFactory] Error triggering AI continuation after draining client tools:', error);
+        }
+      }
+    } finally {
+      isDrainingClientToolsRef.current = false;
+    }
+  }, [chatState.macros, executeMacro, findMacroByAlias, isChatFocused, sessionLogger]);
+
+  // Window focus & visibility listeners to auto-drain waiting client tool calls
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
+        if (waitingClientToolCallsRef.current.length > 0) {
+          sessionLogger?.info('Chat gained focus, draining waiting client tool calls', { count: waitingClientToolCallsRef.current.length }, 'useChatFactory');
+          void drainWaitingClientToolCalls();
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
+  }, [drainWaitingClientToolCalls, sessionLogger]);
+
   // Clean up the SSE inactivity timer on unmount
   React.useEffect(() => {
     return () => {
@@ -3915,6 +4102,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     },
     dismissPendingToolCalls: () => setPendingToolCallResume(null),
     completeClientToolCalls,
+    waitingClientToolCalls,
+    hasWaitingClientToolCalls: waitingClientToolCalls.length > 0,
+    drainWaitingClientToolCalls,
   }
 };
 

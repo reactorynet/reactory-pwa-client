@@ -14,6 +14,7 @@ interface UseChatStatusParams {
   toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number } | null;
   pendingToolCallResume: boolean;
   executingToolCount?: number;
+  waitingClientToolCount?: number;
 }
 
 export default function useChatStatus({
@@ -22,8 +23,12 @@ export default function useChatStatus({
   toolIterationLimitInfo,
   pendingToolCallResume,
   executingToolCount = 0,
+  waitingClientToolCount = 0,
 }: UseChatStatusParams): ChatStatusInfo {
   return useMemo(() => {
+    if (waitingClientToolCount > 0) {
+      return { status: 'waiting_focus' as const, label: 'Waiting for focus...', icon: 'priority_high', color: 'warning.main' };
+    }
     if (pendingToolCallResume) {
       return { status: 'pending_resume' as const, label: 'Pending tool calls', icon: 'history', color: 'warning.main' };
     }

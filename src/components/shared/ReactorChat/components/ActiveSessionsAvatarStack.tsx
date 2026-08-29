@@ -57,6 +57,8 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         return 'Generating response...';
       case 'executing_tools':
         return session.lastToolName ? `Running: ${session.lastToolName}` : 'Executing actions...';
+      case 'waiting_focus':
+        return 'Waiting for chat focus...';
       case 'completed':
         return 'Response ready';
       case 'error':
@@ -74,6 +76,8 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         return '#2979ff'; // Blue
       case 'executing_tools':
         return '#ff9100'; // Amber/Orange
+      case 'waiting_focus':
+        return '#ff9800'; // Amber/Orange Warning
       case 'completed':
         return '#00e676'; // Green
       case 'error':
@@ -129,6 +133,10 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         const statusColor = getStatusColor(session);
         const persona = session.persona;
         const initial = (persona?.name || session.title || 'A').trim().charAt(0).toUpperCase();
+        const isWaitingFocus = session.status === 'waiting_focus' || !!session.hasWaitingToolCalls;
+        const showBadge = session.unread || isWaitingFocus;
+        const badgeContent = showBadge ? '!' : undefined;
+        const badgeColor = isWaitingFocus ? 'warning' : (session.unread ? 'success' : 'primary');
 
         return (
           <Tooltip
@@ -226,18 +234,18 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
               <Badge
                 overlap="circular"
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                variant={session.unread ? 'standard' : 'dot'}
-                badgeContent={session.unread ? '!' : undefined}
-                invisible={!session.unread && !busy}
-                color={session.unread ? 'success' : 'primary'}
+                variant={showBadge ? 'standard' : 'dot'}
+                badgeContent={badgeContent}
+                invisible={!showBadge && !busy}
+                color={badgeColor}
                 sx={{
                   '& .MuiBadge-badge': {
                     fontSize: '0.65rem',
-                    height: session.unread ? 18 : 10,
-                    minWidth: session.unread ? 18 : 10,
-                    padding: session.unread ? '0 4px' : 0,
+                    height: showBadge ? 18 : 10,
+                    minWidth: showBadge ? 18 : 10,
+                    padding: showBadge ? '0 4px' : 0,
                     fontWeight: 800,
-                    boxShadow: `0 0 6px ${session.unread ? '#00e676' : statusColor}`,
+                    boxShadow: `0 0 6px ${isWaitingFocus ? '#ff9800' : (session.unread ? '#00e676' : statusColor)}`,
                     ...(busy && {
                       animation: 'activeBadgePulse 1.4s infinite ease-in-out',
                       '@keyframes activeBadgePulse': {
