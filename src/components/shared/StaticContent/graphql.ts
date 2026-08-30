@@ -25,6 +25,9 @@ const CONTENT_FIELDS = `
   engine
   roles
   metadata
+  enableComments
+  commentLayout
+  commentsProps
   previewInputForm
   helpTopic
   createdBy {

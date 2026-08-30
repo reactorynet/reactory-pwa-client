@@ -28,6 +28,9 @@ export interface CMSContentData {
   previewInputForm?: string;
   helpTopic?: string;
   format?: string;
+  enableComments?: boolean;
+  commentLayout?: 'bottom' | 'accordion' | 'drawer' | 'card';
+  commentsProps?: Record<string, any>;
 }
 
 export interface CMSContentEditorProps {
@@ -92,6 +95,9 @@ const CMSContentEditorComponent: React.FC<CMSContentEditorProps> = ({
         engine: initialData.engine,
         previewInputForm: initialData.previewInputForm,
         helpTopic: initialData.helpTopic,
+        enableComments: initialData.enableComments,
+        commentLayout: initialData.commentLayout,
+        commentsProps: initialData.commentsProps,
       } as ReactoryStaticContent,
       initialData.slug,
       normaliseLang(initialData.locale || reactory?.i18n?.language)

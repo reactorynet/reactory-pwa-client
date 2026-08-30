@@ -1,22 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender'
-import { useReactory } from '@reactory/client-core/api'
+import React from 'react';
+import { useReactory } from '@reactory/client-core/api';
+import { ContentRenderer } from '@reactory/client-core/components/shared/ContentRenderer';
 
-const ContentWidget = (props) => {
-  const { formData, schema, uiSchema, formContext } = props;
+const ContentWidget = (props: any) => {
+  const { formData, schema, uiSchema, formContext, id: propId } = props;
   const reactory = useReactory();
-  const content = formData || "";
-  const { Material } = reactory.getComponents<{
-    Material: Reactory.Client.Web.IMaterialModule;
-  }>(["material-ui.Material"]);
-  
-  const { renderContent } = useContentRender(reactory);
-  const { MaterialCore } = Material;
-  const { sx } = uiSchema?.['ui:options'] || {};
+  const content = formData || '';
+
+  const options = uiSchema?.['ui:options'] || {};
+  const {
+    sx,
+    enableComments = false,
+    contentId,
+    context = 'ReactoryFormContent',
+    commentLayout = 'bottom',
+    commentsProps,
+  } = options;
+
+  // Resolve ID from options, props, or formContext
+  const resolvedId = contentId || propId || formContext?.id || formContext?.documentId;
+
   return (
-    <MaterialCore.Box sx={{ padding: 2, ...sx }}>
-      {renderContent(content)}
-    </MaterialCore.Box>
+    <ContentRenderer
+      content={content}
+      id={resolvedId}
+      enableComments={enableComments}
+      context={context}
+      commentLayout={commentLayout}
+      commentsProps={commentsProps}
+      sx={{ padding: 2, ...sx }}
+      reactory={reactory}
+    />
   );
 };
 

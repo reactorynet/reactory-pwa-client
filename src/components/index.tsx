@@ -108,6 +108,8 @@ import * as Three from 'three';
 
 import { UserProfile } from './shared/UserProfile';
 import { useContentRender } from './shared/hooks/useContentRender';
+import { ContentRenderer } from './shared/ContentRenderer';
+import { Comments } from './shared/Comments/Comments';
 import { 
   Timeline,
   TimelineItem,
@@ -1048,6 +1050,22 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: useContentRender,
     description: 'A custom React hook for rendering dynamic content with support for various content types.',
     tags: ['hook', 'content', 'rendering', 'dynamic'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ContentRenderer',
+    version: '1.0.0',
+    component: ContentRenderer,
+    description: 'Renders Markdown, HTML, plain text, Mermaid diagrams, LaTeX math expressions, and Reactory components with integrated commenting support.',
+    tags: ['content', 'renderer', 'markdown', 'html', 'comments', 'discussions'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'Comments',
+    version: '1.0.0',
+    component: Comments,
+    description: 'Threaded commenting component with reactions, editing, soft deletion, and real-time AMQ updates.',
+    tags: ['comments', 'threads', 'discussion', 'social', 'collaboration'],
   },
   {
     nameSpace: 'core',

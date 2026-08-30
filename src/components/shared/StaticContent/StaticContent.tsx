@@ -23,6 +23,8 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
+import { ContentRenderer } from '@reactory/client-core/components/shared/ContentRenderer';
+import { Comments } from '@reactory/client-core/components/shared/Comments/Comments';
 
 import InlineContentEditor from './editor/InlineContentEditor';
 import useStaticContent, { toDraft } from './hooks/useStaticContent';
@@ -95,6 +97,9 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
     locale,
     aipersona,
     onSaved,
+    enableComments = false,
+    commentLayout = 'bottom',
+    commentsProps = {},
   } = props;
 
   /**
@@ -156,6 +161,13 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
     fallbackTitle: title,
     fallbackContent: defaultContent,
   });
+
+  const resolvedCommentsProps = useMemo(() => ({
+    ...(record?.commentsProps || {}),
+    ...commentsProps,
+  }), [record?.commentsProps, commentsProps]);
+
+  const resolvedCommentLayout = record?.commentLayout || commentLayout || 'bottom';
 
   const [editing, setEditing] = useState(props.isEditing === true);
   // Height of the rendered body, captured as the editor opens so the writing
@@ -301,37 +313,25 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
       );
     }
 
+    const isCommentsEnabled = Boolean(
+      (record?.enableComments !== undefined ? record.enableComments : enableComments) &&
+      (record?.id || activeSlug)
+    );
+
     return (
       <>
-        <Box
-          ref={viewBodyRef}
-          sx={
-            useExpanded && !expanded
-              ? {
-                  maxHeight: 200,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    inset: 'auto 0 0 0',
-                    height: 48,
-                    background: (theme) =>
-                      `linear-gradient(transparent, ${theme.palette.background.paper})`,
-                    pointerEvents: 'none',
-                  },
-                }
-              : undefined
-          }
-        >
-          {displayBody ? (
-            renderContent(displayBody)
-          ) : (
-            <Typography variant="body1" color="text.secondary">
-              {defaultContent}
-            </Typography>
-          )}
-        </Box>
+        <ContentRenderer
+          content={displayBody || defaultContent}
+          id={(record?.id || activeSlug) as string}
+          enableComments={isCommentsEnabled}
+          context="StaticContent"
+          commentLayout={resolvedCommentLayout}
+          commentsProps={{
+            title: resolvedCommentsProps.title || 'Comments',
+            ...resolvedCommentsProps,
+          }}
+          reactory={reactory}
+        />
 
         {useExpanded && (
           <Button

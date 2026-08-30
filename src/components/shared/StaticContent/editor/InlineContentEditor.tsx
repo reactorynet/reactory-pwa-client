@@ -237,6 +237,9 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
       draft.slug !== seed.slug ||
       draft.helpTopic !== seed.helpTopic ||
       draft.previewInputForm !== seed.previewInputForm ||
+      draft.enableComments !== seed.enableComments ||
+      draft.commentLayout !== seed.commentLayout ||
+      JSON.stringify(draft.commentsProps) !== JSON.stringify(seed.commentsProps) ||
       JSON.stringify(draft.topics) !== JSON.stringify(seed.topics) ||
       JSON.stringify(draft.roles) !== JSON.stringify(seed.roles)
     );

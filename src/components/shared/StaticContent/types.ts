@@ -66,6 +66,9 @@ export interface ReactoryStaticContent {
   translations?: ContentTranslation[];
   template?: boolean;
   engine?: string;
+  enableComments?: boolean;
+  commentLayout?: 'bottom' | 'accordion' | 'drawer' | 'card';
+  commentsProps?: Record<string, any>;
   previewInputForm?: string;
   helpTopic?: string;
 }
@@ -87,6 +90,9 @@ export interface ContentDraft {
   version: string;
   template: boolean;
   engine: string;
+  enableComments: boolean;
+  commentLayout: 'bottom' | 'accordion' | 'drawer' | 'card';
+  commentsProps?: Record<string, any>;
   roles: string[];
   previewInputForm: string;
   helpTopic: string;
@@ -159,6 +165,13 @@ export interface ReactoryStaticContentProps {
     className?: string;
     [key: string]: any;
   };
+  /**
+   * Flag enabling the commenting experience on this static content item.
+   * Uses the resolved slug or record ID as contextId.
+   */
+  enableComments?: boolean;
+  commentLayout?: 'bottom' | 'accordion' | 'drawer' | 'card';
+  commentsProps?: Record<string, any>;
   aipersona?: Reactory.Schema.UIAIOptions;
   /**
    * Locale to render. Defaults to the active i18n language.

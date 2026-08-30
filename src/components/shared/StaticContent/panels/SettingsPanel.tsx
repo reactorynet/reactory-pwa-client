@@ -226,6 +226,40 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <Divider />
 
         <Box>
+          <SectionLabel>Comments & Discussion</SectionLabel>
+          <Stack spacing={1.5}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={draft.enableComments ?? false}
+                  onChange={(e) => onChange({ enableComments: e.target.checked })}
+                />
+              }
+              label={draft.enableComments ? 'Comments enabled' : 'Comments disabled'}
+            />
+
+            {draft.enableComments && (
+              <FormControl size="small" fullWidth>
+                <InputLabel id="comment-layout-label">Comment Layout</InputLabel>
+                <Select
+                  labelId="comment-layout-label"
+                  label="Comment Layout"
+                  value={draft.commentLayout || 'bottom'}
+                  onChange={(e) => onChange({ commentLayout: e.target.value as any })}
+                >
+                  <MenuItem value="bottom">Bottom (In-flow)</MenuItem>
+                  <MenuItem value="accordion">Accordion (Collapsible)</MenuItem>
+                  <MenuItem value="drawer">Drawer (Slide-out)</MenuItem>
+                  <MenuItem value="card">Card (Outlined Box)</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          </Stack>
+        </Box>
+
+        <Divider />
+
+        <Box>
           <SectionLabel>Advanced</SectionLabel>
           <Stack spacing={1.5}>
             <FormControlLabel
