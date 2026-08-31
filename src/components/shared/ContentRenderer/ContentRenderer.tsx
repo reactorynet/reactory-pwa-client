@@ -113,11 +113,7 @@ const applyDomHighlights = (
     const parent = mark.parentNode;
     if (parent) {
       while (mark.firstChild) {
-        if ((mark.firstChild as HTMLElement).classList?.contains('reactory-comment-badge-icon')) {
-          mark.removeChild(mark.firstChild);
-        } else {
-          parent.insertBefore(mark.firstChild, mark);
-        }
+        parent.insertBefore(mark.firstChild, mark);
       }
       parent.removeChild(mark);
       parent.normalize();
@@ -173,15 +169,6 @@ const applyDomHighlights = (
         mark.setAttribute('data-comment-id', comment.id);
         mark.title = `${comment.who?.firstName || 'User'}: ${comment.text || ''}`;
         mark.textContent = matchedText;
-
-        const icon = document.createElement('span');
-        icon.className = 'reactory-comment-badge-icon';
-        icon.textContent = ' 💬';
-        icon.style.fontSize = '0.7em';
-        icon.style.verticalAlign = 'super';
-        icon.style.opacity = '0.85';
-        icon.style.pointerEvents = 'none';
-        mark.appendChild(icon);
 
         mark.style.backgroundColor = activeCommentId === comment.id
           ? 'rgba(255, 179, 0, 0.55)'
