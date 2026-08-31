@@ -10,10 +10,8 @@ import {
   AccordionDetails,
   Drawer,
   IconButton,
-  Tooltip,
   Typography,
   Divider,
-  Badge,
   Stack,
   Fade,
   SxProps,
@@ -98,50 +96,123 @@ export interface ContentRendererProps {
 }
 
 /**
- * Safely wraps quoted text in <reactory reactory-component="core.CommentAnnotation@1.0.0" ... /> tags
- * for in-body highlighting without corrupting code blocks or existing components.
+ * Safely applies in-body highlight markers in the rendered DOM
+ * without splitting or disrupting markdown document structures.
  */
-export const injectCommentAnnotations = (
-  content: string,
+const applyDomHighlights = (
+  container: HTMLElement,
   comments: ReactoryCommentItem[],
-  activeCommentId?: string
-): string => {
-  if (!content || !comments || comments.length === 0) return content;
+  activeCommentId?: string,
+  onCommentClick?: (commentId: string) => void
+) => {
+  if (!container) return;
 
-  // Filter comments with quotes
+  // 1. Clear any existing injected marks
+  const existingMarks = container.querySelectorAll('mark.reactory-comment-highlight');
+  existingMarks.forEach((mark) => {
+    const parent = mark.parentNode;
+    if (parent) {
+      while (mark.firstChild) {
+        if ((mark.firstChild as HTMLElement).classList?.contains('reactory-comment-badge-icon')) {
+          mark.removeChild(mark.firstChild);
+        } else {
+          parent.insertBefore(mark.firstChild, mark);
+        }
+      }
+      parent.removeChild(mark);
+      parent.normalize();
+    }
+  });
+
   const commentsWithQuotes = comments.filter(
     (c) => !c.removed && c.quote && c.quote.trim().length > 1
   );
 
-  if (commentsWithQuotes.length === 0) return content;
+  if (commentsWithQuotes.length === 0) return;
 
-  // Sort quotes longest first so substrings don't match prematurely
-  const sorted = [...commentsWithQuotes].sort((a, b) => (b.quote!.length) - (a.quote!.length));
-
-  let transformed = content;
+  // Sort longest quote first
+  const sorted = [...commentsWithQuotes].sort((a, b) => b.quote!.length - a.quote!.length);
 
   for (const comment of sorted) {
     const quote = comment.quote!.trim();
-    const escapedQuote = quote.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!quote) continue;
 
-    // Match quote avoiding inside existing HTML/Reactory tags
-    const regex = new RegExp(`(?<!<[^>]*)${escapedQuote}(?![^<]*>)`, 'i');
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          const parentTag = node.parentElement?.tagName.toLowerCase();
+          if (parentTag === 'code' || parentTag === 'pre' || parentTag === 'script' || parentTag === 'style') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.parentElement?.classList?.contains('reactory-comment-highlight')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return node.nodeValue && node.nodeValue.toLowerCase().includes(quote.toLowerCase())
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_SKIP;
+        },
+      }
+    );
 
-    const authorName = comment.who
-      ? `${comment.who.firstName || ''} ${comment.who.lastName || ''}`.trim() || comment.who.email || 'Anonymous'
-      : 'Anonymous';
+    const textNodes: Text[] = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      textNodes.push(currentNode as Text);
+      currentNode = walker.nextNode();
+    }
 
-    const safeQuoteAttr = quote.replace(/"/g, '&quot;');
-    const safeAuthor = authorName.replace(/"/g, '&quot;');
-    const safePreview = (comment.text || '').substring(0, 120).replace(/"/g, '&quot;');
+    for (const textNode of textNodes) {
+      const text = textNode.nodeValue || '';
+      const index = text.toLowerCase().indexOf(quote.toLowerCase());
+      if (index >= 0) {
+        const matchedText = text.substring(index, index + quote.length);
+        const mark = document.createElement('mark');
+        mark.className = `reactory-comment-highlight${activeCommentId === comment.id ? ' active' : ''}`;
+        mark.setAttribute('data-comment-id', comment.id);
+        mark.title = `${comment.who?.firstName || 'User'}: ${comment.text || ''}`;
+        mark.textContent = matchedText;
 
-    if (regex.test(transformed)) {
-      const annotationTag = `<reactory reactory-component="core.CommentAnnotation@1.0.0" reactory-props-commentId="${comment.id}" reactory-props-quote="${safeQuoteAttr}" reactory-props-author="${safeAuthor}" reactory-props-commentPreview="${safePreview}" reactory-props-active="bool:${activeCommentId === comment.id}">${quote}</reactory>`;
-      transformed = transformed.replace(regex, annotationTag);
+        const icon = document.createElement('span');
+        icon.className = 'reactory-comment-badge-icon';
+        icon.textContent = ' 💬';
+        icon.style.fontSize = '0.7em';
+        icon.style.verticalAlign = 'super';
+        icon.style.opacity = '0.85';
+        icon.style.pointerEvents = 'none';
+        mark.appendChild(icon);
+
+        mark.style.backgroundColor = activeCommentId === comment.id
+          ? 'rgba(255, 179, 0, 0.55)'
+          : 'rgba(255, 235, 59, 0.45)';
+        mark.style.color = 'inherit';
+        mark.style.borderRadius = '3px';
+        mark.style.padding = '1px 3px';
+        mark.style.borderBottom = '2px solid #f57f17';
+        mark.style.cursor = 'pointer';
+        mark.style.display = 'inline';
+
+        mark.onclick = (e) => {
+          e.stopPropagation();
+          if (onCommentClick) onCommentClick(comment.id);
+        };
+
+        const afterText = text.substring(index + quote.length);
+        const beforeText = text.substring(0, index);
+
+        const parent = textNode.parentNode;
+        if (parent) {
+          if (afterText) {
+            parent.insertBefore(document.createTextNode(afterText), textNode.nextSibling);
+          }
+          parent.insertBefore(mark, textNode.nextSibling);
+          textNode.nodeValue = beforeText;
+        }
+        break; // Highlight first match per quote
+      }
     }
   }
-
-  return transformed;
 };
 
 /**
@@ -229,6 +300,38 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     fetchAnnotations();
   }, [fetchAnnotations]);
 
+  // Activate / focus a comment thread and open the appropriate layout
+  const handleCommentActivate = useCallback((commentId: string) => {
+    setActiveCommentId(commentId);
+
+    if (commentLayout === 'drawer') {
+      setDrawerOpen(true);
+    } else if (commentLayout === 'accordion') {
+      setAccordionExpanded(true);
+    }
+
+    setTimeout(() => {
+      const el = document.getElementById(`comment-${commentId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (commentsSectionRef.current) {
+        commentsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 150);
+  }, [commentLayout]);
+
+  // Apply DOM highlight markers whenever content or comments change
+  useEffect(() => {
+    if (contentBodyRef.current && showComments) {
+      applyDomHighlights(
+        contentBodyRef.current,
+        loadedComments,
+        activeCommentId,
+        handleCommentActivate
+      );
+    }
+  }, [content, loadedComments, activeCommentId, showComments, handleCommentActivate]);
+
   // Real-time AMQ listeners
   useEffect(() => {
     if (!reactory?.on) return;
@@ -241,19 +344,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
 
     const handleAnnotationClicked = (evt: any) => {
       if (evt?.commentId) {
-        setActiveCommentId(evt.commentId);
-        if (commentLayout === 'drawer') {
-          setDrawerOpen(true);
-        } else if (commentLayout === 'accordion') {
-          setAccordionExpanded(true);
-          setTimeout(() => {
-            commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 100);
-        } else {
-          setTimeout(() => {
-            commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 100);
-        }
+        handleCommentActivate(evt.commentId);
       }
     };
 
@@ -266,7 +357,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       reactory.off('core.CommentUpdated', handleCommentEvent);
       reactory.off('core.CommentAnnotationClicked', handleAnnotationClicked);
     };
-  }, [id, commentLayout, fetchAnnotations, reactory]);
+  }, [id, handleCommentActivate, fetchAnnotations, reactory]);
 
   // Handle text selection in content area
   const handleSelection = useCallback(() => {
@@ -338,15 +429,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       }, 100);
     }
 
-    // Clear browser text selection
     window.getSelection()?.removeAllRanges();
   };
-
-  // Content with dynamic in-body annotation tags injected
-  const annotatedContent = useMemo(() => {
-    if (!showComments || loadedComments.length === 0) return content;
-    return injectCommentAnnotations(content, loadedComments, activeCommentId);
-  }, [content, showComments, loadedComments, activeCommentId]);
 
   // Render comments surface based on layout option
   const renderCommentsSection = () => {
@@ -383,7 +467,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
                 <Stack direction="row" spacing={1.5} alignItems="center">
                   <ChatBubbleOutlineIcon color="primary" fontSize="small" />
                   <Typography variant="subtitle1" fontWeight={600}>
-                    {mergedCommentsProps.title || 'Comments'}
+                    {mergedCommentsProps.title || 'Comments'} ({loadedComments.length})
                   </Typography>
                 </Stack>
               </AccordionSummary>
@@ -486,7 +570,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
                   color="primary"
                   startIcon={<AddCommentIcon fontSize="small" />}
                   onMouseDown={(e) => {
-                    // Prevent mousedown from clearing the selection before click fires
                     e.preventDefault();
                   }}
                   onClick={handleStartContextualComment}
@@ -499,7 +582,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
           </Fade>
         )}
 
-        {renderContent(annotatedContent)}
+        {renderContent(content)}
       </Box>
       {renderCommentsSection()}
     </>

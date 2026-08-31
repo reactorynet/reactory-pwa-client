@@ -118,6 +118,6 @@ describe('ContentRenderer component', () => {
       />
     );
 
-    expect(screen.getByText('Comments')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Comments/ })).toBeInTheDocument();
   });
 });
