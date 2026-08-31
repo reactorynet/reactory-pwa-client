@@ -229,15 +229,24 @@ const CommentItem: React.FC<{
   }
 
   return (
-    <Box sx={{ my: 1.5, pl: level > 0 ? Math.min(level * 2.5, 8) : 0 }}>
+    <Box sx={{ my: 1.5, pl: level > 0 ? Math.min(level * 2.5, 8) : 0 }} id={`comment-${comment.id}`}>
       <Paper
         variant="outlined"
+        onMouseEnter={() => {
+          if (comment.quote && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('reactory.comment.hover', { detail: { commentId: comment.id } }));
+          }
+        }}
         sx={{
           p: 2,
           borderRadius: 2,
           borderLeft: level > 0 ? 3 : 1,
           borderLeftColor: level > 0 ? 'primary.main' : 'divider',
           bgcolor: 'background.paper',
+          transition: 'box-shadow 150ms ease',
+          '&:hover': {
+            boxShadow: 2,
+          },
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="flex-start">

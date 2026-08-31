@@ -110,6 +110,7 @@ import { UserProfile } from './shared/UserProfile';
 import { useContentRender } from './shared/hooks/useContentRender';
 import { ContentRenderer } from './shared/ContentRenderer';
 import { Comments } from './shared/Comments/Comments';
+import { CommentAnnotation } from './shared/Comments/CommentAnnotation';
 import { 
   Timeline,
   TimelineItem,
@@ -1066,6 +1067,14 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: Comments,
     description: 'Threaded commenting component with reactions, editing, soft deletion, and real-time AMQ updates.',
     tags: ['comments', 'threads', 'discussion', 'social', 'collaboration'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'CommentAnnotation',
+    version: '1.0.0',
+    component: CommentAnnotation,
+    description: 'Interactive in-body text highlight annotation with tooltips and thread activations.',
+    tags: ['comment', 'annotation', 'highlight', 'discussion', 'inline'],
   },
   {
     nameSpace: 'core',

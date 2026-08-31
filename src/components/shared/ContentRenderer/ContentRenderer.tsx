@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -16,7 +16,6 @@ import {
   Badge,
   Stack,
   Fade,
-  ClickAwayListener,
   SxProps,
   Theme,
 } from '@mui/material';
@@ -27,7 +26,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
-import { Comments, ReactoryCommentsProps } from '@reactory/client-core/components/shared/Comments/Comments';
+import { Comments, ReactoryCommentsProps, ReactoryCommentItem } from '@reactory/client-core/components/shared/Comments/Comments';
 
 export type ContentCommentLayout = 'bottom' | 'accordion' | 'drawer' | 'card';
 
@@ -99,10 +98,57 @@ export interface ContentRendererProps {
 }
 
 /**
+ * Safely wraps quoted text in <reactory reactory-component="core.CommentAnnotation@1.0.0" ... /> tags
+ * for in-body highlighting without corrupting code blocks or existing components.
+ */
+export const injectCommentAnnotations = (
+  content: string,
+  comments: ReactoryCommentItem[],
+  activeCommentId?: string
+): string => {
+  if (!content || !comments || comments.length === 0) return content;
+
+  // Filter comments with quotes
+  const commentsWithQuotes = comments.filter(
+    (c) => !c.removed && c.quote && c.quote.trim().length > 1
+  );
+
+  if (commentsWithQuotes.length === 0) return content;
+
+  // Sort quotes longest first so substrings don't match prematurely
+  const sorted = [...commentsWithQuotes].sort((a, b) => (b.quote!.length) - (a.quote!.length));
+
+  let transformed = content;
+
+  for (const comment of sorted) {
+    const quote = comment.quote!.trim();
+    const escapedQuote = quote.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Match quote avoiding inside existing HTML/Reactory tags
+    const regex = new RegExp(`(?<!<[^>]*)${escapedQuote}(?![^<]*>)`, 'i');
+
+    const authorName = comment.who
+      ? `${comment.who.firstName || ''} ${comment.who.lastName || ''}`.trim() || comment.who.email || 'Anonymous'
+      : 'Anonymous';
+
+    const safeQuoteAttr = quote.replace(/"/g, '&quot;');
+    const safeAuthor = authorName.replace(/"/g, '&quot;');
+    const safePreview = (comment.text || '').substring(0, 120).replace(/"/g, '&quot;');
+
+    if (regex.test(transformed)) {
+      const annotationTag = `<reactory reactory-component="core.CommentAnnotation@1.0.0" reactory-props-commentId="${comment.id}" reactory-props-quote="${safeQuoteAttr}" reactory-props-author="${safeAuthor}" reactory-props-commentPreview="${safePreview}" reactory-props-active="bool:${activeCommentId === comment.id}">${quote}</reactory>`;
+      transformed = transformed.replace(regex, annotationTag);
+    }
+  }
+
+  return transformed;
+};
+
+/**
  * Universal ContentRenderer Component
  *
  * Renders rich content (Markdown, HTML, Code, Mermaid, LaTeX expressions, and live `<reactory />` components)
- * with an integrated commenting surface and inline contextual text selection when `id` and `enableComments={true}` are provided.
+ * with in-body highlight annotations, text-selection comment launcher, and customizable comment placement.
  */
 export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
   const sdkFromHook = useReactory();
@@ -128,6 +174,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accordionExpanded, setAccordionExpanded] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<string | undefined>(undefined);
+  const [activeCommentId, setActiveCommentId] = useState<string | undefined>(undefined);
+  const [loadedComments, setLoadedComments] = useState<ReactoryCommentItem[]>([]);
 
   // Floating comment button position for text selections
   const [selectionButtonPos, setSelectionButtonPos] = useState<{ top: number; left: number } | null>(null);
@@ -135,6 +183,90 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
 
   // Condition: Only render commenting experience when content has an ID and enableComments is true
   const showComments = Boolean(id && enableComments === true);
+
+  // Load comments for in-body annotation rendering
+  const fetchAnnotations = useCallback(async () => {
+    if (!id || !showComments) return;
+
+    try {
+      const result = await reactory.graphqlQuery<{
+        getCommentsByContext: {
+          comments: ReactoryCommentItem[];
+        };
+      }, { context: string; contextId: string }>(
+        `
+        query GetCommentsByContext($context: String!, $contextId: String!) {
+          getCommentsByContext(context: $context, contextId: $contextId) {
+            comments {
+              id
+              text
+              when
+              quote
+              who {
+                id
+                firstName
+                lastName
+                avatar
+                email
+              }
+              removed
+            }
+          }
+        }
+      `,
+        { context, contextId: id }
+      );
+
+      if (result.data?.getCommentsByContext?.comments) {
+        setLoadedComments(result.data.getCommentsByContext.comments);
+      }
+    } catch (err) {
+      // ignore annotation query errors
+    }
+  }, [id, context, showComments, reactory]);
+
+  useEffect(() => {
+    fetchAnnotations();
+  }, [fetchAnnotations]);
+
+  // Real-time AMQ listeners
+  useEffect(() => {
+    if (!reactory?.on) return;
+
+    const handleCommentEvent = (evt: any) => {
+      if (evt?.contextId === id || evt?.ticketId === id) {
+        fetchAnnotations();
+      }
+    };
+
+    const handleAnnotationClicked = (evt: any) => {
+      if (evt?.commentId) {
+        setActiveCommentId(evt.commentId);
+        if (commentLayout === 'drawer') {
+          setDrawerOpen(true);
+        } else if (commentLayout === 'accordion') {
+          setAccordionExpanded(true);
+          setTimeout(() => {
+            commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+        } else {
+          setTimeout(() => {
+            commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+        }
+      }
+    };
+
+    reactory.on('core.CommentAdded', handleCommentEvent);
+    reactory.on('core.CommentUpdated', handleCommentEvent);
+    reactory.on('core.CommentAnnotationClicked', handleAnnotationClicked);
+
+    return () => {
+      reactory.off('core.CommentAdded', handleCommentEvent);
+      reactory.off('core.CommentUpdated', handleCommentEvent);
+      reactory.off('core.CommentAnnotationClicked', handleAnnotationClicked);
+    };
+  }, [id, commentLayout, fetchAnnotations, reactory]);
 
   // Handle text selection in content area
   const handleSelection = useCallback(() => {
@@ -166,7 +298,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
           left: rect.left - containerRect.left + rect.width / 2,
         });
       } catch (err) {
-        // ignore range calculation error
+        // ignore range error
       }
     }
   }, [showComments]);
@@ -210,6 +342,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     window.getSelection()?.removeAllRanges();
   };
 
+  // Content with dynamic in-body annotation tags injected
+  const annotatedContent = useMemo(() => {
+    if (!showComments || loadedComments.length === 0) return content;
+    return injectCommentAnnotations(content, loadedComments, activeCommentId);
+  }, [content, showComments, loadedComments, activeCommentId]);
+
   // Render comments surface based on layout option
   const renderCommentsSection = () => {
     if (!showComments || !id) return null;
@@ -224,7 +362,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       placeholder: commentsProps.placeholder || (selectedQuote ? 'Comment on selected text...' : 'Leave a comment on this content...'),
       selectedQuote,
       onClearQuote: () => setSelectedQuote(undefined),
-      onCommentAdded,
+      onCommentAdded: (comment) => {
+        fetchAnnotations();
+        if (onCommentAdded) onCommentAdded(comment);
+      },
       ...commentsProps,
     };
 
@@ -272,7 +413,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
               onClick={() => setDrawerOpen(true)}
               sx={{ textTransform: 'none' }}
             >
-              Open Comments
+              Open Comments ({loadedComments.length})
             </Button>
             <Drawer
               anchor="right"
@@ -358,7 +499,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
           </Fade>
         )}
 
-        {renderContent(content)}
+        {renderContent(annotatedContent)}
       </Box>
       {renderCommentsSection()}
     </>

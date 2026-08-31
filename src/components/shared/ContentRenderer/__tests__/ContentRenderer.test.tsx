@@ -104,7 +104,7 @@ describe('ContentRenderer component', () => {
       />
     );
 
-    expect(screen.getByText('Open Comments')).toBeInTheDocument();
+    expect(screen.getByText(/Open Comments/)).toBeInTheDocument();
   });
 
   it('renders comments in accordion layout with collapsible summary', () => {
