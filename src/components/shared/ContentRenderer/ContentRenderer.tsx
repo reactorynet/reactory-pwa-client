@@ -287,7 +287,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
 
   useEffect(() => {
     fetchAnnotations();
-  }, [fetchAnnotations]);
+  }, [fetchAnnotations, id, showComments]);
 
   // Activate / focus a comment thread and open the appropriate layout
   const handleCommentActivate = useCallback((commentId: string) => {

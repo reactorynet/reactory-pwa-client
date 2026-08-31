@@ -485,6 +485,14 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
   }, [context, contextId, staticComments, reactory]);
 
   useEffect(() => {
+    if (staticComments) {
+      setComments(staticComments);
+    } else {
+      fetchComments();
+    }
+  }, [fetchComments, staticComments, contextId]);
+
+  useEffect(() => {
     if (selectedQuote) {
       setActiveQuote(selectedQuote);
     }
