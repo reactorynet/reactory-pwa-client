@@ -260,6 +260,128 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <Divider />
 
         <Box>
+          <SectionLabel>Container & Layout Styling</SectionLabel>
+          <Stack spacing={1.5}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="container-element-label">Container Type</InputLabel>
+              <Select
+                labelId="container-element-label"
+                label="Container Type"
+                value={draft.container || 'Box'}
+                onChange={(e) => onChange({ container: e.target.value })}
+              >
+                <MenuItem value="Box">Box (Standard)</MenuItem>
+                <MenuItem value="Paper">Paper (Elevated / Surface)</MenuItem>
+                <MenuItem value="Card">Card (Framed Card)</MenuItem>
+                <MenuItem value="div">div (Plain HTML)</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Stack direction="row" spacing={1}>
+              <TextField
+                label="Padding (p / py / px)"
+                value={draft.containerProps?.sx?.p ?? draft.containerProps?.sx?.padding ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    containerProps: {
+                      ...(draft.containerProps || {}),
+                      sx: {
+                        ...(draft.containerProps?.sx || {}),
+                        p: e.target.value || undefined,
+                      },
+                    },
+                  })
+                }
+                size="small"
+                fullWidth
+                placeholder="e.g. 2, 16px, 24px"
+                helperText="Inner spacing"
+              />
+              <TextField
+                label="Margin (m / my / mx)"
+                value={draft.containerProps?.sx?.my ?? draft.containerProps?.sx?.margin ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    containerProps: {
+                      ...(draft.containerProps || {}),
+                      sx: {
+                        ...(draft.containerProps?.sx || {}),
+                        my: e.target.value || undefined,
+                      },
+                    },
+                  })
+                }
+                size="small"
+                fullWidth
+                placeholder="e.g. 2, 16px, 32px"
+                helperText="Outer spacing"
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={1}>
+              <TextField
+                label="Background Color"
+                value={draft.containerProps?.sx?.bgcolor ?? draft.containerProps?.sx?.backgroundColor ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    containerProps: {
+                      ...(draft.containerProps || {}),
+                      sx: {
+                        ...(draft.containerProps?.sx || {}),
+                        bgcolor: e.target.value || undefined,
+                      },
+                    },
+                  })
+                }
+                size="small"
+                fullWidth
+                placeholder="e.g. #f8f9fa, background.paper"
+              />
+              <TextField
+                label="Border Radius"
+                value={draft.containerProps?.sx?.borderRadius ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    containerProps: {
+                      ...(draft.containerProps || {}),
+                      sx: {
+                        ...(draft.containerProps?.sx || {}),
+                        borderRadius: e.target.value || undefined,
+                      },
+                    },
+                  })
+                }
+                size="small"
+                fullWidth
+                placeholder="e.g. 2, 8px, 12px"
+              />
+            </Stack>
+
+            <TextField
+              label="Border"
+              value={draft.containerProps?.sx?.border ?? ''}
+              onChange={(e) =>
+                onChange({
+                  containerProps: {
+                    ...(draft.containerProps || {}),
+                    sx: {
+                      ...(draft.containerProps?.sx || {}),
+                      border: e.target.value || undefined,
+                    },
+                  },
+                })
+              }
+              size="small"
+              fullWidth
+              placeholder="e.g. 1px solid #e0e0e0"
+              helperText="CSS border outline"
+            />
+          </Stack>
+        </Box>
+
+        <Divider />
+
+        <Box>
           <SectionLabel>Advanced</SectionLabel>
           <Stack spacing={1.5}>
             <FormControlLabel

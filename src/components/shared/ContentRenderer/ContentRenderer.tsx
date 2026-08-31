@@ -577,29 +577,41 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     </>
   );
 
+  const mergedSx = { ...(containerProps?.sx || {}), ...(sx || {}) };
+  const mergedStyle = { ...(containerProps?.style || {}) };
+
   switch (container) {
     case 'Paper':
       return (
-        <Paper sx={{ p: 3, ...sx }} {...containerProps}>
+        <Paper
+          elevation={containerProps?.elevation ?? 1}
+          {...containerProps}
+          sx={{ p: 3, ...mergedSx }}
+          style={mergedStyle}
+        >
           {renderedBody}
         </Paper>
       );
     case 'Card':
       return (
-        <Card sx={{ p: 2, ...sx }} {...containerProps}>
+        <Card
+          {...containerProps}
+          sx={{ p: 2, ...mergedSx }}
+          style={mergedStyle}
+        >
           <CardContent>{renderedBody}</CardContent>
         </Card>
       );
     case 'div':
       return (
-        <div style={{ width: '100%' }} {...containerProps}>
+        <div style={{ width: '100%', ...mergedStyle }} {...containerProps}>
           {renderedBody}
         </div>
       );
     case 'Box':
     default:
       return (
-        <Box sx={{ width: '100%', ...sx }} {...containerProps}>
+        <Box sx={{ width: '100%', ...mergedSx }} style={mergedStyle} {...containerProps}>
           {renderedBody}
         </Box>
       );

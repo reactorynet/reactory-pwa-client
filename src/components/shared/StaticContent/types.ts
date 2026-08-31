@@ -69,6 +69,9 @@ export interface ReactoryStaticContent {
   enableComments?: boolean;
   commentLayout?: 'bottom' | 'accordion' | 'drawer' | 'card';
   commentsProps?: Record<string, any>;
+  container?: string;
+  containerProps?: Record<string, any>;
+  style?: Record<string, any>;
   previewInputForm?: string;
   helpTopic?: string;
 }
@@ -93,6 +96,9 @@ export interface ContentDraft {
   enableComments: boolean;
   commentLayout: 'bottom' | 'accordion' | 'drawer' | 'card';
   commentsProps?: Record<string, any>;
+  container: string;
+  containerProps: Record<string, any>;
+  style: Record<string, any>;
   roles: string[];
   previewInputForm: string;
   helpTopic: string;

@@ -28,6 +28,9 @@ const CONTENT_FIELDS = `
   enableComments
   commentLayout
   commentsProps
+  container
+  containerProps
+  style
   previewInputForm
   helpTopic
   createdBy {

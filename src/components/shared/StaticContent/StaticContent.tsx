@@ -168,6 +168,15 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
   }), [record?.commentsProps, commentsProps]);
 
   const resolvedCommentLayout = record?.commentLayout || commentLayout || 'bottom';
+  const resolvedContainer = record?.container || container || 'Box';
+  const resolvedContainerProps = useMemo(() => ({
+    ...(record?.containerProps || {}),
+    ...(containerProps || {}),
+    sx: {
+      ...(record?.containerProps?.sx || {}),
+      ...(containerProps?.sx || {}),
+    },
+  }), [record?.containerProps, containerProps]);
 
   const [editing, setEditing] = useState(props.isEditing === true);
   // Height of the rendered body, captured as the editor opens so the writing
@@ -326,6 +335,8 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
           enableComments={isCommentsEnabled}
           context="StaticContent"
           commentLayout={resolvedCommentLayout}
+          container={resolvedContainer as any}
+          containerProps={resolvedContainerProps}
           commentsProps={{
             title: resolvedCommentsProps.title || 'Comments',
             ...resolvedCommentsProps,
