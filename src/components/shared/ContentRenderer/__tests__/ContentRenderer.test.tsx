@@ -34,6 +34,7 @@ const mockReactory: any = {
   getUser: () => ({ loggedIn: { user: { id: 'user-1' } } }),
   hasRole: () => true,
   log: jest.fn(),
+  getComponents: jest.fn().mockReturnValue({ Material: { MaterialStyles: {} } }),
 };
 
 describe('ContentRenderer component', () => {

@@ -85,6 +85,11 @@ export interface ContentRendererProps {
   containerProps?: Record<string, any>;
 
   /**
+   * JSS / inline CSS styles applied to the container component
+   */
+  style?: Record<string, any>;
+
+  /**
    * Injected Reactory SDK instance
    */
   reactory?: Reactory.Client.ReactorySDK;
@@ -228,6 +233,13 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
   } = props;
 
   const { renderContent } = useContentRender(reactory);
+  const { Material } = typeof reactory?.getComponents === 'function'
+    ? reactory.getComponents<{
+        Material: Reactory.Client.Web.IMaterialModule;
+      }>(["material-ui.Material"])
+    : {} as any;
+  const { MaterialStyles } = Material || {};
+
   const contentBodyRef = useRef<HTMLDivElement>(null);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
 
@@ -236,6 +248,30 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
   const [selectedQuote, setSelectedQuote] = useState<string | undefined>(undefined);
   const [activeCommentId, setActiveCommentId] = useState<string | undefined>(undefined);
   const [loadedComments, setLoadedComments] = useState<ReactoryCommentItem[]>([]);
+
+  // JSS dynamic styles
+  const effectiveStyle = useMemo(() => {
+    return {
+      ...(props.style || {}),
+      ...(containerProps?.style || {}),
+    };
+  }, [props.style, containerProps?.style]);
+
+  const jssClassName = useMemo(() => {
+    if (!effectiveStyle || Object.keys(effectiveStyle).length === 0) return '';
+    try {
+      if (MaterialStyles?.makeStyles) {
+        const useStyles = MaterialStyles.makeStyles(() => ({
+          containerRoot: effectiveStyle,
+        }));
+        const classes = useStyles();
+        return classes?.containerRoot || '';
+      }
+    } catch (e) {
+      // fallback
+    }
+    return '';
+  }, [MaterialStyles, effectiveStyle]);
 
   // Floating comment button position for text selections
   const [selectionButtonPos, setSelectionButtonPos] = useState<{ top: number; left: number } | null>(null);
@@ -578,7 +614,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
   );
 
   const mergedSx = { ...(containerProps?.sx || {}), ...(sx || {}) };
-  const mergedStyle = { ...(containerProps?.style || {}) };
+  const mergedStyle = { ...(containerProps?.style || {}), ...(props.style || {}) };
+  const mergedClassName = [containerProps?.className, jssClassName].filter(Boolean).join(' ');
 
   switch (container) {
     case 'Paper':
@@ -586,6 +623,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
         <Paper
           elevation={containerProps?.elevation ?? 1}
           {...containerProps}
+          className={mergedClassName || undefined}
           sx={{ p: 3, ...mergedSx }}
           style={mergedStyle}
         >
@@ -596,6 +634,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       return (
         <Card
           {...containerProps}
+          className={mergedClassName || undefined}
           sx={{ p: 2, ...mergedSx }}
           style={mergedStyle}
         >
@@ -604,14 +643,23 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       );
     case 'div':
       return (
-        <div style={{ width: '100%', ...mergedStyle }} {...containerProps}>
+        <div
+          {...containerProps}
+          className={mergedClassName || undefined}
+          style={{ width: '100%', ...mergedStyle }}
+        >
           {renderedBody}
         </div>
       );
     case 'Box':
     default:
       return (
-        <Box sx={{ width: '100%', ...mergedSx }} style={mergedStyle} {...containerProps}>
+        <Box
+          {...containerProps}
+          className={mergedClassName || undefined}
+          sx={{ width: '100%', ...mergedSx }}
+          style={mergedStyle}
+        >
           {renderedBody}
         </Box>
       );

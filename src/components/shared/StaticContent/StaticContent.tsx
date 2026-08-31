@@ -169,6 +169,10 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
 
   const resolvedCommentLayout = record?.commentLayout || commentLayout || 'bottom';
   const resolvedContainer = record?.container || container || 'Box';
+  const resolvedStyle = useMemo(() => ({
+    ...(record?.style || {}),
+    ...(props.style || {}),
+  }), [record?.style, props.style]);
   const resolvedContainerProps = useMemo(() => ({
     ...(record?.containerProps || {}),
     ...(containerProps || {}),
@@ -337,6 +341,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
           commentLayout={resolvedCommentLayout}
           container={resolvedContainer as any}
           containerProps={resolvedContainerProps}
+          style={resolvedStyle}
           commentsProps={{
             title: resolvedCommentsProps.title || 'Comments',
             ...resolvedCommentsProps,

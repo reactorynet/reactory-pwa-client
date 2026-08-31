@@ -171,6 +171,7 @@ export interface ReactoryStaticContentProps {
     className?: string;
     [key: string]: any;
   };
+  style?: Record<string, any>;
   /**
    * Flag enabling the commenting experience on this static content item.
    * Uses the resolved slug or record ID as contextId.

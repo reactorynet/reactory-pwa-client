@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   Autocomplete,
   Box,
@@ -38,6 +38,70 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     {children}
   </Typography>
 );
+
+/**
+ * Validated JSON editor input field
+ */
+const JsonEditorField: React.FC<{
+  label: string;
+  value: Record<string, any> | undefined;
+  onChange: (parsed: Record<string, any>) => void;
+  helperText?: string;
+  placeholder?: string;
+  minRows?: number;
+}> = ({ label, value, onChange, helperText, placeholder, minRows = 3 }) => {
+  const [text, setText] = useState(() => (value && Object.keys(value).length > 0 ? JSON.stringify(value, null, 2) : ''));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const formatted = value && Object.keys(value).length > 0 ? JSON.stringify(value, null, 2) : '';
+    setText(formatted);
+    setError(null);
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setText(raw);
+    if (!raw.trim()) {
+      setError(null);
+      onChange({});
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        setError(null);
+        onChange(parsed);
+      } else {
+        setError('Must be a valid JSON object');
+      }
+    } catch (err: any) {
+      setError('Invalid JSON format');
+    }
+  };
+
+  return (
+    <TextField
+      label={label}
+      value={text}
+      onChange={handleChange}
+      multiline
+      minRows={minRows}
+      maxRows={8}
+      fullWidth
+      size="small"
+      error={Boolean(error)}
+      helperText={error || helperText}
+      placeholder={placeholder || '{\n  \n}'}
+      InputProps={{
+        sx: {
+          fontFamily: 'monospace',
+          fontSize: '0.8125rem',
+        },
+      }}
+    />
+  );
+};
 
 /**
  * Metadata and publishing options for the content being edited.
@@ -277,104 +341,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </Select>
             </FormControl>
 
-            <Stack direction="row" spacing={1}>
-              <TextField
-                label="Padding (p / py / px)"
-                value={draft.containerProps?.sx?.p ?? draft.containerProps?.sx?.padding ?? ''}
-                onChange={(e) =>
-                  onChange({
-                    containerProps: {
-                      ...(draft.containerProps || {}),
-                      sx: {
-                        ...(draft.containerProps?.sx || {}),
-                        p: e.target.value || undefined,
-                      },
-                    },
-                  })
-                }
-                size="small"
-                fullWidth
-                placeholder="e.g. 2, 16px, 24px"
-                helperText="Inner spacing"
-              />
-              <TextField
-                label="Margin (m / my / mx)"
-                value={draft.containerProps?.sx?.my ?? draft.containerProps?.sx?.margin ?? ''}
-                onChange={(e) =>
-                  onChange({
-                    containerProps: {
-                      ...(draft.containerProps || {}),
-                      sx: {
-                        ...(draft.containerProps?.sx || {}),
-                        my: e.target.value || undefined,
-                      },
-                    },
-                  })
-                }
-                size="small"
-                fullWidth
-                placeholder="e.g. 2, 16px, 32px"
-                helperText="Outer spacing"
-              />
-            </Stack>
+            <JsonEditorField
+              label="Container Properties (containerProps JSON)"
+              value={draft.containerProps}
+              onChange={(containerProps) => onChange({ containerProps })}
+              helperText="Attributes passed to container component (e.g. sx, elevation, className)"
+              placeholder={'{\n  "sx": {\n    "p": 3,\n    "bgcolor": "background.paper"\n  }\n}'}
+              minRows={4}
+            />
 
-            <Stack direction="row" spacing={1}>
-              <TextField
-                label="Background Color"
-                value={draft.containerProps?.sx?.bgcolor ?? draft.containerProps?.sx?.backgroundColor ?? ''}
-                onChange={(e) =>
-                  onChange({
-                    containerProps: {
-                      ...(draft.containerProps || {}),
-                      sx: {
-                        ...(draft.containerProps?.sx || {}),
-                        bgcolor: e.target.value || undefined,
-                      },
-                    },
-                  })
-                }
-                size="small"
-                fullWidth
-                placeholder="e.g. #f8f9fa, background.paper"
-              />
-              <TextField
-                label="Border Radius"
-                value={draft.containerProps?.sx?.borderRadius ?? ''}
-                onChange={(e) =>
-                  onChange({
-                    containerProps: {
-                      ...(draft.containerProps || {}),
-                      sx: {
-                        ...(draft.containerProps?.sx || {}),
-                        borderRadius: e.target.value || undefined,
-                      },
-                    },
-                  })
-                }
-                size="small"
-                fullWidth
-                placeholder="e.g. 2, 8px, 12px"
-              />
-            </Stack>
-
-            <TextField
-              label="Border"
-              value={draft.containerProps?.sx?.border ?? ''}
-              onChange={(e) =>
-                onChange({
-                  containerProps: {
-                    ...(draft.containerProps || {}),
-                    sx: {
-                      ...(draft.containerProps?.sx || {}),
-                      border: e.target.value || undefined,
-                    },
-                  },
-                })
-              }
-              size="small"
-              fullWidth
-              placeholder="e.g. 1px solid #e0e0e0"
-              helperText="CSS border outline"
+            <JsonEditorField
+              label="JSS Style Attributes (style JSON)"
+              value={draft.style}
+              onChange={(style) => onChange({ style })}
+              helperText="JSS styles injected via makeStyles for the container"
+              placeholder={'{\n  "padding": "16px",\n  "margin": "20px 0",\n  "backgroundColor": "#fdfdfd",\n  "borderRadius": "8px"\n}'}
+              minRows={4}
             />
           </Stack>
         </Box>
