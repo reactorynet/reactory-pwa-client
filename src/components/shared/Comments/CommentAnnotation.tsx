@@ -176,8 +176,10 @@ export const CommentAnnotation: React.FC<CommentAnnotationProps> = (props) => {
             ? 'rgba(25, 118, 210, 0.25)' // Soft blue on hover
             : 'rgba(255, 235, 59, 0.38)', // Standard soft highlighter
           color: 'inherit',
-          borderRadius: '3px',
-          padding: '1px 3px',
+          borderRadius: '0',
+          padding: '0',
+          margin: '0',
+          lineHeight: 'inherit',
           cursor: 'pointer',
           borderBottom: '2px solid',
           borderColor: active ? 'warning.main' : hovered ? 'primary.main' : 'rgba(245, 127, 23, 0.6)',
@@ -188,20 +190,6 @@ export const CommentAnnotation: React.FC<CommentAnnotationProps> = (props) => {
         }}
       >
         {displayText}
-        <Box
-          component="span"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            verticalAlign: 'super',
-            fontSize: '0.65rem',
-            color: active ? 'warning.dark' : 'primary.main',
-            ml: 0.35,
-          }}
-        >
-          <ChatBubbleOutlineIcon sx={{ fontSize: '0.75rem' }} />
-        </Box>
       </Box>
     </Tooltip>
   );

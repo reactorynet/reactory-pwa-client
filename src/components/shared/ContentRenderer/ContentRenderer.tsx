@@ -174,8 +174,10 @@ const applyDomHighlights = (
           ? 'rgba(255, 179, 0, 0.55)'
           : 'rgba(255, 235, 59, 0.45)';
         mark.style.color = 'inherit';
-        mark.style.borderRadius = '3px';
-        mark.style.padding = '1px 3px';
+        mark.style.borderRadius = '0';
+        mark.style.padding = '0';
+        mark.style.margin = '0';
+        mark.style.lineHeight = 'inherit';
         mark.style.borderBottom = '2px solid #f57f17';
         mark.style.cursor = 'pointer';
         mark.style.display = 'inline';
