@@ -11,11 +11,15 @@
 #$RANDOM - Returns a different random number each time is it referred to.
 #$LINENO - Returns the current line number in the Bash script.
 
-# # Get additional options from the command line arguments
-additional_options="${@:3}"
 project_key=${1:-reactory}
 target=${2:-local}
 
-echo "Starting Reactory Web Client key: [$project_key] target: $target with additional options: $additional_options"
-sh ./bin/generate.sh "$project_key" "$target"
-env-cmd -f ./config/env/$project_key/.env.$target yarn babel-node scripts/start.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000
+ENV_FILE="./config/env/${project_key}/.env.${target}"
+
+if [ -f "$ENV_FILE" ]; then
+  echo "Running Client Generate Process For: $ENV_FILE"
+  NODE_PATH=./src env-cmd -f "$ENV_FILE" npx babel-node ./scripts/generate.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000
+else
+  echo "Running Client Generate Process with default environment"
+  NODE_PATH=./src npx babel-node ./scripts/generate.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000
+fi

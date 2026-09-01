@@ -42,6 +42,7 @@ storybook-static
 /src/components/plugins/*
 !/src/components/plugins/README.MD
 !/src/components/plugins/index.ts
+!/src/components/plugins/pluginImportFactory.ts
 
 /src/**/*.jsx
 /src/**/*.jsx.map

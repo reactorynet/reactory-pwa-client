@@ -827,19 +827,19 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               allItems = $data.data;
             }
 
-            const hasServerPaging = $data.paging && typeof $data.paging.total === 'number' && $data.paging.total > 0;
+            const hasServerPaging = $data.paging && typeof $data.paging.total === 'number';
 
             if (!hasServerPaging && allItems.length > 0) {
               // Local client-side paging mode for flat unpaginated array payloads
               const totalItems = allItems.length;
-              const pageIdx = typeof query.page === 'number' ? query.page : 0;
+              const pageIdx = typeof query.page === 'number' ? (query.page > 0 ? query.page - 1 : 0) : 0;
               const pageSize = typeof query.pageSize === 'number' ? query.pageSize : (uiOptions.options?.pageSize || 10);
               const start = pageIdx * pageSize;
               const end = start + pageSize;
 
               response.data = allItems.slice(start, end);
               response.paging = {
-                page: pageIdx,
+                page: pageIdx + 1,
                 pageSize,
                 total: totalItems,
                 hasNext: end < totalItems,
@@ -899,7 +899,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return response;
   }, [query, formContext.graphql, uiOptions.query, uiOptions.variables, uiOptions.resultMap, uiOptions.disablePaging, formContext.$selectedRows, reactory]);
 
-  const rows = (data?.data && Array.isArray(data.data) && data.data.length > 0) ? data.data : (Array.isArray(formData) && formData.length > 0 ? formData : (data?.data || []));
+  const rows = uiOptions.remoteData === true ? (data?.data || []) : (Array.isArray(formData) ? formData : (data?.data || []));
 
   // Extract unique breakpoints from columns for responsive filtering
   // This must be done at the top level to comply with Rules of Hooks
@@ -1848,7 +1848,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                 onRowsPerPageChange={(evt) => {
                   setQuery({
                     ...query,
-                    pageSize: parseInt(evt.target.value)
+                    pageSize: parseInt(evt.target.value, 10),
+                    page: 1,
                   })
                 }}
                 onPageChange={(evt, nextPage) => {
@@ -1998,8 +1999,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }, []);  // setQuery is always stable
 
   const onToolbarDataChange = useCallback((filteredData: any[]) => {
-    setData(prev => ({ ...prev, data: filteredData }));
-  }, []);
+    if (uiOptions.remoteData !== true) {
+      setData(prev => ({ ...prev, data: filteredData }));
+    }
+  }, [uiOptions.remoteData]);
 
   const getToolbar = () => {
 
