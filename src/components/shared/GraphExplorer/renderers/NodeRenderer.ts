@@ -94,35 +94,64 @@ const NODE_FRAGMENT_SHADER = `
 
 const ICON_CELL = 64; // atlas cell size in px
 
+/**
+ * The icon font stack for the atlas. Material Symbols FIRST — several of our
+ * glyph names (function, database, deployed_code, …) only exist there; the
+ * classic Material Icons font would shape them as plain letters.
+ */
+const ICON_FONT = `${ICON_CELL * 0.72}px "Material Symbols Outlined", "Material Icons", sans-serif`;
+
+interface IconAtlas {
+  texture: THREE.Texture;
+  index: Map<GraphNodeType, number>;
+  /** Re-rasterize the glyphs (same canvas/texture) — used once fonts load. */
+  redraw(): void;
+}
+
 /** Renders one Material Symbols glyph per node type into a 1-row atlas. */
-const buildIconAtlas = (): { texture: THREE.Texture; index: Map<GraphNodeType, number> } => {
+const buildIconAtlas = (): IconAtlas => {
   const types = Object.keys(NODE_TYPE_ICONS) as GraphNodeType[];
   const canvas = document.createElement('canvas');
   canvas.width = ICON_CELL * types.length;
   canvas.height = ICON_CELL;
   const ctx = canvas.getContext('2d');
   const index = new Map<GraphNodeType, number>();
-
-  if (ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    // Material Symbols ligatures; falls back to a plain dot when the font is
-    // not loaded (the glyph simply rasterizes as text and gets alpha anyway).
-    ctx.font = `${ICON_CELL * 0.72}px "Material Icons", "Material Symbols Outlined", sans-serif`;
-    types.forEach((type, i) => {
-      index.set(type, i);
-      ctx.fillText(NODE_TYPE_ICONS[type], i * ICON_CELL + ICON_CELL / 2, ICON_CELL / 2 + 2);
-    });
-  }
+  types.forEach((type, i) => index.set(type, i));
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   // Y flip: canvas rows run top-down, texture UVs bottom-up.
   texture.flipY = true;
-  return { texture, index };
+
+  const redraw = () => {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = ICON_FONT;
+    types.forEach((type, i) => {
+      ctx.fillText(NODE_TYPE_ICONS[type], i * ICON_CELL + ICON_CELL / 2, ICON_CELL / 2 + 2);
+    });
+    texture.needsUpdate = true;
+  };
+  redraw();
+  return { texture, index, redraw };
+};
+
+/**
+ * Resolves once the icon fonts are usable (or immediately when the Font
+ * Loading API is unavailable, e.g. jsdom). Before that, ligature names
+ * rasterize as literal text — the initial atlas is redrawn on resolution.
+ */
+const whenIconFontsReady = (): Promise<void> => {
+  const fonts = (document as any).fonts;
+  if (!fonts?.load) return Promise.resolve();
+  return Promise.allSettled([
+    fonts.load(`${ICON_CELL * 0.72}px "Material Symbols Outlined"`, 'hub'),
+    fonts.load(`${ICON_CELL * 0.72}px "Material Icons"`, 'hub'),
+  ]).then(() => undefined);
 };
 
 export class NodeRenderer implements IGraphNodeRenderer {
@@ -131,7 +160,7 @@ export class NodeRenderer implements IGraphNodeRenderer {
   private mesh: THREE.InstancedMesh | null = null;
   private geometry: THREE.InstancedBufferGeometry | null = null;
   private material: THREE.ShaderMaterial | null = null;
-  private iconAtlas: { texture: THREE.Texture; index: Map<GraphNodeType, number> } | null = null;
+  private iconAtlas: IconAtlas | null = null;
   private capacity = 1024;
   private highlightId: number | null = null;
   private lastNodes: NodeGeometryData[] = [];
@@ -146,6 +175,11 @@ export class NodeRenderer implements IGraphNodeRenderer {
     this.config = { ...DEFAULT_NODE_RENDER_CONFIG, ...config };
     this.iconAtlas = buildIconAtlas();
     this.createMesh(this.capacity);
+    // The icon fonts usually finish loading after the first atlas rasterizes
+    // ligature names as text — redraw the glyphs once they are ready.
+    void whenIconFontsReady().then(() => {
+      this.iconAtlas?.redraw();
+    });
   }
 
   private createMesh(capacity: number): void {

@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import Icon from '@mui/material/Icon';
 import { GraphEdge, GraphNode } from '../../types';
+import { toSafeSvg } from '../../utils/svgAttribute';
 
 export interface InspectorPanelProps {
   node: GraphNode | null;
@@ -34,8 +35,13 @@ export interface InspectorPanelProps {
   onDeleteEdge(edgeId: string): void;
   onSelectEdge(edgeId: string): void;
   onFocus(node: GraphNode): void;
-  /** Hide the node (persisted in the perspective — Delete key does the same). */
+  /** Hide the node (restorable via Unhide; persisted in the perspective). */
   onHide(node: GraphNode): void;
+  /** Remove the node from the view/perspective (Delete key does the same). */
+  onRemove(node: GraphNode): void;
+  /** Bulk actions over the whole selection (multi-select). */
+  onHideSelection(): void;
+  onRemoveSelection(): void;
   onOpenFile?(node: GraphNode): void;
 }
 
@@ -59,6 +65,9 @@ export default function InspectorPanel(props: InspectorPanelProps) {
     onSelectEdge,
     onFocus,
     onHide,
+    onRemove,
+    onHideSelection,
+    onRemoveSelection,
     onOpenFile,
   } = props;
 
@@ -134,6 +143,17 @@ export default function InspectorPanel(props: InspectorPanelProps) {
         {selectionCount > 1 && <Chip size="small" variant="outlined" label={`+${selectionCount - 1} selected`} />}
       </Stack>
 
+      {selectionCount > 1 && (
+        <Stack direction="row" spacing={0.5} sx={{ mb: 1 }}>
+          <Button size="small" color="error" variant="outlined" onClick={onRemoveSelection}>
+            Remove {selectionCount} nodes
+          </Button>
+          <Button size="small" onClick={onHideSelection}>
+            Hide {selectionCount}
+          </Button>
+        </Stack>
+      )}
+
       <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
         {node.hasChildren && (
           <Button size="small" variant="outlined" disabled={loading} onClick={() => onToggleExpand(node)}>
@@ -177,9 +197,14 @@ export default function InspectorPanel(props: InspectorPanelProps) {
             </IconButton>
           </Tooltip>
         )}
-        <Tooltip title="Hide from view (Delete)">
+        <Tooltip title="Hide (restorable via Unhide)">
           <IconButton size="small" onClick={() => onHide(node)}>
             <Icon fontSize="small">visibility_off</Icon>
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Remove from view / perspective (Delete)">
+          <IconButton size="small" onClick={() => onRemove(node)}>
+            <Icon fontSize="small">delete</Icon>
           </IconButton>
         </Tooltip>
       </Stack>
@@ -205,16 +230,47 @@ export default function InspectorPanel(props: InspectorPanelProps) {
           <Divider sx={{ my: 1 }} />
           <Typography variant="overline">Attributes</Typography>
           <List dense disablePadding>
-            {attributes.slice(0, 40).map(([key, value]) => (
-              <ListItem key={key} disableGutters sx={{ py: 0 }}>
-                <ListItemText
-                  primary={typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                  secondary={key}
-                  primaryTypographyProps={{ variant: 'body2', sx: { wordBreak: 'break-all' } }}
-                  secondaryTypographyProps={{ variant: 'caption' }}
-                />
-              </ListItem>
-            ))}
+            {attributes.slice(0, 40).map(([key, value]) => {
+              // Parser-emitted file icons ({type:'svg', svg:'<svg…>'}) render
+              // inline (sanitized) instead of as a JSON blob.
+              const svg = toSafeSvg(value);
+              if (svg) {
+                return (
+                  <ListItem key={key} disableGutters sx={{ py: 0.5 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                          bgcolor: 'action.hover',
+                          '& svg': { width: 28, height: 28 },
+                        }}
+                        // Sanitized by toSafeSvg (no scripts/handlers/URLs).
+                        dangerouslySetInnerHTML={{ __html: svg }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        {key}
+                      </Typography>
+                    </Stack>
+                  </ListItem>
+                );
+              }
+              return (
+                <ListItem key={key} disableGutters sx={{ py: 0 }}>
+                  <ListItemText
+                    primary={typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    secondary={key}
+                    primaryTypographyProps={{ variant: 'body2', sx: { wordBreak: 'break-all' } }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </>
       )}

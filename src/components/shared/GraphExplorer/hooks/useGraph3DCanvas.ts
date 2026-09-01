@@ -27,6 +27,7 @@ import {
   FORCE_FRAME_BUDGET_MS,
   LABEL_3D_MAX_DISTANCE,
   LINK_TYPE_COLORS,
+  MAX_EDGE_LABELS,
   MAX_VISIBLE_LABELS_3D,
   NODE_3D_RADIUS_SCALE,
   NODE_TYPE_COLORS,
@@ -37,6 +38,7 @@ import {
   VIEWPORT_ANIMATION_MS,
 } from '../constants';
 import {
+  Bounds,
   GraphCameraState,
   GraphCanvasController,
   GraphInteractionEvent,
@@ -118,7 +120,7 @@ class LabelSprites {
     this.active.clear();
   }
 
-  place(id: number, text: string, position: GraphPoint, radius: number, emphasis: boolean): void {
+  place(id: number | string, text: string, position: GraphPoint, radius: number, emphasis: boolean): void {
     const key = `${id}`;
     let sprite = this.cache.get(key);
     if (!sprite || sprite.userData.text !== text || sprite.userData.emphasis !== emphasis) {
@@ -189,6 +191,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
 
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [marquee, setMarquee] = useState<Bounds | null>(null);
 
   const orbitRef = useRef<OrbitState>({
     target: new THREE.Vector3(0, 0, 0),
@@ -448,20 +451,41 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
       const positionsArr = new Float32Array(edges.length * 6);
       const colorsArr = new Float32Array(edges.length * 6);
       const selectedArr: number[] = [];
+      const edgeLabelItems: Array<{ id: string; mid: GraphPoint; text: string }> = [];
+      const anySelected = selection.nodeIds.size > 0;
       let n = 0;
       for (const edge of edges) {
         const a = byId.get(edge.source);
         const b = byId.get(edge.target);
         if (!a || !b) continue;
+        // Selecting a node lights up its connections and labels them.
+        const highlighted =
+          selection.edgeIds.has(edge.id) ||
+          (anySelected && (selection.nodeIds.has(edge.source) || selection.nodeIds.has(edge.target)));
         const color = tmpColor.setHex(
           edge.origin === 'overlay'
             ? OVERLAY_ACCENT_COLOR
             : LINK_TYPE_COLORS[edge.types[0] ?? 'UNKNOWN'] ?? LINK_TYPE_COLORS.UNKNOWN
         );
+        if (highlighted) color.lerp(new THREE.Color(0xffffff), 0.4);
         positionsArr.set([a.p.x, a.p.y, a.p.z ?? 0, b.p.x, b.p.y, b.p.z ?? 0], n * 6);
         colorsArr.set([color.r, color.g, color.b, color.r, color.g, color.b], n * 6);
-        if (selection.edgeIds.has(edge.id)) {
+        if (highlighted) {
           selectedArr.push(a.p.x, a.p.y, a.p.z ?? 0, b.p.x, b.p.y, b.p.z ?? 0);
+          if (edgeLabelItems.length < MAX_EDGE_LABELS) {
+            edgeLabelItems.push({
+              id: `edge:${edge.id}`,
+              mid: {
+                x: (a.p.x + b.p.x) / 2,
+                y: ((a.p.y + b.p.y) / 2) - 10, // place() re-adds radius+14
+                z: ((a.p.z ?? 0) + (b.p.z ?? 0)) / 2,
+              },
+              text: (() => {
+                const typeText = edge.types.map((t) => t.toLowerCase()).join(' · ');
+                return edge.title && edge.title.toLowerCase() !== typeText ? `${typeText} — ${edge.title}` : typeText;
+              })(),
+            });
+          }
         }
         n++;
       }
@@ -485,6 +509,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
         .sort((a, b) => Number(b.important) - Number(a.important) || a.d - b.d)
         .slice(0, MAX_VISIBLE_LABELS_3D);
       for (const c of candidates) labels.place(c.node.id, c.node.name, c.entry.p, c.entry.r, c.important);
+      for (const item of edgeLabelItems) labels.place(item.id, item.text, item.mid, -4, false);
       labels.end();
 
       // Edge preview.
@@ -545,7 +570,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
 
     const drag = {
       active: false,
-      mode: 'none' as 'none' | 'orbit' | 'pan' | 'node',
+      mode: 'none' as 'none' | 'orbit' | 'pan' | 'node' | 'marquee',
       moved: false,
       startX: 0,
       startY: 0,
@@ -559,7 +584,8 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 && e.button !== 2) return;
-      canvas.setPointerCapture?.(e.pointerId);
+      // Synthetic events (tests) and detached pointers can make capture throw.
+      try { canvas.setPointerCapture?.(e.pointerId); } catch { /* no active pointer */ }
       cameraTweenRef.current = null;
       drag.active = true;
       drag.moved = false;
@@ -572,10 +598,48 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
         const p = propsRef.current.positions.get(hit) ?? { x: 0, y: 0, z: 0 };
         const normal = camera.getWorldDirection(new THREE.Vector3()).negate();
         drag.plane.setFromNormalAndCoplanarPoint(normal, new THREE.Vector3(p.x, p.y, p.z ?? 0));
+      } else if (e.button === 0 && e.shiftKey) {
+        // Shift-drag = marquee multi-select (matches the 2D board);
+        // panning stays on right-drag.
+        drag.mode = 'marquee';
+        drag.nodeId = null;
       } else {
-        drag.mode = e.button === 2 || e.shiftKey ? 'pan' : 'orbit';
+        drag.mode = e.button === 2 ? 'pan' : 'orbit';
         drag.nodeId = null;
       }
+    };
+
+    const marqueeRect = (e: PointerEvent): Bounds => {
+      const rect = canvas.getBoundingClientRect();
+      const x1 = drag.startX - rect.left;
+      const y1 = drag.startY - rect.top;
+      const x2 = e.clientX - rect.left;
+      const y2 = e.clientY - rect.top;
+      return {
+        x: Math.min(x1, x2),
+        y: Math.min(y1, y2),
+        width: Math.abs(x2 - x1),
+        height: Math.abs(y2 - y1),
+      };
+    };
+
+    /** Nodes whose projected screen position falls inside the rect. */
+    const nodesInRect = (rect: Bounds): number[] => {
+      const { nodes, positions } = propsRef.current;
+      const size = canvas.getBoundingClientRect();
+      const out: number[] = [];
+      for (const node of nodes) {
+        const p = positions.get(node.id);
+        if (!p) continue;
+        tmpVec.set(p.x, p.y, p.z ?? 0).project(camera);
+        if (tmpVec.z < -1 || tmpVec.z > 1) continue; // behind the camera / clipped
+        const sx = ((tmpVec.x + 1) / 2) * size.width;
+        const sy = ((1 - tmpVec.y) / 2) * size.height;
+        if (sx >= rect.x && sx <= rect.x + rect.width && sy >= rect.y && sy <= rect.y + rect.height) {
+          out.push(node.id);
+        }
+      }
+      return out;
     };
 
     const onPointerMove = (e: PointerEvent) => {
@@ -611,6 +675,10 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
         }
       }
       const o = orbitRef.current;
+      if (drag.mode === 'marquee') {
+        setMarquee(marqueeRect(e));
+        return;
+      }
       if (drag.mode === 'node' && drag.nodeId !== null) {
         const world = worldOnPlane(e, drag.plane);
         if (world) {
@@ -633,7 +701,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
 
     const onPointerUp = (e: PointerEvent) => {
       if (!drag.active) return;
-      canvas.releasePointerCapture?.(e.pointerId);
+      try { canvas.releasePointerCapture?.(e.pointerId); } catch { /* not captured */ }
       const wasClick = !drag.moved;
       const mode = drag.mode;
       const nodeId = drag.nodeId;
@@ -648,9 +716,14 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
         if (mode === 'node' && nodeId !== null) {
           const p = propsRef.current.positions.get(nodeId);
           if (p) propsRef.current.events.onNodeDrag?.(nodeId, p, 'end');
+        } else if (mode === 'marquee') {
+          const rect = marqueeRect(e);
+          setMarquee(null);
+          propsRef.current.events.onMarqueeSelectIds?.(nodesInRect(rect), event);
         }
         return;
       }
+      if (mode === 'marquee') setMarquee(null);
       if (e.button === 2) return; // context menu handled separately
       const hit = pick(e);
       const now = performance.now();
@@ -798,6 +871,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
       if (canvas.parentElement === container) container.removeChild(canvas);
       syncRef.current = () => undefined;
       setHoveredNodeId(null);
+      setMarquee(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
@@ -816,7 +890,7 @@ export function useGraph3DCanvas(props: UseGraph3DCanvasProps): GraphCanvasContr
     focusOn,
     runForceLayout,
     setEdgePreview,
-    marquee: null,
+    marquee,
     zoom,
   };
 }

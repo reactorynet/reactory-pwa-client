@@ -118,6 +118,8 @@ export const SELECTION_RING_COLOR = 0xffd700; // trace gold
 export const FOCUS_RING_COLOR = 0x00bcd4; // cyan highlight
 export const EDGE_SELECTED_COLOR = 0x00bcd4;
 export const EDGE_PREVIEW_COLOR = 0xffd700;
+/** Max simultaneously labelled edges (selection-incident). */
+export const MAX_EDGE_LABELS = 24;
 
 // ============================================================================
 // Level of detail

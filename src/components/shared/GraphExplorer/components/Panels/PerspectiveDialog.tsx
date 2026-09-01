@@ -101,6 +101,10 @@ export interface PerspectiveManagerDialogProps {
   loading: boolean;
   perspectives: GraphPerspective[];
   currentId?: string;
+  /** Root of the view currently on canvas — its perspectives list first. */
+  currentRootId?: number | null;
+  /** Resolve a perspective's root to a project name for the scope chip. */
+  projectNameFor?(catalogNodeId: number | null): string | null;
   readOnly?: boolean;
   onLoad(perspective: GraphPerspective): void;
   onRename(perspective: GraphPerspective, name: string): void;
@@ -117,6 +121,8 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
     loading,
     perspectives,
     currentId,
+    currentRootId,
+    projectNameFor,
     readOnly,
     onLoad,
     onRename,
@@ -145,6 +151,23 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
     setEditing(null);
   };
 
+  // Current project's perspectives first, everything else after, both keeping
+  // the server order (default first, then most recently updated).
+  const ordered = React.useMemo(() => {
+    if (currentRootId === undefined || currentRootId === null) return perspectives;
+    return [
+      ...perspectives.filter((p) => p.catalogNodeId === currentRootId),
+      ...perspectives.filter((p) => p.catalogNodeId !== currentRootId),
+    ];
+  }, [perspectives, currentRootId]);
+
+  const scopeChip = (p: GraphPerspective): string | null => {
+    if (currentRootId !== undefined && currentRootId !== null && p.catalogNodeId === currentRootId) return null;
+    const name = projectNameFor?.(p.catalogNodeId);
+    if (name) return name;
+    return p.catalogNodeId !== null ? `root #${p.catalogNodeId}` : 'unscoped';
+  };
+
   const describe = (p: GraphPerspective) =>
     [
       `${p.positions.length} node(s)`,
@@ -163,11 +186,11 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
         {loading && <CircularProgress size={22} sx={{ display: 'block', mx: 'auto', my: 2 }} />}
         {!loading && perspectives.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-            No saved perspectives for this project yet. Arrange the graph and use Save.
+            No saved perspectives yet. Arrange the graph and use Save.
           </Typography>
         )}
         <List dense disablePadding>
-          {perspectives.map((perspective) => {
+          {ordered.map((perspective) => {
             const editingThis = editing?.perspective.id === perspective.id;
             return (
               <ListItem
@@ -211,6 +234,9 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
                           <span>{perspective.name}</span>
                           {perspective.isDefault && <Chip size="small" label="default" />}
                           {perspective.share && <Chip size="small" variant="outlined" label={perspective.isOwner ? 'shared' : 'shared with you'} />}
+                          {scopeChip(perspective) && (
+                            <Chip size="small" variant="outlined" color="info" icon={<Icon fontSize="small">hub</Icon>} label={scopeChip(perspective)} />
+                          )}
                         </Stack>
                       }
                       secondary={describe(perspective)}

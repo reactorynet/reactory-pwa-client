@@ -14,10 +14,12 @@ import { GraphNode } from '../../types';
 export interface SearchPanelProps {
   onSearch(term: string): Promise<GraphNode[]>;
   onResultClick(node: GraphNode): void;
+  /** Fires on every keystroke (trimmed) — hosts use it to filter their lists. */
+  onTermChange?(term: string): void;
 }
 
 export default function SearchPanel(props: SearchPanelProps) {
-  const { onSearch, onResultClick } = props;
+  const { onSearch, onResultClick, onTermChange } = props;
   const [results, setResults] = useState<GraphNode[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<number | undefined>(undefined);
@@ -25,6 +27,7 @@ export default function SearchPanel(props: SearchPanelProps) {
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const term = event.target.value;
+      onTermChange?.(term.trim());
       window.clearTimeout(debounceRef.current);
       if (term.trim().length < 2) {
         setResults([]);
@@ -41,7 +44,7 @@ export default function SearchPanel(props: SearchPanelProps) {
         }
       }, 350);
     },
-    [onSearch]
+    [onSearch, onTermChange]
   );
 
   return (

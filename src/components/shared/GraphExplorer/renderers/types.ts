@@ -42,6 +42,15 @@ export interface EdgeGeometryData {
   directed: boolean;
   dashed: boolean;
   selected: boolean;
+  /** Incident to the selected node(s) — rendered brighter, label shown. */
+  highlighted?: boolean;
+}
+
+/** Text pinned to an edge midpoint (types/title) while highlighted. */
+export interface EdgeLabelData {
+  id: string;
+  position: Point;
+  text: string;
 }
 
 // ============================================================================
@@ -105,6 +114,8 @@ export interface GraphCanvasEvents {
   onCanvasClick(position: Point, event: GraphInteractionEvent): void;
   onCanvasContextMenu(position: Point, event: GraphInteractionEvent): void;
   onMarqueeSelect(bounds: Bounds, event: GraphInteractionEvent): void;
+  /** Marquee resolved to node ids by the renderer (2D world AABB / 3D screen projection). */
+  onMarqueeSelectIds(nodeIds: number[], event: GraphInteractionEvent): void;
   /** Live marquee rectangle (screen space) while shift-dragging; null when done. */
   onMarqueeUpdate(bounds: Bounds | null): void;
   /** Pointer moved over the canvas (world space) — drives the edge-preview ghost. */
