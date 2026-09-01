@@ -19,4 +19,7 @@ BUILD_VERSION=$(node -p "require('./package.json').version")
 export REACTORY_CONFIG_ID
 export REACTORY_ENV_ID
 
+echo "Building Reactory Web Client key: [$REACTORY_CONFIG_ID] target: $REACTORY_ENV_ID"
+sh ./bin/generate.sh "$REACTORY_CONFIG_ID" "$REACTORY_ENV_ID"
+
 NODE_PATH=./src env-cmd -f ./config/env/$REACTORY_CONFIG_ID/.env.$REACTORY_ENV_ID npx babel-node scripts/build.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000
