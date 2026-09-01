@@ -39,10 +39,7 @@ yarn.lock
 *storybook.log
 storybook-static
 
-/src/components/plugins/*
-!/src/components/plugins/README.MD
-!/src/components/plugins/index.ts
-!/src/components/plugins/pluginImportFactory.ts
+/src/components/plugins/__index.ts
 
 /src/**/*.jsx
 /src/**/*.jsx.map
