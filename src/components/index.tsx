@@ -31,6 +31,7 @@ import { ReactoryFormEnhanced as ReactoryFormV2 } from './reactory/ReactoryForm/
 import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
+import { CalendarLayout, MonthView, WeekView, DayView, AgendaView, YearView, MultiDayView, ScheduleView } from './shared/ReactoryCalendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
 import Logo from './shared/logo';
 import SlideOutLauncher from './shared/SlideOutLauncher';
@@ -525,6 +526,22 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: Calendar,
     description: 'A calendar component for displaying dates, events, and scheduling information with interactive features.',
     tags: ['calendar', 'date', 'events', 'scheduling'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryCalendar',
+    version: '1.0.0',
+    component: CalendarLayout,
+    description: 'A full-featured composable calendar component supporting Month, Week, Day, Agenda, Year, MultiDay, and Schedule resource views with drag and drop.',
+    tags: ['calendar', 'schedule', 'agenda', 'month', 'week', 'day', 'events'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'CalendarLayout',
+    version: '1.0.0',
+    component: CalendarLayout,
+    description: 'The layout orchestrator for the ReactoryCalendar component system.',
+    tags: ['calendar', 'layout', 'schedule'],
   },
   
   {
