@@ -20,7 +20,11 @@ The chat's Neural Graph side-panel viewer (`reactor.NeuralBackground@1.0.0`,
 `ReactorChat/components/NeuralGraphViewer.tsx`) is a thin adapter that
 mounts this component in 3D with chat props (conversation root, agent
 overlay, steering, pin) — so the 2D and 3D surfaces have identical
-capabilities by construction. The ambient background behind the chat
+capabilities by construction. The conversation perspective is live: while the
+root is the conversation node the shell polls `refreshRoot()` every 30s
+(ProcessConversationWorkflow keeps growing the graph server-side) and merges
+the agent overlay as tool results stream in; until the conversation has been
+graphed it polls `ReactorConversationNode` every 30s and shows the overlay. The ambient background behind the chat
 (`NeuralBrainBackground.tsx`) is decoration only and does not talk to the
 server.
 
@@ -127,6 +131,13 @@ key down the lazy tree when a node isn't in its cache).
 
 ### The graphMapping seam
 
+The graph search box (left drawer) searches the whole system graph via
+`ReactorNodesByTerm` *and* filters the Projects list beneath it by the same
+term. Each project row carries two actions: **+** merges that project's root
+and first hop into the current view (`addRootNeighborhood` — placed beside
+the existing content, so a perspective can span several projects) and **⟳**
+replaces the view (same as clicking the row).
+
 `utils/graphMapping.ts` is the only place wire shapes are interpreted:
 
 - Edge endpoints normalize to numbers whether the server sends scalar
@@ -227,8 +238,18 @@ WorkflowDesigner's, ports removed): pan (drag empty canvas), wheel zoom
 anchored under the cursor, shift-drag marquee, node drag, click vs
 double-click discrimination, context menu, touch pan/pinch. Events flow out
 through the `GraphCanvasEvents` contract; the shell decides what they mean
-(double-click = toggle expand, right-click = context menu, Delete = hide,
-Escape = cancel tool mode / clear selection, `f` = focus selection or fit).
+(double-click = toggle expand, right-click = context menu, Delete/Backspace =
+remove the selection from the view & perspective, Shift+Delete = hide
+(restorable), Escape = cancel tool mode / clear selection, `f` = focus
+selection or fit). Multi-select: shift/ctrl/meta-click is additive in both
+renderers; shift-drag draws a marquee (2D: world AABB via the spatial hash;
+3D: screen-space rectangle over projected node positions — panning moves to
+right-drag there). Marquee results reach the shell as node ids
+(`onMarqueeSelectIds`), so it never cares which renderer produced them.
+
+Selecting nodes highlights their incident edges in both renderers (brightened,
+solid, wider in 2D) and labels each highlighted edge at its midpoint with its
+link types and title (capped at `MAX_EDGE_LABELS`).
 The shell also owns two **tool modes**: *edge* (pick a target node to create
 a link; a ghost line follows the pointer) and *path* (pick two nodes; the
 server's `ReactorGraphPath` result is merged and selected).
@@ -293,6 +314,10 @@ current one in place when owned (a shared one saves as a private copy),
 `setPerspectiveDefault` patch metadata only, `duplicatePerspective` copies
 server-side, `deletePerspective`, and `openRoot` applies the owner's default
 for that root (never an arbitrary first entry).
+
+Removal semantics: **Remove** (Delete, inspector, context menu) drops nodes
+from the store, so the next perspective save excludes them; **Hide** keeps
+them loaded and records them in `hiddenNodeIds` (restorable via Unhide).
 
 `applyPerspective` re-materializes: it diffs saved ids against the store,
 batch-fetches missing nodes and the persisted edges among the set

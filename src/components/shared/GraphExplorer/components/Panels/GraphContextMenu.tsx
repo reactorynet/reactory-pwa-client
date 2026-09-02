@@ -21,6 +21,8 @@ export interface GraphContextMenuProps {
   onStartEdge(node: GraphNode): void;
   onEditNodeData(node: GraphNode): void;
   onHide(node: GraphNode): void;
+  /** Remove from the view/perspective (not persisted server data). */
+  onRemove(node: GraphNode): void;
 }
 
 export default function GraphContextMenu(props: GraphContextMenuProps) {
@@ -36,6 +38,7 @@ export default function GraphContextMenu(props: GraphContextMenuProps) {
     onStartEdge,
     onEditNodeData,
     onHide,
+    onRemove,
   } = props;
   const node = state?.node;
   const run = (fn: (node: GraphNode) => void) => () => {
@@ -88,7 +91,11 @@ export default function GraphContextMenu(props: GraphContextMenuProps) {
       <Divider />
       <MenuItem onClick={run(onHide)}>
         <ListItemIcon><Icon fontSize="small">visibility_off</Icon></ListItemIcon>
-        <ListItemText>Hide</ListItemText>
+        <ListItemText>Hide (restorable)</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={run(onRemove)}>
+        <ListItemIcon><Icon fontSize="small">delete</Icon></ListItemIcon>
+        <ListItemText>Remove from perspective (Del)</ListItemText>
       </MenuItem>
     </Menu>
   );

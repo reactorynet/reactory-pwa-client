@@ -42,6 +42,10 @@ export interface UseGraphExplorerReturn {
   store: UseGraphStoreReturn;
   data: UseGraphDataReturn;
   loadRoot(catalogNodeId: number, nodeKey?: string, depth?: number): Promise<GraphNode | null>;
+  /** Re-fetch the current root's neighbourhood and merge new nodes/edges. */
+  refreshRoot(): Promise<void>;
+  /** Merge another project root (+1 hop) into the current view (the "+" action). */
+  addRootNeighborhood(node: GraphNode): Promise<GraphNode | null>;
   /** Load a root, then apply the owner's default perspective if one exists. */
   openRoot(catalogNodeId: number, nodeKey?: string, depth?: number): Promise<GraphPerspective | null>;
   expandNode(node: GraphNode): Promise<void>;
@@ -443,6 +447,86 @@ export function useGraphExplorer(): UseGraphExplorerReturn {
     [data, dispatch, positions, animator, layoutNewNodes, reactory]
   );
 
+  /**
+   * Merge another project's root + first hop into the CURRENT view without
+   * resetting it — the "+" affordance for composing a perspective out of
+   * several projects. The new root is placed to the right of the existing
+   * content and its children fan out from there.
+   */
+  const addRootNeighborhood = useCallback(
+    async (node: GraphNode): Promise<GraphNode | null> => {
+      const current = stateRef.current;
+      if (current.loading.has(node.id)) return null;
+      dispatch({ type: 'NODE_LOADING', nodeId: node.id, loading: true });
+      try {
+        // Hydrate via the ancestry key first — the subgraph query alone can
+        // return a placeholder for projects that are lazily materialized.
+        const hydrated = (await data.getNode(node.id, node.key)) ?? node;
+        const result = await data.getNeighborhood(node.id, 1);
+        const root = { ...(result.nodes.find((n) => n.id === node.id) ?? {}), ...hydrated };
+        if (!result.nodes.some((n) => n.id === node.id)) result.nodes.push(root);
+        // Place the incoming root beside the existing content.
+        if (!positions.get(node.id)) {
+          let maxX = -Infinity;
+          let sumY = 0;
+          let sumZ = 0;
+          let count = 0;
+          for (const [id, p] of positions.snapshot()) {
+            if (!current.nodes.has(id)) continue;
+            maxX = Math.max(maxX, p.x);
+            sumY += p.y;
+            sumZ += p.z ?? 0;
+            count += 1;
+          }
+          positions.set(node.id, {
+            x: (Number.isFinite(maxX) ? maxX : 0) + fanRadius(result.nodes.length) + 260,
+            y: count ? sumY / count : 0,
+            z: count ? sumZ / count : 0,
+          });
+        }
+        const nodes = result.nodes.map((n) => (n.id === node.id ? root : n));
+        layoutNewNodes(nodes.filter((n) => n.id !== node.id), result.edges, root);
+        dispatch({
+          type: 'MERGE_SUBGRAPH',
+          nodes,
+          edges: result.edges,
+          expandedNodeId: node.id,
+          truncated: result.truncated,
+        });
+        return root;
+      } catch (err) {
+        dispatch({ type: 'NODE_LOADING', nodeId: node.id, loading: false });
+        reactory.log(`GraphExplorer: add-to-view failed for node ${node.id}`, { err }, 'error');
+        return null;
+      }
+    },
+    [data, dispatch, positions, layoutNewNodes, reactory]
+  );
+
+  /**
+   * Re-fetch the root neighbourhood and merge — keeps a live perspective
+   * (e.g. the chat conversation) growing without resetting the view.
+   */
+  const refreshRoot = useCallback(async () => {
+    const current = stateRef.current;
+    if (current.rootId === null) return;
+    const root = current.nodes.get(current.rootId);
+    try {
+      const result = await data.getNeighborhood(current.rootId, current.depth);
+      const fresh = result.nodes.filter((n) => !current.nodes.has(n.id));
+      if (fresh.length === 0 && result.edges.every((e) => current.edges.has(e.id))) return;
+      layoutNewNodes(fresh, result.edges, root);
+      dispatch({
+        type: 'MERGE_SUBGRAPH',
+        nodes: result.nodes,
+        edges: result.edges,
+        truncated: result.truncated,
+      });
+    } catch (err) {
+      reactory.log('GraphExplorer: root refresh failed', { err }, 'warn');
+    }
+  }, [data, dispatch, layoutNewNodes, reactory]);
+
   const expandNode = useCallback(
     async (node: GraphNode) => {
       if (stateRef.current.loading.has(node.id)) return;
@@ -559,10 +643,62 @@ export function useGraphExplorer(): UseGraphExplorerReturn {
     [data, jumpToSearchResult]
   );
 
+  /** BFS over the edges already in the store (containment included). */
+  const findLocalPath = useCallback((sourceId: number, targetId: number): PathResult => {
+    const current = stateRef.current;
+    if (!current.nodes.has(sourceId) || !current.nodes.has(targetId)) {
+      return { found: false, nodeIds: [], edgeIds: [] };
+    }
+    const discoveredBy = new Map<number, GraphEdge>();
+    const visited = new Set<number>([sourceId]);
+    let frontier = [sourceId];
+    while (frontier.length > 0 && !visited.has(targetId)) {
+      const next: number[] = [];
+      for (const id of frontier) {
+        for (const edgeId of current.adjacency.get(id) ?? []) {
+          const edge = current.edges.get(edgeId);
+          if (!edge) continue;
+          const other = edge.source === id ? edge.target : edge.source;
+          if (visited.has(other)) continue;
+          visited.add(other);
+          discoveredBy.set(other, edge);
+          next.push(other);
+        }
+      }
+      frontier = next;
+    }
+    if (!visited.has(targetId)) return { found: false, nodeIds: [], edgeIds: [] };
+    const nodeIds = [targetId];
+    const edgeIds: string[] = [];
+    let cursor = targetId;
+    while (cursor !== sourceId) {
+      const via = discoveredBy.get(cursor);
+      if (!via) break;
+      edgeIds.unshift(via.id);
+      cursor = via.source === cursor ? via.target : via.source;
+      nodeIds.unshift(cursor);
+    }
+    return { found: true, nodeIds, edgeIds };
+  }, []);
+
   const findPathBetween = useCallback(
     async (sourceId: number, targetId: number): Promise<PathResult> => {
-      const result = await data.findPath(sourceId, targetId);
-      if (!result.found) return { found: false, nodeIds: [], edgeIds: [] };
+      const result = await data.findPath(sourceId, targetId).catch(() => ({
+        found: false,
+        nodes: [] as GraphNode[],
+        edges: [] as GraphEdge[],
+        truncated: false,
+      }));
+      if (!result.found) {
+        // The server walks the persisted graph; the view may hold containment
+        // or overlay edges it cannot see — fall back to what is on canvas.
+        const local = findLocalPath(sourceId, targetId);
+        if (local.found) {
+          dispatch({ type: 'UNHIDE_NODES', nodeIds: local.nodeIds });
+          dispatch({ type: 'SET_SELECTION', nodeIds: local.nodeIds, edgeIds: local.edgeIds });
+        }
+        return local;
+      }
       const anchor = stateRef.current.nodes.get(sourceId);
       layoutNewNodes(result.nodes, result.edges, anchor);
       dispatch({ type: 'MERGE_SUBGRAPH', nodes: result.nodes, edges: result.edges });
@@ -842,10 +978,10 @@ export function useGraphExplorer(): UseGraphExplorerReturn {
     [data, dispatch]
   );
 
-  const listPerspectives = useCallback(
-    () => data.listPerspectives({ catalogNodeId: stateRef.current.rootId }),
-    [data]
-  );
+  // The manager lists EVERYTHING the user can see (own + shared, any project)
+  // — loading one re-roots the view as needed. Only the default-perspective
+  // lookup in openRoot stays scoped to its root.
+  const listPerspectives = useCallback(() => data.listPerspectives({}), [data]);
 
   const applyPerspective = useCallback(
     async (perspective: GraphPerspective): Promise<GraphCameraState> => {
@@ -952,6 +1088,8 @@ export function useGraphExplorer(): UseGraphExplorerReturn {
     data,
     loadRoot,
     openRoot,
+    refreshRoot,
+    addRootNeighborhood,
     expandNode,
     collapseNode,
     toggleNode,

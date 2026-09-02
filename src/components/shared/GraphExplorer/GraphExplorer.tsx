@@ -97,6 +97,7 @@ export default function GraphExplorer(props: GraphExplorerProps) {
   const effectiveHeight = height ?? (compact ? '100%' : 'calc(100vh - 64px)');
 
   const [catalogs, setCatalogs] = useState<GraphNode[]>([]);
+  const [catalogFilter, setCatalogFilter] = useState('');
   const [leftOpen, setLeftOpen] = useState(!compact);
   const [mode, setMode] = useState<ToolMode>({ kind: 'none' });
   const [edgeDialog, setEdgeDialog] = useState<{ from: GraphNode; to: GraphNode; edge?: GraphEdge } | null>(null);
@@ -150,6 +151,15 @@ export default function GraphExplorer(props: GraphExplorerProps) {
       (e): e is NonNullable<typeof e> => e !== undefined
     );
   }, [selectedNode, state.adjacency, state.edges]);
+
+  // The graph search box also narrows the Projects list below it.
+  const filteredCatalogs = useMemo(() => {
+    const term = catalogFilter.toLowerCase();
+    if (!term) return catalogs;
+    return catalogs.filter((c) =>
+      `${c.nameSpace ?? ''}.${c.name}`.toLowerCase().includes(term) || c.name.toLowerCase().includes(term)
+    );
+  }, [catalogs, catalogFilter]);
 
   const presentTypes = useMemo(() => {
     const nodeTypes = new Set(Array.from(state.nodes.values(), (n) => n.type));
@@ -227,23 +237,8 @@ export default function GraphExplorer(props: GraphExplorerProps) {
         dispatch({ type: 'SET_SELECTION', nodeIds: [], edgeIds: [] });
         dispatch({ type: 'SET_FOCUS', nodeId: null });
       },
-      onMarqueeSelect: (bounds, event) => {
-        const hit = stateRef.current.nodes.size
-          ? Array.from(stateRef.current.nodes.values())
-              .filter((node) => {
-                if (stateRef.current.hidden.has(node.id)) return false;
-                const p = positions.get(node.id);
-                return (
-                  p &&
-                  p.x >= bounds.x &&
-                  p.x <= bounds.x + bounds.width &&
-                  p.y >= bounds.y &&
-                  p.y <= bounds.y + bounds.height
-                );
-              })
-              .map((node) => node.id)
-          : [];
-        dispatch({ type: 'SET_SELECTION', nodeIds: hit, additive: event.modifiers.shift && event.modifiers.meta });
+      onMarqueeSelectIds: (nodeIds, event) => {
+        dispatch({ type: 'SET_SELECTION', nodeIds, additive: event.modifiers.meta || event.modifiers.ctrl });
       },
       onViewportChange: () => {
         if (stateRef.current.perspective) dispatch({ type: 'MARK_DIRTY' });
@@ -341,6 +336,29 @@ export default function GraphExplorer(props: GraphExplorerProps) {
 
   const openCatalog = useCallback((node: GraphNode) => openRoot(node.id, node.key), [openRoot]);
 
+  /** "+" on a project: merge it into the current view instead of replacing. */
+  const addCatalog = useCallback(
+    async (node: GraphNode) => {
+      if (stateRef.current.rootId === null) {
+        // Nothing loaded yet — adding and replacing are the same thing.
+        await openCatalog(node);
+        return;
+      }
+      const added = await explorer.addRootNeighborhood(node);
+      if (added) {
+        requestAnimationFrame(() => canvasRef.current.focusOn(added.id));
+        setNotice(
+          stateRef.current.perspective
+            ? `${node.name} added — save the perspective to keep it`
+            : `${node.name} added to the view`
+        );
+      } else {
+        setNotice(`Failed to add ${node.name}`);
+      }
+    },
+    [openCatalog, explorer]
+  );
+
   // Route/props → root resolution: catalogNodeId > projectId > conversationId.
   // `conversationRetry` re-runs the conversation branch until the session has
   // been graphed server-side (ProcessConversationWorkflow runs ~60s after the
@@ -387,6 +405,7 @@ export default function GraphExplorer(props: GraphExplorerProps) {
         rootId = node.id;
         rootKey = node.key;
         depth = 2;
+        conversationRootRef.current = node.id;
       }
       if (cancelled || rootId === null) return;
       await openRoot(rootId, rootKey, depth);
@@ -407,6 +426,21 @@ export default function GraphExplorer(props: GraphExplorerProps) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.capabilitiesResolved, catalogNodeId, projectId, conversationId, nodeId, conversationRetry]);
+
+  // Live conversation perspective: while the root is the conversation node,
+  // keep merging the server-side graph as ProcessConversationWorkflow grows it.
+  const conversationRootRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!conversationId) return undefined;
+    const timer = window.setInterval(() => {
+      const current = stateRef.current;
+      if (current.rootId !== null && current.rootId === conversationRootRef.current) {
+        void explorer.refreshRoot();
+      }
+    }, 30000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
 
   // Overlay (host-injected graph) — merge whenever it changes.
   const lastOverlayRef = useRef<typeof overlay>(undefined);
@@ -590,6 +624,22 @@ export default function GraphExplorer(props: GraphExplorerProps) {
       if (nodeIds.length === 0) return;
       explorer.hideNodes(nodeIds);
       dispatch({ type: 'SET_SELECTION', nodeIds: [], edgeIds: [] });
+      setNotice(`${nodeIds.length} node(s) hidden — restore with Unhide`);
+    },
+    [explorer, dispatch]
+  );
+
+  /** Remove from the canvas and (on next save) from the perspective. */
+  const handleRemove = useCallback(
+    (nodeIds: number[]) => {
+      if (nodeIds.length === 0) return;
+      explorer.removeNodes(nodeIds);
+      dispatch({ type: 'SET_SELECTION', nodeIds: [], edgeIds: [] });
+      setNotice(
+        stateRef.current.perspective
+          ? `${nodeIds.length} node(s) removed — save the perspective to persist`
+          : `${nodeIds.length} node(s) removed from the view`
+      );
     },
     [explorer, dispatch]
   );
@@ -722,7 +772,9 @@ export default function GraphExplorer(props: GraphExplorerProps) {
         const selected = Array.from(current.selection.nodeIds);
         if (selected.length > 0) {
           e.preventDefault();
-          handleHide(selected);
+          // Delete removes (drops from the perspective); Shift+Delete hides.
+          if (e.shiftKey) handleHide(selected);
+          else handleRemove(selected);
         }
         return;
       }
@@ -734,7 +786,7 @@ export default function GraphExplorer(props: GraphExplorerProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dispatch, handleHide, cancelMode]);
+  }, [dispatch, handleHide, handleRemove, cancelMode]);
 
   const nodeName = useCallback(
     (id: number) => state.nodes.get(id)?.name ?? `#${id}`,
@@ -777,13 +829,14 @@ export default function GraphExplorer(props: GraphExplorerProps) {
           '& .MuiDrawer-paper': { width: LEFT_PANEL_WIDTH, position: 'relative', height: '100%', overflowY: 'auto' },
         }}
       >
-        <SearchPanel onSearch={handleSearch} onResultClick={handleSearchResult} />
+        <SearchPanel onSearch={handleSearch} onResultClick={handleSearchResult} onTermChange={setCatalogFilter} />
         <Divider />
         <CatalogPicker
-          catalogs={catalogs}
+          catalogs={filteredCatalogs}
           selectedId={state.rootId}
           loading={data.loading}
           onSelect={openCatalog}
+          onAdd={(node) => void addCatalog(node)}
         />
         <Divider />
         <FilterPanel
@@ -926,6 +979,9 @@ export default function GraphExplorer(props: GraphExplorerProps) {
           onSelectEdge={(edgeId) => dispatch({ type: 'SET_SELECTION', nodeIds: Array.from(state.selection.nodeIds), edgeIds: [edgeId] })}
           onFocus={(node) => canvas.focusOn(node.id)}
           onHide={(node) => handleHide([node.id])}
+          onRemove={(node) => handleRemove([node.id])}
+          onHideSelection={() => handleHide(Array.from(state.selection.nodeIds))}
+          onRemoveSelection={() => handleRemove(Array.from(state.selection.nodeIds))}
           onOpenFile={(node) => setFilePreview(node)}
         />
       </Drawer>
@@ -942,6 +998,7 @@ export default function GraphExplorer(props: GraphExplorerProps) {
         onStartEdge={startEdge}
         onEditNodeData={setNodeDataDialog}
         onHide={(node) => handleHide([node.id])}
+        onRemove={(node) => handleRemove([node.id])}
       />
 
       <EdgeEditorDialog
@@ -975,6 +1032,10 @@ export default function GraphExplorer(props: GraphExplorerProps) {
         loading={manager.loading}
         perspectives={manager.perspectives}
         currentId={state.perspective?.id}
+        currentRootId={state.rootId}
+        projectNameFor={(catalogNodeId) =>
+          catalogNodeId === null ? null : catalogs.find((c) => c.id === catalogNodeId)?.name ?? null
+        }
         readOnly={readOnly}
         onLoad={(perspective) => void handleLoadPerspective(perspective)}
         onRename={(perspective, name) => void managerAction('Rename', () => explorer.renamePerspective(perspective, name))()}

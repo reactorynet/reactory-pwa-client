@@ -24,6 +24,7 @@ import {
   LINK_TYPE_COLORS,
   LOD_ICON_RADIUS_PX,
   LOD_LABEL_RADIUS_PX,
+  MAX_EDGE_LABELS,
   NODE_TYPE_COLORS,
   NODE_TYPE_RADII,
   OVERLAY_ACCENT_COLOR,
@@ -49,10 +50,12 @@ import { GraphLabelRenderer } from '../renderers/GraphLabelRenderer';
 import { GraphInteractionManager } from '../renderers/GraphInteractionManager';
 import {
   EdgeGeometryData,
+  EdgeLabelData,
   GraphCanvasEvents,
   NodeGeometryData,
   NodeLodTier,
 } from '../renderers/types';
+import * as THREE from 'three';
 import { createSteppingForceLayout, LayoutRequest, SteppingForceLayout } from '../layouts';
 
 export interface UseGraphCanvasProps {
@@ -190,6 +193,9 @@ export function useGraphWebGLCanvas(props: UseGraphCanvasProps): UseGraphWebGLCa
     }
 
     const edgeGeometry: EdgeGeometryData[] = [];
+    const edgeLabels: EdgeLabelData[] = [];
+    const tmpColor = new THREE.Color();
+    const anySelected = selection.nodeIds.size > 0;
     for (const edge of edges) {
       const source = byId.get(edge.source);
       const target = byId.get(edge.target);
@@ -201,30 +207,53 @@ export function useGraphWebGLCanvas(props: UseGraphCanvasProps): UseGraphWebGLCa
       const ux = dx / length;
       const uy = dy / length;
       const primaryType = edge.types[0] ?? 'UNKNOWN';
+      const selected = selection.edgeIds.has(edge.id);
+      // Selecting a node lights up its connections and labels them.
+      const highlighted =
+        anySelected && (selection.nodeIds.has(edge.source) || selection.nodeIds.has(edge.target));
+      const baseColor =
+        edge.origin === 'overlay'
+          ? OVERLAY_ACCENT_COLOR
+          : LINK_TYPE_COLORS[primaryType] ?? LINK_TYPE_COLORS.UNKNOWN;
+      const color = highlighted && !selected
+        ? tmpColor.setHex(baseColor).lerp(new THREE.Color(0xffffff), 0.45).getHex()
+        : baseColor;
+      const from = {
+        x: source.position.x + ux * source.radius,
+        y: source.position.y + uy * source.radius,
+      };
+      const to = {
+        x: target.position.x - ux * target.radius,
+        y: target.position.y - uy * target.radius,
+      };
       edgeGeometry.push({
         id: edge.id,
-        source: {
-          x: source.position.x + ux * source.radius,
-          y: source.position.y + uy * source.radius,
-        },
-        target: {
-          x: target.position.x - ux * target.radius,
-          y: target.position.y - uy * target.radius,
-        },
-        color:
-          edge.origin === 'overlay'
-            ? OVERLAY_ACCENT_COLOR
-            : LINK_TYPE_COLORS[primaryType] ?? LINK_TYPE_COLORS.UNKNOWN,
-        width: selection.edgeIds.has(edge.id) ? 3 : 1.5,
+        source: from,
+        target: to,
+        color,
+        width: selected || highlighted ? 3 : 1.5,
         directed: primaryType !== 'CONTAINS' && primaryType !== 'CONNECTION',
-        dashed: edge.types.some((t) => DASHED_LINK_TYPES.includes(t)),
-        selected: selection.edgeIds.has(edge.id),
+        // Highlighted edges render solid so the label sits on a firm line.
+        dashed: !highlighted && !selected && edge.types.some((t) => DASHED_LINK_TYPES.includes(t)),
+        selected,
+        highlighted,
       });
+      if ((highlighted || selected) && edgeLabels.length < MAX_EDGE_LABELS) {
+        const typeText = edge.types.map((t) => t.toLowerCase()).join(' · ');
+        // Skip titles that just repeat the type (synthetic containment).
+        const text = edge.title && edge.title.toLowerCase() !== typeText ? `${typeText} — ${edge.title}` : typeText;
+        edgeLabels.push({
+          id: edge.id,
+          position: { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 },
+          text,
+        });
+      }
     }
 
     nodeRenderer.updateNodes(nodeGeometry);
     edgeRenderer.updateEdges(edgeGeometry);
     labelRenderer?.updateLabels(nodeGeometry);
+    labelRenderer?.updateEdgeLabels(edgeLabels);
     interactionRef.current?.updateState(hash, edgeGeometry, viewportRef.current);
   }, []);
 
@@ -429,7 +458,13 @@ export function useGraphWebGLCanvas(props: UseGraphCanvasProps): UseGraphWebGLCa
         onEdgeClick: (id, e) => propsRef.current.events.onEdgeClick?.(id, e),
         onCanvasClick: (p, e) => propsRef.current.events.onCanvasClick?.(p, e),
         onCanvasContextMenu: (p, e) => propsRef.current.events.onCanvasContextMenu?.(p, e),
-        onMarqueeSelect: (bounds, e) => propsRef.current.events.onMarqueeSelect?.(bounds, e),
+        onMarqueeSelect: (bounds, e) => {
+          propsRef.current.events.onMarqueeSelect?.(bounds, e);
+          // Resolve the world AABB to node ids here (the hash only holds
+          // rendered nodes) so the shell is renderer-agnostic.
+          const ids = spatialHashRef.current.queryBounds(bounds);
+          propsRef.current.events.onMarqueeSelectIds?.(ids, e);
+        },
         onMarqueeUpdate: (bounds) => {
           setMarquee(bounds);
           propsRef.current.events.onMarqueeUpdate?.(bounds);
