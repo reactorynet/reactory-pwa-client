@@ -764,21 +764,22 @@ describe('ReactoryHOC (App)', () => {
 
       // Mock window.location
       delete (window as any).location;
-      window.location = { href: '' } as any;
+      window.location = { href: '', pathname: '/dashboard', search: '' } as any;
 
       render(<ReactoryHOC appTheme={{}} />);
 
-      await waitFor(() => {
-        expect(mockReactory.on).toHaveBeenCalled();
+      await act(async () => {
+        await Promise.resolve();
       });
 
       const onLogoutCall = mockReactory.on.mock.calls.find(
-        (call: any[]) => call[0] === 'onLogout'
+        (call: any[]) => call[0] === 'onLogout' || call[0] === 'loggedOut'
       );
       expect(onLogoutCall).toBeTruthy();
 
       await act(async () => {
         onLogoutCall[1]({ reason: 'session_expired' });
+        await Promise.resolve();
       });
 
       // Verify notification was created
@@ -788,11 +789,10 @@ describe('ReactoryHOC (App)', () => {
       );
 
       // Advance timers to trigger the redirect
-      jest.advanceTimersByTime(250);
+      act(() => {
+        jest.advanceTimersByTime(250);
+      });
 
-      // Verify redirect would be set (setTimeout was called)
-      // We can't directly test window.location.href in jsdom, but we verified the notification
-      
       jest.useRealTimers();
     });
 

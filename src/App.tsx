@@ -263,7 +263,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     // Get the current user data directly without triggering additional API calls
     const currentUser = reactory.getUser();
     if (currentUser && currentUser.loggedIn) {
-      setUser(currentUser);
+      setUser({ ...currentUser });
       setIsValidated(true);
       applyTheme();
 
@@ -278,7 +278,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       // If user data is not immediately available, set a timeout to retry
       setTimeout(async () => {
         const retryUser = reactory.getUser();
-        setUser(retryUser);
+        setUser(retryUser ? { ...retryUser } : null);
         setIsValidated(true);
         applyTheme();
 
@@ -297,7 +297,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.log('App.onLogout handler', { eventData });
 
     // Capture the current path before clearing state, for session expiry redirect
-    const currentPath = window.location.pathname + window.location.search;
+    const currentPath = window?.location ? `${window.location.pathname || ''}${window.location.search || ''}` : '';
     const isSessionExpired = eventData?.reason === 'session_expired';
 
     // Set flag to prevent re-rendering loops during auth transition
@@ -320,37 +320,50 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           }
         });
 
+        // Re-register built-in components after cleanup
+        componentRegistery.forEach((componentDef) => {
+          const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
+          reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+        });
+
         reactory.log('Forms and components cleaned up after logout');
       } catch (error) {
         reactory.error('Error cleaning up forms and components after logout:', error);
       }
     };
 
-    // Clear user data and reset authentication state
-    setUser(null);
-    setIsValidated(false);
-    setIsAuthenticating(false);
-    setIsReady(false);
+    // Cleanup forms and components and restore anonymous state
+    cleanupFormsAndComponents().then(() => {
+      const anonUser = reactory.getUser();
+      setUser(anonUser ? { ...anonUser } : null);
+      setIsValidated(true);
+      setIsAuthenticating(false);
+      setIsReady(true);
+      applyTheme();
 
-    // Cleanup forms and components
-    void cleanupFormsAndComponents();
-
-    // If session expired due to 401, navigate to login with redirect param
-    if (isSessionExpired && currentPath && currentPath !== '/login' && !currentPath.startsWith('/login?')) {
-      reactory.log(`Session expired, redirecting to login with return path: ${currentPath}`);
-      reactory.createNotification(
-        'Your session has expired. Please log in again.',
-        { type: 'warning', canDismiss: true, timeout: 5000, showInAppNotification: true }
-      );
-      const redirectPath = `/login?r=${encodeURIComponent(currentPath)}`;
-      // Use a short delay to allow cleanup to complete before navigating
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 250);
-    } else {
-      // Clear the transition flag after a short delay for normal logout
-      setTimeout(() => setIsAuthTransitioning(false), 100);
-    }
+      // If session expired due to 401, navigate to login with redirect param
+      if (isSessionExpired && currentPath && currentPath !== '/login' && !currentPath.startsWith('/login?')) {
+        reactory.log(`Session expired, redirecting to login with return path: ${currentPath}`);
+        reactory.createNotification(
+          'Your session has expired. Please log in again.',
+          { type: 'warning', canDismiss: true, timeout: 5000, showInAppNotification: true }
+        );
+        const redirectPath = `/login?r=${encodeURIComponent(currentPath)}`;
+        // Use a short delay to allow cleanup to complete before navigating
+        setTimeout(() => {
+          window.location.href = redirectPath;
+        }, 250);
+      } else {
+        // For normal logout, navigate to root
+        if (typeof reactory.navigation === 'function') {
+          reactory.navigation('/');
+        } else if (window?.location && window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
+        // Clear the transition flag after a short delay for normal logout
+        setTimeout(() => setIsAuthTransitioning(false), 100);
+      }
+    });
   };
 
 
@@ -397,12 +410,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     if (!(status === null || status === undefined)) {
       reactory.debug('App.onApiStatusUpdate(status)', { status });
-
-      // Skip updates during auth transitions to prevent loops
-      if (isAuthTransitioning) {
-        reactory.debug('Skipping API status update during auth transition');
-        return;
-      }
 
       let isOffline = status.offline === true;
 
@@ -641,7 +648,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   if (isReady === false) return <AppLoading message={"Loading..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
 
   // Keep the router mounted during authentication so public routes such as
-  // /login can render. The router owns matched-route auth/role decisions.
+  // /login can render and so a successful login can swap the route catalog.
   if (isAuthTransitioning === true && isAuthenticating === true && auth_validated === false && user === null) {
     return <AppLoading message={"Authenticating..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
   }

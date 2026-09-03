@@ -10,6 +10,7 @@ import CatchAllRoute from './CatchAllRoute';
 import RouteFailure from './widgets/RouteFailure';
 import RouteInspector from './widgets/RouteInspector';
 import { ROUTE_AUTH_TIMEOUT_MS } from './constants';
+import { routeKeyFor, selectRoutesForSession, isAnonymousSession } from './auth';
 
 const emptyCatalogRoute: Reactory.Routing.IReactoryRoute = {
   id: 'empty-catalog',
@@ -37,23 +38,35 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const location = useLocation();
   const reactory = useReactory();
   const { debug, isDevelopmentMode } = reactory;
-  const { auth_validated, authenticating = false, header, footer } = props;
+  const { auth_validated, authenticating = false, header, footer, user } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>(
     () => [...(reactory.getRoutes() || [])],
   );
   const [routeHash, setRouteHash] = React.useState<number>(0);
   const [authWaitMs, setAuthWaitMs] = React.useState<number>(0);
   const authStartedAt = React.useRef<number>(Date.now());
+  const userId = (user as { id?: string; email?: string } | null)?.id
+    || (user as { email?: string } | null)?.email
+    || '';
+  const userRolesKey = isArray((user as any)?.roles)
+    ? (user as any).roles.join(',')
+    : isArray((user as any)?.loggedIn?.roles)
+      ? (user as any).loggedIn.roles.join(',')
+      : '';
+  const isAnon = isAnonymousSession(reactory);
 
   reactory.navigation = navigation;
   reactory.location = location;
 
   const configureRouting = React.useCallback(() => {
-    const $routes = [...(reactory.getRoutes() || [])];
-    const newHash = reactory.utils.hashCode(JSON.stringify($routes));
+    const $routes = selectRoutesForSession(reactory.getRoutes() || [], reactory);
+    const serialized = JSON.stringify($routes);
+    const newHash = typeof reactory.utils?.hashCode === 'function'
+      ? reactory.utils.hashCode(serialized)
+      : serialized.length;
     setRoutes((current) => {
-      const currentHash = reactory.utils.hashCode(JSON.stringify(current));
-      if (newHash !== currentHash) {
+      const currentSerialized = JSON.stringify(current);
+      if (serialized !== currentSerialized) {
         setRouteHash(newHash);
         return $routes;
       }
@@ -68,9 +81,14 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     configureRoutingRef.current();
 
     const handleLogin = () => {
+      configureRoutingRef.current();
       setTimeout(() => configureRoutingRef.current(), 100);
     };
     const handleLogout = () => {
+      configureRoutingRef.current();
+      if (typeof navigation === 'function') {
+        navigation('/');
+      }
       setTimeout(() => configureRoutingRef.current(), 100);
     };
     const handlePluginLoaded = (pluginName: string) => {
@@ -92,11 +110,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       reactory.off(ReactoryApiEventNames.onPluginLoaded, handlePluginLoaded);
       reactory.off(ReactoryApiEventNames.onApiStatusUpdate, handleApiStatusUpdate);
     };
-  }, [debug, reactory]);
+  }, [debug, reactory, navigation]);
 
   useEffect(() => {
     configureRouting();
-  }, [auth_validated, authenticating, configureRouting]);
+  }, [auth_validated, authenticating, userId, userRolesKey, isAnon, configureRouting]);
 
   useEffect(() => {
     if (auth_validated === true || authenticating !== true) {
@@ -149,8 +167,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   return (
     <Routes key={`reactory-router-routes-${routeHash}`}>
-      {routes.map((routeDef) => {
-        const routeKey = routeDef.id || routeDef.key || routeDef.path;
+      {routes.map((routeDef, index) => {
+        const routeKey = routeKeyFor(routeDef, index);
         const componentArgs = buildComponentArgs(routeDef);
         return (
           <Route

@@ -1,5 +1,7 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { act, screen, waitFor } from '@testing-library/react';
+import { ReactoryContext } from '@reactory/client-core/api/ApiProvider';
 import ReactoryRouter from '../ReactoryRouter';
 import {
   createMockReactory,
@@ -237,5 +239,134 @@ describe('ReactoryRouter', () => {
     expect(screen.getByTestId('default-header')).toBeTruthy();
     expect(screen.getByTestId('default-footer')).toBeTruthy();
     expect(screen.getByTestId('about-page').getAttribute('style')).toBeNull();
+  });
+
+  it('swaps the anonymous catalog for the authenticated home after login', async () => {
+    const guestHome: Reactory.Routing.IReactoryRoute = {
+      id: 'home_guest',
+      key: 'home_guest',
+      path: '/',
+      public: true,
+      roles: ['ANON'],
+      componentFqn: 'core.StaticContent@1.0.0',
+    };
+    const Guest = () => <div data-testid="guest-home">guest</div>;
+    let routes: Reactory.Routing.IReactoryRoute[] = [publicLoginRoute(), guestHome];
+    const reactory = createMockReactory({
+      routes,
+      components: {
+        'core.Login@1.0.0': Login,
+        'core.Home@1.0.0': Home,
+        'core.StaticContent@1.0.0': Guest,
+      },
+      isAnon: true,
+      roles: ['ANON'],
+    });
+    reactory.getRoutes.mockImplementation(() => routes);
+
+    const view = renderRouter(reactory, '/login', { authenticating: false, auth_validated: true });
+    await waitFor(() => {
+      expect(screen.getByTestId('login-page')).toBeTruthy();
+    });
+
+    routes = [protectedHomeRoute()];
+    reactory.isAnon.mockReturnValue(false);
+    reactory.getUser.mockReturnValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      anon: false,
+      loggedIn: { roles: ['USER'] },
+      roles: ['USER'],
+      routes,
+    });
+    reactory.hasRole.mockImplementation((required: string[] = [], userRoles?: string[]) => {
+      const compared = userRoles || ['USER'];
+      return required.some((role) => compared.includes(role));
+    });
+
+    view.rerender(
+      <ReactoryContext.Provider value={reactory}>
+        <MemoryRouter initialEntries={['/']}>
+          <ReactoryRouter
+            reactory={reactory}
+            auth_validated={true}
+            authenticating={false}
+            user={reactory.getUser()}
+            header={null}
+            footer={null}
+          />
+        </MemoryRouter>
+      </ReactoryContext.Provider>,
+    );
+    act(() => {
+      reactory.emit('loggedIn', reactory.getUser());
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('home-page')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('login-page')).toBeNull();
+  });
+
+  it('swaps authenticated routes for anonymous catalog and redirects on logout', async () => {
+    const guestHome: Reactory.Routing.IReactoryRoute = {
+      id: 'home_guest',
+      key: 'home_guest',
+      path: '/',
+      public: true,
+      roles: ['ANON'],
+      componentFqn: 'core.StaticContent@1.0.0',
+    };
+    const Guest = () => <div data-testid="guest-home">guest</div>;
+    let routes: Reactory.Routing.IReactoryRoute[] = [protectedHomeRoute()];
+    const reactory = createMockReactory({
+      routes,
+      components: {
+        'core.Login@1.0.0': Login,
+        'core.Home@1.0.0': Home,
+        'core.StaticContent@1.0.0': Guest,
+      },
+      isAnon: false,
+      roles: ['USER'],
+    });
+    reactory.getRoutes.mockImplementation(() => routes);
+
+    const view = renderRouter(reactory, '/', { authenticating: false, auth_validated: true });
+    await waitFor(() => {
+      expect(screen.getByTestId('home-page')).toBeTruthy();
+    });
+
+    routes = [publicLoginRoute(), guestHome];
+    reactory.isAnon.mockReturnValue(true);
+    reactory.getUser.mockReturnValue({
+      routes,
+      anon: true,
+      roles: ['ANON'],
+      loggedIn: null,
+      plugins: [],
+    });
+
+    view.rerender(
+      <ReactoryContext.Provider value={reactory}>
+        <MemoryRouter initialEntries={['/']}>
+          <ReactoryRouter
+            reactory={reactory}
+            auth_validated={true}
+            authenticating={false}
+            user={reactory.getUser()}
+            header={null}
+            footer={null}
+          />
+        </MemoryRouter>
+      </ReactoryContext.Provider>,
+    );
+    act(() => {
+      reactory.emit('loggedOut');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('guest-home')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('home-page')).toBeNull();
   });
 });

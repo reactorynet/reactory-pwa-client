@@ -73,8 +73,9 @@ export const createMockReactory = (options: MockReactoryOptions = {}) => {
     getComponents: jest.fn(() => ({})),
     getUser: jest.fn(() => ({
       routes: options.routes || [],
+      anon: options.isAnon === true,
       roles: options.isAnon ? ['ANON'] : (options.roles || ['USER']),
-      loggedIn: { roles: options.roles || ['USER'] },
+      loggedIn: options.isAnon ? null : { roles: options.roles || ['USER'] },
       plugins: options.plugins || [],
     })),
     isAnon: jest.fn(() => options.isAnon === true),
