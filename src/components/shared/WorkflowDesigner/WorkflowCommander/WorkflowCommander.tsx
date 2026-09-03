@@ -41,7 +41,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
   style,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isHoverDisabledRef = useRef(false);
 
   const {
     dock,
@@ -73,25 +73,31 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
   }, []);
 
   const handleMouseEnter = useCallback(() => {
-    if (!disabled) setIsOpen(true);
+    if (disabled || isHoverDisabledRef.current) return;
+    setIsOpen(true);
   }, [disabled]);
 
   const handleMouseLeave = useCallback(() => {
-    // Keep open if user is interacting, or close on outside click
+    // Keep popover open on hover, dismiss on outside click or action
   }, []);
 
   // Dismiss on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (!isOpen) return;
+      const target = e.target as Element;
+      const container = document.querySelector('[data-workflow-commander-fab]');
+      if (container && !container.contains(target)) {
         setIsOpen(false);
       }
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
     };
   }, [isOpen]);
 
@@ -131,6 +137,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('tasks');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       {
@@ -143,6 +151,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('active_runs');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       {
@@ -155,6 +165,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('schedules');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       {
@@ -165,6 +177,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('quick_launch');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       {
@@ -186,6 +200,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('schedules');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       {
@@ -203,6 +219,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClick: () => {
           setActivePanel('active_runs');
           setIsOpen(false);
+          isHoverDisabledRef.current = true;
+          setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
       ...customActions,
@@ -220,8 +238,8 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
   );
 
   return (
-    <Box ref={containerRef} className={className} sx={{ position: 'relative' }}>
-      {/* Draggable FAB */}
+    <>
+      {/* Draggable FAB with anchored hover popover inside */}
       <WorkflowCommanderFAB
         dock={dock}
         customPosition={customPosition}
@@ -235,20 +253,16 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onMouseLeave={handleMouseLeave}
         disabled={disabled}
         mode={mode}
+        className={className}
         style={style}
-      />
-
-      {/* 4x2 Hover Popover Menu */}
-      {isOpen && (
-        <Box sx={{ position: 'fixed', zIndex: 1399 }}>
-          <WorkflowCommanderPopover
-            actions={defaultActions}
-            mode={mode}
-            dock={dock}
-            onActionClick={(action, e) => action.onClick(e)}
-          />
-        </Box>
-      )}
+      >
+        <WorkflowCommanderPopover
+          actions={defaultActions}
+          mode={mode}
+          dock={dock}
+          onActionClick={(action, e) => action.onClick(e)}
+        />
+      </WorkflowCommanderFAB>
 
       {/* Dialog: Pending Task Queue */}
       <Dialog
@@ -368,7 +382,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         }}
         mode={mode}
       />
-    </Box>
+    </>
   );
 };
 

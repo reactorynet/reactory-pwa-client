@@ -20,6 +20,7 @@ export interface WorkflowCommanderFABProps {
   mode?: string;
   className?: string;
   style?: React.CSSProperties;
+  children?: React.ReactNode;
 }
 
 export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
@@ -37,6 +38,7 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
   mode = 'dark',
   className,
   style,
+  children,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; startLeft: number; startTop: number } | null>(null);
@@ -122,6 +124,7 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
     <Box
       ref={fabRef}
       className={className}
+      data-workflow-commander-fab={className || 'workflow-commander-fab'}
       style={{ ...positionStyles, ...style }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -129,11 +132,16 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       sx={{
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : 'pointer',
         touchAction: 'none',
         userSelect: 'none',
+        position: 'fixed',
+        zIndex: 1400,
       }}
     >
+      {/* Popover rendered inside this positioned root */}
+      {isOpen && children}
+
       <Badge
         badgeContent={badgeCount}
         color={badgeColor as any}
@@ -141,7 +149,7 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
         overlap="circular"
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         sx={{
-          zIndex: 1301,
+          zIndex: 1401,
           '& .MuiBadge-badge': {
             fontSize: '0.72rem',
             fontWeight: 800,
@@ -152,7 +160,7 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
           },
         }}
       >
-        <Tooltip title="Workflow Commander (Drag to reposition)" placement="left">
+        <Tooltip title="Workflow Commander (Click or hover to open, drag to move)" placement="left">
           <Fab
             color="primary"
             size="medium"
