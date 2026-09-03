@@ -34,6 +34,12 @@ import { useNavigate } from 'react-router';
 import Reactory from '@reactorynet/reactory-core';
 import localForage from 'localforage';
 import { ReactoryAvatar } from './AvatarComponent';
+import RouteInspectorPreferenceButton from '../../../app/router/widgets/RouteInspectorPreferenceButton';
+import {
+  isRouteInspectorEnabled,
+  ROUTE_INSPECTOR_PREFERENCE_EVENT,
+  toggleRouteInspectorEnabled,
+} from '../../../app/router/inspectorPreference';
 
 // Configure localForage
 localForage.config({
@@ -134,43 +140,50 @@ const CacheComponent = ({ reactory, classes }) => {
   );
 };
 
-// Development mode toggle component
-const ToggleDevelopComponent = ({ reactory, classes }) => {
+// Route inspector FAB toggle, persisted in localStorage
+const ToggleRouteInspectorComponent = ({ reactory }) => {
   const theme = useTheme();
-  const [version, setVersion] = useState(0);
+  const [enabled, setEnabled] = useState(() => isRouteInspectorEnabled());
 
-  const toggle = () => {
-    reactory.setDevelopmentMode(!reactory.$development_mode);
-    reactory.emit('onReactoryDevelopmentModeChanged', reactory.isDevelopmentMode());
-    setVersion(version + 1);
-  };
+  useEffect(() => {
+    const onPreference = (value: boolean | Event) => {
+      const next = typeof value === 'boolean'
+        ? value
+        : (value as CustomEvent<boolean>).detail;
+      setEnabled(next === true);
+    };
+    reactory?.on?.(ROUTE_INSPECTOR_PREFERENCE_EVENT, onPreference);
+    window.addEventListener(ROUTE_INSPECTOR_PREFERENCE_EVENT, onPreference as EventListener);
+    return () => {
+      reactory?.off?.(ROUTE_INSPECTOR_PREFERENCE_EVENT, onPreference);
+      window.removeEventListener(ROUTE_INSPECTOR_PREFERENCE_EVENT, onPreference as EventListener);
+    };
+  }, [reactory]);
 
-  if (reactory.hasRole(["DEVELOPER"]) === false) {
+  if (reactory.isDevelopmentMode() !== true) {
     return null;
   }
 
   return (
-    <ListItem 
-      key="reactory.development_mode" 
-      onClick={toggle}       
-      sx={{        
+    <ListItem
+      key="reactory.route_inspector"
+      onClick={() => setEnabled(toggleRouteInspectorEnabled(reactory))}
+      data-testid="route-inspector-menu-toggle"
+      sx={{
         color: theme.palette.text.primary,
         borderBottom: 'none',
         '&:hover': {
           backgroundColor: theme.palette.action.hover,
         },
-        '&:focus': {
-          outline: 'none',
-        },
         cursor: 'pointer',
       }}
     >
       <ListItemIcon>
-        <Icon color="inherit">build</Icon>
+        <Icon color={enabled ? 'secondary' : 'inherit'}>alt_route</Icon>
       </ListItemIcon>
       <ListItemText
-        primary={<span>DEVELOPMENT</span>}
-        secondary={<span>{reactory.$development_mode === true ? '(enabled)' : '(disabled)'}</span>}
+        primary={<span>ROUTE INSPECTOR</span>}
+        secondary={<span>{enabled ? '(visible)' : '(hidden)'}</span>}
       />
     </ListItem>
   );
@@ -483,7 +496,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
 
     // Cache and development components
     menuItems.push(<CacheComponent key="cache" reactory={reactory} classes={{}} />);
-    menuItems.push(<ToggleDevelopComponent key="dev" reactory={reactory} classes={{}} />);
+    menuItems.push(<ToggleRouteInspectorComponent key="route-inspector" reactory={reactory} />);
 
     return menuItems;
   };
@@ -566,6 +579,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           </Typography>
 
           {renderSearchInterface()}
+
+          <RouteInspectorPreferenceButton size="large" />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>

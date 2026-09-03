@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface NewNotification {
   id: string,
   title: string,
@@ -27,6 +29,6 @@ export interface ReactoryRouterProps {
   auth_validated: boolean,
   user: Reactory.Models.IUser,
   authenticating: boolean,
-  header: React.ReactElement
-  footer: React.ReactElement
+  header: React.ReactElement | null
+  footer: React.ReactElement | null
 }

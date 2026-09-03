@@ -640,19 +640,15 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   if (isReady === false) return <AppLoading message={"Loading..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
 
-  // Add additional check for authentication transition
-  if (isAuthenticating === true || isAuthTransitioning === true) {
+  // Keep the router mounted during authentication so public routes such as
+  // /login can render. The router owns matched-route auth/role decisions.
+  if (isAuthTransitioning === true && isAuthenticating === true && auth_validated === false && user === null) {
     return <AppLoading message={"Authenticating..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
   }
 
-  // Add check for user state during authentication transitions
-  if (auth_validated === false && user === null) {
-    return <AppLoading message={"Validating authentication..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
-  }
-
   //@ts-ignore
-  let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
-  let footer = isAuthenticating === false ? (<Footer />) : null;
+  let header = (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />);
+  let footer = Footer ? (<Footer />) : null;
   return (
     <StyledRouter>
       <React.Fragment>

@@ -1,155 +1,128 @@
-import React from "react";
-import { useParams, useLocation } from "react-router-dom";
+import React from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { isArray } from 'lodash';
+import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import queryString from '../../components/utility/query-string';
-import { AppLoading } from '../widgets';
-/**
- * Wrapper component that renders inside each route to access params
- * and process componentProps templates
- */
-const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, onComponentLoad, hasHeader = false, headerHeight = 48 }) => {
+import { useRouteComponent } from './hooks/useRouteComponent';
+import { processTemplateStrings } from './processTemplateStrings';
+import RouteErrorBoundary from './RouteErrorBoundary';
+import RouteResolving from './RouteResolving';
+import RouteSlot from './RouteSlot';
+import RouteFailure from './widgets/RouteFailure';
+import RouteInspector from './widgets/RouteInspector';
+import { ROUTE_COMPONENT_TIMEOUT_MS } from './constants';
+import { RouteComponentWrapperProps } from './types';
+
+const RouteComponentWrapper = ({
+  routeDef,
+  componentArgs,
+  defaultHeader,
+  defaultFooter,
+}: RouteComponentWrapperProps) => {
+  const reactory = useReactory();
   const params = useParams();
   const location = useLocation();
   const query = queryString.parse(location.search);
+  const isDevelopmentMode = reactory.isDevelopmentMode() === true;
+  const timeoutMs = Number((routeDef as { timeoutMs?: number }).timeoutMs) || ROUTE_COMPONENT_TIMEOUT_MS;
+  const resolution = useRouteComponent(reactory, routeDef.componentFqn, timeoutMs);
 
-  // Recursive function to process template strings in objects and arrays
-  const processTemplateStrings = (obj) => {
-    if (typeof obj === 'string' && obj.includes('${')) {
-      try {
-        if (obj.includes('::')) {
-          const [_value, transform] = obj.split('::');
-          let processed = reactory.utils.template(_value)({ route: params, location, query });
-          if (transform) {
-            switch (transform) {
-              case 'toInt':
-                processed = parseInt(processed);
-                break;
-              case 'toString':
-                processed = String(processed);
-                break;
-              case 'toDate':
-                processed = new Date(processed);
-                break;
-              case 'toBoolean':
-                processed = Boolean(processed);
-                break;
-              default:
-                // no change
-            }
-          }
-          return processed;
-        } else {
-          // Replace ${route.paramName} with actual param values
-          return reactory.utils.template(obj)({ route: params, location, query } );
-        }
-      } catch (error) {
-        reactory.warning(`Error processing template ${obj}:`, error);
-        return obj; // fallback to original value
-      }
-    } else if (Array.isArray(obj)) {
-      return obj.map(item => processTemplateStrings(item));
-    } else if (obj !== null && typeof obj === 'object') {
-      const result = {};
-      for (const key in obj) {
-        result[key] = processTemplateStrings(obj[key]);
-      }
-      return result;
-    } else {
-      return obj;
-    }
-  };
-
-  // Process componentProps templates with actual route params
-  let processedArgs = { ...componentArgs };
-
-  // Add route params directly to component args
-  Object.keys(params).forEach(paramKey => {
+  let processedArgs: Record<string, unknown> = { ...componentArgs };
+  Object.keys(params).forEach((paramKey) => {
     processedArgs[paramKey] = params[paramKey];
   });
 
   if (routeDef.componentProps) {
-    processedArgs = { ...routeDef.componentProps };
-
-    // Process template strings recursively in componentProps
-    processedArgs = processTemplateStrings(processedArgs);
+    processedArgs = processTemplateStrings(
+      { ...routeDef.componentProps },
+      reactory,
+      { route: params, location, query },
+    ) as Record<string, unknown>;
   }
 
+  const headerNode = (
+    <RouteSlot config={routeDef.header} fallback={defaultHeader} />
+  );
+  const footerNode = (
+    <RouteSlot config={routeDef.footer} fallback={defaultFooter} />
+  );
 
+  const companionComponents = isArray(routeDef.components)
+    ? routeDef.components.map((slot, index) => (
+      <RouteSlot
+        key={`${slot.componentFqn || 'slot'}-${index}`}
+        config={{ show: true, ...slot }}
+      />
+    ))
+    : null;
 
-  const ReactoryComponent = reactory.getComponent(routeDef.componentFqn);
-  const NotFound = reactory.getComponent("core.NotFound");
+  const inspector = isDevelopmentMode ? (
+    <RouteInspector
+      routeDef={routeDef}
+      status={resolution.status}
+      elapsedMs={resolution.elapsedMs}
+      nearbyFqns={resolution.nearbyFqns}
+      lastPluginEvent={resolution.lastPluginEvent}
+      error={resolution.error}
+      params={params}
+      query={query as Record<string, unknown>}
+      pathname={location.pathname}
+      search={location.search}
+      onRetry={resolution.retry}
+    />
+  ) : null;
 
-  // Calculate margin-top based on header presence and height
-  const wrapperStyle = hasHeader ? { marginTop: `${headerHeight}px` } : {};
-
-  // Add additional safety checks for component loading
-  if (!ReactoryComponent) {
-    return (
-      <div key={`route-loading-${routeDef.id}`}>
-        {children}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem', marginTop: `${headerHeight}px` }}>
-          <AppLoading message="Loading component..." />
-        </div>
-      </div>
+  let body: React.ReactNode = null;
+  const canRender = resolution.status === 'ready'
+    && resolution.component
+    && (typeof resolution.component === 'function'
+      || (typeof resolution.component === 'object'
+        && resolution.component !== null
+        && (resolution.component as { $$typeof?: unknown }).$$typeof));
+  if (canRender) {
+    const ReactoryComponent = resolution.component as React.ComponentType<any>;
+    body = (
+      <ReactoryComponent
+        reactory={reactory}
+        {...processedArgs}
+      />
+    );
+  } else if (resolution.status === 'resolving') {
+    body = (
+      <RouteResolving
+        fqn={routeDef.componentFqn}
+        elapsedMs={resolution.elapsedMs}
+        onStopWaiting={resolution.stopWaiting}
+      />
+    );
+  } else {
+    const kind = resolution.status === 'timeout' ? 'timeout' : 'missing';
+    const message = kind === 'timeout'
+      ? `Timed out waiting for ${routeDef.componentFqn}.`
+      : `Component ${routeDef.componentFqn || '(unspecified)'} is not registered.`;
+    body = (
+      <RouteFailure
+        kind={kind}
+        message={message}
+        fqn={routeDef.componentFqn}
+        path={routeDef.path}
+        elapsedMs={resolution.elapsedMs}
+        onRetry={resolution.retry}
+      />
     );
   }
 
-  try {
-    if (ReactoryComponent) {
-
-      const componentProps = {
-        reactory,
-        ...processedArgs,
-        style: {
-          marginTop: `${headerHeight}px`,
-          ...processedArgs?.style,
-        }
-      }
-
-      return (
-        <div key={`route-${routeDef.id}`}>
-          {children}
-          <ReactoryComponent {...componentProps} key={routeDef.id} />
-        </div>
-      );
-    } else {
-      // Component not found - show loading state with retry mechanism
-      return (
-        <div key={`route-not-found-${routeDef.id}`}>
-          {children}
-          <NotFound
-            key={routeDef.id}
-            message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}
-            waitingFor={routeDef.componentFqn}
-            args={processedArgs}
-            wait={500}
-            onFound={onComponentLoad}
-            style={{ marginTop: `${headerHeight}px` }}
-          />
-        </div>
-      );
-    }
-  } catch (routeError) {
-    reactory.error(`Error rendering component ${routeDef.componentFqn} for route ${routeDef.path}`, {
-      error: routeError,
-      routeDef,
-      params,
-      location
-    });
-    return (
-      <div key={`route-error-${routeDef.id}`}>
-        {children}
-        <NotFound
-          key={routeDef.id}
-          message={`Error rendering component ${routeDef.componentFqn} for route ${routeDef.path}`}
-          waitingFor={routeDef.componentFqn}
-          args={processedArgs}
-          wait={500}
-          onFound={onComponentLoad}
-          style={{ marginTop: `${headerHeight}px` }}
-        />
-      </div>
-    );
-  }
+  return (
+    <React.Fragment>
+      {headerNode}
+      {companionComponents}
+      <RouteErrorBoundary routeDef={routeDef} isDevelopmentMode={isDevelopmentMode}>
+        {body}
+      </RouteErrorBoundary>
+      {footerNode}
+      {inspector}
+    </React.Fragment>
+  );
 };
 
 export default RouteComponentWrapper;
