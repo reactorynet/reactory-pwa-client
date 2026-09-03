@@ -24,7 +24,11 @@ const GET_ACTIVE_INSTANCES = gql`
         endTime
         duration
       }
-      total
+      pagination {
+        total
+        page
+        limit
+      }
     }
   }
 `;
@@ -35,15 +39,26 @@ const GET_SCHEDULES = gql`
       schedules {
         id
         name
-        cronExpression
+        schedule {
+          cron
+          timezone
+          enabled
+        }
         enabled
         workflow {
           id
+          nameSpace
+          name
+          version
         }
         nextRun
         lastRun
       }
-      total
+      pagination {
+        total
+        page
+        limit
+      }
     }
   }
 `;
@@ -150,26 +165,30 @@ export const useWorkflowCommander = ({
   const fetchActiveInstances = useCallback(async () => {
     if (!reactory?.graphqlQuery) return;
     try {
+      setLoading(true);
       const res: any = await reactory.graphqlQuery(GET_ACTIVE_INSTANCES, { limit: 20 });
       if (res?.data?.workflowInstances?.instances) {
         setActiveInstances(res.data.workflowInstances.instances);
       }
     } catch (e) {
       // Non-critical
+    } finally {
+      setLoading(false);
     }
   }, [reactory]);
 
   const fetchSchedules = useCallback(async () => {
     if (!reactory?.graphqlQuery) return;
     try {
+      setLoading(true);
       const res: any = await reactory.graphqlQuery(GET_SCHEDULES, { limit: 50 });
       if (res?.data?.workflowSchedules?.schedules) {
         const mapped = res.data.workflowSchedules.schedules.map((s: any) => ({
           id: s.id,
           name: s.name || s.workflow?.id || 'Unnamed Schedule',
-          cronExpression: s.cronExpression,
-          enabled: s.enabled,
-          workflowId: s.workflow?.id || '',
+          cronExpression: s.schedule?.cron || '',
+          enabled: s.enabled !== undefined ? s.enabled : (s.schedule?.enabled ?? true),
+          workflowId: s.workflow?.id || (s.workflow?.nameSpace ? `${s.workflow.nameSpace}.${s.workflow.name}@${s.workflow.version}` : ''),
           nextExecutionTime: s.nextRun,
           lastExecutionTime: s.lastRun,
         }));
@@ -177,6 +196,8 @@ export const useWorkflowCommander = ({
       }
     } catch (e) {
       // Non-critical
+    } finally {
+      setLoading(false);
     }
   }, [reactory]);
 
