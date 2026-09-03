@@ -1767,6 +1767,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         il8n={undefined}
       />
 
+    
+
       {/* Save notification */}
       <Snackbar
         open={saveNotification.open}

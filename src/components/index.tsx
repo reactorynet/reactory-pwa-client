@@ -91,7 +91,9 @@ import MarkdownGfm from 'remark-gfm';
 import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
 
-import WorkflowDesigner from './shared/WorkflowDesigner';
+import WorkflowDesigner, { WorkflowCommander } from './shared/WorkflowDesigner';
+import { WorkflowInstanceInspector } from './shared/WorkflowDesigner/WorkflowCommander/panels/WorkflowInstanceInspector';
+import { WorkflowDataViewer, WorkflowLaunch, WorkflowTaskApproval } from './shared/WorkflowWidgets';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import FormEditor from './shared/FormEditor';
 import { UserHomeFolder } from './shared/UserHomeFolder';
@@ -996,6 +998,51 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: Three,
     description: 'Three.js 3D graphics library for creating and displaying animated 3D computer graphics in web browsers.',
     tags: ['3d', 'graphics', 'animation', 'webgl'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowCommander',
+    version: '1.0.0',
+    component: WorkflowCommander,
+    description: 'Floating draggable workflow command center widget with active instance control, user task queue, and schedule manager.',
+    tags: ['workflow', 'commander', 'widget', 'tasks', 'schedules', 'fab'],
+    roles: ['*'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowInstanceInspector',
+    version: '1.0.0',
+    component: WorkflowInstanceInspector,
+    description: 'Detailed inspection viewer for workflow instances, step execution timelines, data, and live logs.',
+    tags: ['workflow', 'inspector', 'instance', 'execution', 'history', 'logs'],
+    roles: ['*'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowDataViewer',
+    version: '1.0.0',
+    component: WorkflowDataViewer,
+    description: 'Interactive JSON and YAML data viewer with toggle and download support.',
+    tags: ['workflow', 'data', 'viewer', 'json', 'yaml'],
+    roles: ['*'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowLaunch',
+    version: '1.0.0',
+    component: WorkflowLaunch,
+    description: 'Workflow launch trigger widget with JSON parameter inputs.',
+    tags: ['workflow', 'launch', 'execute', 'start'],
+    roles: ['*'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowTaskApproval',
+    version: '1.0.0',
+    component: WorkflowTaskApproval,
+    description: 'Workflow user task approval card with structured metadata and reject/approve actions.',
+    tags: ['workflow', 'task', 'approval', 'user-task'],
+    roles: ['*'],
   },
   {
     nameSpace: 'core',

@@ -1951,6 +1951,27 @@ export default (props) => {
     });
   }, [sidePanelActions, personaAvatarViewerProps]);
 
+  // ── Shell console (side panel) ─────────────────────────────────────────────
+  const SHELL_CONSOLE_PANEL_ID = 'shell-macro-console';
+
+  const handleShellConsoleToggle = useCallback(() => {
+    const state = sidePanelActions.getState();
+    if (state.items.some((i) => i.id === SHELL_CONSOLE_PANEL_ID)) {
+      sidePanelActions.setActiveItem(SHELL_CONSOLE_PANEL_ID);
+      if (!state.isOpen) sidePanelActions.togglePanel();
+      return;
+    }
+    sidePanelActions.addItem({
+      id: SHELL_CONSOLE_PANEL_ID,
+      componentFqn: 'reactory.ChatShellConsole@1.0.0',
+      title: il8n?.t('reactor.client.chat.shellConsole.title', { defaultValue: 'Shell' }) ?? 'Shell',
+      type: 'component',
+      props: {},
+      addedAt: new Date(),
+      addedBy: 'user-toggle',
+    });
+  }, [sidePanelActions, il8n]);
+
   // SpeedDial actions for persona and chat tools
   const personaSpeedDialActions = useMemo(() => [   
     {
@@ -2041,20 +2062,7 @@ export default (props) => {
       key: 'shellConsole',
       icon: <Terminal />,
       title: il8n?.t('reactor.client.chat.shellConsole', { defaultValue: 'Shell Console' }),
-      clickHandler: () => {
-        sidePanelActions.addItem({
-          id: 'shell-macro-console',
-          componentFqn: 'reactory.ChatShellConsole@1.0.0',
-          title: 'Shell',
-          type: 'component',
-          props: {},
-          addedAt: new Date(),
-          addedBy: 'user-toggle',
-        });
-        if (!sidePanelState.isOpen) {
-          sidePanelActions.togglePanel();
-        }
-      },
+      clickHandler: handleShellConsoleToggle,
     },
     {
       key: 'neuralGraph',
@@ -2074,7 +2082,7 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleShellConsoleToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
