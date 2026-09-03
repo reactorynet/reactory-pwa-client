@@ -66,6 +66,20 @@ export { useStepLibrary } from './hooks/useStepLibrary';
 export { useCanvasOperations } from './hooks/useCanvasOperations';
 export { useGraphQL } from './hooks/useGraphQL';
 
+// Export WorkflowCommander widget & related components
+export {
+  WorkflowCommander,
+  WorkflowCommanderFAB,
+  WorkflowCommanderPopover,
+  UserTaskQueuePanel,
+  ActiveWorkflowsPanel,
+  WorkflowScheduleManager,
+  TaskExecutionDialog,
+  QuickLaunchDialog,
+  useWorkflowCommander,
+  useWorkflowTasks,
+} from './WorkflowCommander';
+
 // Export components for modular use
 export * from './components';
 

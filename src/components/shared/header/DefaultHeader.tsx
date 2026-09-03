@@ -40,6 +40,7 @@ import {
   ROUTE_INSPECTOR_PREFERENCE_EVENT,
   toggleRouteInspectorEnabled,
 } from '../../../app/router/inspectorPreference';
+import { WorkflowCommander } from '../WorkflowDesigner/WorkflowCommander';
 
 // Configure localForage
 localForage.config({
@@ -581,6 +582,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           {renderSearchInterface()}
 
           <RouteInspectorPreferenceButton size="large" />
+
+          <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
