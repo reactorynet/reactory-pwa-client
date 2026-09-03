@@ -90,7 +90,7 @@ import MarkdownGfm from 'remark-gfm';
 import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
 
-import WorkflowDesigner from './shared/WorkflowDesigner';
+import WorkflowDesigner, { WorkflowCommander } from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import FormEditor from './shared/FormEditor';
 import { UserHomeFolder } from './shared/UserHomeFolder';
@@ -979,6 +979,15 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: Three,
     description: 'Three.js 3D graphics library for creating and displaying animated 3D computer graphics in web browsers.',
     tags: ['3d', 'graphics', 'animation', 'webgl'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowCommander',
+    version: '1.0.0',
+    component: WorkflowCommander,
+    description: 'Floating draggable workflow command center widget with active instance control, user task queue, and schedule manager.',
+    tags: ['workflow', 'commander', 'widget', 'tasks', 'schedules', 'fab'],
+    roles: ['*'],
   },
   {
     nameSpace: 'core',

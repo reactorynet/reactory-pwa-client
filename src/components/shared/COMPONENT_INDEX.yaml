@@ -355,6 +355,13 @@ categories:
 
   # Advanced Features
   advanced:
+    - name: "WorkflowCommander"
+      path: "./WorkflowDesigner/WorkflowCommander/"
+      description: "Floating draggable workflow command center widget with active instance control, user task queue, and schedule manager"
+      type: "widget"
+      registration: "core.WorkflowCommander@1.0.0"
+      exports: ["WorkflowCommander", "WorkflowCommanderFAB", "WorkflowCommanderPopover", "UserTaskQueuePanel", "ActiveWorkflowsPanel", "WorkflowScheduleManager"]
+
     - name: "WorkflowDesigner"
       path: "./WorkflowDesigner/"
       description: "Visual workflow designer component"
