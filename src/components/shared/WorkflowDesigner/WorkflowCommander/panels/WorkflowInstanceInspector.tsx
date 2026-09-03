@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Icon,
   CircularProgress,
   Chip,
   Alert,
@@ -29,6 +28,8 @@ import {
   DialogContentText,
   DialogActions,
   TextField,
+  ToggleButtonGroup,
+  ToggleButton,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -43,15 +44,18 @@ import StopCircleIcon from '@mui/icons-material/StopCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import DescriptionIcon from '@mui/icons-material/Description';
+import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import moment from 'moment';
 import { useReactory } from '@reactory/client-core/api';
 import { gql } from '@apollo/client';
+import WorkflowDesigner from '../../WorkflowDesigner';
 
 export interface WorkflowInstanceInspectorProps {
   instanceId: string;
   onClose?: () => void;
   mode?: string;
+  initialViewMode?: 'visual' | 'tabs';
 }
 
 const WORKFLOW_STATUS: Record<number, { label: string; color: string; icon: React.ReactNode }> = {
@@ -149,10 +153,12 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
   instanceId,
   onClose,
   mode = 'dark',
+  initialViewMode = 'visual',
 }) => {
   const reactory = useReactory();
   const theme = useTheme();
 
+  const [viewMode, setViewMode] = useState<'visual' | 'tabs'>(initialViewMode);
   const [loading, setLoading] = useState(true);
   const [instance, setInstance] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -243,6 +249,24 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
       cancelled = true;
     };
   }, [activeTab, logFetched, instanceId, reactory]);
+
+  // Extract workflow identity for visual canvas
+  const workflowRef = useMemo(() => {
+    if (!instance?.workflowDefinitionId) return null;
+    const defId: string = instance.workflowDefinitionId;
+    const [nsAndName, ver] = defId.split('@');
+    const dotIdx = nsAndName.indexOf('.');
+    const nameSpace = dotIdx > -1 ? nsAndName.substring(0, dotIdx) : nsAndName;
+    const name = dotIdx > -1 ? nsAndName.substring(dotIdx + 1) : nsAndName;
+    const version = ver || instance.version || '1.0.0';
+
+    return {
+      nameSpace,
+      name,
+      version,
+      workflowType: 'YAML' as const,
+    };
+  }, [instance]);
 
   const formatDate = (d: string | null | undefined) => {
     if (!d) return 'N/A';
@@ -371,28 +395,51 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <Box sx={{ px: 3, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <Box sx={{ flex: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            {wfStatus.icon}
-            <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-              {instance.workflowDefinitionId}
-            </Typography>
-            <Chip
-              label={instance.statusLabel || wfStatus.label}
-              color={wfStatus.color as any}
-              size="small"
-              variant="outlined"
-            />
-          </Box>
-          {instance.description && (
-            <Typography variant="body2" color="text.secondary">
-              {instance.description}
-            </Typography>
-          )}
+      <Box
+        sx={{
+          px: 2.5,
+          py: 1.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+          {wfStatus.icon}
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+            {instance.workflowDefinitionId}
+          </Typography>
+          <Chip
+            label={instance.statusLabel || wfStatus.label}
+            color={wfStatus.color as any}
+            size="small"
+            variant="outlined"
+            sx={{ height: 20, fontSize: '0.68rem' }}
+          />
         </Box>
 
+        {/* View Mode Toggle: Visual Canvas vs Tabular Details */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ToggleButtonGroup
+            size="small"
+            value={viewMode}
+            exclusive
+            onChange={(_, val) => val && setViewMode(val)}
+            sx={{ height: 30 }}
+          >
+            <ToggleButton value="visual" sx={{ px: 1.25, fontSize: '0.75rem', gap: 0.5, textTransform: 'none' }}>
+              <ViewQuiltIcon fontSize="small" />
+              Visual Canvas
+            </ToggleButton>
+            <ToggleButton value="tabs" sx={{ px: 1.25, fontSize: '0.75rem', gap: 0.5, textTransform: 'none' }}>
+              <TableChartIcon fontSize="small" />
+              Tabular Details
+            </ToggleButton>
+          </ToggleButtonGroup>
+
           {isStoppable && (
             <Button
               onClick={() => setStopConfirmOpen(true)}
@@ -400,10 +447,12 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
               size="small"
               variant="outlined"
               startIcon={<StopCircleIcon />}
+              sx={{ height: 30, textTransform: 'none' }}
             >
               Stop
             </Button>
           )}
+
           {onClose && (
             <IconButton onClick={onClose} size="small">
               <CloseIcon />
@@ -412,295 +461,309 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
         </Box>
       </Box>
 
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(_, v) => setActiveTab(v)}
-          sx={{ minHeight: 38 }}
-        >
-          <Tab label="Overview" sx={{ minHeight: 38, py: 0.5 }} />
-          <Tab label={`Steps (${sortedPointers.length})`} sx={{ minHeight: 38, py: 0.5 }} />
-          <Tab label="Data" sx={{ minHeight: 38, py: 0.5 }} />
-          <Tab label="Logs" sx={{ minHeight: 38, py: 0.5 }} />
-        </Tabs>
-      </Box>
+      {/* Main View: Visual Canvas or Tabular Inspector */}
+      {viewMode === 'visual' && workflowRef ? (
+        <Box sx={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+          <WorkflowDesigner
+            mode="instance"
+            instanceId={instance.id}
+            workflow={workflowRef}
+            readonly={true}
+          />
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          {/* Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              sx={{ minHeight: 38 }}
+            >
+              <Tab label="Overview" sx={{ minHeight: 38, py: 0.5 }} />
+              <Tab label={`Steps (${sortedPointers.length})`} sx={{ minHeight: 38, py: 0.5 }} />
+              <Tab label="Data" sx={{ minHeight: 38, py: 0.5 }} />
+              <Tab label="Logs" sx={{ minHeight: 38, py: 0.5 }} />
+            </Tabs>
+          </Box>
 
-      {/* Tab Panels */}
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-        {/* Tab 0: Overview */}
-        {activeTab === 0 && (
-          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-            <TableContainer>
-              <Table size="small">
-                <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, width: 180, color: 'text.secondary' }}>Instance ID</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                        {instance.id}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Version</TableCell>
-                    <TableCell>{instance.version}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Created</TableCell>
-                    <TableCell>{formatDate(instance.createTime)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Completed</TableCell>
-                    <TableCell>{formatDate(instance.completeTime)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Duration</TableCell>
-                    <TableCell>{formatDuration(instance.duration)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Steps</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip label={`${instance.completedStepCount} completed`} size="small" color="success" variant="outlined" />
-                        {instance.failedStepCount > 0 && (
-                          <Chip label={`${instance.failedStepCount} failed`} size="small" color="error" variant="outlined" />
-                        )}
-                        <Typography variant="caption" color="text.secondary">
-                          / {instance.stepCount} total
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        )}
-
-        {/* Tab 1: Steps */}
-        {activeTab === 1 && (
-          <Box>
-            {sortedPointers.length === 0 ? (
-              <Alert severity="info">No execution steps recorded for this instance.</Alert>
-            ) : (
-              <Stepper orientation="vertical" activeStep={-1}>
-                {sortedPointers.map((pointer: any) => {
-                  const stepStatus = STEP_STATUS[pointer.status] || STEP_STATUS[1];
-                  const isExpanded = expandedStep === pointer.id;
-                  const isWaiting = Boolean(pointer.eventName) && !pointer.eventPublished;
-                  const isFailed = pointer.status === 6;
-
-                  return (
-                    <Step key={pointer.id} active expanded>
-                      <StepLabel
-                        icon={stepStatus.icon}
-                        onClick={() => setExpandedStep((p) => (p === pointer.id ? null : pointer.id))}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {formatStepName(pointer.stepName || `Step ${pointer.stepId}`)}
+          {/* Tab Panels */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            {/* Tab 0: Overview */}
+            {activeTab === 0 && (
+              <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                <TableContainer>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, width: 180, color: 'text.secondary' }}>Instance ID</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                            {instance.id}
                           </Typography>
-                          <Chip
-                            label={pointer.statusLabel || stepStatus.label}
-                            size="small"
-                            variant="outlined"
-                            color={stepStatus.color as any}
-                            sx={{ height: 18, fontSize: '0.65rem' }}
-                          />
-                          {pointer.retryCount > 0 && (
-                            <Chip
-                              label={`${pointer.retryCount} retries`}
-                              size="small"
-                              variant="outlined"
-                              color="warning"
-                              sx={{ height: 18, fontSize: '0.65rem' }}
-                            />
-                          )}
-                          <ExpandMoreIcon
-                            fontSize="small"
-                            sx={{
-                              ml: 'auto',
-                              transition: 'transform 0.2s',
-                              transform: isExpanded ? 'rotate(180deg)' : 'none',
-                              color: 'text.secondary',
-                            }}
-                          />
-                        </Box>
-                      </StepLabel>
-                      <StepContent>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDate(pointer.startTime)}
-                          {pointer.endTime ? ` → ${formatDate(pointer.endTime)}` : ''}
-                          {pointer.duration !== null && pointer.duration !== undefined
-                            ? ` (${formatDuration(pointer.duration)})`
-                            : ''}
-                        </Typography>
-
-                        {isWaiting && (
-                          <Alert
-                            severity="info"
-                            variant="outlined"
-                            sx={{ mt: 1 }}
-                            action={
-                              <Button
-                                size="small"
-                                variant="contained"
-                                color="info"
-                                startIcon={<BoltIcon />}
-                                onClick={() => {
-                                  setSignalTarget(pointer);
-                                  setSignalData('{}');
-                                }}
-                              >
-                                Continue
-                              </Button>
-                            }
-                          >
-                            Waiting for event: <strong>{pointer.eventName}</strong>
-                          </Alert>
-                        )}
-
-                        {isFailed && pointer.errorMessage && (
-                          <Alert severity="error" variant="outlined" sx={{ mt: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {pointer.errorMessage}
-                            </Typography>
-                            {pointer.errorStack && (
-                              <Box
-                                component="pre"
-                                sx={{
-                                  mt: 1,
-                                  p: 1,
-                                  borderRadius: 1,
-                                  bgcolor: 'grey.900',
-                                  fontSize: '0.7rem',
-                                  fontFamily: 'monospace',
-                                  overflow: 'auto',
-                                  maxHeight: 120,
-                                }}
-                              >
-                                {pointer.errorStack}
-                              </Box>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Version</TableCell>
+                        <TableCell>{instance.version}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Created</TableCell>
+                        <TableCell>{formatDate(instance.createTime)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Completed</TableCell>
+                        <TableCell>{formatDate(instance.completeTime)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Duration</TableCell>
+                        <TableCell>{formatDuration(instance.duration)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Steps</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip label={`${instance.completedStepCount} completed`} size="small" color="success" variant="outlined" />
+                            {instance.failedStepCount > 0 && (
+                              <Chip label={`${instance.failedStepCount} failed`} size="small" color="error" variant="outlined" />
                             )}
-                          </Alert>
-                        )}
-
-                        <Collapse in={isExpanded}>
-                          <Box sx={{ mt: 1.5 }}>
-                            <Paper variant="outlined" sx={{ p: 2 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                                Pointer ID: {pointer.id}
-                              </Typography>
-                              {pointer.outcome && (
-                                <Box sx={{ mt: 1 }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                    Outcome
-                                  </Typography>
-                                  <Box component="pre" sx={{ p: 1, borderRadius: 1, bgcolor: 'background.default', fontSize: '0.75rem', overflow: 'auto', maxHeight: 150 }}>
-                                    {JSON.stringify(pointer.outcome, null, 2)}
-                                  </Box>
-                                </Box>
-                              )}
-                            </Paper>
+                            <Typography variant="caption" color="text.secondary">
+                              / {instance.stepCount} total
+                            </Typography>
                           </Box>
-                        </Collapse>
-                      </StepContent>
-                    </Step>
-                  );
-                })}
-              </Stepper>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            )}
+
+            {/* Tab 1: Steps */}
+            {activeTab === 1 && (
+              <Box>
+                {sortedPointers.length === 0 ? (
+                  <Alert severity="info">No execution steps recorded for this instance.</Alert>
+                ) : (
+                  <Stepper orientation="vertical" activeStep={-1}>
+                    {sortedPointers.map((pointer: any) => {
+                      const stepStatus = STEP_STATUS[pointer.status] || STEP_STATUS[1];
+                      const isExpanded = expandedStep === pointer.id;
+                      const isWaiting = Boolean(pointer.eventName) && !pointer.eventPublished;
+                      const isFailed = pointer.status === 6;
+
+                      return (
+                        <Step key={pointer.id} active expanded>
+                          <StepLabel
+                            icon={stepStatus.icon}
+                            onClick={() => setExpandedStep((p) => (p === pointer.id ? null : pointer.id))}
+                            sx={{ cursor: 'pointer' }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {formatStepName(pointer.stepName || `Step ${pointer.stepId}`)}
+                              </Typography>
+                              <Chip
+                                label={pointer.statusLabel || stepStatus.label}
+                                size="small"
+                                variant="outlined"
+                                color={stepStatus.color as any}
+                                sx={{ height: 18, fontSize: '0.65rem' }}
+                              />
+                              {pointer.retryCount > 0 && (
+                                <Chip
+                                  label={`${pointer.retryCount} retries`}
+                                  size="small"
+                                  variant="outlined"
+                                  color="warning"
+                                  sx={{ height: 18, fontSize: '0.65rem' }}
+                                />
+                              )}
+                              <ExpandMoreIcon
+                                fontSize="small"
+                                sx={{
+                                  ml: 'auto',
+                                  transition: 'transform 0.2s',
+                                  transform: isExpanded ? 'rotate(180deg)' : 'none',
+                                  color: 'text.secondary',
+                                }}
+                              />
+                            </Box>
+                          </StepLabel>
+                          <StepContent>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDate(pointer.startTime)}
+                              {pointer.endTime ? ` → ${formatDate(pointer.endTime)}` : ''}
+                              {pointer.duration !== null && pointer.duration !== undefined
+                                ? ` (${formatDuration(pointer.duration)})`
+                                : ''}
+                            </Typography>
+
+                            {isWaiting && (
+                              <Alert
+                                severity="info"
+                                variant="outlined"
+                                sx={{ mt: 1 }}
+                                action={
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="info"
+                                    startIcon={<BoltIcon />}
+                                    onClick={() => {
+                                      setSignalTarget(pointer);
+                                      setSignalData('{}');
+                                    }}
+                                  >
+                                    Continue
+                                  </Button>
+                                }
+                              >
+                                Waiting for event: <strong>{pointer.eventName}</strong>
+                              </Alert>
+                            )}
+
+                            {isFailed && pointer.errorMessage && (
+                              <Alert severity="error" variant="outlined" sx={{ mt: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {pointer.errorMessage}
+                                </Typography>
+                                {pointer.errorStack && (
+                                  <Box
+                                    component="pre"
+                                    sx={{
+                                      mt: 1,
+                                      p: 1,
+                                      borderRadius: 1,
+                                      bgcolor: 'grey.900',
+                                      fontSize: '0.7rem',
+                                      fontFamily: 'monospace',
+                                      overflow: 'auto',
+                                      maxHeight: 120,
+                                    }}
+                                  >
+                                    {pointer.errorStack}
+                                  </Box>
+                                )}
+                              </Alert>
+                            )}
+
+                            <Collapse in={isExpanded}>
+                              <Box sx={{ mt: 1.5 }}>
+                                <Paper variant="outlined" sx={{ p: 2 }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Pointer ID: {pointer.id}
+                                  </Typography>
+                                  {pointer.outcome && (
+                                    <Box sx={{ mt: 1 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                        Outcome
+                                      </Typography>
+                                      <Box component="pre" sx={{ p: 1, borderRadius: 1, bgcolor: 'background.default', fontSize: '0.75rem', overflow: 'auto', maxHeight: 150 }}>
+                                        {JSON.stringify(pointer.outcome, null, 2)}
+                                      </Box>
+                                    </Box>
+                                  )}
+                                </Paper>
+                              </Box>
+                            </Collapse>
+                          </StepContent>
+                        </Step>
+                      );
+                    })}
+                  </Stepper>
+                )}
+              </Box>
+            )}
+
+            {/* Tab 2: Data */}
+            {activeTab === 2 && (
+              <Box>
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Workflow Instance Data
+                  </Typography>
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      borderRadius: 1,
+                      bgcolor: mode === 'dark' ? 'grey.950' : 'grey.50',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      fontSize: '0.8rem',
+                      fontFamily: 'monospace',
+                      overflow: 'auto',
+                      maxHeight: '55vh',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      m: 0,
+                    }}
+                  >
+                    {JSON.stringify(instance.data || {}, null, 2)}
+                  </Box>
+                </Paper>
+              </Box>
+            )}
+
+            {/* Tab 3: Logs */}
+            {activeTab === 3 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    Instance Execution Log
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setLogFetched(false);
+                      setLogContent(null);
+                    }}
+                    disabled={logLoading}
+                  >
+                    <RefreshIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+
+                {logLoading && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2 }}>
+                    <CircularProgress size={20} />
+                    <Typography variant="body2" color="text.secondary">Loading log...</Typography>
+                  </Box>
+                )}
+
+                {!logLoading && logError && <Alert severity="error">{logError}</Alert>}
+                {!logLoading && !logError && logContent === null && logFetched && (
+                  <Alert severity="info">No log file available for this instance.</Alert>
+                )}
+
+                {!logLoading && logContent !== null && (
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      borderRadius: 1,
+                      bgcolor: mode === 'dark' ? '#0a0e17' : 'grey.100',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      fontSize: '0.75rem',
+                      fontFamily: '"Fira Code", "Cascadia Code", monospace',
+                      overflow: 'auto',
+                      maxHeight: '55vh',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all',
+                      m: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {logContent}
+                  </Box>
+                )}
+              </Box>
             )}
           </Box>
-        )}
-
-        {/* Tab 2: Data */}
-        {activeTab === 2 && (
-          <Box>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Workflow Instance Data
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  p: 2,
-                  borderRadius: 1,
-                  bgcolor: mode === 'dark' ? 'grey.950' : 'grey.50',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  fontSize: '0.8rem',
-                  fontFamily: 'monospace',
-                  overflow: 'auto',
-                  maxHeight: '55vh',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  m: 0,
-                }}
-              >
-                {JSON.stringify(instance.data || {}, null, 2)}
-              </Box>
-            </Paper>
-          </Box>
-        )}
-
-        {/* Tab 3: Logs */}
-        {activeTab === 3 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                Instance Execution Log
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  setLogFetched(false);
-                  setLogContent(null);
-                }}
-                disabled={logLoading}
-              >
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-            </Box>
-
-            {logLoading && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2 }}>
-                <CircularProgress size={20} />
-                <Typography variant="body2" color="text.secondary">Loading log...</Typography>
-              </Box>
-            )}
-
-            {!logLoading && logError && <Alert severity="error">{logError}</Alert>}
-            {!logLoading && !logError && logContent === null && logFetched && (
-              <Alert severity="info">No log file available for this instance.</Alert>
-            )}
-
-            {!logLoading && logContent !== null && (
-              <Box
-                component="pre"
-                sx={{
-                  p: 2,
-                  borderRadius: 1,
-                  bgcolor: mode === 'dark' ? '#0a0e17' : 'grey.100',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  fontSize: '0.75rem',
-                  fontFamily: '"Fira Code", "Cascadia Code", monospace',
-                  overflow: 'auto',
-                  maxHeight: '55vh',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                  m: 0,
-                  lineHeight: 1.6,
-                }}
-              >
-                {logContent}
-              </Box>
-            )}
-          </Box>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {/* Stop Confirmation Dialog */}
       <Dialog open={stopConfirmOpen} onClose={() => !stopping && setStopConfirmOpen(false)}>
