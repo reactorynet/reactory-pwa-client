@@ -19,6 +19,7 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SchemaIcon from '@mui/icons-material/Schema';
+import DynamicFormIcon from '@mui/icons-material/DynamicForm';
 import { useReactory } from '@reactory/client-core/api';
 import { gql } from '@apollo/client';
 import { ReactoryForm } from '@reactory/client-core/components/reactory/ReactoryForm/ReactoryForm';
@@ -35,6 +36,20 @@ const GET_WORKFLOWS = gql`
         tags
         workflowType
       }
+    }
+  }
+`;
+
+const GET_FORM_BY_ID = gql`
+  query GetFormById($id: String!) {
+    ReactoryFormGetById(id: $id) {
+      id
+      name
+      nameSpace
+      version
+      schema
+      uiSchema
+      defaultFormValue
     }
   }
 `;
@@ -95,8 +110,9 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowOption | null>(null);
 
-  const [yamlDefinition, setYamlDefinition] = useState<any>(null);
-  const [loadingDefinition, setLoadingDefinition] = useState(false);
+  const [activeFormDef, setActiveFormDef] = useState<Reactory.Forms.IReactoryForm | null>(null);
+  const [formSource, setFormSource] = useState<'custom_form' | 'inferred' | 'none'>('none');
+  const [loadingForm, setLoadingForm] = useState(false);
 
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [rawJson, setRawJson] = useState('{}');
@@ -127,115 +143,162 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
       fetchWorkflows();
     } else {
       setSelectedWorkflow(null);
-      setYamlDefinition(null);
+      setActiveFormDef(null);
+      setFormSource('none');
       setFormData({});
       setRawJson('{}');
       setError(null);
     }
   }, [open, fetchWorkflows]);
 
-  // When a workflow is selected, fetch its YAML definition and auto-construct schema
+  // When a workflow is selected, resolve the form using the two-tier convention:
+  // 1. Look for matching form: [namespace].[name]FormInput@[version] or [namespace].[name]FormInput
+  // 2. Fall back to inferred schema from workflowYamlDefinition.inputs
   useEffect(() => {
-    if (!selectedWorkflow || !reactory?.graphqlQuery) {
-      setYamlDefinition(null);
+    if (!selectedWorkflow || !reactory) {
+      setActiveFormDef(null);
+      setFormSource('none');
       return;
     }
 
-    const loadDef = async () => {
+    const resolveForm = async () => {
+      setLoadingForm(true);
+      setError(null);
+
+      const { nameSpace, name, version } = selectedWorkflow;
+
+      // Candidate form IDs to check
+      const candidateIds = [
+        `${nameSpace}.${name}FormInput@${version}`,
+        `${nameSpace}.${name}Input@${version}`,
+        `${nameSpace}.${name}FormInput@1.0.0`,
+        `${nameSpace}.${name}FormInput`,
+      ];
+
+      // Step 1: Check client-side registered form schemas
+      let matchedForm: any = null;
+      if (Array.isArray(reactory.formSchemas)) {
+        matchedForm = reactory.formSchemas.find((f: any) =>
+          candidateIds.includes(f.id) || candidateIds.includes(`${f.nameSpace}.${f.name}@${f.version}`) || candidateIds.includes(f.name)
+        );
+      }
+
+      // Step 2: If not found on client, query GraphQL ReactoryFormGetById
+      if (!matchedForm && reactory.graphqlQuery) {
+        for (const candidateId of candidateIds) {
+          try {
+            const formRes: any = await reactory.graphqlQuery(GET_FORM_BY_ID, { id: candidateId });
+            if (formRes?.data?.ReactoryFormGetById?.schema) {
+              matchedForm = formRes.data.ReactoryFormGetById;
+              break;
+            }
+          } catch (e) {
+            // Check next candidate
+          }
+        }
+      }
+
+      // If custom matching form found, use it!
+      if (matchedForm?.schema) {
+        const customDef: Reactory.Forms.IReactoryForm = {
+          id: matchedForm.id || `${nameSpace}.${name}FormInput@${version}`,
+          name: matchedForm.name || `${name}FormInput`,
+          nameSpace: matchedForm.nameSpace || nameSpace,
+          version: matchedForm.version || version,
+          schema: matchedForm.schema,
+          uiSchema: matchedForm.uiSchema || {},
+        };
+        const initialValues = matchedForm.defaultFormValue || {};
+        setActiveFormDef(customDef);
+        setFormSource('custom_form');
+        setFormData(initialValues);
+        setRawJson(JSON.stringify(initialValues, null, 2));
+        setLoadingForm(false);
+        return;
+      }
+
+      // Step 3: Fall back to inferred properties from workflow YAML inputs
       try {
-        setLoadingDefinition(true);
-        const res: any = await reactory.graphqlQuery(GET_WORKFLOW_YAML_DEF, {
-          nameSpace: selectedWorkflow.nameSpace,
-          name: selectedWorkflow.name,
-          version: selectedWorkflow.version,
+        const defRes: any = await reactory.graphqlQuery(GET_WORKFLOW_YAML_DEF, {
+          nameSpace,
+          name,
+          version,
         });
 
-        const def = res?.data?.workflowYamlDefinition;
-        if (def) {
-          setYamlDefinition(def);
-
-          // Extract defaults from definition inputs
-          const rawInputs = def.inputs || {};
+        const yamlDef = defRes?.data?.workflowYamlDefinition;
+        if (yamlDef?.inputs) {
+          const rawInputs = yamlDef.inputs;
+          let schema: any = { type: 'object', properties: {} };
           const initialData: Record<string, any> = {};
 
-          if (typeof rawInputs === 'object' && rawInputs !== null) {
-            // Check if inputs has properties directly or map of field definitions
-            const properties = rawInputs.properties || rawInputs;
-            Object.keys(properties).forEach((k) => {
-              const spec = properties[k];
-              if (spec && typeof spec === 'object' && 'default' in spec) {
-                initialData[k] = spec.default;
-              } else if (typeof spec !== 'object') {
-                initialData[k] = spec;
+          if (rawInputs.type === 'object' && rawInputs.properties) {
+            schema = rawInputs;
+            Object.keys(rawInputs.properties).forEach((k) => {
+              if (rawInputs.properties[k]?.default !== undefined) {
+                initialData[k] = rawInputs.properties[k].default;
               }
             });
+          } else if (typeof rawInputs === 'object' && rawInputs !== null) {
+            const props: Record<string, any> = {};
+            const requiredFields: string[] = [];
+
+            Object.entries(rawInputs).forEach(([key, val]: [string, any]) => {
+              if (typeof val === 'object' && val !== null) {
+                props[key] = {
+                  title: val.title || key,
+                  type: val.type || (typeof val.default === 'number' ? 'number' : typeof val.default === 'boolean' ? 'boolean' : 'string'),
+                  description: val.description,
+                  default: val.default,
+                  ...(val.enum ? { enum: val.enum } : {}),
+                };
+                if (val.default !== undefined) initialData[key] = val.default;
+                if (val.required) requiredFields.push(key);
+              } else {
+                props[key] = {
+                  title: key,
+                  type: typeof val === 'number' ? 'number' : typeof val === 'boolean' ? 'boolean' : 'string',
+                  default: val,
+                };
+                initialData[key] = val;
+              }
+            });
+
+            schema = {
+              type: 'object',
+              properties: props,
+              ...(requiredFields.length > 0 ? { required: requiredFields } : {}),
+            };
           }
 
+          const inferredDef: Reactory.Forms.IReactoryForm = {
+            id: `quickLaunch.inferred.${nameSpace}.${name}@${version}`,
+            name: `${name}_InferredInput`,
+            nameSpace: nameSpace,
+            version: version,
+            schema,
+            uiSchema: {},
+          };
+
+          setActiveFormDef(inferredDef);
+          setFormSource('inferred');
           setFormData(initialData);
           setRawJson(JSON.stringify(initialData, null, 2));
+        } else {
+          setActiveFormDef(null);
+          setFormSource('none');
+          setFormData({});
+          setRawJson('{}');
         }
-      } catch (err: any) {
-        // Fallback gracefully
-        setYamlDefinition(null);
+      } catch (err) {
+        setActiveFormDef(null);
+        setFormSource('none');
       } finally {
-        setLoadingDefinition(false);
+        setLoadingForm(false);
       }
     };
 
-    loadDef();
+    resolveForm();
   }, [selectedWorkflow, reactory]);
-
-  // Construct JSON schema for ReactoryForm
-  const formDefinition: Reactory.Forms.IReactoryForm | null = useMemo(() => {
-    if (!yamlDefinition?.inputs) return null;
-
-    const rawInputs = yamlDefinition.inputs;
-    let schema: any = {
-      type: 'object',
-      properties: {},
-    };
-
-    if (rawInputs.type === 'object' && rawInputs.properties) {
-      schema = rawInputs;
-    } else if (typeof rawInputs === 'object' && rawInputs !== null) {
-      const props: Record<string, any> = {};
-      const requiredFields: string[] = [];
-
-      Object.entries(rawInputs).forEach(([key, val]: [string, any]) => {
-        if (typeof val === 'object' && val !== null) {
-          props[key] = {
-            title: val.title || key,
-            type: val.type || (typeof val.default === 'number' ? 'number' : typeof val.default === 'boolean' ? 'boolean' : 'string'),
-            description: val.description,
-            default: val.default,
-            ...(val.enum ? { enum: val.enum } : {}),
-          };
-          if (val.required) requiredFields.push(key);
-        } else {
-          props[key] = {
-            title: key,
-            type: typeof val === 'number' ? 'number' : typeof val === 'boolean' ? 'boolean' : 'string',
-            default: val,
-          };
-        }
-      });
-
-      schema = {
-        type: 'object',
-        properties: props,
-        ...(requiredFields.length > 0 ? { required: requiredFields } : {}),
-      };
-    }
-
-    return {
-      id: `quickLaunch.${selectedWorkflow?.id || 'workflow'}@1.0.0`,
-      name: selectedWorkflow?.name || 'QuickLaunchForm',
-      nameSpace: selectedWorkflow?.nameSpace || 'core',
-      version: selectedWorkflow?.version || '1.0.0',
-      schema,
-      uiSchema: {},
-    };
-  }, [yamlDefinition, selectedWorkflow]);
 
   const handleLaunch = async () => {
     if (!selectedWorkflow) {
@@ -296,7 +359,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
             Quick Launch Workflow
           </Typography>
         </Box>
-        {formDefinition && (
+        {activeFormDef && (
           <FormControlLabel
             control={
               <Switch
@@ -373,9 +436,30 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               borderColor: 'divider',
             }}
           >
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              {selectedWorkflow.name} ({selectedWorkflow.nameSpace})
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                {selectedWorkflow.name} ({selectedWorkflow.nameSpace})
+              </Typography>
+              {formSource === 'custom_form' && (
+                <Chip
+                  size="small"
+                  color="success"
+                  icon={<DynamicFormIcon fontSize="small" />}
+                  label={`Form: ${activeFormDef?.name}`}
+                  sx={{ height: 20, fontSize: '0.68rem' }}
+                />
+              )}
+              {formSource === 'inferred' && (
+                <Chip
+                  size="small"
+                  color="info"
+                  variant="outlined"
+                  icon={<AutoAwesomeIcon fontSize="small" />}
+                  label="Inferred Schema"
+                  sx={{ height: 20, fontSize: '0.68rem' }}
+                />
+              )}
+            </Box>
             {selectedWorkflow.description && (
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                 {selectedWorkflow.description}
@@ -399,15 +483,15 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               Execution Parameters
             </Typography>
 
-            {loadingDefinition ? (
+            {loadingForm ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress size={24} />
               </Box>
-            ) : formDefinition && !useRawJson ? (
+            ) : activeFormDef && !useRawJson ? (
               <Box sx={{ '& .MuiPaper-root': { bgcolor: 'transparent' } }}>
                 <ReactoryForm
-                  key={`form_${selectedWorkflow.id}`}
-                  formDef={formDefinition}
+                  key={`form_${activeFormDef.id}`}
+                  formDef={activeFormDef}
                   data={formData}
                   onChange={(val: any) => {
                     const data = val?.formData || val || {};
