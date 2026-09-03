@@ -38,6 +38,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import moment from 'moment';
 import { useReactory } from '@reactory/client-core/api';
 import { WorkflowInstanceSummary, WorkflowHistoryItem } from '../types';
+import { WorkflowInstanceInspector } from './WorkflowInstanceInspector';
 
 export interface ActiveWorkflowsPanelProps {
   instances: WorkflowInstanceSummary[];
@@ -75,8 +76,6 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
   const [tab, setTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [inspectingInstanceId, setInspectingInstanceId] = useState<string | null>(null);
-
-  const WorkflowInstanceInspector = reactory?.getComponent('core.WorkflowInstanceInspector@1.0.0') as React.ComponentType<any> | null;
 
   const activeRuns = instances.filter(
     (i) => i.status === 'RUNNING' || i.status === 'PENDING' || i.status === 'PAUSED'
@@ -534,20 +533,13 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
           },
         }}
       >
-        {inspectingInstanceId && WorkflowInstanceInspector ? (
+        {inspectingInstanceId && (
           <WorkflowInstanceInspector
-            reactory={reactory}
             instanceId={inspectingInstanceId}
             onClose={() => setInspectingInstanceId(null)}
+            mode={mode}
           />
-        ) : inspectingInstanceId ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <CircularProgress size={32} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Loading instance inspector ({inspectingInstanceId})...
-            </Typography>
-          </Box>
-        ) : null}
+        )}
       </Dialog>
     </Box>
   );
