@@ -6,6 +6,7 @@ import {
   CommanderCoordinates,
   CommanderStorageState,
   WorkflowInstanceSummary,
+  WorkflowHistoryItem,
   WorkflowScheduleItem,
 } from '../types';
 
@@ -28,6 +29,34 @@ const GET_ACTIVE_INSTANCES = gql`
         total
         page
         limit
+      }
+    }
+  }
+`;
+
+const GET_WORKFLOW_HISTORY = gql`
+  query GetWorkflowExecutionHistory($limit: Int) {
+    workflowExecutionHistory(pagination: { limit: $limit, page: 1, sortOrder: DESC }) {
+      instances {
+        id
+        workflowDefinitionId
+        version
+        status
+        statusLabel
+        description
+        createTime
+        completeTime
+        duration
+        stepCount
+        completedStepCount
+        failedStepCount
+        logFileUrl
+      }
+      pagination {
+        total
+        page
+        limit
+        pages
       }
     }
   }
@@ -138,10 +167,11 @@ export const useWorkflowCommander = ({
   });
 
   const [activeInstances, setActiveInstances] = useState<WorkflowInstanceSummary[]>([]);
+  const [historyInstances, setHistoryInstances] = useState<WorkflowHistoryItem[]>([]);
   const [schedules, setSchedules] = useState<WorkflowScheduleItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Active panel popup (e.g. 'tasks' | 'active_runs' | 'schedules' | 'quick_launch' | 'schedule_create' | null)
+  // Active panel popup (e.g. 'tasks' | 'active_runs' | 'history' | 'schedules' | 'quick_launch' | null)
   const [activePanel, setActivePanel] = useState<string | null>(null);
 
   // Save location to localStorage only
@@ -169,6 +199,21 @@ export const useWorkflowCommander = ({
       const res: any = await reactory.graphqlQuery(GET_ACTIVE_INSTANCES, { limit: 20 });
       if (res?.data?.workflowInstances?.instances) {
         setActiveInstances(res.data.workflowInstances.instances);
+      }
+    } catch (e) {
+      // Non-critical
+    } finally {
+      setLoading(false);
+    }
+  }, [reactory]);
+
+  const fetchHistoryInstances = useCallback(async () => {
+    if (!reactory?.graphqlQuery) return;
+    try {
+      setLoading(true);
+      const res: any = await reactory.graphqlQuery(GET_WORKFLOW_HISTORY, { limit: 30 });
+      if (res?.data?.workflowExecutionHistory?.instances) {
+        setHistoryInstances(res.data.workflowExecutionHistory.instances);
       }
     } catch (e) {
       // Non-critical
@@ -216,9 +261,10 @@ export const useWorkflowCommander = ({
       if (!reactory?.graphqlMutation) return;
       const res: any = await reactory.graphqlMutation(PAUSE_INSTANCE, { instanceId });
       fetchActiveInstances();
+      fetchHistoryInstances();
       return res?.data?.pauseWorkflowInstance;
     },
-    [reactory, fetchActiveInstances]
+    [reactory, fetchActiveInstances, fetchHistoryInstances]
   );
 
   const resumeInstance = useCallback(
@@ -226,9 +272,10 @@ export const useWorkflowCommander = ({
       if (!reactory?.graphqlMutation) return;
       const res: any = await reactory.graphqlMutation(RESUME_INSTANCE, { instanceId });
       fetchActiveInstances();
+      fetchHistoryInstances();
       return res?.data?.resumeWorkflowInstance;
     },
-    [reactory, fetchActiveInstances]
+    [reactory, fetchActiveInstances, fetchHistoryInstances]
   );
 
   const cancelInstance = useCallback(
@@ -236,40 +283,46 @@ export const useWorkflowCommander = ({
       if (!reactory?.graphqlMutation) return;
       const res: any = await reactory.graphqlMutation(CANCEL_INSTANCE, { instanceId });
       fetchActiveInstances();
+      fetchHistoryInstances();
       return res?.data?.cancelWorkflowInstance;
     },
-    [reactory, fetchActiveInstances]
+    [reactory, fetchActiveInstances, fetchHistoryInstances]
   );
 
   useEffect(() => {
     fetchActiveInstances();
+    fetchHistoryInstances();
     fetchSchedules();
 
     if (!reactory) return;
 
     const handleEvent = () => {
       fetchActiveInstances();
+      fetchHistoryInstances();
       fetchSchedules();
     };
 
     if (typeof reactory.on === 'function') {
       reactory.on('workflow.status.changed', handleEvent);
       reactory.on('workflow.schedule.updated', handleEvent);
+      reactory.on('workflow.completed', handleEvent);
     }
 
     return () => {
       if (typeof reactory.off === 'function') {
         reactory.off('workflow.status.changed', handleEvent);
         reactory.off('workflow.schedule.updated', handleEvent);
+        reactory.off('workflow.completed', handleEvent);
       }
     };
-  }, [fetchActiveInstances, fetchSchedules, reactory]);
+  }, [fetchActiveInstances, fetchHistoryInstances, fetchSchedules, reactory]);
 
   return {
     dock,
     customPosition,
     updatePosition,
     activeInstances,
+    historyInstances,
     schedules,
     loading,
     activePanel,
@@ -278,7 +331,11 @@ export const useWorkflowCommander = ({
     pauseInstance,
     resumeInstance,
     cancelInstance,
-    refreshInstances: fetchActiveInstances,
+    refreshInstances: () => {
+      fetchActiveInstances();
+      fetchHistoryInstances();
+    },
+    refreshHistory: fetchHistoryInstances,
     refreshSchedules: fetchSchedules,
   };
 };

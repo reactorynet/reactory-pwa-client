@@ -55,6 +55,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
     customPosition,
     updatePosition,
     activeInstances,
+    historyInstances,
     schedules,
     loading: commanderLoading,
     activePanel,
@@ -230,9 +231,11 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         id: 'history',
         label: 'Exec History',
         icon: <HistoryIcon fontSize="small" />,
+        badge: historyInstances.length > 0 ? historyInstances.length : undefined,
+        badgeColor: 'default',
         tooltip: 'Open workflow execution history',
         onClick: () => {
-          setActivePanel('active_runs');
+          setActivePanel('history');
           setIsOpen(false);
           isHoverDisabledRef.current = true;
           setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
@@ -243,6 +246,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
     [
       pendingCount,
       activeRunsCount,
+      historyInstances.length,
       schedules.length,
       dock,
       variant,
@@ -364,9 +368,9 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         </DialogActions>
       </Dialog>
 
-      {/* Dialog: Active Workflows */}
+      {/* Dialog: Active Workflows & Execution History */}
       <Dialog
-        open={activePanel === 'active_runs'}
+        open={activePanel === 'active_runs' || activePanel === 'history'}
         onClose={() => setActivePanel(null)}
         maxWidth="md"
         fullWidth
@@ -378,11 +382,13 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>Active Workflow Executions</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Workflow Executions</DialogTitle>
         <Divider />
         <DialogContent sx={{ p: 0 }}>
           <ActiveWorkflowsPanel
             instances={activeInstances}
+            historyInstances={historyInstances}
+            initialTab={activePanel === 'history' ? 1 : 0}
             loading={commanderLoading}
             onRefresh={refreshInstances}
             onPause={pauseInstance}

@@ -57,6 +57,22 @@ export interface WorkflowInstanceSummary {
   duration?: number;
 }
 
+export interface WorkflowHistoryItem {
+  id: string;
+  workflowDefinitionId: string;
+  version: string;
+  status: number;
+  statusLabel: string;
+  description?: string;
+  createTime: string | Date;
+  completeTime?: string | Date;
+  duration?: number;
+  stepCount: number;
+  completedStepCount: number;
+  failedStepCount: number;
+  logFileUrl?: string;
+}
+
 export interface WorkflowScheduleItem {
   id: string;
   name: string;
