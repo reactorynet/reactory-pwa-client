@@ -20,6 +20,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SchemaIcon from '@mui/icons-material/Schema';
 import DynamicFormIcon from '@mui/icons-material/DynamicForm';
+import WidgetsIcon from '@mui/icons-material/Widgets';
 import { useReactory } from '@reactory/client-core/api';
 import { gql } from '@apollo/client';
 import { ReactoryForm } from '@reactory/client-core/components/reactory/ReactoryForm/ReactoryForm';
@@ -110,8 +111,10 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowOption | null>(null);
 
+  // Resolution states
+  const [CustomComponent, setCustomComponent] = useState<React.ComponentType<any> | null>(null);
   const [activeFormDef, setActiveFormDef] = useState<Reactory.Forms.IReactoryForm | null>(null);
-  const [formSource, setFormSource] = useState<'custom_form' | 'inferred' | 'none'>('none');
+  const [formSource, setFormSource] = useState<'custom_component' | 'custom_form' | 'inferred' | 'none'>('none');
   const [loadingForm, setLoadingForm] = useState(false);
 
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -143,6 +146,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
       fetchWorkflows();
     } else {
       setSelectedWorkflow(null);
+      setCustomComponent(null);
       setActiveFormDef(null);
       setFormSource('none');
       setFormData({});
@@ -151,41 +155,58 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
     }
   }, [open, fetchWorkflows]);
 
-  // When a workflow is selected, resolve the form using the two-tier convention:
-  // 1. Look for matching form: [namespace].[name]FormInput@[version] or [namespace].[name]FormInput
-  // 2. Fall back to inferred schema from workflowYamlDefinition.inputs
+  // Target input form/component FQN following the standard core.WorkflowLaunch convention:
+  // const targetWorkflowFormInputId = `${workflow.nameSpace}.${workflow.name}InputForm@${workflow.version}`
+  const targetWorkflowFormInputId = useMemo(() => {
+    if (!selectedWorkflow) return '';
+    return `${selectedWorkflow.nameSpace}.${selectedWorkflow.name}InputForm@${selectedWorkflow.version}`;
+  }, [selectedWorkflow]);
+
+  // Resolve custom launcher component, custom form schema, or inferred properties
   useEffect(() => {
     if (!selectedWorkflow || !reactory) {
+      setCustomComponent(null);
       setActiveFormDef(null);
       setFormSource('none');
       return;
     }
 
-    const resolveForm = async () => {
+    const resolveWorkflowInput = async () => {
       setLoadingForm(true);
       setError(null);
+      setCustomComponent(null);
+      setActiveFormDef(null);
 
       const { nameSpace, name, version } = selectedWorkflow;
 
-      // Candidate form IDs to check
-      const candidateIds = [
+      // 1. Check if a custom React component is registered matching `${nameSpace}.${name}InputForm@${version}`
+      const RegisteredComp = reactory.getComponent(targetWorkflowFormInputId) as React.ComponentType<any> | null;
+      if (RegisteredComp) {
+        setCustomComponent(() => RegisteredComp);
+        setFormSource('custom_component');
+        setLoadingForm(false);
+        return;
+      }
+
+      // 2. Check for matching custom ReactoryForm schema
+      const candidateFormIds = [
+        targetWorkflowFormInputId,
+        `${nameSpace}.${name}InputForm`,
         `${nameSpace}.${name}FormInput@${version}`,
-        `${nameSpace}.${name}Input@${version}`,
-        `${nameSpace}.${name}FormInput@1.0.0`,
         `${nameSpace}.${name}FormInput`,
       ];
 
-      // Step 1: Check client-side registered form schemas
       let matchedForm: any = null;
       if (Array.isArray(reactory.formSchemas)) {
         matchedForm = reactory.formSchemas.find((f: any) =>
-          candidateIds.includes(f.id) || candidateIds.includes(`${f.nameSpace}.${f.name}@${f.version}`) || candidateIds.includes(f.name)
+          candidateFormIds.includes(f.id) ||
+          candidateFormIds.includes(`${f.nameSpace}.${f.name}@${f.version}`) ||
+          candidateFormIds.includes(f.name)
         );
       }
 
-      // Step 2: If not found on client, query GraphQL ReactoryFormGetById
       if (!matchedForm && reactory.graphqlQuery) {
-        for (const candidateId of candidateIds) {
+        for (const candidateId of candidateFormIds) {
           try {
             const formRes: any = await reactory.graphqlQuery(GET_FORM_BY_ID, { id: candidateId });
             if (formRes?.data?.ReactoryFormGetById?.schema) {
@@ -198,11 +219,10 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
         }
       }
 
-      // If custom matching form found, use it!
       if (matchedForm?.schema) {
         const customDef: Reactory.Forms.IReactoryForm = {
-          id: matchedForm.id || `${nameSpace}.${name}FormInput@${version}`,
-          name: matchedForm.name || `${name}FormInput`,
+          id: matchedForm.id || targetWorkflowFormInputId,
+          name: matchedForm.name || `${name}InputForm`,
           nameSpace: matchedForm.nameSpace || nameSpace,
           version: matchedForm.version || version,
           schema: matchedForm.schema,
@@ -217,7 +237,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
         return;
       }
 
-      // Step 3: Fall back to inferred properties from workflow YAML inputs
+      // 3. Fall back to inferred properties from workflow YAML definition
       try {
         const defRes: any = await reactory.graphqlQuery(GET_WORKFLOW_YAML_DEF, {
           nameSpace,
@@ -297,17 +317,19 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
       }
     };
 
-    resolveForm();
-  }, [selectedWorkflow, reactory]);
+    resolveWorkflowInput();
+  }, [selectedWorkflow, targetWorkflowFormInputId, reactory]);
 
-  const handleLaunch = async () => {
+  const handleExecute = async (payloadOverride?: any) => {
     if (!selectedWorkflow) {
       setError('Please select a workflow to launch');
       return;
     }
 
     let executionPayload: any = {};
-    if (useRawJson) {
+    if (payloadOverride !== undefined) {
+      executionPayload = typeof payloadOverride === 'string' ? (() => { try { return JSON.parse(payloadOverride); } catch { return {}; } })() : payloadOverride;
+    } else if (useRawJson) {
       try {
         executionPayload = JSON.parse(rawJson || '{}');
       } catch (e) {
@@ -322,17 +344,29 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
       setLaunching(true);
       setError(null);
 
-      await reactory.graphqlMutation(START_WORKFLOW, {
+      const res: any = await reactory.graphqlMutation(START_WORKFLOW, {
         workflowId: selectedWorkflow.id,
         input: {
           input: executionPayload,
+          tags: ['launched-from-ui'],
+          priority: 1,
         },
       });
 
-      onClose();
-      if (onLaunched) onLaunched();
+      if (res?.data?.startWorkflow) {
+        if (typeof reactory.createNotification === 'function') {
+          reactory.createNotification('Workflow started successfully', { type: 'success' });
+        }
+        onClose();
+        if (onLaunched) onLaunched();
+      } else {
+        throw new Error('Failed to start workflow');
+      }
     } catch (err: any) {
-      setError(err?.message || 'Failed to start workflow');
+      setError(err?.message || 'Failed to execute workflow');
+      if (typeof reactory.createNotification === 'function') {
+        reactory.createNotification('Failed to start workflow', { type: 'error' });
+      }
     } finally {
       setLaunching(false);
     }
@@ -359,7 +393,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
             Quick Launch Workflow
           </Typography>
         </Box>
-        {activeFormDef && (
+        {(activeFormDef || CustomComponent) && (
           <FormControlLabel
             control={
               <Switch
@@ -440,6 +474,15 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
                 {selectedWorkflow.name} ({selectedWorkflow.nameSpace})
               </Typography>
+              {formSource === 'custom_component' && (
+                <Chip
+                  size="small"
+                  color="secondary"
+                  icon={<WidgetsIcon fontSize="small" />}
+                  label={`Component: ${targetWorkflowFormInputId}`}
+                  sx={{ height: 20, fontSize: '0.68rem' }}
+                />
+              )}
               {formSource === 'custom_form' && (
                 <Chip
                   size="small"
@@ -475,7 +518,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
           </Box>
         )}
 
-        {/* Inputs Form */}
+        {/* Inputs Form / Component */}
         {selectedWorkflow && (
           <Box sx={{ mt: 1 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -487,6 +530,14 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress size={24} />
               </Box>
+            ) : CustomComponent && !useRawJson ? (
+              <Box sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+                <CustomComponent
+                  reactory={reactory}
+                  workflow={selectedWorkflow}
+                  onSubmit={(submitted: any) => handleExecute(submitted)}
+                />
+              </Box>
             ) : activeFormDef && !useRawJson ? (
               <Box sx={{ '& .MuiPaper-root': { bgcolor: 'transparent' } }}>
                 <ReactoryForm
@@ -497,6 +548,10 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
                     const data = val?.formData || val || {};
                     setFormData(data);
                     setRawJson(JSON.stringify(data, null, 2));
+                  }}
+                  onSubmit={(val: any) => {
+                    const data = val?.formData || val || {};
+                    handleExecute(data);
                   }}
                 />
               </Box>
@@ -531,7 +586,7 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
         <Button
           variant="contained"
           color="primary"
-          onClick={handleLaunch}
+          onClick={() => handleExecute()}
           disabled={launching || !selectedWorkflow}
           startIcon={launching ? <CircularProgress size={16} /> : <PlayArrowIcon />}
         >
