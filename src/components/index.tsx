@@ -113,6 +113,7 @@ import { UserProfile } from './shared/UserProfile';
 import { useContentRender } from './shared/hooks/useContentRender';
 import { ContentRenderer } from './shared/ContentRenderer';
 import { Comments } from './shared/Comments/Comments';
+import { MermaidDiagram } from './shared/MermaidDiagram';
 import { CommentAnnotation } from './shared/Comments/CommentAnnotation';
 import { 
   Timeline,
@@ -1182,6 +1183,22 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
   D3ChartComponentDefinition,
   // Reactor system graph explorer (three.js)
   GraphExplorerComponentDefinition,
+  {
+    nameSpace: 'core',
+    name: 'MermaidDiagram',
+    version: '1.0.0',
+    component: MermaidDiagram,
+    description: 'Interactive Mermaid diagram renderer with syntax error detection, graceful fallback, and source code editor toggle.',
+    tags: ['mermaid', 'diagram', 'chart', 'flowchart', 'sequence', 'visual', 'graph'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'Mermaid',
+    version: '1.0.0',
+    component: MermaidDiagram,
+    description: 'Interactive Mermaid diagram renderer with syntax error detection, graceful fallback, and source code editor toggle.',
+    tags: ['mermaid', 'diagram', 'chart', 'flowchart', 'sequence', 'visual', 'graph'],
+  },
   // Append plugin components
   ...pluginComponents
 ];
