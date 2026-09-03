@@ -35,7 +35,6 @@ import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
 import UserHomeFolder from '../UserHomeFolder/UserHomeFolder';
 import { ServerFileExplorer } from '../ServerFileExplorer';
-import { WorkflowCommander } from './WorkflowCommander';
 
 /**
  * A single error captured during YAML workflow definition loading.
@@ -1768,16 +1767,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         il8n={undefined}
       />
 
-      {/* Workflow Commander Widget */}
-      {!isInstanceMode && (
-        <WorkflowCommander
-          initialPosition="top-right"
-          mode={mode}
-          onScheduleChanged={() => {
-            reactory.createNotification?.('Workflow schedules updated', { type: 'info' });
-          }}
-        />
-      )}
+    
 
       {/* Save notification */}
       <Snackbar
