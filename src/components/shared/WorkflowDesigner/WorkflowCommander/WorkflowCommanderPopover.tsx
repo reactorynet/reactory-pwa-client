@@ -56,6 +56,9 @@ export const WorkflowCommanderPopover: React.FC<WorkflowCommanderPopoverProps> =
   return (
     <Paper
       elevation={8}
+      data-commander-popover="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       className={className}
       sx={{
@@ -74,7 +77,7 @@ export const WorkflowCommanderPopover: React.FC<WorkflowCommanderPopoverProps> =
         },
         animation: 'commanderPopoverRise 200ms cubic-bezier(0.4, 0, 0.2, 1)',
         transformOrigin,
-        zIndex: 1400,
+        zIndex: 1450,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -113,7 +116,10 @@ export const WorkflowCommanderPopover: React.FC<WorkflowCommanderPopoverProps> =
             const buttonContent = (
               <Box
                 component="button"
-                onClick={(e) => onActionClick(action, e)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onActionClick(action, e);
+                }}
                 disabled={action.disabled}
                 sx={{
                   width: SLOT_SIZE,

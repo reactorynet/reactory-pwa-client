@@ -49,6 +49,12 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
     if (disabled) return;
     if (e.button !== 0) return; // Left click only
 
+    // Don't initiate drag if clicking inside the popover or an interactive child
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-commander-popover]')) {
+      return;
+    }
+
     const rect = fabRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -72,7 +78,7 @@ export const WorkflowCommanderFAB: React.FC<WorkflowCommanderFABProps> = ({
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
 
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
       movedRef.current = true;
     }
 
