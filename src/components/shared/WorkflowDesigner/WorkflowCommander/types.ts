@@ -68,7 +68,9 @@ export interface WorkflowScheduleItem {
 }
 
 export interface WorkflowCommanderProps {
-  /** Initial or controlled position docking */
+  /** Rendering variant: 'fab' (floating draggable) or 'toolbar' (in app bar/header) */
+  variant?: 'fab' | 'toolbar';
+  /** Initial or controlled position docking (used in 'fab' mode) */
   initialPosition?: CommanderPosition;
   /** Storage key for persisting FAB coordinates */
   storageKey?: string;
@@ -80,7 +82,7 @@ export interface WorkflowCommanderProps {
   onTaskCompleted?: (task: WorkflowTask, result: any) => void;
   /** Callback on schedule created/deleted */
   onScheduleChanged?: () => void;
-  /** Whether the FAB is disabled */
+  /** Whether the commander is disabled */
   disabled?: boolean;
   className?: string;
   style?: React.CSSProperties;

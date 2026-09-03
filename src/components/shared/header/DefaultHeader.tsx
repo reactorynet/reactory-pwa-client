@@ -34,6 +34,7 @@ import { useNavigate } from 'react-router';
 import Reactory from '@reactorynet/reactory-core';
 import localForage from 'localforage';
 import { ReactoryAvatar } from './AvatarComponent';
+import { WorkflowCommander } from '../WorkflowDesigner/WorkflowCommander';
 
 // Configure localForage
 localForage.config({
@@ -566,6 +567,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           </Typography>
 
           {renderSearchInterface()}
+
+          <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>

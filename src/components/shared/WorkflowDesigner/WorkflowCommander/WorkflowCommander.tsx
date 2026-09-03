@@ -7,6 +7,10 @@ import {
   DialogActions,
   Button,
   Divider,
+  IconButton,
+  Tooltip,
+  Badge,
+  alpha,
 } from '@mui/material';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -18,6 +22,7 @@ import ScreenRotationIcon from '@mui/icons-material/ScreenRotation';
 import HistoryIcon from '@mui/icons-material/History';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import PauseCircleIcon from '@mui/icons-material/PauseCircle';
+import SpeedIcon from '@mui/icons-material/Speed';
 
 import { WorkflowCommanderProps, CommanderAction, CommanderPosition } from './types';
 import { WorkflowCommanderFAB } from './WorkflowCommanderFAB';
@@ -30,6 +35,7 @@ import { WorkflowScheduleManager } from './panels/WorkflowScheduleManager';
 import { QuickLaunchDialog } from './panels/QuickLaunchDialog';
 
 export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
+  variant = 'fab',
   initialPosition = 'top-right',
   storageKey = 'reactory_workflow_commander_pos',
   mode = 'dark',
@@ -42,6 +48,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const isHoverDisabledRef = useRef(false);
+  const toolbarContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     dock,
@@ -86,7 +93,11 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
     const handleOutsideClick = (e: MouseEvent) => {
       if (!isOpen) return;
       const target = e.target as Element;
-      const container = document.querySelector('[data-workflow-commander-fab]');
+      const container = document.querySelector(
+        variant === 'toolbar'
+          ? '[data-workflow-commander-toolbar]'
+          : '[data-workflow-commander-fab]'
+      );
       if (container && !container.contains(target)) {
         setIsOpen(false);
       }
@@ -99,7 +110,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
     };
-  }, [isOpen]);
+  }, [isOpen, variant]);
 
   const handleCompleteTask = async (taskId: string, resultData: any) => {
     const res = await completeTask(taskId, resultData);
@@ -204,13 +215,17 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
           setTimeout(() => { isHoverDisabledRef.current = false; }, 600);
         },
       },
-      {
-        id: 'cycle_dock',
-        label: 'Dock Corner',
-        icon: <ScreenRotationIcon fontSize="small" />,
-        tooltip: `Current dock: ${dock}. Click to move corner.`,
-        onClick: handleCycleDock,
-      },
+      ...(variant === 'fab'
+        ? [
+            {
+              id: 'cycle_dock',
+              label: 'Dock Corner',
+              icon: <ScreenRotationIcon fontSize="small" />,
+              tooltip: `Current dock: ${dock}. Click to move corner.`,
+              onClick: handleCycleDock,
+            },
+          ]
+        : []),
       {
         id: 'history',
         label: 'Exec History',
@@ -230,6 +245,7 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
       activeRunsCount,
       schedules.length,
       dock,
+      variant,
       customActions,
       refreshTasks,
       refreshInstances,
@@ -239,30 +255,81 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
 
   return (
     <>
-      {/* Draggable FAB with anchored hover popover inside */}
-      <WorkflowCommanderFAB
-        dock={dock}
-        customPosition={customPosition}
-        onPositionChange={updatePosition}
-        badgeCount={totalBadge}
-        badgeColor={pendingCount > 0 ? 'warning' : 'primary'}
-        isBusy={activeRunsCount > 0}
-        isOpen={isOpen}
-        onToggleOpen={handleToggleOpen}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        disabled={disabled}
-        mode={mode}
-        className={className}
-        style={style}
-      >
-        <WorkflowCommanderPopover
-          actions={defaultActions}
-          mode={mode}
+      {variant === 'toolbar' ? (
+        <Box
+          ref={toolbarContainerRef}
+          className={className}
+          data-workflow-commander-toolbar="true"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}
+        >
+          <Tooltip title="Workflow Commander (Click or hover to open)" placement="bottom">
+            <IconButton
+              size="large"
+              color="inherit"
+              onClick={handleToggleOpen}
+              disabled={disabled}
+              aria-label="Workflow Commander"
+              sx={{
+                transition: 'all 0.2s ease',
+                ...(activeRunsCount > 0 && {
+                  color: mode === 'dark' ? '#00e5ff' : '#0288d1',
+                  animation: 'activeToolbarPulse 1.6s infinite ease-in-out',
+                  '@keyframes activeToolbarPulse': {
+                    '0%, 100%': { transform: 'scale(1)' },
+                    '50%': { transform: 'scale(1.1)' },
+                  },
+                }),
+              }}
+            >
+              <Badge
+                badgeContent={totalBadge}
+                color={pendingCount > 0 ? 'warning' : 'primary'}
+                invisible={!totalBadge || totalBadge === 0}
+              >
+                <SpeedIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          {isOpen && (
+            <Box sx={{ position: 'absolute', top: '100%', right: 0, mt: 0.5, zIndex: 1450 }}>
+              <WorkflowCommanderPopover
+                actions={defaultActions}
+                mode={mode}
+                dock="top-right"
+                onActionClick={(action, e) => action.onClick(e)}
+              />
+            </Box>
+          )}
+        </Box>
+      ) : (
+        /* Floating Draggable FAB */
+        <WorkflowCommanderFAB
           dock={dock}
-          onActionClick={(action, e) => action.onClick(e)}
-        />
-      </WorkflowCommanderFAB>
+          customPosition={customPosition}
+          onPositionChange={updatePosition}
+          badgeCount={totalBadge}
+          badgeColor={pendingCount > 0 ? 'warning' : 'primary'}
+          isBusy={activeRunsCount > 0}
+          isOpen={isOpen}
+          onToggleOpen={handleToggleOpen}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          disabled={disabled}
+          mode={mode}
+          className={className}
+          style={style}
+        >
+          <WorkflowCommanderPopover
+            actions={defaultActions}
+            mode={mode}
+            dock={dock}
+            onActionClick={(action, e) => action.onClick(e)}
+          />
+        </WorkflowCommanderFAB>
+      )}
 
       {/* Dialog: Pending Task Queue */}
       <Dialog
