@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { useContentRender, replaceMathSymbols } from '../useContentRender';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { useContentRender, replaceMathSymbols, CodeSnippet } from '../useContentRender';
 
 /**
  * Component mounting used to work by substituting each `<reactory />` tag for a
@@ -240,6 +240,47 @@ describe('component mounting through useContentRender', () => {
       const host = screen.getByTestId('host');
       expect(host.querySelectorAll('td')).toHaveLength(2);
       expect(host.querySelectorAll('td')[0].textContent).toContain('a | b');
+    });
+  });
+
+  describe('code block rendering and actions', () => {
+    it('renders a code block with language label and copy button', () => {
+      render(<Host content={'```javascript\nconst a = 1;\n```'} />);
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByLabelText('Copy code')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Execute command')).toBeNull();
+    });
+
+    it('renders an execute button for shell code blocks', () => {
+      render(<Host content={'```shell\ncd directory | command\n```'} />);
+      expect(screen.getByText('shell')).toBeInTheDocument();
+      expect(screen.getByLabelText('Copy code')).toBeInTheDocument();
+      expect(screen.getByLabelText('Execute command')).toBeInTheDocument();
+    });
+
+    it('executes shell command via AMQ when execute button is clicked', () => {
+      const mockPublish = jest.fn();
+      const mockReactory = {
+        ...reactoryStub,
+        amq: {
+          $pub: {
+            def: mockPublish,
+          },
+        },
+        emit: jest.fn(),
+      };
+
+      const ShellHost: React.FC<{ content: string }> = ({ content }) => {
+        const { renderContent } = useContentRender(mockReactory);
+        return <div>{renderContent(content)}</div>;
+      };
+
+      render(<ShellHost content={'```bash\necho "Hello World"\n```'} />);
+      const execBtn = screen.getByLabelText('Execute command');
+      fireEvent.click(execBtn);
+
+      expect(mockPublish).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' }, 'shell');
+      expect(mockReactory.emit).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' });
     });
   });
 });

@@ -1,4 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Box,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import Reactory from '@reactorynet/reactory-core';
 import { ReactoryTag, splitReactoryTags } from './reactoryTags';
@@ -209,6 +221,170 @@ export enum ContentType {
   MERMAID = 'application/mermaid',
 }
 
+export interface CodeSnippetProps {
+  code: string;
+  language?: string;
+  mode?: 'light' | 'dark';
+  reactory?: Reactory.Client.ReactorySDK;
+}
+
+/**
+ * Enhanced code snippet container with top-right Copy button and
+ * interactive Execute button for shell / bash commands.
+ */
+export const CodeSnippet: React.FC<CodeSnippetProps> = ({
+  code,
+  language = '',
+  mode = 'light',
+  reactory,
+}) => {
+  const [copied, setCopied] = useState(false);
+  const [executing, setExecuting] = useState(false);
+
+  const cleanLang = (language || '').toLowerCase().trim();
+  const isShell = /^(?:shell|bash|sh|zsh|terminal|cli|console|powershell|cmd)$/i.test(cleanLang);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleExecute = async () => {
+    const cleanCommand = code.trim();
+    if (!cleanCommand) return;
+    setExecuting(true);
+    try {
+      if (reactory?.amq?.$pub) {
+        reactory.amq.$pub.def('shell.execute', { command: cleanCommand }, 'shell');
+        reactory.amq.$pub.def('shell.command', { command: cleanCommand }, 'chat');
+        reactory.amq.$pub.def('macro.execute', { macro: 'shell', args: { command: cleanCommand } }, 'reactor');
+      }
+      reactory?.emit?.('shell.execute', { command: cleanCommand });
+      if (typeof reactory?.graphqlMutation === 'function') {
+        reactory.graphqlMutation(
+          `mutation ExecuteReactorMacro($macroInput: ReactorExecuteMacroInput!) {
+            ReactorExecuteMacro(macroInput: $macroInput) {
+              ... on ReactorChatMessage { id role content }
+              ... on ReactorErrorResponse { message }
+            }
+          }`,
+          {
+            macroInput: {
+              macro: 'shell',
+              personaId: 'reactor',
+              chatSessionId: 'active',
+              args: { command: cleanCommand },
+            },
+          }
+        ).catch(() => {});
+      }
+      reactory?.log?.('Executed shell command from code block', { command: cleanCommand });
+    } catch (err: any) {
+      reactory?.error?.('Error executing shell command', err);
+    } finally {
+      setTimeout(() => setExecuting(false), 1500);
+    }
+  };
+
+  const isDarkMode = mode === 'dark';
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        my: 1.5,
+        borderRadius: 1,
+        border: 1,
+        borderColor: isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+        backgroundColor: isDarkMode ? '#1e1e1e' : '#f8f9fa',
+        overflow: 'hidden',
+      }}
+      data-testid="code-snippet-container"
+    >
+      {/* Header bar */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 1.5,
+          py: 0.5,
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          borderBottom: 1,
+          borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: 'monospace',
+            color: 'text.secondary',
+            textTransform: 'lowercase',
+            fontWeight: 600,
+          }}
+        >
+          {cleanLang || 'code'}
+        </Typography>
+
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {isShell && (
+            <Tooltip title={executing ? 'Executing...' : 'Run in terminal'}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleExecute}
+                  disabled={executing}
+                  aria-label="Execute command"
+                  sx={{
+                    color: executing ? 'primary.main' : 'text.secondary',
+                    '&:hover': { color: 'primary.main' },
+                  }}
+                >
+                  {executing ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon fontSize="small" />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
+          <Tooltip title={copied ? 'Copied!' : 'Copy code'}>
+            <IconButton
+              size="small"
+              onClick={handleCopy}
+              aria-label="Copy code"
+              sx={{
+                color: copied ? 'success.main' : 'text.secondary',
+                '&:hover': { color: 'text.primary' },
+              }}
+            >
+              {copied ? <CheckIcon fontSize="small" color="success" /> : <ContentCopyIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+      {/* Code body */}
+      <Box
+        component="pre"
+        sx={{
+          m: 0,
+          p: 1.5,
+          overflowX: 'auto',
+          fontSize: '0.875rem',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          lineHeight: 1.5,
+        }}
+      >
+        <code>{code}</code>
+      </Box>
+    </Box>
+  );
+};
+
 /**
  * Hook to detect content type and render it accordingly
  */
@@ -357,6 +533,25 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
                 {children}
               </a>
             ),
+            code: ({ node, inline, className, children, ...props }: any) => {
+              const match = /language-(\w+)/.exec(className || '');
+              const codeText = String(children).replace(/\n$/, '');
+              if (!inline && (match || codeText.includes('\n'))) {
+                const lang = match ? match[1] : '';
+                return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+              }
+              return (
+                <code className={className} style={{
+                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875em',
+                }} {...props}>
+                  {children}
+                </code>
+              );
+            },
           }}
         >
           {formatted}
@@ -473,7 +668,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
         // Code block
         if (/^```[a-zA-Z]*[\s\S]*```$/.test(block)) {
           const codeBlock = block.replace(/```/g, '');
-          let language = 'javascript';
+          let language = '';
           const firstLineBreak = codeBlock.indexOf('\n');
           if (firstLineBreak > 0) {
             const potentialLang = codeBlock.substring(0, firstLineBreak).trim();
@@ -481,13 +676,15 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
               language = potentialLang;
             }
           }
-          const code = codeBlock.replace(language, '').trim();
+          const code = language ? codeBlock.replace(language, '').trim() : codeBlock.trim();
           return (
-            <pre style={{ backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto' }} key={`code-${idx}`}>
-              <code dangerouslySetInnerHTML={{
-                __html: code
-              }} />
-            </pre>
+            <CodeSnippet
+              key={`code-${idx}`}
+              code={code}
+              language={language}
+              mode={mode}
+              reactory={reactory}
+            />
           );
         }
         // Markdown block (if it looks like markdown)
@@ -501,6 +698,28 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
           let tableMatch: RegExpExecArray | null;
           let subIdx = 0;
 
+          const markdownCodeComponents = {
+            code: ({ node, inline, className, children, ...props }: any) => {
+              const match = /language-(\w+)/.exec(className || '');
+              const codeText = String(children).replace(/\n$/, '');
+              if (!inline && (match || codeText.includes('\n'))) {
+                const lang = match ? match[1] : '';
+                return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+              }
+              return (
+                <code className={className} style={{
+                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875em',
+                }} {...props}>
+                  {children}
+                </code>
+              );
+            },
+          };
+
           while ((tableMatch = tableRegex.exec(block)) !== null) {
             // Text before the table
             if (tableMatch.index > lastEnd) {
@@ -508,7 +727,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
               if (before.trim()) {
                 subParts.push(
                   <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                    <Markdown>{replaceMathSymbols(before)}</Markdown>
+                    <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
                   </div>
                 );
               }
@@ -525,7 +744,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
             if (remainder.trim()) {
               subParts.push(
                 <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  <Markdown>{replaceMathSymbols(remainder)}</Markdown>
+                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
                 </div>
               );
             }
