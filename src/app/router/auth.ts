@@ -1,6 +1,9 @@
 export const isAnonymousSession = (reactory: Reactory.Client.ReactorySDK): boolean => {
   const user = reactory.getUser?.();
-  if (user?.loggedIn) {
+  //@ts-ignore
+  const loggedInRoles: string[] = user?.loggedIn?.roles || [];
+  // If the session has authenticated roles other than ANON, it is authenticated
+  if (Array.isArray(loggedInRoles) && loggedInRoles.some((r: string) => r !== 'ANON')) {
     return false;
   }
   if (user?.anon === true) {
@@ -9,7 +12,10 @@ export const isAnonymousSession = (reactory: Reactory.Client.ReactorySDK): boole
   if (typeof reactory.isAnon === 'function') {
     return reactory.isAnon() === true;
   }
-  return true;
+  if (Array.isArray(loggedInRoles) && loggedInRoles.includes('ANON')) {
+    return true;
+  }
+  return !(user as any)?.loggedIn;
 };
 
 export const currentUserRoles = (reactory: Reactory.Client.ReactorySDK): string[] => {
