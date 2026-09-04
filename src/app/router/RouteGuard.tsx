@@ -5,6 +5,7 @@ import RouteForbidden from './widgets/RouteForbidden';
 import RouteInspector from './widgets/RouteInspector';
 import RouteResolving from './RouteResolving';
 import { LOGIN_PATH } from './constants';
+import { currentUserRoles, isAnonymousSession } from './auth';
 import { RouteGuardProps } from './types';
 
 const RouteGuard: React.FC<RouteGuardProps> = ({
@@ -17,10 +18,17 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
   const location = useLocation();
   const isDevelopmentMode = reactory.isDevelopmentMode() === true;
   const isPublic = routeDef.public === true;
-  const isAnon = reactory.isAnon() === true;
+  const isAnon = isAnonymousSession(reactory);
+  const roles = currentUserRoles(reactory);
+  const loginOnly = isArrayishAnonOnly(routeDef.roles);
 
   if (routeDef.redirect) {
     return <Navigate to={routeDef.redirect} replace />;
+  }
+
+  if (!isAnon && loginOnly && location.pathname === LOGIN_PATH) {
+    const returnTo = new URLSearchParams(location.search).get('r') || '/';
+    return <Navigate to={returnTo} replace />;
   }
 
   if (!isPublic && isAnon && routeDef.path !== LOGIN_PATH) {
@@ -37,8 +45,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
   }
 
   if (!isPublic && !isAnon) {
-    const userRoles = reactory.getUser()?.loggedIn?.roles || [];
-    const hasRoles = reactory.hasRole(routeDef.roles || [], userRoles) === true;
+    const hasRoles = reactory.hasRole(routeDef.roles || [], roles) === true;
     if (hasRoles === false) {
       return (
         <>
@@ -60,6 +67,10 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
   }
 
   return <>{children}</>;
+};
+
+const isArrayishAnonOnly = (roles?: string[]): boolean => {
+  return Array.isArray(roles) && roles.length === 1 && roles[0] === 'ANON';
 };
 
 export default RouteGuard;

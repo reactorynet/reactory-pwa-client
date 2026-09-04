@@ -468,12 +468,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       omitDeep,
       queryString,
       hashCode: (inputString: string) => {
-        let i = 0;
+        if (!inputString || typeof inputString !== 'string') return 0;
         let h = 0;
-        for (i < inputString.length; i += 1;) {
-          h = Math.imul(31, h) + inputString.charCodeAt(i) | 0;
-          return h;
+        for (let i = 0; i < inputString.length; i += 1) {
+          h = (Math.imul(31, h) + inputString.charCodeAt(i)) | 0;
         }
+        return h;
       },
       injectResources,
       componentFqn,
@@ -1079,10 +1079,14 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     } else $query = query;
 
     try {
+      const fetchPolicy = (typeof navigator !== 'undefined' && navigator.onLine === false)
+        ? 'cache-only'
+        : options.fetchPolicy;
+
       const result = await that.client.query<T, V>({
         query: $query,
         variables,
-        fetchPolicy: options.fetchPolicy,
+        fetchPolicy,
       });
       const { errors = [] } = result;
       if (errors.length > 0) {
