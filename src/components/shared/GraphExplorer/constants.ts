@@ -44,6 +44,18 @@ export const NODE_TYPE_COLORS: Record<GraphNodeType, number> = {
   SECTION: 0xbcaaa4, // label tape
   TOPIC: 0x80cbc4, // teal tag
   RESOURCE: 0x90a4ae, // off-board slate
+  // External tracker family — status-LED tones so work items read as a live
+  // layer above the board: amber tickets, indigo boards, green sprints.
+  TICKET: 0xffb300, // amber status LED
+  BOARD: 0x5c6bc0, // indigo header strip
+  SPRINT: 0x66bb6a, // active-cycle green
+  PERSON: 0xf48fb1, // badge pink
+  // Database family — cyan DATASTORE lineage, darkening with depth.
+  SCHEMA: 0x26c6da, // cyan (schema tier)
+  TABLE: 0x00acc1, // deeper cyan
+  VIEW: 0x4dd0e1, // translucent cyan (derived relation)
+  COLUMN: 0x80deea, // pale cyan leaf
+  PROCEDURE: 0x00897b, // teal routine
   UNKNOWN: 0x808080,
 };
 
@@ -69,6 +81,15 @@ export const NODE_TYPE_ICONS: Record<GraphNodeType, string> = {
   SECTION: 'segment',
   TOPIC: 'label',
   RESOURCE: 'link',
+  TICKET: 'task_alt',
+  BOARD: 'view_kanban',
+  SPRINT: 'timer',
+  PERSON: 'person',
+  SCHEMA: 'schema',
+  TABLE: 'table_chart',
+  VIEW: 'table_view',
+  COLUMN: 'view_column',
+  PROCEDURE: 'functions',
   UNKNOWN: 'help',
 };
 
@@ -82,6 +103,15 @@ export const NODE_TYPE_RADII: Partial<Record<GraphNodeType, number>> = {
   SECTION: 10,
   TOPIC: 12,
   RESOURCE: 9,
+  TICKET: 12,
+  BOARD: 20,
+  SPRINT: 16,
+  PERSON: 10,
+  SCHEMA: 20,
+  TABLE: 14,
+  VIEW: 14,
+  COLUMN: 8,
+  PROCEDURE: 10,
 };
 export const DEFAULT_NODE_RADIUS = 12;
 
@@ -102,6 +132,14 @@ export const LINK_TYPE_COLORS: Record<GraphLinkType, number> = {
   DOCUMENTS: 0xf5f5f5, // silkscreen white — prose describing code
   MENTIONS: 0x80cbc4, // teal, matching TOPIC
   EMBEDS: 0xbcaaa4, // label tape, matching SECTION
+  // External tracker links — amber family, matching TICKET.
+  BLOCKS: 0xe53935, // blocking red
+  DUPLICATES: 0xffcc80, // faded amber (redundant work)
+  RELATES: 0xffb300, // amber, matching TICKET
+  PART_OF: 0x5c6bc0, // indigo, matching BOARD membership
+  ASSIGNED_TO: 0xf48fb1, // badge pink, matching PERSON
+  // Database links — cyan family, matching TABLE.
+  FOREIGN_KEY: 0x00acc1,
   UNKNOWN: 0x808080,
 };
 
@@ -111,6 +149,8 @@ export const LINK_TYPE_COLORS: Record<GraphLinkType, number> = {
  */
 export const DASHED_LINK_TYPES: GraphLinkType[] = [
   'CONTAINS', 'REFERENCE', 'INFERRED', 'MENTIONS',
+  // Membership and assignment are annotative rather than structural.
+  'PART_OF', 'ASSIGNED_TO', 'RELATES',
 ];
 
 /** Selection / focus / preview colors (circuit theme highlights). */

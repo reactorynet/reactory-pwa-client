@@ -34,6 +34,15 @@ export type GraphNodeType =
   | 'SECTION'
   | 'TOPIC'
   | 'RESOURCE'
+  | 'TICKET'
+  | 'BOARD'
+  | 'SPRINT'
+  | 'PERSON'
+  | 'SCHEMA'
+  | 'TABLE'
+  | 'VIEW'
+  | 'COLUMN'
+  | 'PROCEDURE'
   | 'UNKNOWN';
 
 /** Mirrors the server's ReactorLinkType enum, with a fallback. */
@@ -53,6 +62,12 @@ export type GraphLinkType =
   | 'DOCUMENTS'
   | 'MENTIONS'
   | 'EMBEDS'
+  | 'BLOCKS'
+  | 'DUPLICATES'
+  | 'RELATES'
+  | 'PART_OF'
+  | 'ASSIGNED_TO'
+  | 'FOREIGN_KEY'
   | 'UNKNOWN';
 
 export const ALL_NODE_TYPES: GraphNodeType[] = [
