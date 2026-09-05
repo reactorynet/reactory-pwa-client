@@ -1399,3 +1399,54 @@ describe('injectResource', () => {
     expect(() => api.injectResource(resource)).toThrow('not found');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 26. initi18n
+// ═══════════════════════════════════════════════════════════════════════════
+describe('initi18n', () => {
+  it('should query ReactoryTranslation, hydrate resources across namespaces, and initialize i18n', async () => {
+    const api = await createApi();
+    const i18next = require('i18next').default;
+
+    mockApolloQuery.mockResolvedValueOnce(
+      makeQueryResult({
+        ReactoryTranslation: {
+          id: 'en',
+          i18n: [
+            { id: 'en.common', ns: 'common', translations: { 'common.search': 'Search' } },
+            { id: 'en.forms', ns: 'forms', translations: { 'forms.save': 'Save' } },
+            { id: 'en.reactory', ns: 'reactory', translations: { 'reactory.title': 'Reactory' } },
+            { id: 'en.booktutor', ns: 'booktutor', translations: { 'booktutor.title': 'Book Tutor' } },
+          ],
+        },
+      }),
+    );
+
+    await api.initi18n();
+
+    expect(mockApolloQuery).toHaveBeenCalled();
+    expect(i18next.init).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lng: 'en',
+        fallbackLng: ['en-US', 'en'],
+        defaultNS: 'reactory',
+        fallbackNS: expect.arrayContaining(['reactory', 'booktutor', 'forms', 'common']),
+        resources: expect.objectContaining({
+          en: expect.objectContaining({
+            common: { 'common.search': 'Search' },
+            forms: { 'forms.save': 'Save' },
+            reactory: { 'reactory.title': 'Reactory' },
+            booktutor: { 'booktutor.title': 'Book Tutor' },
+          }),
+          'en-US': expect.objectContaining({
+            common: { 'common.search': 'Search' },
+            forms: { 'forms.save': 'Save' },
+            reactory: { 'reactory.title': 'Reactory' },
+            booktutor: { 'booktutor.title': 'Book Tutor' },
+          }),
+        }),
+      }),
+    );
+    expect(api.i18n).toBeDefined();
+  });
+});
