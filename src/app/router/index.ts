@@ -10,3 +10,11 @@ export {
   toggleRouteInspectorEnabled,
   ROUTE_INSPECTOR_STORAGE_KEY,
 } from './inspectorPreference';
+export {
+  normalizeRouteConfig,
+  areRouteConfigsEqual,
+  areRouteCatalogsEqual,
+  findMatchingRoute,
+  areReactElementsEqual,
+  areUserPropsEqual,
+} from './routeMatching';

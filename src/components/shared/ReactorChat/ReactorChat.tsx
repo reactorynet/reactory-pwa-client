@@ -55,12 +55,12 @@ export default (props) => {
   const user = reactory.getUser()?.loggedIn?.user;
     
   const {
-    mode,
-    primary,
-    secondary,
-    background,
-    text,
-  } = reactory.muiTheme.palette;
+    mode = 'default',
+    primary = reactory?.muiTheme?.palette?.primary || { main: '#1976d2' },
+    secondary = reactory?.muiTheme?.palette?.secondary || { main: '#dc004e' },
+    background = reactory?.muiTheme?.palette?.background || { default: '#ffffff' },
+    text = reactory?.muiTheme?.palette?.text || { primary: '#000000' }  ,
+  } = reactory?.muiTheme?.palette;
 
   const {
     React,
@@ -1160,6 +1160,28 @@ export default (props) => {
 
   const handleToolsChange = useCallback((toolNames: string[]) => {
     setEnabledTools(new Set(toolNames));
+
+    setChatState((prev) => {
+      if (!prev) return prev;
+      const allAvailableTools = prev.persona?.tools || prev.tools || [];
+      const updatedTools = allAvailableTools.filter(
+        (t) => t.function?.name && toolNames.includes(t.function.name)
+      );
+
+      const allAvailableMacros = prev.persona?.macros || prev.macros || [];
+      const updatedMacros = allAvailableMacros.filter((m) => {
+        if (Array.isArray(m?.tools) && m.tools.length > 0) {
+          return m.tools.some((t: any) => toolNames.includes(t.function?.name || t.name));
+        }
+        return toolNames.includes(m.alias || m.name) || m.runat === 'client';
+      });
+
+      return {
+        ...prev,
+        tools: updatedTools,
+        macros: updatedMacros,
+      };
+    });
     
     const sessionId = chatState?.id;
     if (sessionId) {
@@ -1168,11 +1190,22 @@ export default (props) => {
           ReactorUpdateChatTools(chatSessionId: $chatSessionId, toolNames: $toolNames) { id }
         }`,
         { chatSessionId: sessionId, toolNames }
-      ).catch((err) => {
+      ).then(() => {
+        if (reactory.amq?.$pub?.def) {
+          reactory.amq.$pub.def('reactor.tools.changed', {
+            chatSessionId: sessionId,
+            tools: toolNames,
+          }, 'reactor');
+          reactory.amq.$pub.def('tools.changed', {
+            chatSessionId: sessionId,
+            tools: toolNames,
+          }, 'reactor');
+        }
+      }).catch((err) => {
         reactory.log(`Failed to update session tools: ${err?.message}`, {}, 'warning');
       });
     }
-  }, [chatState?.id, reactory]);
+  }, [chatState?.id, reactory, setChatState]);
 
   const handleToolToggle = useCallback((toolName: string) => {
     setEnabledTools(prev => {
@@ -1184,6 +1217,30 @@ export default (props) => {
         newSet.add(toolName);
         sessionLogger?.info(`Tool enabled: ${toolName}`, { toolName }, 'ReactorChat');
       }
+
+      const toolNames = Array.from(newSet);
+
+      setChatState((prevState) => {
+        if (!prevState) return prevState;
+        const allAvailableTools = prevState.persona?.tools || prevState.tools || [];
+        const updatedTools = allAvailableTools.filter(
+          (t) => t.function?.name && newSet.has(t.function.name)
+        );
+
+        const allAvailableMacros = prevState.persona?.macros || prevState.macros || [];
+        const updatedMacros = allAvailableMacros.filter((m) => {
+          if (Array.isArray(m?.tools) && m.tools.length > 0) {
+            return m.tools.some((t: any) => newSet.has(t.function?.name || t.name));
+          }
+          return newSet.has(m.alias || m.name) || m.runat === 'client';
+        });
+
+        return {
+          ...prevState,
+          tools: updatedTools,
+          macros: updatedMacros,
+        };
+      });
       
       const sessionId = chatState?.id;
       if (sessionId) {
@@ -1191,15 +1248,78 @@ export default (props) => {
           `mutation ReactorUpdateChatTools($chatSessionId: String!, $toolNames: [String]!) {
             ReactorUpdateChatTools(chatSessionId: $chatSessionId, toolNames: $toolNames) { id }
           }`,
-          { chatSessionId: sessionId, toolNames: Array.from(newSet) }
-        ).catch((err) => {
+          { chatSessionId: sessionId, toolNames }
+        ).then(() => {
+          if (reactory.amq?.$pub?.def) {
+            reactory.amq.$pub.def('reactor.tools.changed', {
+              chatSessionId: sessionId,
+              tools: toolNames,
+            }, 'reactor');
+            reactory.amq.$pub.def('tools.changed', {
+              chatSessionId: sessionId,
+              tools: toolNames,
+            }, 'reactor');
+          }
+        }).catch((err) => {
           reactory.log(`Failed to update session tools: ${err?.message}`, {}, 'warning');
         });
       }
 
       return newSet;
     });
-  }, [chatState?.id, reactory]);
+  }, [chatState?.id, reactory, setChatState, sessionLogger]);
+
+  // Listen for AMQ tools changed events so client immediately re-resolves chat state and tool count on 4x2 action panel
+  React.useEffect(() => {
+    if (!reactory || !reactory.amq?.$sub?.def) return;
+
+    const handleToolsChangedEvent = (eventData: any) => {
+      reactory.log('AMQ: Tools changed event received', eventData);
+      const eventSessionId = eventData?.chatSessionId || eventData?.sessionId;
+      if (!eventSessionId || eventSessionId === chatState?.id) {
+        if (Array.isArray(eventData?.tools)) {
+          const toolNames = eventData.tools
+            .map((t: any) => (typeof t === 'string' ? t : t.function?.name || t.name))
+            .filter(Boolean);
+          setEnabledTools(new Set(toolNames));
+
+          setChatState((prev) => {
+            if (!prev) return prev;
+            const allAvailableTools = prev.persona?.tools || prev.tools || [];
+            const updatedTools = allAvailableTools.filter(
+              (t) => t.function?.name && toolNames.includes(t.function.name)
+            );
+            const allAvailableMacros = prev.persona?.macros || prev.macros || [];
+            const updatedMacros = allAvailableMacros.filter((m) => {
+              if (Array.isArray(m?.tools) && m.tools.length > 0) {
+                return m.tools.some((t: any) => toolNames.includes(t.function?.name || t.name));
+              }
+              return toolNames.includes(m.alias || m.name) || m.runat === 'client';
+            });
+            return {
+              ...prev,
+              tools: updatedTools,
+              macros: updatedMacros,
+            };
+          });
+        } else if (chatState?.id) {
+          loadChat(chatState.id);
+        }
+      }
+    };
+
+    const sub1: any = reactory.amq.$sub.def('reactor.tools.changed', handleToolsChangedEvent, 'reactor');
+    const sub2: any = reactory.amq.$sub.def('tools.changed', handleToolsChangedEvent, 'reactor');
+    const sub3: any = reactory.amq.$sub.def('tools.changed', handleToolsChangedEvent, 'chat');
+    const sub4: any = reactory.amq.$sub.def('session.tools.changed', handleToolsChangedEvent, 'reactor');
+
+    return () => {
+      if (sub1 && typeof sub1.unsubscribe === 'function') sub1.unsubscribe();
+      if (sub2 && typeof sub2.unsubscribe === 'function') sub2.unsubscribe();
+      if (sub3 && typeof sub3.unsubscribe === 'function') sub3.unsubscribe();
+      if (sub4 && typeof sub4.unsubscribe === 'function') sub4.unsubscribe();
+    };
+  }, [reactory, chatState?.id, loadChat, setChatState]);
 
   const handleChatHistoryPanelToggle = useCallback(() => {
     // Close other panels first

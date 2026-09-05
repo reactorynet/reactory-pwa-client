@@ -420,6 +420,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       const trailingTokens = tokenBufferRef.current;
       tokenBufferRef.current = "";
 
+      // Check if message completed with tool_calls that modified session tools
+      const messageToolCalls = (message.data as any)?.tool_calls || [];
+      if (messageToolCalls.some((tc: any) => ['toolkit', 'addToolsToSession', 'removeToolsFromSession'].includes(tc.function?.name || tc.name))) {
+        if (reactory?.amq?.$pub?.def) {
+          reactory.amq.$pub.def('reactor.tools.changed', {
+            chatSessionId: eventSessionId || chatState.id,
+          }, 'reactor');
+        }
+      }
+
       // Update the last assistant message with the final content from the complete event.
       setChatState((prevState) => {
         const history = [...prevState.history];
@@ -502,6 +512,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // Now process any tool_calls that were accumulated during streaming.
       const accumulated = pendingToolCallsRef.current;
       pendingToolCallsRef.current = [];
+
+      if (accumulated.some((tc: any) => ['toolkit', 'addToolsToSession', 'removeToolsFromSession'].includes(tc.function?.name || tc.name))) {
+        if (reactory?.amq?.$pub?.def) {
+          reactory.amq.$pub.def('reactor.tools.changed', {
+            chatSessionId: eventSessionId || chatState.id,
+          }, 'reactor');
+        }
+      }
 
       // In AUTO mode with SSE, the server executes server-side tools in its
       // internal loop and sends tool_call start/complete events for UI progress.
@@ -3505,6 +3523,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           
           const result = await executeMacro(macro, args, 'auto', id);
           console.log('✅ [useChatFactory] Macro executed successfully:', { name: macro.name, result });
+          if (['toolkit', 'addToolsToSession', 'removeToolsFromSession'].includes(name)) {
+            if (reactory?.amq?.$pub?.def) {
+              reactory.amq.$pub.def('reactor.tools.changed', {
+                chatSessionId: chatState.id,
+              }, 'reactor');
+            }
+          }
           // Extract meaningful string content from the macro result.
           // Macros return { __typename, content, ... } — prefer .content.
           // If the macro returned null (side effect only), provide a fallback.

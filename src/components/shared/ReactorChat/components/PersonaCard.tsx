@@ -44,6 +44,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
     <Card 
       sx={{         
         height: '100%',
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         cursor: 'pointer',

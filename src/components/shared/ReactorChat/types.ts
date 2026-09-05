@@ -107,6 +107,7 @@ export interface IAIPersona {
   providerId?: string;
   macros?: MacroComponentDefinition<unknown>[];
   toolProfiles?: IToolProfile[];
+  tags?: string[];
 }
 
 export interface IProps {

@@ -24,16 +24,53 @@ const RuntimeMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => 
   console.log('🔧 [RuntimeMacro] Parsed arguments:', { action, macro, tool });
 
   if (action === "list") {
-    const macros = chatState.macros || [];
-    const tools = chatState.tools || [];
+    const activeToolNames = new Set(
+      (chatState.tools || []).map((t) => t.function?.name || (t as any).name).filter(Boolean)
+    );
+    const user = reactory.getUser ? reactory.getUser() : null;
+    const userRoles: string[] = user?.roles as string[] || ['USER'];
 
-    const macrosText = macros.map(m => `- ${m?.alias ?? m.nameSpace + '.' + m.name}`).join("\n");
-    const toolsText = tools.map(t => `- ${t?.function?.name ?? 'unknown'}`).join("\n");
+    // Filter macros to only those active and available for the user in this session
+    const activeMacros = (chatState.macros || []).filter((macro) => {
+      // 1. Role-based access check
+      if (macro.roles && macro.roles.length > 0) {
+        const hasRole = macro.roles.some((r: string) => userRoles.includes(r));
+        if (!hasRole) return false;
+      }
+
+      // 2. Tool selection check: if the macro declares tools, at least one must be active
+      if (Array.isArray(macro.tools) && macro.tools.length > 0) {
+        return macro.tools.some((t: any) => {
+          const name = t.function?.name || t.name;
+          return name && activeToolNames.has(name);
+        });
+      }
+
+      // 3. For macros without explicit tools: check if active by name or if client utility
+      const identifier = macro.alias || macro.name;
+      if (activeToolNames.size > 0 && !activeToolNames.has(identifier)) {
+        // Keep runtime utility macros like 'macros', 'state'
+        if (macro.name === 'macros' || macro.alias === 'macros') {
+          return true;
+        }
+        return false;
+      }
+
+      return true;
+    });
+
+    const macrosText = activeMacros.length > 0
+      ? activeMacros.map(m => `- ${m?.alias ?? (m.nameSpace ? `${m.nameSpace}.${m.name}` : m.name)}`).join("\n")
+      : "None";
+
+    const toolsText = (chatState.tools || []).length > 0
+      ? (chatState.tools || []).map(t => `- ${t?.function?.name ?? 'unknown'}`).join("\n")
+      : "None";
 
     return {
       __typename: "ReactorChatMessage",
       role: "system",
-      content: `Available Macros: ${macrosText} \nAvailable Tools: ${toolsText}`,
+      content: `Available Macros:\n${macrosText}\n\nAvailable Tools:\n${toolsText}`,
       component: null,
       props: {},
       id: reactory.utils.uuid(),
@@ -44,8 +81,15 @@ const RuntimeMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => 
   }
 
   if (action === 'details') {
-    const macroDetails = chatState.macros?.[macro.name] || null;
-    const toolDetails = chatState.tools?.[tool.name] || null;
+    const macroName = macro?.name || (typeof macro === 'string' ? macro : null);
+    const toolName = tool?.name || (typeof tool === 'string' ? tool : null);
+
+    const macroDetails = macroName
+      ? (chatState.macros || []).find((m: any) => m.name === macroName || m.alias === macroName)
+      : null;
+    const toolDetails = toolName
+      ? (chatState.tools || []).find((t: any) => t.function?.name === toolName || (t as any).name === toolName)
+      : null;
 
     if (macroDetails) {
       return {
@@ -78,7 +122,12 @@ const RuntimeMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => 
 
   if (action === "add" && macro) {
     if (!chatState.macros) chatState.macros = [];
-    chatState.macros[macro.name] = macro;
+    const existingIndex = chatState.macros.findIndex((m: any) => m.name === macro.name || m.alias === macro.name);
+    if (existingIndex >= 0) {
+      chatState.macros[existingIndex] = macro;
+    } else {
+      chatState.macros.push(macro);
+    }
     return {
       __typename: "ReactorChatMessage",
       role: "system",
@@ -94,11 +143,17 @@ const RuntimeMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => 
 
   if (action === "add" && tool) {
     if (!chatState.tools) chatState.tools = [];
-    chatState.tools[tool.name] = tool;
+    const toolName = tool.function?.name || tool.name;
+    const existingIndex = chatState.tools.findIndex((t: any) => (t.function?.name || t.name) === toolName);
+    if (existingIndex >= 0) {
+      chatState.tools[existingIndex] = tool;
+    } else {
+      chatState.tools.push(tool);
+    }
     return {
       __typename: "ReactorChatMessage",
       role: "system",
-      content: `Tool "${tool.name}" added.`,
+      content: `Tool "${toolName || 'custom'}" added.`,
       component: null,
       props: {},
       id: reactory.utils.uuid(),
