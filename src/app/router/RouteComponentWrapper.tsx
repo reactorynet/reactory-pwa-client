@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { isArray } from 'lodash';
+import { isArray, isEqual } from 'lodash';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import queryString from '../../components/utility/query-string';
 import { useRouteComponent } from './hooks/useRouteComponent';
@@ -12,6 +12,7 @@ import RouteFailure from './widgets/RouteFailure';
 import RouteInspector from './widgets/RouteInspector';
 import { ROUTE_COMPONENT_TIMEOUT_MS } from './constants';
 import { RouteComponentWrapperProps } from './types';
+import { areRouteConfigsEqual, areReactElementsEqual } from './routeMatching';
 
 const RouteComponentWrapper = ({
   routeDef,
@@ -27,18 +28,21 @@ const RouteComponentWrapper = ({
   const timeoutMs = Number((routeDef as { timeoutMs?: number }).timeoutMs) || ROUTE_COMPONENT_TIMEOUT_MS;
   const resolution = useRouteComponent(reactory, routeDef.componentFqn, timeoutMs);
 
-  let processedArgs: Record<string, unknown> = { ...componentArgs };
-  Object.keys(params).forEach((paramKey) => {
-    processedArgs[paramKey] = params[paramKey];
-  });
+  const processedArgs = React.useMemo(() => {
+    let args: Record<string, unknown> = { ...componentArgs };
+    Object.keys(params).forEach((paramKey) => {
+      args[paramKey] = params[paramKey];
+    });
 
-  if (routeDef.componentProps) {
-    processedArgs = processTemplateStrings(
-      { ...routeDef.componentProps },
-      reactory,
-      { route: params, location, query },
-    ) as Record<string, unknown>;
-  }
+    if (routeDef.componentProps) {
+      args = processTemplateStrings(
+        { ...routeDef.componentProps },
+        reactory,
+        { route: params, location, query },
+      ) as Record<string, unknown>;
+    }
+    return args;
+  }, [componentArgs, params, routeDef.componentProps, reactory, location.pathname, location.search]);
 
   const headerNode = (
     <RouteSlot config={routeDef.header} fallback={defaultHeader} />
@@ -125,4 +129,16 @@ const RouteComponentWrapper = ({
   );
 };
 
-export default RouteComponentWrapper;
+export const areRouteComponentWrapperPropsEqual = (
+  prev: RouteComponentWrapperProps,
+  next: RouteComponentWrapperProps,
+): boolean => {
+  return (
+    areRouteConfigsEqual(prev.routeDef, next.routeDef) &&
+    isEqual(prev.componentArgs, next.componentArgs) &&
+    areReactElementsEqual(prev.defaultHeader, next.defaultHeader) &&
+    areReactElementsEqual(prev.defaultFooter, next.defaultFooter)
+  );
+};
+
+export default React.memo(RouteComponentWrapper, areRouteComponentWrapperPropsEqual);

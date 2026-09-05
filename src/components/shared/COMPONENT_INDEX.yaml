@@ -264,6 +264,12 @@ categories:
       type: "component"
       storybook: true
       
+    - name: "TagCloud"
+      path: "./TagCloud/"
+      description: "Interactive tag cloud widget supporting multi-select/single-select filtering"
+      type: "component"
+      storybook: false
+      
     - name: "DateLabel"
       path: "./DateLabel/"
       description: "Date formatting label component"

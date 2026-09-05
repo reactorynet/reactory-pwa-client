@@ -49,9 +49,6 @@ export interface IAsynchronousMessageQueue {
   //$chan: (name: string) => IChannelDefinition<any>
 }
 
-
-
-
 export default {
   $chan,
   $sub,
@@ -71,5 +68,5 @@ export default {
   raiseFormCommand: $pub.formCommand, 
   raiseWorkFlowEvent: $pub.workFlow,
   raiseMessageHandlerLoadedEvent: $pub.messageHandlerLoaded,
-  raiseReactoryPluginEvent: $pub.pluginLoaded 
+  raiseReactoryPluginEvent: $pub.pluginLoaded, 
 };

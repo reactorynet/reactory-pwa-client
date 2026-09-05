@@ -1,11 +1,182 @@
-import React, { useState, useEffect } from 'react';
-import { ChatState, MacroToolDefinition, ToolApprovalMode } from '../types';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { ChatState, MacroToolDefinition, ToolApprovalMode, IToolProfile } from '../types';
 import ModelSelector, { ModelOverride } from './ModelSelector';
 import { Provider, ProviderAuthStatus } from '../hooks/useProviders';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
-import { max } from 'lodash';
-import { border } from '@mui/system';
 import { arePanelPropsEqual, glassPanelSx } from '../utils';
+
+const KNOWN_PERSONA_TOOL_PROFILES: Record<string, IToolProfile[]> = {
+  ReactorAIPersona: [
+    {
+      name: "Reactory Development Tools",
+      description: "Core tools for Reactory and Reactor development: file reading/writing, editing, shell, and HTTP requests.",
+      tools: [
+        "toolkit",
+        "writeFile",
+        "readFile",
+        "safeEditFile",
+        "listDirectory",
+        "shell",
+        "http",
+        "httpPost",
+        "httpGet",
+        "httpPut",
+        "httpDelete",
+        "httpPatch",
+        "todo",
+      ],
+    },
+    {
+      name: "Playwright Browser Automation Tools",
+      description: "Browser automation tools for navigation, page inspection, interaction, screenshots, and PDF generation.",
+      tools: [
+        "playwright_open_session",
+        "playwright_close_session",
+        "playwright_navigate",
+        "playwright_click",
+        "playwright_type",
+        "playwright_select",
+        "playwright_press_key",
+        "playwright_get_content",
+        "playwright_inspect",
+        "playwright_wait_for",
+        "playwright_evaluate",
+        "playwright_screenshot",
+        "playwright_pdf",
+        "playwright_page_info",
+        "playwright_list_sessions",
+      ],
+    },
+    {
+      name: "Atlassian & Jira Tools",
+      description: "Tools for querying, inspecting, updating, and transitioning Jira issues and sprints.",
+      tools: [
+        "jiraSearchIssues",
+        "jiraGetIssue",
+        "jiraGetBoards",
+        "jiraGetSprints",
+        "jiraGetAttachments",
+        "jiraCreateIssue",
+        "jiraUpdateIssue",
+        "jiraAddComment",
+        "jiraUpdateComment",
+        "jiraDeleteComment",
+        "jiraTransitionIssue",
+        "jiraLinkIssues",
+        "jiraAddWorklog",
+        "jiraMoveToSprint",
+      ],
+    },
+    {
+      name: "System Graph & Perspectives",
+      description: "Tools for traversing the system knowledge graph, searching nodes, and managing graph perspectives.",
+      tools: [
+        "searchGraph",
+        "getGraphNode",
+        "graphChildren",
+        "exploreGraph",
+        "graphLinks",
+        "createNodeEdge",
+        "loadGraphPerspective",
+        "deletePerspective",
+        "listExternalSources",
+        "registerExternalSource",
+        "syncExternalSource",
+        "catalogProject",
+        "searchProject",
+      ],
+    },
+  ],
+  WorkflowWillAIPersona: [
+    {
+      name: "Workflow Engine & Execution Tools",
+      description: "Tools for YAML workflow authoring, validation, execution, schedules, inspection, and instance control.",
+      tools: [
+        "executeYamlWorkflow",
+        "saveWorkflowYaml",
+        "validateWorkflowYaml",
+        "deleteWorkflowDefinition",
+        "getWorkflowYaml",
+        "getWorkflow",
+        "listWorkflows",
+        "listWorkflowSteps",
+        "listWorkflowSchedules",
+        "listWorkflowInstances",
+        "getWorkflowHistory",
+        "getWorkflowErrors",
+        "getWorkflowStats",
+        "getRecentExecutions",
+        "controlWorkflowInstance",
+        "workflow",
+        "amq",
+      ],
+    },
+    {
+      name: "UI Component & Visualization Tools",
+      description: "Tools for mounting side panel components, forms, charts, D3 graphs, and host editing.",
+      tools: [
+        "component",
+        "form",
+        "chart",
+        "d3",
+        "image",
+        "side_panel_state",
+        "host_fields",
+        "host_field_update",
+      ],
+    },
+    {
+      name: "System Graph & Catalog Tools",
+      description: "Tools for traversing the Reactor graph, inspecting projects, and managing perspectives.",
+      tools: [
+        "listProjects",
+        "getProject",
+        "createProject",
+        "updateProject",
+        "catalogProject",
+        "deleteProject",
+        "searchProject",
+        "searchGraph",
+        "getGraphNode",
+        "graphChildren",
+        "exploreGraph",
+        "graphLinks",
+        "createNodeEdge",
+        "loadGraphPerspective",
+        "deletePerspective",
+      ],
+    },
+    {
+      name: "File & System Operations",
+      description: "Core file editing, shell, GraphQL query/mutation, and HTTP operations.",
+      tools: [
+        "toolkit",
+        "readFile",
+        "writeFile",
+        "safeEditFile",
+        "snip",
+        "listDirectory",
+        "shell",
+        "todo",
+        "var",
+        "svc",
+        "queryGQL",
+        "mutationGQL",
+        "modules",
+        "env",
+        "state",
+        "datetime",
+        "http",
+        "httpPost",
+        "httpGet",
+        "httpPut",
+        "httpDelete",
+        "httpPatch",
+      ],
+    },
+  ],
+};
+
 interface ToolsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -113,13 +284,67 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     }
   };
 
-  const getProfileToolsAndGroup = (profileToolsNames: string[]) => {
-    const filteredTools = (chatState?.tools || []).filter((tool) => {
+  // Full library of all available tools for this agent (from persona or chatState)
+  const availableTools: MacroToolDefinition[] = useMemo(() => {
+    const fromPersona = chatState?.persona?.tools;
+    if (Array.isArray(fromPersona) && fromPersona.length > 0) return fromPersona;
+    if (Array.isArray(chatState?.tools) && chatState.tools.length > 0) return chatState.tools;
+    return [];
+  }, [chatState?.persona?.tools, chatState?.tools]);
+
+  const allToolNames: string[] = useMemo(() => {
+    return availableTools.map((t) => t.function?.name).filter(Boolean) as string[];
+  }, [availableTools]);
+
+  const configuredProfiles: IToolProfile[] = useMemo(() => {
+    const personaId = chatState?.persona?.id;
+    if (Array.isArray(chatState?.persona?.toolProfiles) && chatState.persona.toolProfiles.length > 0) {
+      return chatState.persona.toolProfiles;
+    }
+    if (personaId && KNOWN_PERSONA_TOOL_PROFILES[personaId]) {
+      return KNOWN_PERSONA_TOOL_PROFILES[personaId];
+    }
+    return [];
+  }, [chatState?.persona?.id, chatState?.persona?.toolProfiles]);
+
+  // Derive category-based tool profiles when persona has no explicit toolProfiles defined
+  const autoProfiles: IToolProfile[] = useMemo(() => {
+    if (configuredProfiles.length > 0) return [];
+    const catMap = new Map<string, string[]>();
+    availableTools.forEach((tool) => {
+      const cat = tool.category || (tool as any).function?.category || 'General';
+      const name = tool.function?.name;
+      if (name) {
+        if (!catMap.has(cat)) catMap.set(cat, []);
+        catMap.get(cat)!.push(name);
+      }
+    });
+    if (catMap.size <= 1) return [];
+    return Array.from(catMap.entries()).map(([cat, toolList]) => ({
+      name: `${cat} Tools`,
+      description: `${cat} tool collection (${toolList.length} tools)`,
+      tools: toolList,
+    }));
+  }, [configuredProfiles, availableTools]);
+
+  const allProfiles: IToolProfile[] = useMemo(() => [
+    {
+      name: 'All Tools',
+      description: 'All available tools for the current agent',
+      tools: allToolNames,
+    },
+    ...configuredProfiles,
+    ...autoProfiles,
+  ], [allToolNames, configuredProfiles, autoProfiles]);
+
+  const getProfileToolsAndGroup = useCallback((profileToolsNames: string[]) => {
+    // Filter against availableTools (the complete set), so disabled tools still render
+    const filteredTools = availableTools.filter((tool) => {
       const name = tool.function?.name;
       return name && profileToolsNames.includes(name);
     });
 
-    const groups: Record<string, typeof chatState.tools> = {};
+    const groups: Record<string, MacroToolDefinition[]> = {};
     filteredTools.forEach((tool) => {
       const category = tool.category || (tool as any).function?.category || 'General';
       if (!groups[category]) {
@@ -129,22 +354,43 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     });
 
     return groups;
-  };
+  }, [availableTools]);
 
-  const allProfiles = [
-    {
-      name: 'All Tools',
-      description: 'All available tools for the current agent',
-      tools: (chatState?.tools || []).map(t => t.function?.name).filter(Boolean) as string[]
-    },
-    ...(chatState?.persona?.toolProfiles || [])
-  ];
+  const isProfileActive = useCallback((profile: IToolProfile) => {
+    if (profile.name === 'All Tools') {
+      return allToolNames.length > 0 && enabledTools.size === allToolNames.length;
+    }
+    if (profile.tools.length === 0 && enabledTools.size === 0) return true;
+    if (profile.tools.length !== enabledTools.size) return false;
+    return profile.tools.every((t) => enabledTools.has(t));
+  }, [enabledTools, allToolNames]);
 
-  const sortedProfiles = [...allProfiles].sort((a, b) => {
-    if (a.name === selectedToolbelt) return -1;
-    if (b.name === selectedToolbelt) return 1;
-    return 0;
-  });
+  const getEnabledCountInProfile = useCallback((profile: IToolProfile) => {
+    return profile.tools.filter((t) => enabledTools.has(t)).length;
+  }, [enabledTools]);
+
+  const handleSelectToolbelt = useCallback((profile: IToolProfile) => {
+    setSelectedToolbelt(profile.name);
+    setExpandedProfile(profile.name);
+
+    if (onToolsChange) {
+      onToolsChange(profile.tools);
+    } else {
+      profile.tools.forEach((toolName) => {
+        if (!enabledTools.has(toolName)) {
+          onToolToggle(toolName);
+        }
+      });
+    }
+  }, [onToolsChange, enabledTools, onToolToggle]);
+
+  const sortedProfiles = useMemo(() => {
+    return [...allProfiles].sort((a, b) => {
+      if (a.name === selectedToolbelt) return -1;
+      if (b.name === selectedToolbelt) return 1;
+      return 0;
+    });
+  }, [allProfiles, selectedToolbelt]);
 
   const {
     Paper,
@@ -625,11 +871,65 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       )}
 
       {/* Collapsable Toolbelts (Profiles) */}
-      {chatState?.tools && chatState.tools.length > 0 ? (
+      {availableTools && availableTools.length > 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Quick-switch Toolbelts Selector */}
+          {allProfiles.length > 1 && (
+            <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Icon sx={{ color: 'primary.main', fontSize: 20 }}>home_repair_service</Icon>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                    {il8n?.t('reactor.client.tools.toolbelts.title', { defaultValue: 'Tool Collections (Toolbelts)' })}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  {il8n?.t('reactor.client.tools.activeCount', {
+                    defaultValue: '{{count}} of {{total}} tools active',
+                    count: enabledTools.size,
+                    total: allToolNames.length,
+                  })}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                {il8n?.t('reactor.client.tools.toolbelts.desc', {
+                  defaultValue: 'Select a pre-defined toolbelt to instantly switch the active tools for this session.',
+                })}
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {allProfiles.map((profile) => {
+                  const active = isProfileActive(profile);
+                  const count = getEnabledCountInProfile(profile);
+                  const total = profile.tools.length;
+
+                  return (
+                    <Chip
+                      key={profile.name}
+                      label={`${profile.name} (${count}/${total})`}
+                      variant={active ? 'filled' : 'outlined'}
+                      color={active ? 'primary' : 'default'}
+                      onClick={() => handleSelectToolbelt(profile)}
+                      icon={active ? <Material.MaterialIcons.Check sx={{ fontSize: '1rem !important' }} /> : undefined}
+                      sx={{
+                        cursor: 'pointer',
+                        fontWeight: active ? 600 : 400,
+                        transition: 'all 0.15s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                        },
+                      }}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+
           {sortedProfiles.map((profile) => {
             const groupedTools = getProfileToolsAndGroup(profile.tools);
             const isExpanded = expandedProfile === profile.name;
+            const active = isProfileActive(profile);
+            const enabledCount = getEnabledCountInProfile(profile);
 
             return (
               <Accordion
@@ -644,7 +944,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 sx={{
                   bgcolor: 'background.paper',
                   border: 1,
-                  borderColor: selectedToolbelt === profile.name ? 'primary.main' : 'divider',
+                  borderColor: active ? 'primary.main' : 'divider',
                   borderRadius: 1,
                   '&:before': { display: 'none' },
                 }}
@@ -661,14 +961,23 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                     }
                   }}
                 >
-                  <Box>
+                  <Box sx={{ minWidth: 0, mr: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                       {profile.name}
-                      {selectedToolbelt === profile.name && (
+                      {active ? (
                         <Chip
-                          label="Selected"
+                          label={il8n?.t('reactor.client.tools.active', { defaultValue: 'Active Toolbelt' })}
                           size="small"
-                          color="primary"
+                          color="success"
+                          variant="filled"
+                          icon={<Material.MaterialIcons.Check sx={{ fontSize: '0.85rem !important' }} />}
+                          sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }}
+                        />
+                      ) : (
+                        <Chip
+                          label={`${enabledCount}/${profile.tools.length} active`}
+                          size="small"
+                          color={enabledCount > 0 ? 'warning' : 'default'}
                           variant="outlined"
                           sx={{ height: 18, fontSize: '0.65rem' }}
                         />
@@ -678,7 +987,20 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                       {profile.description}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1, ml: 'auto', mr: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', mr: 2, flexShrink: 0 }}>
+                    {!active ? (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectToolbelt(profile);
+                        }}
+                      >
+                        {il8n?.t('reactor.client.tools.selectToolbelt', { defaultValue: 'Select Toolbelt' })}
+                      </Button>
+                    ) : null}
                     <Button
                       size="small"
                       variant="outlined"

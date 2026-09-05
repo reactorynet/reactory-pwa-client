@@ -369,4 +369,219 @@ describe('ReactoryRouter', () => {
     });
     expect(screen.queryByTestId('home-page')).toBeNull();
   });
+
+  describe('apiStatus route update isolation', () => {
+    it('does not re-render the active screen when apiStatus runs with unchanged route catalog', async () => {
+      const renderSpy = jest.fn();
+      const MonitoredScreen = (props: any) => {
+        renderSpy();
+        return <div data-testid="monitored-screen">Screen</div>;
+      };
+
+      const routes: Reactory.Routing.IReactoryRoute[] = [
+        {
+          id: 'dashboard',
+          path: '/dashboard',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Dashboard@1.0.0',
+        },
+      ];
+
+      const reactory = createMockReactory({
+        routes,
+        components: { 'test.Dashboard@1.0.0': MonitoredScreen },
+        isAnon: true,
+        roles: ['ANON'],
+      });
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      renderRouter(reactory, '/dashboard');
+      await waitFor(() => {
+        expect(screen.getByTestId('monitored-screen')).toBeTruthy();
+      });
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+
+      // Simulate periodic apiStatus execution that returns the same route catalog
+      act(() => {
+        reactory.emit('onApiStatusUpdate', { offline: false, status: 'API OK' });
+      });
+
+      // Assert that the active screen was NOT re-rendered
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not re-render the active screen when apiStatus runs and only an inactive route changed', async () => {
+      const dashboardRenderSpy = jest.fn();
+      const DashboardScreen = () => {
+        dashboardRenderSpy();
+        return <div data-testid="dashboard-screen">Dashboard</div>;
+      };
+      const SettingsScreen = () => <div data-testid="settings-screen">Settings</div>;
+
+      let routes: Reactory.Routing.IReactoryRoute[] = [
+        {
+          id: 'dashboard',
+          path: '/dashboard',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Dashboard@1.0.0',
+        },
+        {
+          id: 'settings',
+          path: '/settings',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Settings@1.0.0',
+        },
+      ];
+
+      const reactory = createMockReactory({
+        routes,
+        components: {
+          'test.Dashboard@1.0.0': DashboardScreen,
+          'test.Settings@1.0.0': SettingsScreen,
+        },
+        isAnon: true,
+        roles: ['ANON'],
+      });
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      renderRouter(reactory, '/dashboard');
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-screen')).toBeTruthy();
+      });
+      expect(dashboardRenderSpy).toHaveBeenCalledTimes(1);
+
+      // Inactive route /settings is modified in the API status response
+      routes = [
+        routes[0],
+        {
+          id: 'settings',
+          path: '/settings',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Settings@1.0.0',
+          componentProps: { theme: 'dark' },
+        },
+      ];
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      act(() => {
+        reactory.emit('onApiStatusUpdate', { offline: false, status: 'API OK' });
+      });
+
+      // Active screen (dashboard) must NOT re-render
+      expect(dashboardRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-renders the active screen when apiStatus runs and the active route configuration changed', async () => {
+      const dashboardRenderSpy = jest.fn();
+      const DashboardScreen = (props: any) => {
+        dashboardRenderSpy();
+        return <div data-testid="dashboard-screen">Dashboard Version: {props.version || 'v1'}</div>;
+      };
+
+      let routes: Reactory.Routing.IReactoryRoute[] = [
+        {
+          id: 'dashboard',
+          path: '/dashboard',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Dashboard@1.0.0',
+          componentProps: { version: 'v1' },
+        },
+      ];
+
+      const reactory = createMockReactory({
+        routes,
+        components: { 'test.Dashboard@1.0.0': DashboardScreen },
+        isAnon: true,
+        roles: ['ANON'],
+      });
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      renderRouter(reactory, '/dashboard');
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-screen').textContent).toContain('Dashboard Version: v1');
+      });
+      expect(dashboardRenderSpy).toHaveBeenCalledTimes(1);
+
+      // Active route configuration changes from the server
+      routes = [
+        {
+          id: 'dashboard',
+          path: '/dashboard',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.Dashboard@1.0.0',
+          componentProps: { version: 'v2' },
+        },
+      ];
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      act(() => {
+        reactory.emit('onApiStatusUpdate', { offline: false, status: 'API OK' });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-screen').textContent).toContain('Dashboard Version: v2');
+      });
+      expect(dashboardRenderSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not re-render ReactoryRouter when parent re-renders with new JSX header/footer objects but identical props', async () => {
+      const renderSpy = jest.fn();
+      const MonitoredScreen = () => {
+        renderSpy();
+        return <div data-testid="header-screen">Screen</div>;
+      };
+
+      const routes: Reactory.Routing.IReactoryRoute[] = [
+        {
+          id: 'test-header',
+          path: '/test-header',
+          public: true,
+          roles: ['*'],
+          componentFqn: 'test.HeaderScreen@1.0.0',
+        },
+      ];
+
+      const reactory = createMockReactory({
+        routes,
+        components: { 'test.HeaderScreen@1.0.0': MonitoredScreen },
+        isAnon: true,
+        roles: ['ANON'],
+      });
+      reactory.getRoutes.mockImplementation(() => routes);
+
+      const view = renderRouter(reactory, '/test-header', {
+        header: <div data-testid="header-node">Header 1</div>,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('header-screen')).toBeTruthy();
+      });
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+
+      // Parent re-renders, creating a new JSX object with identical type and props
+      view.rerender(
+        <ReactoryContext.Provider value={reactory}>
+          <MemoryRouter initialEntries={['/test-header']}>
+            <ReactoryRouter
+              reactory={reactory}
+              auth_validated={true}
+              authenticating={false}
+              user={reactory.getUser()}
+              header={<div data-testid="header-node">Header 1</div>}
+              footer={null}
+            />
+          </MemoryRouter>
+        </ReactoryContext.Provider>,
+      );
+
+      // The screen component should not re-render
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });
