@@ -7,6 +7,7 @@ import RouteResolving from './RouteResolving';
 import { LOGIN_PATH } from './constants';
 import { currentUserRoles, isAnonymousSession } from './auth';
 import { RouteGuardProps } from './types';
+import { areRouteConfigsEqual } from './routeMatching';
 
 const RouteGuard: React.FC<RouteGuardProps> = ({
   routeDef,
@@ -73,4 +74,16 @@ const isArrayishAnonOnly = (roles?: string[]): boolean => {
   return Array.isArray(roles) && roles.length === 1 && roles[0] === 'ANON';
 };
 
-export default RouteGuard;
+export const areRouteGuardPropsEqual = (
+  prev: RouteGuardProps,
+  next: RouteGuardProps,
+): boolean => {
+  return (
+    prev.authenticating === next.authenticating &&
+    prev.authValidated === next.authValidated &&
+    areRouteConfigsEqual(prev.routeDef, next.routeDef) &&
+    prev.children === next.children
+  );
+};
+
+export default React.memo(RouteGuard, areRouteGuardPropsEqual);

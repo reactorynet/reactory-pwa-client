@@ -29,6 +29,8 @@ query GetReactorPersonas {
     ReactorPersonas {
       id
       name
+      modelId
+      provider
       defaultGreeting
       description
       avatar          

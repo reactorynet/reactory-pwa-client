@@ -45,8 +45,22 @@ const COMPLETE_WORKFLOW_TASK = gql`
 export interface UseWorkflowTasksOptions {
   workflowId?: string;
   instanceId?: string;
+  /**
+   * Poll for new tasks. Defaults to true.
+   *
+   * There is no server→browser push: `reactory.on` is a client-local emitter, so the
+   * workflow.task.* subscriptions below only ever fire for events this browser
+   * raised. Without polling the queue shows whatever existed when it mounted, and a
+   * task raised by a workflow a moment later never appears — which for an approval
+   * queue means the work is invisible until someone happens to reload.
+   */
   autoRefresh?: boolean;
+  /** Poll interval in ms. Defaults to 30s. */
+  refreshInterval?: number;
 }
+
+/** Default poll cadence — brisk enough for an approval queue, quiet enough to ignore. */
+const DEFAULT_REFRESH_INTERVAL = 30000;
 
 export const useWorkflowTasks = (options: UseWorkflowTasksOptions = {}) => {
   const reactory = useReactory();
@@ -92,7 +106,9 @@ export const useWorkflowTasks = (options: UseWorkflowTasksOptions = {}) => {
     [reactory]
   );
 
-  // Subscribe to real-time events for task queue updates
+  // Client-local event subscriptions. These fire only for events raised in THIS
+  // browser (e.g. this hook completing a task); there is currently no server→browser
+  // transport, so they are not a substitute for the poll above.
   useEffect(() => {
     fetchTasks();
 
@@ -116,6 +132,53 @@ export const useWorkflowTasks = (options: UseWorkflowTasksOptions = {}) => {
       }
     };
   }, [fetchTasks, reactory]);
+
+  // Poll for tasks raised while this queue was already mounted.
+  //
+  // Paused while the tab is hidden: a background tab polling an approval queue is
+  // pure waste, and the visibility handler refetches on return so coming back to the
+  // tab shows current state immediately rather than after the next tick.
+  const autoRefresh = options.autoRefresh !== false;
+  const refreshInterval = options.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (timer === null) timer = setInterval(fetchTasks, refreshInterval);
+    };
+
+    const stop = () => {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (typeof document === 'undefined') return;
+      if (document.hidden) {
+        stop();
+      } else {
+        fetchTasks();
+        start();
+      }
+    };
+
+    if (typeof document === 'undefined' || !document.hidden) start();
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
+    return () => {
+      stop();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+    };
+  }, [autoRefresh, refreshInterval, fetchTasks]);
 
   return {
     tasks,

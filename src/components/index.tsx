@@ -42,6 +42,7 @@ import { FramedWindow, ReportViewerComponent, GraphiqlWindow } from './shared/Fr
 
 import TabbedNavigation from './shared/TabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
+import TagCloud from './shared/TagCloud';
 import MaterialInput from './shared/MaterialInput';
 import FormSubmissionComponent from './shared/FormSubmissionComponent';
 import ImageComponent from './shared/ImageComponent';
@@ -232,6 +233,14 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     version: '1.0.0',
     description: 'A component that renders Material-UI Chip components to display labels, tags, or form data, optionally with avatars and customizable styling.',
     tags: ['chip', 'label', 'tag', 'material-ui', 'form widget'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'TagCloud',
+    component: TagCloud,
+    version: '1.0.0',
+    description: 'An interactive tag cloud widget supporting multi-select/single-select filtering with customizable chips, counts, and selection callbacks.',
+    tags: ['tag', 'chip', 'tag cloud', 'filter', 'selection', 'widget'],
   },
   {
     nameSpace: 'core',
