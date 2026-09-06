@@ -35,7 +35,7 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
   sessions,
   onSelectSession,
   mode = 'dark',
-  maxVisible = 4,
+  maxVisible = 6,
   bottomOffset = 96,
   rightOffset = 10,
 }) => {
@@ -59,6 +59,8 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         return session.lastToolName ? `Running: ${session.lastToolName}` : 'Executing actions...';
       case 'waiting_focus':
         return 'Waiting for chat focus...';
+      case 'waiting_approval':
+        return 'Approval Required';
       case 'completed':
         return 'Response ready';
       case 'error':
@@ -77,6 +79,7 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
       case 'executing_tools':
         return '#ff9100'; // Amber/Orange
       case 'waiting_focus':
+      case 'waiting_approval':
         return '#ff9800'; // Amber/Orange Warning
       case 'completed':
         return '#00e676'; // Green
@@ -134,9 +137,10 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         const persona = session.persona;
         const initial = (persona?.name || session.title || 'A').trim().charAt(0).toUpperCase();
         const isWaitingFocus = session.status === 'waiting_focus' || !!session.hasWaitingToolCalls;
-        const showBadge = session.unread || isWaitingFocus;
-        const badgeContent = showBadge ? '!' : undefined;
-        const badgeColor = isWaitingFocus ? 'warning' : (session.unread ? 'success' : 'primary');
+        const isWaitingApproval = session.status === 'waiting_approval';
+        const showBadge = session.unread || isWaitingFocus || isWaitingApproval;
+        const badgeContent = (isWaitingFocus || isWaitingApproval) ? '!' : undefined;
+        const badgeColor = (isWaitingFocus || isWaitingApproval) ? 'warning' : (session.unread ? 'success' : 'primary');
 
         return (
           <Tooltip

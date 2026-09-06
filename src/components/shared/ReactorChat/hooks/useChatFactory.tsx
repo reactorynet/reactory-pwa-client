@@ -92,7 +92,13 @@ interface ChatFactoryHookResult {
   // interrupts an in-progress AUTO tool execution loop
   interruptExecution: (reason?: string) => Promise<void>
   // info about a tool iteration limit event, null when not paused
-  toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number; partialContent?: string } | null
+  toolIterationLimitInfo: {
+    iterationsCompleted: number;
+    maxIterations: number;
+    partialContent?: string;
+    componentFqn?: string;
+    componentProps?: any;
+  } | null
   // clears the tool iteration limit info ("stop" action)
   clearToolIterationLimitInfo: () => void
   // info about an ongoing/completed conversation compaction, null when idle
@@ -1129,7 +1135,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [isStreaming, setIsStreaming] = React.useState<boolean>(false);
   const [waitingForResponse, setWaitingForResponse] = React.useState<boolean>(false);
   const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
-  const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{ iterationsCompleted: number; maxIterations: number; partialContent?: string } | null>(null);
+  const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{
+    iterationsCompleted: number;
+    maxIterations: number;
+    partialContent?: string;
+    componentFqn?: string;
+    componentProps?: any;
+  } | null>(null);
   const [compactionInfo, setCompactionInfo] = React.useState<ChatFactoryHookResult['compactionInfo']>(null);
 
   // Pending tool calls detected on conversation load (for resume after navigation)
@@ -1506,6 +1518,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         iterationsCompleted: event.data.iterationsCompleted,
         maxIterations: event.data.maxIterations,
         partialContent: event.data.partialContent,
+        componentFqn: event.data.componentFqn,
+        componentProps: event.data.componentProps,
       });
       setWaitingForResponse(false);
       // Clear the SSE inactivity watchdog since the stream has paused

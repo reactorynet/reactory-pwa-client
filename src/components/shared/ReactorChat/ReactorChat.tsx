@@ -2796,16 +2796,60 @@ export default (props) => {
         />
       )}
 
-      {toolIterationLimitInfo && (
-        <ToolIterationLimitBanner
-          iterationsCompleted={toolIterationLimitInfo.iterationsCompleted}
-          maxIterations={toolIterationLimitInfo.maxIterations}
-          onContinue={(newMax) => continueToolExecution(newMax)}
-          onStop={() => clearToolIterationLimitInfo()}
-          Material={Material}
-          il8n={il8n}
-        />
-      )}
+      {toolIterationLimitInfo && (() => {
+        let ApprovalComponent: any = null;
+        if (toolIterationLimitInfo.componentFqn && reactory?.getComponent) {
+          try {
+            ApprovalComponent = reactory.getComponent(toolIterationLimitInfo.componentFqn);
+          } catch (e) {
+            // fallback
+          }
+        }
+        if (!ApprovalComponent && reactory?.getComponent) {
+          try {
+            ApprovalComponent = reactory.getComponent('core.WorkflowTaskApproval@1.0.0');
+          } catch (e) {
+            // fallback
+          }
+        }
+
+        const approvalProps = {
+          sessionId: chatState.id,
+          chatSessionId: chatState.id,
+          persona:getPersona(chatState.personaId),
+          personaId: chatState.personaId,
+          iterationsCompleted: toolIterationLimitInfo.iterationsCompleted,
+          maxIterations: toolIterationLimitInfo.maxIterations,
+          onContinue: (newMax?: number) => continueToolExecution(newMax),
+          onStop: () => {
+            clearToolIterationLimitInfo();
+            interruptExecution('User declined additional tool calls');
+          },
+          ...(toolIterationLimitInfo.componentProps || {}),
+        };
+
+        if (ApprovalComponent) {
+          return (
+            <Box sx={{ mx: 2, mb: 1 }}>
+              <ApprovalComponent {...approvalProps} />
+            </Box>
+          );
+        }
+
+        return (
+          <ToolIterationLimitBanner
+            iterationsCompleted={toolIterationLimitInfo.iterationsCompleted}
+            maxIterations={toolIterationLimitInfo.maxIterations}
+            onContinue={(newMax) => continueToolExecution(newMax)}
+            onStop={() => {
+              clearToolIterationLimitInfo();
+              interruptExecution('User declined additional tool calls');
+            }}
+            Material={Material}
+            il8n={il8n}
+          />
+        );
+      })()}
       {/* Input area + floating thinking overlay.
           The status pill is positioned absolutely above the input bar so it
           reads as a small overlay rising from the input surface, instead of

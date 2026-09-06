@@ -159,6 +159,36 @@ describe('ActiveSessionsAvatarStack', () => {
     expect(onSelectSession).toHaveBeenCalledWith('session-1', 'persona-1');
   });
 
+  it('renders waiting_approval status with indicator and label', () => {
+    const approvalSessions: any[] = [
+      {
+        sessionId: 'session-approval-1',
+        personaId: 'persona-1',
+        persona: {
+          id: 'persona-1',
+          name: 'Coder Agent',
+          avatar: 'https://example.com/avatar.png',
+        },
+        title: 'Coder Session',
+        status: 'waiting_approval',
+        unread: false,
+        lastUpdated: new Date(),
+      },
+    ];
+
+    render(
+      <ThemeProvider theme={theme}>
+        <ActiveSessionsAvatarStack
+          sessions={approvalSessions}
+          onSelectSession={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    const button = screen.getByRole('button', { name: /Coder Agent/i });
+    expect(button).toBeInTheDocument();
+  });
+
   it('renders null when sessions list is empty', () => {
     const { container } = render(
       <ThemeProvider theme={theme}>

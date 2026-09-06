@@ -4,7 +4,7 @@ import { ChatState, IAIPersona, SessionLogger, SubAgentSummary } from '../types'
 import { StreamingEventType } from './useSSE';
 import { createStreamingSession } from '../components/Shell/shellApi';
 
-export type TrackedSessionStatus = 'idle' | 'thinking' | 'streaming' | 'executing_tools' | 'waiting_focus' | 'completed' | 'error';
+export type TrackedSessionStatus = 'idle' | 'thinking' | 'streaming' | 'executing_tools' | 'waiting_focus' | 'waiting_approval' | 'completed' | 'error';
 
 export interface TrackedSession {
   sessionId: string;
@@ -616,8 +616,13 @@ export const useSessionStreamHub = ({
         }
         break;
       }
+      case StreamingEventType.TOOL_ITERATION_LIMIT: {
+        nextStatus = 'waiting_approval';
+        nextUnread = sessionId !== currentActiveSessionId;
+        lastTool = 'Approval Required';
+        break;
+      }
       case StreamingEventType.ERROR:
-      case StreamingEventType.TOOL_ITERATION_LIMIT:
       case StreamingEventType.INTERRUPTED: {
         nextStatus = type === StreamingEventType.ERROR ? 'error' : 'completed';
         nextUnread = sessionId !== currentActiveSessionId;
