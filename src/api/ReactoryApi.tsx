@@ -730,37 +730,55 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     `;
 
-    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, {}).then()
+    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, {}).then();
 
     let $resources: any = {};
+    let languageId = 'en';
+
     if (data && data.ReactoryTranslation) {
       const { i18n, id } = data.ReactoryTranslation;
+      languageId = id || 'en';
       if (i18n && lodash.isArray(i18n) === true) {
-        $resources[id] = {};
+        $resources[languageId] = {};
         i18n.forEach((e) => {
           if (e && e.translations && e.ns) {
-            if (!$resources[id][e.ns] && e.translations) {
-              $resources[id][e.ns] = { ...e.translations };
+            if (!$resources[languageId][e.ns] && e.translations) {
+              $resources[languageId][e.ns] = { ...e.translations };
             }
           }
         });
       }
 
-      await i18next
-        .use(LanguageDetector)
-        .use(initReactI18next)
-        .init({
-          debug: true,
-          lng: id,
-          fallbackLng: 'en-US',
-          interpolation: {
-            escapeValue: false
-          },
-          resources: $resources
-        }).then();
-
-      this.i18n = i18next;
+      // Alias en <-> en-US so browser language detection resolves seamlessly
+      if ($resources[languageId]) {
+        if (languageId === 'en' && !$resources['en-US']) {
+          $resources['en-US'] = { ...$resources['en'] };
+        } else if (languageId === 'en-US' && !$resources['en']) {
+          $resources['en'] = { ...$resources['en-US'] };
+        }
+      }
     }
+
+    const loadedNamespaces = Object.keys($resources[languageId] || {});
+    const allNamespaces = Array.from(new Set(['reactory', 'booktutor', 'forms', 'common', 'reactor', ...loadedNamespaces]));
+
+    await i18next
+      .use(LanguageDetector)
+      .use(initReactI18next)
+      .init({
+        debug: this.isDevelopmentMode(),
+        lng: languageId,
+        fallbackLng: ['en-US', 'en'],
+        ns: allNamespaces,
+        defaultNS: allNamespaces.includes('reactory') ? 'reactory' : allNamespaces[0] || 'common',
+        fallbackNS: allNamespaces,
+        interpolation: {
+          escapeValue: false
+        },
+        resources: $resources
+      }).then();
+
+    this.i18n = i18next;
   }
 
   clearStoreAndCache() {
