@@ -375,12 +375,22 @@ export default (props) => {
     currentStreamingMessage: '',
   };
 
+  const executingToolCount = React.useMemo(() => {
+    if (!agentBusy || !chatState?.history?.length) return 0;
+    const lastMsg = chatState.history[chatState.history.length - 1];
+    if (lastMsg?.role === 'assistant' && Array.isArray(lastMsg.tool_calls)) {
+      return (lastMsg.tool_calls as any[]).filter(tc => !tc.status || tc.status === 'running' || tc.status === 'pending').length;
+    }
+    return 0;
+  }, [agentBusy, chatState?.history]);
+
   // Derived chat activity status
   const chatStatusInfo = useChatStatus({
     busy: agentBusy,
     isStreaming,
     toolIterationLimitInfo,
     pendingToolCallResume: !!pendingToolCallResume,
+    executingToolCount,
     waitingClientToolCount: waitingClientToolCalls?.length || 0,
   });
 

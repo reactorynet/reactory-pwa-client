@@ -139,4 +139,28 @@ describe('ChatList Tool Call Expand and Delete', () => {
 
     expect(onDeleteToolCall).toHaveBeenCalledWith(toolCallMessage, 'call_shell_1');
   });
+
+  it('renders reasoning toggle on processing message when thinking content is present', () => {
+    const processingWithThinking: UXChatMessage = {
+      id: 'msg-processing-1',
+      role: 'assistant',
+      content: 'Processing...',
+      thinking: 'Analyzing system requirements...',
+      timestamp: new Date(),
+    };
+
+    render(
+      <ChatList
+        reactory={mockReactory}
+        messages={[processingWithThinking]}
+      />
+    );
+
+    expect(screen.getByText('Agent is thinking...')).toBeInTheDocument();
+    expect(screen.getByText('View reasoning')).toBeInTheDocument();
+
+    // Expand reasoning
+    fireEvent.click(screen.getByText('View reasoning'));
+    expect(screen.getByText('Analyzing system requirements...')).toBeInTheDocument();
+  });
 });

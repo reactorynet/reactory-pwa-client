@@ -535,23 +535,79 @@ const ChatList = (props: {
                   </Grid>
                   <Grid item xs>
                     {isProcessingMessage(message) ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, px: 0.5 }}>
-                        {[0, 1, 2].map((i) => (
-                          <Box
-                            key={i}
-                            sx={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: 'text.secondary',
-                              animation: `${pulse} 1.4s ease-in-out infinite`,
-                              animationDelay: `${i * 0.2}s`,
-                            }}
-                          />
-                        ))}
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
-                          {selectedPersona?.name || 'Agent'} is thinking...
-                        </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+                          {[0, 1, 2].map((i) => (
+                            <Box
+                              key={i}
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                backgroundColor: 'text.secondary',
+                                animation: `${pulse} 1.4s ease-in-out infinite`,
+                                animationDelay: `${i * 0.2}s`,
+                              }}
+                            />
+                          ))}
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                            {selectedPersona?.name || 'Agent'} is thinking...
+                          </Typography>
+                        </Box>
+                        {message.thinking && (
+                          <Box sx={{ mb: 0.5 }}>
+                            <Box
+                              onClick={() => toggleThinking(String(message.id || idx))}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                px: 0.75,
+                                py: 0.25,
+                                borderRadius: '4px',
+                                bgcolor: 'action.hover',
+                                '&:hover': { bgcolor: 'action.selected' },
+                              }}
+                            >
+                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
+                              <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
+                                {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
+                              </Typography>
+                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
+                              </Icon>
+                            </Box>
+                            <Collapse in={expandedThinking.has(String(message.id || idx))}>
+                              <Box
+                                sx={{
+                                  mt: 0.5,
+                                  p: 1,
+                                  borderRadius: '4px',
+                                  bgcolor: 'action.hover',
+                                  borderLeft: '3px solid',
+                                  borderColor: 'text.disabled',
+                                  maxHeight: 200,
+                                  overflowY: 'auto',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  component="div"
+                                  sx={{
+                                    fontFamily: 'inherit',
+                                    whiteSpace: 'pre-wrap',
+                                    color: 'text.secondary',
+                                    lineHeight: 1.5,
+                                    userSelect: 'text',
+                                  }}
+                                >
+                                  {message.thinking}
+                                </Typography>
+                              </Box>
+                            </Collapse>
+                          </Box>
+                        )}
                       </Box>
                     ) : isActivityMessage(message) ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>

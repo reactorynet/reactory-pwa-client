@@ -1412,8 +1412,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 content: flushChunk,
                 timestamp: new Date(),
               };
-            } else if (lastMessage.content.startsWith("Calling tool:")) {
-              // Keep the tool call message as is
+            } else if (lastMessage.content.startsWith("Calling tool:") || (Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls.length > 0)) {
+              // The tool call turn has completed and the assistant is now streaming
+              // the text response. Append a new assistant message for the streaming text.
+              history.push({
+                id: reactory.utils.uuid(),
+                role: "assistant",
+                content: flushChunk,
+                timestamp: new Date(),
+                sessionId: validSessionId,
+              } as UXChatMessage);
             } else {
               history[lastIndex] = {
                 ...lastMessage,
@@ -1421,6 +1429,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 timestamp: new Date(),
               };
             }
+          } else {
+            // No assistant message in history yet — append one
+            history.push({
+              id: reactory.utils.uuid(),
+              role: "assistant",
+              content: flushChunk,
+              timestamp: new Date(),
+              sessionId: validSessionId,
+            } as UXChatMessage);
           }
 
           return {
@@ -4031,7 +4048,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     pinGraphPerspectiveForChat,
     sendAudio,
     isInitialized,
-    isStreaming: (sse as any).isStreaming,
+    isStreaming: (sse as any).isStreaming || isStreaming,
     currentStreamingMessage: (sse as any).currentStreamingMessage,
     setChatState,
     modelOverride,
