@@ -583,7 +583,9 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
 
           <RouteInspectorPreferenceButton size="large" />
 
-          <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
+          {reactory.hasRole(['USER']) === true && (
+             <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
+          )}
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
