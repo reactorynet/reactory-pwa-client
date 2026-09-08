@@ -18,7 +18,14 @@ if (nodeCrypto.webcrypto) {
   });
 }
 
-import { pathHash, formatFromExtension, contentHash, debounce } from '../utils';
+import {
+  pathHash,
+  formatFromExtension,
+  contentHash,
+  debounce,
+  detectFileType,
+  isPreviewableType,
+} from '../utils';
 
 describe('utils', () => {
   describe('pathHash', () => {
@@ -136,6 +143,42 @@ describe('utils', () => {
       wrapped.cancel();
       jest.advanceTimersByTime(200);
       expect(fn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('detectFileType and isPreviewableType', () => {
+    it('detects markdown by extension, mimetype, and format', () => {
+      expect(detectFileType({ path: 'doc.md' })).toEqual({ type: 'markdown', isPreviewable: true });
+      expect(detectFileType({ path: 'install.md', mimetype: 'application/octet-stream' })).toEqual({ type: 'markdown', isPreviewable: true });
+      expect(detectFileType({ path: 'spec.markdown' })).toEqual({ type: 'markdown', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', mimetype: 'text/markdown' })).toEqual({ type: 'markdown', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', format: 'markdown' })).toEqual({ type: 'markdown', isPreviewable: true });
+      expect(isPreviewableType({ path: 'doc.md' })).toBe(true);
+    });
+
+    it('detects html by extension, mimetype, and format', () => {
+      expect(detectFileType({ path: 'index.html' })).toEqual({ type: 'html', isPreviewable: true });
+      expect(detectFileType({ path: 'page.htm' })).toEqual({ type: 'html', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', mimetype: 'text/html' })).toEqual({ type: 'html', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', format: 'html' })).toEqual({ type: 'html', isPreviewable: true });
+      expect(isPreviewableType({ path: 'index.html' })).toBe(true);
+    });
+
+    it('detects plain text and code files as text', () => {
+      expect(detectFileType({ path: 'notes.txt' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(detectFileType({ path: 'config.json' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(detectFileType({ path: 'workflow.yaml' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(detectFileType({ path: 'script.js' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', mimetype: 'text/plain' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(detectFileType({ path: 'unknown', mimetype: 'text/csv' })).toEqual({ type: 'text', isPreviewable: true });
+      expect(isPreviewableType({ path: 'notes.txt' })).toBe(true);
+    });
+
+    it('identifies non-text files as other and not previewable', () => {
+      expect(detectFileType({ path: 'image.png', mimetype: 'image/png' })).toEqual({ type: 'other', isPreviewable: false });
+      expect(detectFileType({ path: 'file.pdf', mimetype: 'application/pdf' })).toEqual({ type: 'other', isPreviewable: false });
+      expect(detectFileType({ path: 'binary.bin', mimetype: 'application/octet-stream' })).toEqual({ type: 'other', isPreviewable: false });
+      expect(isPreviewableType({ path: 'image.png', mimetype: 'image/png' })).toBe(false);
     });
   });
 });

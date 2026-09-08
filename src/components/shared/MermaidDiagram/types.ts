@@ -41,6 +41,14 @@ export interface MermaidDiagramProps {
    * Disable JS execution for mermaid rendering
    */
   disableJs?: boolean;
+  /**
+   * Whether to show zoom and pan controls in visual mode (default: true)
+   */
+  allowZoom?: boolean;
+  /**
+   * Whether to show the maximize / full-screen overlay button (default: true)
+   */
+  allowMaximize?: boolean;
   // Mermaid configuration options
   securityLevel?: "strict" | "loose" | "antiscript" | "sandbox";
   theme?: "forest" | "default" | "base" | "dark" | "neutral" | "null";

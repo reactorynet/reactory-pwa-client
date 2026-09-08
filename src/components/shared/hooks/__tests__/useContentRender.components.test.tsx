@@ -100,6 +100,21 @@ describe('component mounting through useContentRender', () => {
       expect(labels[0]).toHaveTextContent('one');
       expect(labels[1]).toHaveTextContent('two');
     });
+
+    it('renders fenced code blocks containing internal backticks as a single code snippet', () => {
+      const complexCode = [
+        '```',
+        'Block 0: Markdown segment',
+        'Block 1: Code block (` ```sh ... ``` `)',
+        'Block 2: Markdown segment',
+        '```',
+      ].join('\n');
+
+      render(<Host content={complexCode} />);
+      const snippet = screen.getByTestId('code-snippet-container');
+      expect(snippet).toBeInTheDocument();
+      expect(snippet.textContent).toContain('Block 1: Code block (` ```sh ... ``` `)');
+    });
   });
 
   describe('html content', () => {

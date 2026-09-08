@@ -796,6 +796,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
           <FileEditor
             key={previewFile.id}
             path={toUserHomeRelative(previewFile.path)}
+            mimetype={previewFile.mimetype}
             scope="user"
           />
         )}

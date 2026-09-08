@@ -282,7 +282,7 @@ const RichTextEditor = (props: any) => {
   // Plain-text mode: render content as native Quill paragraphs with a
   // monospace font + pre-wrap CSS. Preserves whitespace/indentation without
   // the code-block's trailing-newline normalisation quirks.
-  const PLAIN_TEXT_FORMATS = ['text', 'markdown'];
+  const PLAIN_TEXT_FORMATS = ['text', 'markdown', 'html'];
   // Language-aware code-mode formats use hljs highlightAuto to colour tokens.
   const HIGHLIGHTED_CODE_FORMATS = [
     'console',

@@ -385,6 +385,93 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
   );
 };
 
+export interface MarkupSegment {
+  type: 'mermaid' | 'code' | 'markdown' | 'html';
+  content: string;
+  language?: string;
+}
+
+/**
+ * Line-by-line state machine parser for fenced code blocks and prose.
+ * Correctly isolates code blocks with backtick or tilde fences of arbitrary length
+ * without prematurely closing on inline backticks or nested code samples.
+ */
+export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
+  if (!text) return [];
+
+  const lines = text.split(/\r?\n/);
+  const segments: MarkupSegment[] = [];
+
+  let inFence = false;
+  let fenceChar = '';
+  let fenceLen = 0;
+  let fenceLang = '';
+  let fenceLines: string[] = [];
+  let proseLines: string[] = [];
+
+  const flushProse = () => {
+    if (proseLines.length > 0) {
+      const prose = proseLines.join('\n');
+      if (prose.trim()) {
+        if (/^\s*<[a-z][\s\S]*>\s*$/i.test(prose)) {
+          segments.push({ type: 'html', content: prose });
+        } else {
+          segments.push({ type: 'markdown', content: prose });
+        }
+      }
+      proseLines = [];
+    }
+  };
+
+  const flushFence = () => {
+    const code = fenceLines.join('\n');
+    const isMermaid = fenceLang.toLowerCase() === 'mermaid';
+    segments.push({
+      type: isMermaid ? 'mermaid' : 'code',
+      content: code,
+      language: fenceLang,
+    });
+    fenceLines = [];
+    inFence = false;
+    fenceChar = '';
+    fenceLen = 0;
+    fenceLang = '';
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (!inFence) {
+      const openMatch = /^[ ]{0,3}(`{3,}|~{3,})([^\r\n`~]*)$/.exec(line);
+      if (openMatch) {
+        flushProse();
+        inFence = true;
+        fenceChar = openMatch[1][0];
+        fenceLen = openMatch[1].length;
+        fenceLang = openMatch[2].trim();
+        fenceLines = [];
+        continue;
+      }
+      proseLines.push(line);
+    } else {
+      const closeRegex = new RegExp('^[ ]{0,3}\\' + fenceChar + '{' + fenceLen + ',}[ \\t]*$');
+      if (closeRegex.test(line)) {
+        flushFence();
+        continue;
+      }
+      fenceLines.push(line);
+    }
+  }
+
+  if (inFence) {
+    flushFence();
+  } else {
+    flushProse();
+  }
+
+  return segments;
+};
+
 /**
  * Hook to detect content type and render it accordingly
  */
@@ -465,16 +552,12 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
     return ContentType.MARKDOWN;
   };
 
-  // Card wrapper for Mermaid diagrams with dynamic actions
+  // Wrapper for Mermaid diagrams with zoom, pan, and fullscreen capabilities
   const MermaidCard = ({ diagram, message }: { diagram: string; message?: string }) => {
-    const { Card, CardContent } = MaterialCore;
-
     return (
-      <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <MermaidDiagram>{diagram}</MermaidDiagram>
-        </CardContent>
-      </Card>
+      <Box sx={{ my: 1.5 }}>
+        <MermaidDiagram>{diagram}</MermaidDiagram>
+      </Box>
     );
   };
 
@@ -638,55 +721,43 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
      * through the mermaid / code / markdown / HTML pipeline.
      */
     const renderMarkup = (markup: string, keyPrefix: string): React.ReactNode => {
-      // Regex to match code, mermaid, and markdown blocks
-      const blockRegex = /(```mermaid[\s\S]*?```|```[a-zA-Z]*[\s\S]*?```)/g;
-      const blocks: string[] = [];
-      let lastIndex = 0;
-      let match;
-      while ((match = blockRegex.exec(markup)) !== null) {
-        if (match.index > lastIndex) {
-          blocks.push(markup.substring(lastIndex, match.index));
-        }
-        blocks.push(match[0]);
-        lastIndex = match.index + match[0].length;
-      }
-      if (lastIndex < markup.length) {
-        blocks.push(markup.substring(lastIndex));
-      }
+      const segments = parseMarkupBlocks(markup);
 
-      const children: React.ReactNode[] = blocks.map((block, blockIndex) => {
-        const idx = `${keyPrefix}-${blockIndex}`;
-        // Mermaid block
-        if (/^```mermaid[\s\S]*```$/i.test(block)) {
-          const diagram = block.replace(/```mermaid|```/gi, '').trim();
+      const children: React.ReactNode[] = segments.map((seg, segIndex) => {
+        const idx = `${keyPrefix}-${segIndex}`;
+
+        if (seg.type === 'mermaid') {
           return (
             <div ref={mermaidRef} key={`mermaid-${idx}`}>
-              <MermaidCard diagram={diagram} />
+              <MermaidCard diagram={seg.content} />
             </div>
           );
         }
-        // Code block
-        if (/^```[a-zA-Z]*[\s\S]*```$/.test(block)) {
-          const codeBlock = block.replace(/```/g, '');
-          let language = '';
-          const firstLineBreak = codeBlock.indexOf('\n');
-          if (firstLineBreak > 0) {
-            const potentialLang = codeBlock.substring(0, firstLineBreak).trim();
-            if (potentialLang && !potentialLang.includes(' ')) {
-              language = potentialLang;
-            }
-          }
-          const code = language ? codeBlock.replace(language, '').trim() : codeBlock.trim();
+
+        if (seg.type === 'code') {
           return (
             <CodeSnippet
               key={`code-${idx}`}
-              code={code}
-              language={language}
+              code={seg.content}
+              language={seg.language || ''}
               mode={mode}
               reactory={reactory}
             />
           );
         }
+
+        if (seg.type === 'html') {
+          return (
+            <div
+              key={`html-${idx}`}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(seg.content),
+              }}
+            />
+          );
+        }
+
+        const block = seg.content;
         // Markdown block (if it looks like markdown)
         if (detectContentType(block) === ContentType.MARKDOWN) {
           // Split the block into table vs non-table sub-blocks so that
@@ -702,6 +773,10 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
             code: ({ node, inline, className, children, ...props }: any) => {
               const match = /language-(\w+)/.exec(className || '');
               const codeText = String(children).replace(/\n$/, '');
+              const lang = match ? match[1] : '';
+              if (lang.toLowerCase() === 'mermaid') {
+                return <MermaidCard diagram={codeText} />;
+              }
               if (!inline && (match || codeText.includes('\n'))) {
                 const lang = match ? match[1] : '';
                 return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
@@ -751,7 +826,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
           }
 
           return (
-            <div style={{ width: '100%', height: '100%', overflow: 'auto' }}
+            <div style={{ width: '100%' }}
               className="reactor-markdown-content"
               key={`md-${idx}`}>
               {subParts}

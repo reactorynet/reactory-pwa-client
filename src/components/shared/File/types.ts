@@ -10,7 +10,21 @@ export type FileFormat =
   | 'typescript'
   | 'markdown'
   | 'text'
-  | 'code';
+  | 'code'
+  | 'html';
+
+export type DetectedFileType = 'markdown' | 'html' | 'text' | 'other';
+
+export interface DetectFileTypeOptions {
+  path?: string;
+  mimetype?: string;
+  format?: string;
+}
+
+export interface DetectFileTypeResult {
+  type: DetectedFileType;
+  isPreviewable: boolean;
+}
 
 /**
  * File operation scope.
@@ -66,8 +80,12 @@ export interface FileProps {
   /** Defaults to `server`. Use `user` to edit files in the caller's home folder. */
   scope?: FileScope;
   format?: FileFormat;
+  mimetype?: string;
+  mimeType?: string;
   readOnly?: boolean;
   height?: string;
+  defaultViewMode?: 'preview' | 'raw';
+  showPreviewToggle?: boolean;
   onSave?: (payload: FileSavePayload) => FileSaveOverride | Promise<FileSaveOverride>;
   onSaved?: (result: FileSavedResult) => void;
   onSaveError?: (error: Error, payload: FileSavePayload) => void;
@@ -85,6 +103,8 @@ export interface FileHandle {
   getContent(): string;
   isDirty(): boolean;
   focus(): void;
+  getViewMode?(): 'preview' | 'raw';
+  setViewMode?(mode: 'preview' | 'raw'): void;
 }
 
 // ─── SSE event shapes (mirror server `FileSseEvent` in FileSSETransportManager.ts) ──

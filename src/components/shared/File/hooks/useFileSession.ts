@@ -74,6 +74,7 @@ export interface UseFileSessionResult {
   /** Informative message for the read-only reason. */
   readOnlyMessage: string | null;
   loading: boolean;
+  mimetype: string | null;
   save: () => Promise<FileSavedResult | null>;
   reload: () => Promise<void>;
 }
@@ -93,6 +94,7 @@ export default function useFileSession(
   } = options;
 
   const [content, setContentState] = React.useState<string>('');
+  const [mimetype, setMimetype] = React.useState<string | null>(null);
   const [lastSavedHash, setLastSavedHash] = React.useState<string>('');
   const [baseRevision, setBaseRevision] = React.useState<string | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
@@ -224,6 +226,7 @@ export default function useFileSession(
     setReadOnlyMessage(null);
     setConflict(null);
     setConnectionState('connecting');
+    setMimetype(null);
 
     (async () => {
       try {
@@ -235,6 +238,7 @@ export default function useFileSession(
 
         setSessionId(session.sessionId);
         setContentState(file.content);
+        setMimetype(file.mimetype || null);
         lastSavedContentRef.current = file.content;
         const hash = await contentHash(stripTrailingNewlines(file.content));
         if (cancelled) return;
@@ -352,6 +356,7 @@ export default function useFileSession(
   const reload = React.useCallback(async () => {
     try {
       const file = await readFile(reactory, path, scope);
+      setMimetype(file.mimetype || null);
       await applyRemoteContent(file.content, file.revision);
     } catch (err) {
       reactory.error?.('useFileSession: reload failed', err);
@@ -382,6 +387,7 @@ export default function useFileSession(
     readOnlyReason,
     readOnlyMessage,
     loading,
+    mimetype,
     save,
     reload,
   };

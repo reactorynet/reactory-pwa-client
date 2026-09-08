@@ -920,6 +920,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             <File
               key={previewFile.id}
               path={toUserHomeRelative(previewFile.path)}
+              mimetype={previewFile.mimetype}
               scope="user"
             />
           )}

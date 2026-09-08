@@ -331,4 +331,65 @@ describe('MermaidDiagram Component', () => {
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('flowchart TD\n  A --> B');
   });
+
+  it('provides zoom in, zoom out, and reset zoom controls in visual mode', async () => {
+    render(
+      <MermaidDiagram testId="test-mermaid">
+        {`flowchart TD\n  A --> B`}
+      </MermaidDiagram>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+    });
+
+    const zoomInBtn = screen.getAllByRole('button', { name: /Zoom in/i })[0];
+    const zoomOutBtn = screen.getAllByRole('button', { name: /Zoom out/i })[0];
+    const resetBtn = screen.getByRole('button', { name: /Reset zoom and pan$/i });
+
+    expect(zoomInBtn).toBeInTheDocument();
+    expect(zoomOutBtn).toBeInTheDocument();
+    expect(resetBtn).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(zoomInBtn);
+    });
+    expect(screen.getByText('125%')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(zoomOutBtn);
+    });
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('opens and closes the full-screen overlay when clicking maximize', async () => {
+    render(
+      <MermaidDiagram testId="test-mermaid">
+        {`flowchart TD\n  A --> B`}
+      </MermaidDiagram>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+    });
+
+    const maxBtn = screen.getByRole('button', { name: /Maximize diagram/i });
+    expect(maxBtn).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(maxBtn);
+    });
+
+    expect(screen.getByText('Mermaid Diagram (Fullscreen)')).toBeInTheDocument();
+
+    const closeFullscreenBtn = screen.getByRole('button', { name: /Close fullscreen/i });
+    act(() => {
+      fireEvent.click(closeFullscreenBtn);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Mermaid Diagram (Fullscreen)')).not.toBeInTheDocument();
+    });
+  });
 });

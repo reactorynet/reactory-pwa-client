@@ -1,4 +1,8 @@
-import { FileFormat } from './types';
+import {
+  FileFormat,
+  DetectFileTypeOptions,
+  DetectFileTypeResult,
+} from './types';
 
 const EXTENSION_TO_FORMAT: Record<string, FileFormat> = {
   yaml: 'yaml',
@@ -14,7 +18,108 @@ const EXTENSION_TO_FORMAT: Record<string, FileFormat> = {
   markdown: 'markdown',
   txt: 'text',
   log: 'text',
+  html: 'html',
+  htm: 'html',
+  xhtml: 'html',
 };
+
+const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdown', 'mkd', 'mdwn', 'mdx']);
+const HTML_EXTENSIONS = new Set(['html', 'htm', 'xhtml']);
+const TEXT_EXTENSIONS = new Set([
+  'txt', 'text', 'log', 'csv', 'tsv', 'json', 'yaml', 'yml',
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx',
+  'css', 'scss', 'sass', 'less',
+  'sh', 'bash', 'zsh', 'fish',
+  'xml', 'svg', 'sql', 'graphql', 'gql',
+  'conf', 'ini', 'env', 'diff', 'patch',
+  'properties', 'toml', 'dockerfile', 'makefile',
+]);
+
+/**
+ * Checks if a file (by path, mimetype, and/or format) is previewable as text/html/markdown.
+ */
+export function detectFileType(options: DetectFileTypeOptions): DetectFileTypeResult {
+  const { path = '', mimetype = '', format = '' } = options;
+
+  const mime = mimetype.trim().toLowerCase();
+  const fmt = format.trim().toLowerCase();
+  const ext = path.includes('.')
+    ? (path.split('.').pop() || '').trim().toLowerCase()
+    : path.trim().toLowerCase();
+
+  // Explicit non-text / binary media types should never be considered previewable
+  const isExplicitNonTextMedia =
+    mime.startsWith('image/') ||
+    mime.startsWith('video/') ||
+    mime.startsWith('audio/') ||
+    mime === 'application/pdf' ||
+    mime === 'application/zip' ||
+    mime === 'application/gzip' ||
+    mime === 'application/x-tar';
+
+  if (isExplicitNonTextMedia) {
+    return { type: 'other', isPreviewable: false };
+  }
+
+  // 1. Markdown detection (by mime, format, or known markdown extension)
+  if (
+    mime === 'text/markdown' ||
+    mime === 'text/x-markdown' ||
+    mime.includes('markdown') ||
+    fmt === 'markdown' ||
+    MARKDOWN_EXTENSIONS.has(ext)
+  ) {
+    return { type: 'markdown', isPreviewable: true };
+  }
+
+  // 2. HTML detection (by mime, format, or known html extension)
+  if (
+    mime === 'text/html' ||
+    mime === 'application/xhtml+xml' ||
+    mime.includes('html') ||
+    fmt === 'html' ||
+    HTML_EXTENSIONS.has(ext)
+  ) {
+    return { type: 'html', isPreviewable: true };
+  }
+
+  // 3. Text detection (by mime, format, or known text extension)
+  const isTextMime =
+    mime.startsWith('text/') ||
+    mime === 'application/json' ||
+    mime === 'application/xml' ||
+    mime === 'application/javascript' ||
+    mime === 'application/x-javascript' ||
+    mime === 'application/typescript' ||
+    mime === 'application/x-yaml' ||
+    mime === 'application/yaml' ||
+    mime === 'application/x-sh' ||
+    mime === 'application/sql' ||
+    mime === 'application/graphql';
+
+  const isTextExt = TEXT_EXTENSIONS.has(ext);
+
+  if (isTextMime || isTextExt) {
+    return { type: 'text', isPreviewable: true };
+  }
+
+  if (
+    !mime &&
+    !ext &&
+    (fmt === 'text' || fmt === 'yaml' || fmt === 'json' || fmt === 'javascript' || fmt === 'typescript' || fmt === 'code')
+  ) {
+    return { type: 'text', isPreviewable: true };
+  }
+
+  return { type: 'other', isPreviewable: false };
+}
+
+/**
+ * Returns whether the file is previewable as text, html, or markdown.
+ */
+export function isPreviewableType(options: DetectFileTypeOptions): boolean {
+  return detectFileType(options).isPreviewable;
+}
 
 /**
  * Derive the editor format from a filename or bare extension.
