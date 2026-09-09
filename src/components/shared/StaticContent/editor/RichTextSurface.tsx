@@ -80,14 +80,32 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
     // Register all custom blots and style attributors
     registerAllCustomBlots();
 
-    // Convert stored HTML (with <reactory /> and <table>) to Quill embed format synchronously
-    const editorValue = useMemo(() => fullToEditorHtml(value), [value]);
+    const isSelfChangeRef = useRef(false);
+    const lastQuillHtmlRef = useRef<string>('');
+
+    // Symmetrical editor value calculation:
+    // If the re-render was triggered by Quill's own handleChange, we return
+    // the exact HTML string Quill emitted (lastQuillHtmlRef). This prevents
+    // ReactQuill.shouldComponentUpdate from detecting a prop difference and
+    // wiping Quill's contents with setEditorContents on every keystroke.
+    const editorValue = useMemo(() => {
+      if (isSelfChangeRef.current && lastQuillHtmlRef.current) {
+        isSelfChangeRef.current = false;
+        return lastQuillHtmlRef.current;
+      }
+      return fullToEditorHtml(value);
+    }, [value]);
 
     /**
      * Converts editor HTML back to pure semantic HTML for persistence.
      */
     const handleChange = useCallback(
-      (html: string) => onChange(fullToContentHtml(html)),
+      (html: string) => {
+        lastQuillHtmlRef.current = html;
+        isSelfChangeRef.current = true;
+        const content = fullToContentHtml(html);
+        onChange(content);
+      },
       [onChange]
     );
 
@@ -224,6 +242,18 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
       focus: () => quillRef.current?.focus?.(),
     }));
 
+    const tableHandlerRef = useRef<() => void>(() => {});
+    tableHandlerRef.current = handleTableToolbarClick;
+
+    const imageHandlerRef = useRef<() => void>(() => {});
+    imageHandlerRef.current = handleImageToolbarClick;
+
+    const linkHandlerRef = useRef<() => void>(() => {});
+    linkHandlerRef.current = handleLinkToolbarClick;
+
+    const hrHandlerRef = useRef<() => void>(() => {});
+    hrHandlerRef.current = handleHrToolbarClick;
+
     const modules = useMemo(
       () => ({
         toolbar: {
@@ -239,17 +269,17 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
             ['clean'],
           ],
           handlers: {
-            table: handleTableToolbarClick,
-            image: handleImageToolbarClick,
-            link: handleLinkToolbarClick,
-            hr: handleHrToolbarClick,
+            table: () => tableHandlerRef.current(),
+            image: () => imageHandlerRef.current(),
+            link: () => linkHandlerRef.current(),
+            hr: () => hrHandlerRef.current(),
           },
         },
         clipboard: {
           matchVisual: false,
         },
       }),
-      [handleTableToolbarClick, handleImageToolbarClick, handleLinkToolbarClick, handleHrToolbarClick]
+      []
     );
 
     return (
