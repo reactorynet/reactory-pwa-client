@@ -10,6 +10,8 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import { useReactory } from '@reactory/client-core/api';
@@ -589,32 +591,145 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
   };
 
   /**
-   * Renders a single `<reactory />` tag as the live component it names.
+   * Helper to unwrap and validate a React component from the registry.
+   */
+  const resolveComponent = (raw: any): React.ComponentType<any> | null => {
+    if (!raw) return null;
+    if (typeof raw === 'function') return raw;
+    // React.forwardRef or React.memo objects have $typeof
+    if (typeof raw === 'object' && raw.$typeof) return raw;
+    // Descriptor or module exports with a component/default property
+    if (typeof raw === 'object') {
+      if (typeof raw.component === 'function' || (raw.component && raw.component.$typeof)) {
+        return raw.component;
+      }
+      if (typeof raw.default === 'function' || (raw.default && raw.default.$typeof)) {
+        return raw.default;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Renders a single `<reactory />` tag as the live component it names,
+   * with defensive component validation and ErrorBoundary isolation.
    */
   const renderReactoryComponent = (tag: ReactoryTag, key: string) => {
-    const Component = reactory.getComponent<any>(tag.fqn);
-
-    if (!Component) {
-      reactory.log(`Content references unregistered component "${tag.fqn}"`, {}, 'warning');
+    let rawComponent: any = null;
+    try {
+      rawComponent = reactory.getComponent<any>(tag.fqn);
+    } catch (err: any) {
+      reactory.log(`Failed to retrieve component "${tag.fqn}": ${err?.message}`, {}, 'error');
       return (
-        <span
+        <Box
           key={key}
-          data-reactory-missing={tag.fqn}
-          style={{
-            display: 'inline-block',
-            padding: '2px 6px',
-            borderRadius: 4,
-            border: `1px dashed ${reactory.muiTheme?.palette?.warning?.main || '#ed6c02'}`,
-            color: reactory.muiTheme?.palette?.text?.secondary,
+          data-reactory-error={tag.fqn}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.75,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'error.main',
+            backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
+            color: 'error.main',
             fontSize: '0.8125rem',
           }}
         >
-          Unknown component: {tag.fqn}
-        </span>
+          <ErrorOutlineIcon fontSize="small" color="error" />
+          <span>Failed to retrieve &quot;{tag.fqn}&quot;: {err?.message}</span>
+        </Box>
       );
     }
 
-    return <Component key={key} {...tag.props} />;
+    const Component = resolveComponent(rawComponent);
+
+    if (!Component) {
+      reactory.log(`Component "${tag.fqn}" is not a registered or callable component function (received ${typeof rawComponent})`, {}, 'warning');
+      return (
+        <Box
+          key={key}
+          data-reactory-missing={tag.fqn}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.75,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: '1px dashed',
+            borderColor: 'warning.main',
+            backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(237, 108, 2, 0.15)' : '#fff3e0'),
+            color: (t: any) => (t?.palette?.mode === 'dark' ? '#ffb74d' : '#e65100'),
+            fontSize: '0.8125rem',
+          }}
+        >
+          <WarningAmberIcon fontSize="small" />
+          <span>
+            {rawComponent ? `Component "${tag.fqn}" is not a function` : `Unknown component: ${tag.fqn}`}
+          </span>
+        </Box>
+      );
+    }
+
+    class ReactoryComponentErrorBoundary extends React.Component<
+      { fqn: string; children: React.ReactNode },
+      { hasError: boolean; error: Error | null }
+    > {
+      constructor(props: { fqn: string; children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+
+      static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+      }
+
+      componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        reactory.log(`Error mounting component tag "${this.props.fqn}": ${error?.message}`, { error, errorInfo }, 'error');
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <Box
+              component="span"
+              data-reactory-error={this.props.fqn}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.75,
+                my: 1,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'error.main',
+                backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
+                color: 'error.main',
+                fontSize: '0.8125rem',
+              }}
+            >
+              <ErrorOutlineIcon fontSize="small" color="error" />
+              <span>
+                <strong>{this.props.fqn}</strong> failed to mount: {this.state.error?.message || 'Render error'}
+              </span>
+            </Box>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    return (
+      <ReactoryComponentErrorBoundary key={key} fqn={tag.fqn}>
+        <Component {...tag.props} reactory={reactory} />
+      </ReactoryComponentErrorBoundary>
+    );
   };
 
   /**

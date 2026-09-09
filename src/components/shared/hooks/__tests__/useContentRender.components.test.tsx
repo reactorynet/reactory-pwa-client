@@ -297,5 +297,48 @@ describe('component mounting through useContentRender', () => {
       expect(mockPublish).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' }, 'shell');
       expect(mockReactory.emit).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' });
     });
+
+    it('handles component that is not a function gracefully', () => {
+      registry['test.NotAFunction@1.0.0'] = { notAComponent: true } as any;
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub);
+        return <div>{renderContent('<reactory reactory-component="test.NotAFunction@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText(/is not a function/i)).toBeInTheDocument();
+    });
+
+    it('unwraps component descriptor object with component property', () => {
+      const ValidInner: React.FC = () => <span>Unwrapped Component Content</span>;
+      registry['test.Wrapped@1.0.0'] = { component: ValidInner } as any;
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub);
+        return <div>{renderContent('<reactory reactory-component="test.Wrapped@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText('Unwrapped Component Content')).toBeInTheDocument();
+    });
+
+    it('handles component that throws an error on mount without crashing', () => {
+      const CrashingComponent: React.FC = () => {
+        throw new Error('Simulated mount crash');
+      };
+      registry['test.Crashing@1.0.0'] = CrashingComponent;
+
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub);
+        return <div>{renderContent('<reactory reactory-component="test.Crashing@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText(/failed to mount: Simulated mount crash/i)).toBeInTheDocument();
+      spy.mockRestore();
+    });
   });
 });
