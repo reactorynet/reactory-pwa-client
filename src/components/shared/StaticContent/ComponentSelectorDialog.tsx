@@ -24,6 +24,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import CodeIcon from '@mui/icons-material/Code';
+import { parseReactoryTag } from '@reactory/client-core/components/shared/hooks/reactoryTags';
 
 export interface PropItem {
   key: string;
@@ -36,6 +37,7 @@ export interface ComponentSelectorDialogProps {
   onClose: () => void;
   onInsert: (tagHtml: string) => void;
   reactory: Reactory.Client.ReactorySDK;
+  initialTag?: string;
 }
 
 export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = ({
@@ -43,12 +45,43 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
   onClose,
   onInsert,
   reactory,
+  initialTag,
 }) => {
   const [selectedComponent, setSelectedComponent] = useState<string>('core.Label@1.0.0');
   const [customFqn, setCustomFqn] = useState<string>('');
   const [propsList, setPropsItem] = useState<PropItem[]>([
     { key: 'text', type: 'string', value: 'Hello Reactory' },
   ]);
+
+  // Pre-populate with initialTag when editing an existing component
+  React.useEffect(() => {
+    if (!open) return;
+    if (initialTag) {
+      const parsed = parseReactoryTag(initialTag);
+      if (parsed) {
+        setSelectedComponent(parsed.fqn);
+        setCustomFqn(parsed.fqn);
+        const items: PropItem[] = Object.entries(parsed.props).map(([k, v]) => {
+          if (typeof v === 'boolean') {
+            return { key: k, type: 'bool', value: String(v) };
+          }
+          if (typeof v === 'number') {
+            return { key: k, type: Number.isInteger(v) ? 'int' : 'float', value: String(v) };
+          }
+          if (typeof v === 'object' && v !== null) {
+            return { key: k, type: 'object', value: JSON.stringify(v) };
+          }
+          return { key: k, type: 'string', value: String(v ?? '') };
+        });
+        setPropsItem(items);
+        return;
+      }
+    }
+    // Default when inserting new
+    setSelectedComponent('core.Label@1.0.0');
+    setCustomFqn('');
+    setPropsItem([{ key: 'text', type: 'string', value: 'Hello Reactory' }]);
+  }, [open, initialTag]);
 
   // Discover available components from Reactory SDK if available
   const componentOptions = useMemo(() => {
@@ -124,8 +157,8 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <ExtensionIcon color="primary" />
-        <Typography variant="h6" fontWeight="bold">
-          Inject Reactory Component Tag
+        <Typography variant="h6" component="span" fontWeight="bold">
+          {initialTag ? 'Edit Reactory Component Tag' : 'Inject Reactory Component Tag'}
         </Typography>
       </DialogTitle>
       <Divider />
@@ -244,7 +277,7 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
           Cancel
         </Button>
         <Button onClick={handleInsert} variant="contained" color="primary" startIcon={<CodeIcon />}>
-          Insert Component Tag
+          {initialTag ? 'Update Component Tag' : 'Insert Component Tag'}
         </Button>
       </DialogActions>
     </Dialog>

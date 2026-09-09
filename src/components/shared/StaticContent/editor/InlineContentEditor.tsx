@@ -134,6 +134,14 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
     targetLang?: string;
   } | null>(null);
   const [pendingFormat, setPendingFormat] = useState<ContentFormat | null>(null);
+  const [editingComponent, setEditingComponent] = useState<{
+    tag: string;
+    onUpdate: (newTag: string) => void;
+  } | null>(null);
+
+  const handleEditComponent = useCallback((tag: string, onUpdate: (newTag: string) => void) => {
+    setEditingComponent({ tag, onUpdate });
+  }, []);
 
   const settingsAnchor = useRef<HTMLButtonElement>(null);
   const translationsAnchor = useRef<HTMLButtonElement>(null);
@@ -764,6 +772,7 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
               value={activeBody.content}
               minHeight={minHeight}
               onChange={(html) => setActiveBody({ content: html })}
+              onEditComponent={handleEditComponent}
             />
           ) : (
             <SourceSurface
@@ -875,9 +884,21 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
       )}
 
       <ComponentSelectorDialog
-        open={panel === 'components'}
-        onClose={() => setPanel('none')}
-        onInsert={insertComponentTag}
+        open={panel === 'components' || Boolean(editingComponent)}
+        initialTag={editingComponent?.tag}
+        onClose={() => {
+          setPanel('none');
+          setEditingComponent(null);
+        }}
+        onInsert={(tag) => {
+          if (editingComponent) {
+            editingComponent.onUpdate(tag);
+            setEditingComponent(null);
+          } else {
+            insertComponentTag(tag);
+            setPanel('none');
+          }
+        }}
         reactory={reactory}
       />
 

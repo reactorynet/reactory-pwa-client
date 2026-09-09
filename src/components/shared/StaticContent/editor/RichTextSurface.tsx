@@ -10,6 +10,7 @@ import {
   ImageAttributes,
 } from './blots';
 import { REACTORY_EMBED_CLASS } from './reactoryBlot';
+import { buildReactoryTag, parseReactoryTag } from '@reactory/client-core/components/shared/hooks/reactoryTags';
 import { TableInsertDialog, TableConfig } from './dialogs/TableInsertDialog';
 import { ImageInsertDialog } from './dialogs/ImageInsertDialog';
 import { LinkInsertDialog, LinkConfig } from './dialogs/LinkInsertDialog';
@@ -51,6 +52,7 @@ export interface RichTextSurfaceProps {
   /** Minimum height of the writing area, in pixels. */
   minHeight?: number;
   readOnly?: boolean;
+  onEditComponent?: (tag: string, onUpdate: (newTag: string) => void) => void;
 }
 
 /**
@@ -65,7 +67,7 @@ export interface RichTextSurfaceProps {
  * - Reactory Component Embeds (<reactory />)
  */
 const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
-  ({ value, onChange, placeholder, minHeight = 120, readOnly = false }, ref) => {
+  ({ value, onChange, placeholder, minHeight = 120, readOnly = false, onEditComponent }, ref) => {
     const quillRef = useRef<any>(null);
 
     // Dialog states
@@ -132,6 +134,37 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
       setSavedSelection(sel);
       return sel;
     }, [getEditor, getSafeSelection]);
+
+    // Handle clicks on embedded components to open the edit dialog
+    const handleSurfaceClick = useCallback(
+      (e: React.MouseEvent) => {
+        const target = (e.target as HTMLElement)?.closest(`.${REACTORY_EMBED_CLASS}`) as HTMLElement;
+        if (!target) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const tag = target.getAttribute('data-reactory-tag');
+        const fqn = target.getAttribute('data-reactory-fqn');
+        const currentTag = tag ? tag.replace(/&quot;/g, '"') : buildReactoryTag(fqn || '');
+
+        if (onEditComponent) {
+          onEditComponent(currentTag, (newTag: string) => {
+            const parsed = parseReactoryTag(newTag);
+            if (parsed) {
+              target.setAttribute('data-reactory-fqn', parsed.fqn);
+              target.setAttribute('data-reactory-tag', newTag.replace(/"/g, '&quot;'));
+              target.textContent = `⚛ ${parsed.fqn}`;
+              const editor = getEditor();
+              if (editor) {
+                handleChange(editor.root.innerHTML);
+              }
+            }
+          });
+        }
+      },
+      [onEditComponent, getEditor, handleChange]
+    );
 
     // Toolbar custom action handlers
     const handleTableToolbarClick = useCallback(() => {
@@ -287,6 +320,7 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
 
     return (
       <Box
+        onClick={handleSurfaceClick}
         sx={{
           '& .ql-container': {
             fontFamily: 'inherit',
@@ -365,7 +399,12 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
             fontSize: '0.8125rem',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             userSelect: 'none',
-            cursor: 'default',
+            cursor: 'pointer',
+            transition: 'all 120ms ease',
+            '&:hover': {
+              backgroundColor: (theme) => theme.palette.action.selected,
+              boxShadow: (theme) => theme.shadows[2],
+            },
           },
 
           // Table embed container styling
