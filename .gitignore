@@ -57,3 +57,5 @@ storybook-static
 
 coverage-app/*
 .yarn/*
+src/components/plugins/*
+!src/components/plugins/pluginImportFactory.ts

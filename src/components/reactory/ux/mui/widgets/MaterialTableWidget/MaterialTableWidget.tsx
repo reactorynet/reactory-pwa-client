@@ -704,14 +704,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             _toolbar_props = { ...toolbar_props, ..._toolbar_props };
           }
 
-          return <ToolbarComponent {..._toolbar_props} formContext={formContext} tableRef={tableRef} />
+          return <ToolbarComponent {..._toolbar_props} formContext={formContext} tableRef={tableRef} reactory={reactory} api={reactory} />
         }
       }
       // No more setTimeout - the effect handles re-checking
     }
 
     if (detailsPanelComponentId) {
-      const DetailsPanelComponent = reactory.getComponent<React.FC<{ formContext: any, tableRef: any }>>(detailsPanelComponentId);
+      const DetailsPanelComponent = reactory.getComponent<React.FC<any>>(detailsPanelComponentId);
 
       if (DetailsPanelComponent) {
         detailsPanel = (detail_props: MaterialTableDetailPanelProps) => {
@@ -738,7 +738,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             _detail_props = { ...detail_props, ...(uiOptions.detailPanelProps || {}), ...mapped };
           }
 
-          return <DetailsPanelComponent {..._detail_props} formContext={formContext} tableRef={tableRef} />
+          return <DetailsPanelComponent {..._detail_props} formContext={formContext} tableRef={tableRef} reactory={reactory} api={reactory} />
         };
       }
     }
@@ -1988,8 +1988,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     });
   }, []);  // setQuery (from useState) is always stable
 
-  const onToolbarFilterChange = useCallback((filters: any[]) => {
-    const filterFields = filters.reduce((acc: Record<string, any>, f: any) => {
+  const onToolbarFilterChange = useCallback((filters: any) => {
+    let filterArray: any[] = [];
+    if (Array.isArray(filters)) {
+      filterArray = filters;
+    } else if (filters && typeof filters === 'object') {
+      filterArray = Object.entries(filters).map(([field, value]) => ({ field, value }));
+    }
+    const filterFields = filterArray.reduce((acc: Record<string, any>, f: any) => {
       if (f?.field !== undefined && f?.value !== undefined) {
         acc[f.field] = f.value;
       }

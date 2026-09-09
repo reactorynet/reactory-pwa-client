@@ -12,6 +12,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
+import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
 import { ReactoryTag, splitReactoryTags } from './reactoryTags';
 
@@ -267,7 +268,7 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
       reactory?.emit?.('shell.execute', { command: cleanCommand });
       if (typeof reactory?.graphqlMutation === 'function') {
         reactory.graphqlMutation(
-          `mutation ExecuteReactorMacro($macroInput: ReactorExecuteMacroInput!) {
+          `mutation ExecuteReactorMacro($macroInput: ReactorMacroExecuteInput!) {
             ReactorExecuteMacro(macroInput: $macroInput) {
               ... on ReactorChatMessage { id role content }
               ... on ReactorErrorResponse { message }
@@ -332,25 +333,6 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
         </Typography>
 
         <Stack direction="row" spacing={0.5} alignItems="center">
-          {isShell && (
-            <Tooltip title={executing ? 'Executing...' : 'Run in terminal'}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleExecute}
-                  disabled={executing}
-                  aria-label="Execute command"
-                  sx={{
-                    color: executing ? 'primary.main' : 'text.secondary',
-                    '&:hover': { color: 'primary.main' },
-                  }}
-                >
-                  {executing ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon fontSize="small" />}
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-
           <Tooltip title={copied ? 'Copied!' : 'Copy code'}>
             <IconButton
               size="small"
@@ -475,7 +457,9 @@ export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
 /**
  * Hook to detect content type and render it accordingly
  */
-export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
+export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => {
+  const hookReactory = useReactory();
+  const reactory = reactoryProp || hookReactory;
   const {
     Material,
     Markdown,

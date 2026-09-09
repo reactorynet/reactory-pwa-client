@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useReactory } from '@reactory/client-core/api';
 import {
   buildGetContentQuery,
   CREATE_CONTENT_MUTATION,
@@ -15,7 +16,7 @@ import {
 export type LoadState = 'loading' | 'found' | 'missing' | 'error';
 
 export interface UseStaticContentArgs {
-  reactory: Reactory.Client.ReactorySDK;
+  reactory?: Reactory.Client.ReactorySDK;
   slug: string;
   basePath?: string;
   /** Locale to resolve for viewing. Defaults to the active i18n language. */
@@ -76,7 +77,7 @@ export const toDraft = (
  * failed save leaves the user's work intact.
  */
 export const useStaticContent = ({
-  reactory,
+  reactory: propReactory,
   slug,
   basePath = 'content/static-content',
   locale,
@@ -84,6 +85,8 @@ export const useStaticContent = ({
   fallbackTitle,
   fallbackContent = '',
 }: UseStaticContentArgs) => {
+  const hookReactory = useReactory();
+  const reactory = propReactory || hookReactory;
   const activeLocale = normaliseLang(locale || reactory?.i18n?.language);
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
