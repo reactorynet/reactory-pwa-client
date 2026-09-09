@@ -333,6 +333,22 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
         </Typography>
 
         <Stack direction="row" spacing={0.5} alignItems="center">
+          {isShell && (
+            <Tooltip title={executing ? 'Running…' : 'Execute command'}>
+              <IconButton
+                size="small"
+                onClick={handleExecute}
+                aria-label="Execute command"
+                disabled={executing}
+                sx={{
+                  color: executing ? 'primary.main' : 'text.secondary',
+                  '&:hover': { color: 'primary.main' },
+                }}
+              >
+                {executing ? <CircularProgress size={16} /> : <PlayArrowIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={copied ? 'Copied!' : 'Copy code'}>
             <IconButton
               size="small"
@@ -481,6 +497,33 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
     MaterialIcons,
     MaterialLabs,
   } = Material;
+
+  /**
+   * Sanitizes HTML content while preserving tables, images, links, styles, and safe attributes.
+   */
+  const sanitizeHtml = (raw: string): string => {
+    if (!raw) return '';
+    if (!DOMPurify) return raw;
+    try {
+      if (typeof DOMPurify.sanitize === 'function') {
+        return DOMPurify.sanitize(raw, {
+          ADD_TAGS: [
+            'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+            'colgroup', 'col', 'caption', 'hr', 'figure', 'figcaption',
+            'mark', 'span', 'div', 'p', 'a', 'img', 'sub', 'sup',
+          ],
+          ADD_ATTR: [
+            'target', 'rel', 'style', 'class', 'width', 'height',
+            'align', 'border', 'cellpadding', 'cellspacing',
+            'title', 'alt', 'id',
+          ],
+        });
+      }
+    } catch {
+      return typeof DOMPurify.sanitize === 'function' ? DOMPurify.sanitize(raw) : raw;
+    }
+    return raw;
+  };
 
   useEffect(() => {
     //@ts-ignore
@@ -734,8 +777,9 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
           return (
             <div
               key={`html-${idx}`}
+              className="reactor-html-content"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(seg.content),
+                __html: sanitizeHtml(seg.content),
               }}
             />
           );
@@ -821,8 +865,9 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
         if (/<[a-z][\s\S]*>/i.test(block)) {
           return (
             <div key={`html-${idx}`}
+              className="reactor-html-content"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(block)
+                __html: sanitizeHtml(block)
               }}
             />
           );

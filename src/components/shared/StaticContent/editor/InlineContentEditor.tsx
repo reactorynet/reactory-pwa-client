@@ -116,6 +116,7 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [panel, setPanel] = useState<EditorPanel>('none');
+  const [htmlViewMode, setHtmlViewMode] = useState<'visual' | 'source'>('visual');
   /**
    * The body and metadata as they were when assistance was requested.
    *
@@ -289,14 +290,14 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
 
   const insertComponentTag = useCallback(
     (tag: string) => {
-      if (draft.format === 'html') {
+      if (draft.format === 'html' && htmlViewMode === 'visual') {
         richTextRef.current?.insertHtml(tag);
       } else {
         sourceRef.current?.insertText(tag);
       }
       setSaveState('dirty');
     },
-    [draft.format]
+    [draft.format, htmlViewMode]
   );
 
   const handleSave = useCallback(async () => {
@@ -563,6 +564,38 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
           ))}
         </ToggleButtonGroup>
 
+        {draft.format === 'html' && (
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={htmlViewMode}
+            onChange={(_, val) => val && setHtmlViewMode(val)}
+            aria-label="HTML editing mode"
+            sx={{ ml: 0.5 }}
+          >
+            <ToggleButton value="visual" sx={{ px: 1, py: 0.5 }}>
+              <Tooltip title="Visual WYSIWYG editor">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TextFieldsIcon fontSize="small" />
+                  <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' }, fontSize: 12 }}>
+                    Visual
+                  </Box>
+                </Box>
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value="source" sx={{ px: 1, py: 0.5 }}>
+              <Tooltip title="HTML Source code (< / >)">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <CodeIcon fontSize="small" />
+                  <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' }, fontSize: 12 }}>
+                    &lt;/&gt; HTML
+                  </Box>
+                </Box>
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        )}
+
         <Divider orientation="vertical" flexItem />
 
         <Tooltip title="Insert a Reactory component">
@@ -725,7 +758,7 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
         }}
       >
         <Box sx={{ minWidth: 0 }}>
-          {draft.format === 'html' ? (
+          {draft.format === 'html' && htmlViewMode === 'visual' ? (
             <RichTextSurface
               ref={richTextRef}
               value={activeBody.content}
