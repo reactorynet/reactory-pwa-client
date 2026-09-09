@@ -32,6 +32,21 @@ export interface PropItem {
   value: string;
 }
 
+/**
+ * Validates whether a component candidate is a callable function or valid React component.
+ */
+export const isValidReactComponent = (comp: any): boolean => {
+  if (!comp) return false;
+  if (typeof comp === 'function') return true;
+  const reactTypeKey = '\x24\x24typeof';
+  if (typeof comp === 'object' && comp[reactTypeKey]) return true;
+  if (typeof comp === 'object') {
+    if (typeof comp.component === 'function' || (comp.component && comp.component[reactTypeKey])) return true;
+    if (typeof comp.default === 'function' || (comp.default && comp.default[reactTypeKey])) return true;
+  }
+  return false;
+};
+
 export interface ComponentSelectorDialogProps {
   open: boolean;
   onClose: () => void;
@@ -49,9 +64,22 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
 }) => {
   const [selectedComponent, setSelectedComponent] = useState<string>('core.Label@1.0.0');
   const [customFqn, setCustomFqn] = useState<string>('');
+  const [registerVersion, setRegisterVersion] = useState(0);
   const [propsList, setPropsItem] = useState<PropItem[]>([
     { key: 'text', type: 'string', value: 'Hello Reactory' },
   ]);
+
+  // Subscribe to dynamic component registrations on the SDK
+  React.useEffect(() => {
+    if (!reactory?.on) return;
+    const onRegistered = () => setRegisterVersion((v) => v + 1);
+    reactory.on('onReactoryComponentRegistered', onRegistered);
+    reactory.on('componentRegistered', onRegistered);
+    return () => {
+      reactory.off?.('onReactoryComponentRegistered', onRegistered);
+      reactory.off?.('componentRegistered', onRegistered);
+    };
+  }, [reactory]);
 
   // Pre-populate with initialTag when editing an existing component
   React.useEffect(() => {
@@ -83,8 +111,52 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
     setPropsItem([{ key: 'text', type: 'string', value: 'Hello Reactory' }]);
   }, [open, initialTag]);
 
-  // Discover available components from Reactory SDK if available
+  // Discover and derive valid React components dynamically from reactory.componentRegister
   const componentOptions = useMemo(() => {
+    const discovered = new Set<string>();
+
+    if (reactory?.componentRegister) {
+      const reg: any = reactory.componentRegister;
+      if (typeof reg === 'object' && !Array.isArray(reg)) {
+        Object.entries(reg).forEach(([key, entry]: [string, any]) => {
+          if (!entry) return;
+          const comp = entry.component || entry;
+          if (isValidReactComponent(comp)) {
+            const fqn = entry.fqn || key;
+            if (fqn && fqn.indexOf('GLOBAL') < 0) {
+              discovered.add(fqn);
+            }
+          }
+        });
+      } else if (Array.isArray(reg)) {
+        reg.forEach((entry: any) => {
+          if (!entry) return;
+          const comp = entry.component || entry;
+          if (isValidReactComponent(comp)) {
+            const fqn = entry.fqn || `${entry.nameSpace || 'core'}.${entry.name}@${entry.version || '1.0.0'}`;
+            if (fqn && fqn.indexOf('GLOBAL') < 0) {
+              discovered.add(fqn);
+            }
+          }
+        });
+      }
+    }
+
+    if (typeof reactory?.getComponentsByType === 'function') {
+      try {
+        const comps = reactory.getComponentsByType('component');
+        if (comps && typeof comps === 'object') {
+          Object.entries(comps).forEach(([key, entry]: [string, any]) => {
+            if (entry && isValidReactComponent(entry.component)) {
+              discovered.add(key);
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+
     const defaultList = [
       'core.Label@1.0.0',
       'core.StaticContent@1.0.0',
@@ -93,21 +165,11 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
       'core.AlertDialog@1.0.0',
       'core.FullScreenModal@1.0.0',
     ];
-    try {
-      if (reactory && typeof reactory.getComponents === 'function') {
-        const discovered = reactory.getComponents<any>([]);
-        if (discovered && typeof discovered === 'object') {
-          const keys = Object.keys(discovered);
-          if (keys.length > 0) {
-            return Array.from(new Set([...keys, ...defaultList]));
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return defaultList;
-  }, [reactory]);
+
+    defaultList.forEach((fqn) => discovered.add(fqn));
+
+    return Array.from(discovered).sort();
+  }, [reactory, registerVersion]);
 
   const handleAddProp = useCallback(() => {
     setPropsItem((prev) => [...prev, { key: '', type: 'string', value: '' }]);
@@ -168,6 +230,10 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
           <Autocomplete
             freeSolo
             options={componentOptions}
+            groupBy={(option) => {
+              const parts = option.split('.');
+              return parts.length > 1 ? parts[0] : 'other';
+            }}
             value={selectedComponent}
             onChange={(_, newValue) => {
               if (newValue) setSelectedComponent(newValue);
@@ -182,7 +248,7 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
                 placeholder="e.g. core.Label@1.0.0"
                 size="small"
                 fullWidth
-                helperText="Select or type a registered component fully-qualified name"
+                helperText={`${componentOptions.length} component(s) available from registry, or enter custom FQN`}
               />
             )}
           />

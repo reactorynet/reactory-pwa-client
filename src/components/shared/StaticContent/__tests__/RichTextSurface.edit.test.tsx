@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import RichTextSurface from '../editor/RichTextSurface';
-import ComponentSelectorDialog from '../ComponentSelectorDialog';
+import ComponentSelectorDialog, { isValidReactComponent } from '../ComponentSelectorDialog';
 import { REACTORY_EMBED_CLASS } from '../editor/reactoryBlot';
 
 const mockReactory: any = {
@@ -84,5 +84,60 @@ describe('Editing existing embedded Reactory component tags', () => {
     fireEvent.click(screen.getByText('Update Component Tag'));
     expect(submittedTag).toContain('core.UserProfile@1.0.0');
     expect(submittedTag).toContain('user-123');
+  });
+
+  describe('isValidReactComponent', () => {
+    it('returns true for function components', () => {
+      expect(isValidReactComponent(() => <div />)).toBe(true);
+      expect(isValidReactComponent(function NamedComp() { return <div />; })).toBe(true);
+    });
+
+    it('returns true for React.forwardRef and React.memo objects', () => {
+      const Forwarded = React.forwardRef((props, ref) => <div />);
+      expect(isValidReactComponent(Forwarded)).toBe(true);
+      const Memoized = React.memo(() => <div />);
+      expect(isValidReactComponent(Memoized)).toBe(true);
+    });
+
+    it('returns true for wrapped component descriptor objects', () => {
+      expect(isValidReactComponent({ component: () => <div /> })).toBe(true);
+      expect(isValidReactComponent({ default: () => <div /> })).toBe(true);
+    });
+
+    it('returns false for primitives and non-component objects', () => {
+      expect(isValidReactComponent(null)).toBe(false);
+      expect(isValidReactComponent(undefined)).toBe(false);
+      expect(isValidReactComponent('string')).toBe(false);
+      expect(isValidReactComponent(123)).toBe(false);
+      expect(isValidReactComponent({})).toBe(false);
+      expect(isValidReactComponent({ title: 'Just metadata' })).toBe(false);
+    });
+  });
+
+  describe('dynamic component options derivation from reactory.componentRegister', () => {
+    it('derives valid component options from componentRegister object and ignores non-components', () => {
+      const customApi: any = {
+        ...mockReactory,
+        componentRegister: {
+          'custom.Widget@1.0.0': { component: () => <div /> },
+          'custom.DataCard@2.0.0': { component: React.forwardRef((p, r) => <div />) },
+          'custom.WrappedExport@1.0.0': { component: { component: () => <div /> } },
+          'custom.NotAComp@1.0.0': { component: { someData: 123 } },
+          'system.$GLOBAL$.Menu@1.0.0': { component: () => <div /> },
+        },
+      };
+
+      render(
+        <ComponentSelectorDialog
+          open={true}
+          onClose={jest.fn()}
+          onInsert={jest.fn()}
+          reactory={customApi}
+        />
+      );
+
+      // Verify available count in helper text
+      expect(screen.getByText(/component\(s\) available from registry/i)).toBeInTheDocument();
+    });
   });
 });
