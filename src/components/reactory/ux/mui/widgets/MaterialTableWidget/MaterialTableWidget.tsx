@@ -781,6 +781,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, variableMap);
 
         variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
+        if (typeof reactory?.utils?.omitDeep === 'function') {
+          variables = reactory.utils.omitDeep(variables);
+        }
         reactory.debug('MaterialTableWidget - Mapped variables for query', { query, variables });
 
         let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
@@ -1995,13 +1998,28 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     } else if (filters && typeof filters === 'object') {
       filterArray = Object.entries(filters).map(([field, value]) => ({ field, value }));
     }
-    const filterFields = filterArray.reduce((acc: Record<string, any>, f: any) => {
-      if (f?.field !== undefined && f?.value !== undefined) {
-        acc[f.field] = f.value;
+
+    const filterFields: Record<string, any> = {};
+    for (const f of filterArray) {
+      if (f?.field !== undefined) {
+        if (f.value !== undefined && f.value !== null && f.value !== 'all' && f.value !== '') {
+          filterFields[f.field] = f.value;
+        }
       }
-      return acc;
-    }, {});
-    setQuery(prev => ({ ...prev, ...filterFields, page: 1 }));
+    }
+
+    setQuery(prev => {
+      const nextQuery: MaterialTableQuery = {
+        page: 1,
+        pageSize: prev.pageSize,
+        search: prev.search,
+        ...filterFields,
+      };
+      if ('search' in filterFields) {
+        nextQuery.search = filterFields.search;
+      }
+      return nextQuery;
+    });
   }, []);  // setQuery is always stable
 
   const onToolbarDataChange = useCallback((filteredData: any[]) => {
