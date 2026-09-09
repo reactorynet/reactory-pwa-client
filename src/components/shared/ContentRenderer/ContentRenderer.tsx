@@ -69,6 +69,12 @@ export interface ContentRendererProps {
   commentsProps?: Partial<ReactoryCommentsProps>;
 
   /**
+   * Whether to automatically mount embedded <reactory /> component tags into live React elements.
+   * Defaults to true for ContentRenderer.
+   */
+  mountComponents?: boolean;
+
+  /**
    * Container element type to wrap the renderer
    * @default 'Box'
    */
@@ -232,7 +238,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     onCommentAdded,
   } = props;
 
-  const { renderContent } = useContentRender(reactory);
+  const { renderContent } = useContentRender(reactory, { mountComponents: props.mountComponents ?? true });
   const { Material } = typeof reactory?.getComponents === 'function'
     ? reactory.getComponents<{
         Material: Reactory.Client.Web.IMaterialModule;

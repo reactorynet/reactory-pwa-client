@@ -57,8 +57,8 @@ const reactoryStub: any = {
   }),
 };
 
-const Host: React.FC<{ content: string }> = ({ content }) => {
-  const { renderContent } = useContentRender(reactoryStub);
+const Host: React.FC<{ content: string; mountComponents?: boolean }> = ({ content, mountComponents = true }) => {
+  const { renderContent } = useContentRender(reactoryStub, { mountComponents });
   return <div data-testid="host">{renderContent(content)}</div>;
 };
 
@@ -71,6 +71,19 @@ describe('component mounting through useContentRender', () => {
         <Host content={'# Heading\n\n<reactory reactory-component="core.Label@1.0.0" reactory-props-text="Mounted" />\n\nTrailing prose.'} />
       );
       expect(screen.getByTestId('label')).toHaveTextContent('Mounted');
+    });
+
+    it('renders component tag as formatted inline code when mountComponents is false by default', () => {
+      const DefaultHost: React.FC<{ content: string }> = ({ content }) => {
+        const { renderContent } = useContentRender(reactoryStub);
+        return <div data-testid="default-host">{renderContent(content)}</div>;
+      };
+
+      render(
+        <DefaultHost content={'Here is an example: <reactory reactory-component="core.Label@1.0.0" /> in text.'} />
+      );
+      expect(screen.queryByTestId('label')).not.toBeInTheDocument();
+      expect(screen.getByText('<reactory reactory-component="core.Label@1.0.0" />')).toBeInTheDocument();
     });
 
     it('does not leak the tag as visible text', () => {
@@ -302,7 +315,7 @@ describe('component mounting through useContentRender', () => {
       registry['test.NotAFunction@1.0.0'] = { notAComponent: true } as any;
 
       const HostComponent: React.FC = () => {
-        const { renderContent } = useContentRender(reactoryStub);
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
         return <div>{renderContent('<reactory reactory-component="test.NotAFunction@1.0.0" />')}</div>;
       };
 
@@ -315,7 +328,7 @@ describe('component mounting through useContentRender', () => {
       registry['test.Wrapped@1.0.0'] = { component: ValidInner } as any;
 
       const HostComponent: React.FC = () => {
-        const { renderContent } = useContentRender(reactoryStub);
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
         return <div>{renderContent('<reactory reactory-component="test.Wrapped@1.0.0" />')}</div>;
       };
 
@@ -332,7 +345,7 @@ describe('component mounting through useContentRender', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       const HostComponent: React.FC = () => {
-        const { renderContent } = useContentRender(reactoryStub);
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
         return <div>{renderContent('<reactory reactory-component="test.Crashing@1.0.0" />')}</div>;
       };
 

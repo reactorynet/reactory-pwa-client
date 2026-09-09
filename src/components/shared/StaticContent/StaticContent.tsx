@@ -78,7 +78,7 @@ const expandTemplate = (
 const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
   const { reactory } = props;
   const params = useParams();
-  const { renderContent } = useContentRender(reactory);
+  const { renderContent } = useContentRender(reactory, { mountComponents: true });
 
   const {
     editRoles = ['DEVELOPER'],

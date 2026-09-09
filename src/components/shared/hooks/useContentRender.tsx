@@ -472,12 +472,32 @@ export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
   return segments;
 };
 
+export interface UseContentRenderOptions {
+  /**
+   * Whether to automatically mount embedded <reactory /> component tags into live React elements.
+   * Defaults to false so chat responses and text pipelines display tags safely as code
+   * unless explicitly enabled (e.g. in ContentEditor and ContentRenderer).
+   */
+  mountComponents?: boolean;
+}
+
+export interface RenderContentOptions {
+  /**
+   * Override the mountComponents setting for this render pass.
+   */
+  mountComponents?: boolean;
+}
+
 /**
  * Hook to detect content type and render it accordingly
  */
-export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => {
+export const useContentRender = (
+  reactoryProp?: Reactory.Client.ReactorySDK,
+  options?: UseContentRenderOptions
+) => {
   const hookReactory = useReactory();
   const reactory = reactoryProp || hookReactory;
+  const defaultMountComponents = options?.mountComponents ?? false;
   const {
     Material,
     Markdown,
@@ -740,12 +760,14 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
   /**
    * Renders content by splitting into blocks (text, markdown, mermaid, code, etc.) and processing top-down
    */
-  const renderContent = (content: string) => {
+  const renderContent = (content: string, renderOptions?: RenderContentOptions) => {
     if (!content) return null;
 
-    const theme = reactory.muiTheme;
-    const { palette } = theme;
-    const { mode } = palette;
+    const shouldMount = renderOptions?.mountComponents ?? defaultMountComponents;
+
+    const theme: any = reactory?.muiTheme || reactory?.getTheme?.()?.options || {};
+    const palette = theme?.palette || {};
+    const mode = palette?.mode || 'light';
 
     /**
      * Helper to render markdown cell content (bold, italic, code, links, math symbols)
@@ -950,7 +972,11 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
               if (before.trim()) {
                 subParts.push(
                   <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                    <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
+                    {Markdown ? (
+                      <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
+                    ) : (
+                      replaceMathSymbols(before)
+                    )}
                   </div>
                 );
               }
@@ -967,7 +993,11 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
             if (remainder.trim()) {
               subParts.push(
                 <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
+                  {Markdown ? (
+                    <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
+                  ) : (
+                    replaceMathSymbols(remainder)
+                  )}
                 </div>
               );
             }
@@ -1005,11 +1035,30 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
 
     return (
       <React.Fragment>
-        {segments.map((segment, index) =>
-          segment.kind === 'component'
-            ? renderReactoryComponent(segment.tag, `reactory-${index}`)
-            : renderMarkup(segment.value, `segment-${index}`)
-        )}
+        {segments.map((segment, index) => {
+          if (segment.kind === 'component') {
+            if (shouldMount) {
+              return renderReactoryComponent(segment.tag, `reactory-${index}`);
+            }
+            return (
+              <code
+                key={`reactory-code-${index}`}
+                className="reactory-tag-preview"
+                style={{
+                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875em',
+                  color: mode === 'dark' ? '#90caf9' : '#1565c0',
+                }}
+              >
+                {segment.tag.raw}
+              </code>
+            );
+          }
+          return renderMarkup(segment.value, `segment-${index}`);
+        })}
       </React.Fragment>
     );
   };

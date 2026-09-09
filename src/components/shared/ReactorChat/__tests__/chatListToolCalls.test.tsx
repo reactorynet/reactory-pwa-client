@@ -163,4 +163,32 @@ describe('ChatList Tool Call Expand and Delete', () => {
     fireEvent.click(screen.getByText('View reasoning'));
     expect(screen.getByText('Analyzing system requirements...')).toBeInTheDocument();
   });
+
+  it('toggles mounting of embedded Reactory components on button click', () => {
+    const userMsg: UXChatMessage = {
+      id: 'msg-user-1',
+      role: 'user',
+      content: 'Show component',
+      timestamp: new Date(),
+    };
+    const componentMsg: UXChatMessage = {
+      id: 'msg-comp-1',
+      role: 'assistant',
+      content: 'Here is a component: <reactory reactory-component="core.Label@1.0.0" reactory-props-text="Live Widget" />',
+      timestamp: new Date(),
+    };
+
+    render(
+      <ChatList
+        reactory={mockReactory}
+        messages={[userMsg, componentMsg]}
+      />
+    );
+
+    const mountBtns = screen.getAllByLabelText('Mount embedded components');
+    expect(mountBtns.length).toBeGreaterThan(0);
+
+    fireEvent.click(mountBtns[0]);
+    expect(screen.getAllByLabelText('Unmount embedded components').length).toBeGreaterThan(0);
+  });
 });

@@ -55,7 +55,7 @@ const CMSContentEditorComponent: React.FC<CMSContentEditorProps> = ({
   displayMode = 'inline',
   reactory,
 }) => {
-  const { renderContent } = useContentRender(reactory);
+  const { renderContent } = useContentRender(reactory, { mountComponents: true });
 
   const {
     draftSeed,
