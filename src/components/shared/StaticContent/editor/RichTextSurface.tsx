@@ -80,30 +80,33 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
     // Register all custom blots and style attributors
     registerAllCustomBlots();
 
-    const isSelfChangeRef = useRef(false);
-    const lastQuillHtmlRef = useRef<string>('');
+    // Value synchronization:
+    // When editing inside Quill, Quill emits innerHTML via handleChange.
+    // We convert it to semantic HTML and emit it to the host via onChange(content).
+    // When the host re-renders and passes that content back as `value`,
+    // we must pass `editorHtmlRef.current` back into ReactQuill, matching
+    // this.editor.root.innerHTML byte-for-byte. This prevents ReactQuill
+    // from triggering an unnecessary setEditorContents on every keystroke
+    // or update pass, resolving the maximum update depth exceeded loop.
+    const editorHtmlRef = useRef<string>(fullToEditorHtml(value));
+    const lastEmittedContentRef = useRef<string>(value);
 
-    // Symmetrical editor value calculation:
-    // If the re-render was triggered by Quill's own handleChange, we return
-    // the exact HTML string Quill emitted (lastQuillHtmlRef). This prevents
-    // ReactQuill.shouldComponentUpdate from detecting a prop difference and
-    // wiping Quill's contents with setEditorContents on every keystroke.
-    const editorValue = useMemo(() => {
-      if (isSelfChangeRef.current && lastQuillHtmlRef.current) {
-        isSelfChangeRef.current = false;
-        return lastQuillHtmlRef.current;
-      }
-      return fullToEditorHtml(value);
-    }, [value]);
+    if (value !== lastEmittedContentRef.current) {
+      // External value change (language switch, draft restore, seed load, AI assist)
+      lastEmittedContentRef.current = value;
+      editorHtmlRef.current = fullToEditorHtml(value);
+    }
+
+    const editorValue = editorHtmlRef.current;
 
     /**
      * Converts editor HTML back to pure semantic HTML for persistence.
      */
     const handleChange = useCallback(
       (html: string) => {
-        lastQuillHtmlRef.current = html;
-        isSelfChangeRef.current = true;
+        editorHtmlRef.current = html;
         const content = fullToContentHtml(html);
+        lastEmittedContentRef.current = content;
         onChange(content);
       },
       [onChange]
