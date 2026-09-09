@@ -616,14 +616,19 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
    */
   const renderReactoryComponent = (tag: ReactoryTag, key: string) => {
     let rawComponent: any = null;
+    const cleanFqn = (tag.fqn || '')
+      .replace(/&quot;/g, '')
+      .replace(/["']/g, '')
+      .trim();
+
     try {
-      rawComponent = reactory.getComponent<any>(tag.fqn);
+      rawComponent = reactory.getComponent<any>(cleanFqn);
     } catch (err: any) {
-      reactory.log(`Failed to retrieve component "${tag.fqn}": ${err?.message}`, {}, 'error');
+      reactory.log(`Failed to retrieve component "${cleanFqn}": ${err?.message}`, {}, 'error');
       return (
         <Box
           key={key}
-          data-reactory-error={tag.fqn}
+          data-reactory-error={cleanFqn}
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -640,7 +645,7 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
           }}
         >
           <ErrorOutlineIcon fontSize="small" color="error" />
-          <span>Failed to retrieve &quot;{tag.fqn}&quot;: {err?.message}</span>
+          <span>Failed to retrieve &quot;{cleanFqn}&quot;: {err?.message}</span>
         </Box>
       );
     }
@@ -648,11 +653,11 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
     const Component = resolveComponent(rawComponent);
 
     if (!Component) {
-      reactory.log(`Component "${tag.fqn}" is not a registered or callable component function (received ${typeof rawComponent})`, {}, 'warning');
+      reactory.log(`Component "${cleanFqn}" is not a registered or callable component function (received ${typeof rawComponent})`, {}, 'warning');
       return (
         <Box
           key={key}
-          data-reactory-missing={tag.fqn}
+          data-reactory-missing={cleanFqn}
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -670,7 +675,7 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
         >
           <WarningAmberIcon fontSize="small" />
           <span>
-            {rawComponent ? `Component "${tag.fqn}" is not a function` : `Unknown component: ${tag.fqn}`}
+            {rawComponent ? `Component "${cleanFqn}" is not a function` : `Unknown component: ${cleanFqn}`}
           </span>
         </Box>
       );
@@ -726,7 +731,7 @@ export const useContentRender = (reactoryProp?: Reactory.Client.ReactorySDK) => 
     }
 
     return (
-      <ReactoryComponentErrorBoundary key={key} fqn={tag.fqn}>
+      <ReactoryComponentErrorBoundary key={key} fqn={cleanFqn}>
         <Component {...tag.props} reactory={reactory} />
       </ReactoryComponentErrorBoundary>
     );

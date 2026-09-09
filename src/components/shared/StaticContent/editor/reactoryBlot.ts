@@ -121,5 +121,6 @@ export const toContentHtml = (html: string): string => {
   return container.innerHTML
     .replace(/&lt;reactory/gi, '<reactory')
     .replace(/\/&gt;/g, '/>')
-    .replace(/&lt;\/reactory&gt;/gi, '</reactory>');
+    .replace(/&lt;\/reactory&gt;/gi, '</reactory>')
+    .replace(/&quot;/g, '"');
 };
