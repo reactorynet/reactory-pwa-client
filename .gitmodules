@@ -1,0 +1,3 @@
+[submodule "src/components/plugins/reactory-core"]
+	path = src/components/plugins/reactory-core
+	url = git@github.com:reactorynet/reactory-client-core-pwa-plugin.git
