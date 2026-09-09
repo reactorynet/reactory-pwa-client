@@ -67,6 +67,15 @@ const getOverallToolCallStatus = (message: UXChatMessage): ReactorToolCallStatus
   return 'running';
 };
 
+interface ChatDisplayItem {
+  key: string;
+  itemType: 'user' | 'error' | 'activity' | 'processing' | 'thought' | 'tool_call' | 'response';
+  message: UXChatMessage;
+  thoughtText?: string;
+  isLiveThinking?: boolean;
+  messageIndex: number;
+}
+
 const pulse = keyframes`
   0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
   40% { opacity: 1; transform: scale(1); }
@@ -134,6 +143,45 @@ const ChatList = (props: {
       return next;
     });
   }, []);
+
+  // Tracks which completed thought panels the user explicitly collapsed
+  const [collapsedThinking, setCollapsedThinking] = React.useState<Set<string>>(new Set());
+
+  const isThinkingExpanded = React.useCallback((item: ChatDisplayItem) => {
+    const idKey = String(item.message.id || item.messageIndex);
+    if (item.isLiveThinking) {
+      return expandedThinking.has(idKey);
+    }
+    if (expandedThinking.has(idKey)) return true;
+    if (collapsedThinking.has(idKey)) return false;
+    return true;
+  }, [expandedThinking, collapsedThinking]);
+
+  const handleToggleThinking = React.useCallback((item: ChatDisplayItem) => {
+    const idKey = String(item.message.id || item.messageIndex);
+    if (item.isLiveThinking) {
+      toggleThinking(idKey);
+    } else {
+      const currentlyExpanded = isThinkingExpanded(item);
+      if (currentlyExpanded) {
+        setCollapsedThinking(prev => new Set(prev).add(idKey));
+        setExpandedThinking(prev => { const n = new Set(prev); n.delete(idKey); return n; });
+      } else {
+        setCollapsedThinking(prev => { const n = new Set(prev); n.delete(idKey); return n; });
+        setExpandedThinking(prev => new Set(prev).add(idKey));
+      }
+    }
+  }, [isThinkingExpanded, toggleThinking]);
+
+  const handleCopyText = React.useCallback((text: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        reactory.log('Text copied to clipboard');
+      }).catch((err) => {
+        reactory.error('Failed to copy text', err);
+      });
+    }
+  }, [reactory]);
 
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
     open: boolean;
@@ -219,9 +267,126 @@ const ChatList = (props: {
     text,
   } = (options as any)?.palette as Reactory.UX.IThemePalette;
 
+  const hasComponent = (message: UXChatMessage) => {
+    if (!message || !message.component) return false;
+    if (typeof message.component === 'string') {
+      return message.component && reactory.getComponent(message.component) !== undefined;
+    }
+    if (React.isValidElement(message.component) || typeof message.component === 'function') {
+      return true;
+    }
+    return false;
+  };
+
+  // Separate thoughts, tool calls, and output into distinct display items so they each render as their own entity
+  const displayItems = React.useMemo(() => {
+    const items: ChatDisplayItem[] = [];
+
+    messages.forEach((message, idx) => {
+      const msgKey = String(message.id || idx);
+
+      if (message.role === 'user') {
+        items.push({
+          key: `${msgKey}-user`,
+          itemType: 'user',
+          message,
+          messageIndex: idx,
+        });
+        return;
+      }
+
+      if (isErrorMessage(message)) {
+        items.push({
+          key: `${msgKey}-error`,
+          itemType: 'error',
+          message,
+          messageIndex: idx,
+        });
+        return;
+      }
+
+      if (isActivityMessage(message)) {
+        items.push({
+          key: `${msgKey}-activity`,
+          itemType: 'activity',
+          message,
+          messageIndex: idx,
+        });
+        return;
+      }
+
+      // Assistant message handling
+      if (message.role === 'assistant') {
+        const hasThinking = Boolean(message.thinking && message.thinking.trim().length > 0);
+        const hasToolCalls = Boolean(Array.isArray(message.tool_calls) && message.tool_calls.length > 0);
+        const isProcessing = isProcessingMessage(message);
+
+        // Pre-tool thought: when message has tool_calls AND content that isn't a placeholder,
+        // and doesn't already have thinking.
+        const preToolThought = (!hasThinking && hasToolCalls && typeof message.content === 'string' &&
+          message.content.trim().length > 0 &&
+          message.content !== 'Processing...' &&
+          !message.content.startsWith('Calling tool:')) ? message.content : null;
+
+        // Check if content has real response text
+        const hasContent = Boolean(
+          (!preToolThought && typeof message.content === 'string' &&
+            message.content.trim().length > 0 &&
+            message.content !== 'Processing...' &&
+            !message.content.startsWith('Calling tool:')) ||
+          (Array.isArray(message.content) && message.content.length > 0) ||
+          (Array.isArray(message.images) && message.images.length > 0) ||
+          (hasComponent(message) && !hasToolCalls)
+        );
+
+        // 1. Thought Output
+        if (hasThinking || preToolThought) {
+          items.push({
+            key: `${msgKey}-thought`,
+            itemType: 'thought',
+            message,
+            thoughtText: message.thinking || preToolThought || '',
+            isLiveThinking: isProcessing,
+            messageIndex: idx,
+          });
+        } else if (isProcessing && !hasToolCalls) {
+          // Pure processing with no thinking text yet
+          items.push({
+            key: `${msgKey}-processing`,
+            itemType: 'processing',
+            message,
+            messageIndex: idx,
+          });
+        }
+
+        // 2. Tool Calls Output
+        if (hasToolCalls) {
+          items.push({
+            key: `${msgKey}-tools`,
+            itemType: 'tool_call',
+            message,
+            messageIndex: idx,
+          });
+        }
+
+        // 3. Response Output
+        if (hasContent) {
+          items.push({
+            key: `${msgKey}-response`,
+            itemType: 'response',
+            message,
+            messageIndex: idx,
+          });
+        }
+      }
+    });
+
+    return items;
+  }, [messages]);
+
   React.useEffect(() => {
     scrollToBottom();
-  }, [props.messages.length]); // Only trigger on length change, not content change
+  }, [displayItems.length]); // Only trigger on item count change
 
 
   const renderComponent = (message: UXChatMessage) => {
@@ -241,17 +406,6 @@ const ChatList = (props: {
       }
     }
     return null;
-  };
-
-  const hasComponent = (message: UXChatMessage) => {
-    if (!message || !message.component) return false;
-    if (typeof message.component === 'string') {
-      return message.component && reactory.getComponent(message.component) !== undefined;
-    }
-    if (React.isValidElement(message.component) || typeof message.component === 'function') {
-      return true;
-    }
-    return false;
   };
 
   const getMessageAvatar = (message: UXChatMessage, reactory: Reactory.Client.ReactorySDK) => {
@@ -473,318 +627,293 @@ const ChatList = (props: {
       <List sx={{
         padding: 0.5,
       }}>
-        {messages.map((message, idx) => (
-          <React.Fragment key={message.id || idx}>
-            <ListItem
-              alignItems="flex-start"
-              sx={{
-                justifyContent: getMessageAlignment(message),
-                mb: 0.5,
-                padding: 1,
-              }}
-            >
-              <Paper
-                elevation={isProcessingMessage(message) || isActivityMessage(message) || isToolCallMessage(message) || isErrorMessage(message) ? 0 : 1}
+        {displayItems.map((item) => {
+          const { message } = item;
+          const idx = item.messageIndex;
+
+          if (item.itemType === 'thought') {
+            const isExpanded = isThinkingExpanded(item);
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
                 sx={{
-                  p: 0.5,
-                  maxWidth: '95%',
-                  backdropFilter: 'blur(10px)',
-                  backgroundColor: getMessageBackgroundColor(message),
-                  ...(isProcessingMessage(message) && {
-                    backgroundColor: 'transparent',
-                    border: '1px dashed',
-                    borderColor: 'divider',
-                  }),
-                  ...(isActivityMessage(message) && {
-                    backgroundColor: 'transparent',
-                    border: '1px dashed',
-                    borderColor: 'info.main',
-                    opacity: 0.85,
-                  }),
-                  ...(isErrorMessage(message) && {
-                    backgroundColor: 'rgba(211,47,47,0.05)',
-                    border: '1px dashed',
-                    borderColor: 'error.main',
-                    opacity: 0.9,
-                  }),
-                  ...(isToolCallMessage(message) && (() => {
-                    const status = getOverallToolCallStatus(message);
-                    return {
-                      backgroundColor: 'transparent',
-                      border: '1px dashed',
-                      borderColor:
-                        status === 'success' ? 'success.main' :
-                        status === 'error'   ? 'error.main' :
-                        'warning.main',
-                      opacity: 0.9,
-                    };
-                  })()),
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
                 }}
               >
-                <Grid container spacing={1}>
-                  <Grid item>
-                    <Avatar
-                      sx={{ bgcolor: getMessageAvatarColor(message) }}
-                      sizes='small'
-                      aria-label={message.role}
-                      src={getMessageAvatar(message, reactory)}>
-                      {!getMessageAvatar(message, reactory) && (
-                        <Icon>{getMessageAvatarIcon(message)}</Icon>
-                      )}
-                    </Avatar>
-                  </Grid>
-                  <Grid item xs>
-                    {isProcessingMessage(message) ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
-                          {[0, 1, 2].map((i) => (
-                            <Box
-                              key={i}
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: 'text.secondary',
-                                animation: `${pulse} 1.4s ease-in-out infinite`,
-                                animationDelay: `${i * 0.2}s`,
-                              }}
-                            />
-                          ))}
-                          <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
-                            {selectedPersona?.name || 'Agent'} is thinking...
-                          </Typography>
-                        </Box>
-                        {message.thinking && (
-                          <Box sx={{ mb: 0.5 }}>
-                            <Box
-                              onClick={() => toggleThinking(String(message.id || idx))}
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                cursor: 'pointer',
-                                px: 0.75,
-                                py: 0.25,
-                                borderRadius: '4px',
-                                bgcolor: 'action.hover',
-                                '&:hover': { bgcolor: 'action.selected' },
-                              }}
-                            >
-                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
-                              <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
-                                {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
-                              </Typography>
-                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                                {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
-                              </Icon>
-                            </Box>
-                            <Collapse in={expandedThinking.has(String(message.id || idx))}>
-                              <Box
-                                sx={{
-                                  mt: 0.5,
-                                  p: 1,
-                                  borderRadius: '4px',
-                                  bgcolor: 'action.hover',
-                                  borderLeft: '3px solid',
-                                  borderColor: 'text.disabled',
-                                  maxHeight: 200,
-                                  overflowY: 'auto',
-                                }}
-                              >
-                                <Typography
-                                  variant="caption"
-                                  component="div"
-                                  sx={{
-                                    fontFamily: 'inherit',
-                                    whiteSpace: 'pre-wrap',
-                                    color: 'text.secondary',
-                                    lineHeight: 1.5,
-                                    userSelect: 'text',
-                                  }}
-                                >
-                                  {message.thinking}
-                                </Typography>
-                              </Box>
-                            </Collapse>
-                          </Box>
-                        )}
-                      </Box>
-                    ) : isActivityMessage(message) ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
-                        <Typography
-                          variant="body2"
-                          color="info.main"
-                          sx={{ fontStyle: 'italic', userSelect: 'none' }}
-                        >
-                          {getMessageText(message)}
-                        </Typography>
-                      </Box>
-                    ) : isErrorMessage(message) ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>error</Icon>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.25,
+                    maxWidth: '95%',
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid',
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    borderLeft: '3px solid',
+                    borderLeftColor: mode === 'dark' ? 'rgba(156, 39, 176, 0.5)' : 'rgba(156, 39, 176, 0.4)',
+                    borderRadius: '8px',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                          color: 'text.secondary',
+                        }}
+                        sizes='small'
+                        aria-label="thought"
+                      >
+                        <Icon sx={{ fontSize: '1rem', color: 'text.secondary' }}>psychology</Icon>
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                          <Icon sx={{ fontSize: '0.9rem', color: 'text.secondary', opacity: 0.85 }}>psychology</Icon>
                           <Typography
                             variant="caption"
-                            color="error.main"
-                            sx={{ fontWeight: 500, userSelect: 'none' }}
-                          >
-                            Error
-                            {(message as any).errorCount > 1 && (
-                              <Box
-                                component="span"
-                                sx={{
-                                  ml: 0.75,
-                                  px: 0.75,
-                                  py: 0.125,
-                                  borderRadius: '10px',
-                                  bgcolor: 'error.main',
-                                  color: 'error.contrastText',
-                                  fontSize: '0.65rem',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                ×{(message as any).errorCount}
-                              </Box>
-                            )}
-                          </Typography>
-                          <Box sx={{ flex: 1 }} />
-                          {onDismissError && (
-                            <Tooltip title="Dismiss">
-                              <IconButton
-                                size="small"
-                                onClick={() => onDismissError(message)}
-                                sx={{ p: 0.25 }}
-                              >
-                                <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>close</Icon>
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Box>
-                        <Box
-                          sx={{
-                            p: 0.75,
-                            borderRadius: '4px',
-                            bgcolor: 'rgba(211,47,47,0.08)',
-                            border: '1px solid',
-                            borderColor: 'error.main',
-                            maxHeight: 120,
-                            overflowY: 'auto',
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            component="pre"
                             sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.7rem',
-                              color: 'error.main',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-all',
-                              m: 0,
+                              fontWeight: 600,
+                              color: 'text.secondary',
+                              letterSpacing: '0.04em',
+                              textTransform: 'uppercase',
+                              fontSize: '0.68rem',
+                              userSelect: 'none',
                             }}
                           >
-                            {message.content}
+                            {item.isLiveThinking ? `${selectedPersona?.name || 'Agent'} is thinking...` : (selectedPersona?.name ? `${selectedPersona.name}'s Thought` : 'Thought')}
                           </Typography>
-                        </Box>
-                      </Box>
-                    ) : isToolCallMessage(message) ? (() => {
-                      const overallStatus = getOverallToolCallStatus(message);
-                      const overallColor =
-                        overallStatus === 'success' ? 'success.main' :
-                        overallStatus === 'error'   ? 'error.main' :
-                        'warning.main';
-                      const headerLabel =
-                        overallStatus === 'running'
-                          ? (message.tool_calls.length === 1 ? 'Invoking tool' : `Invoking ${message.tool_calls.length} tools`)
-                          : overallStatus === 'success'
-                          ? (message.tool_calls.length === 1 ? 'Tool completed' : `${message.tool_calls.length} tools completed`)
-                          : (message.tool_calls.length === 1 ? 'Tool failed' : `${message.tool_calls.length} tools (some failed)`);
-
-                      return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
-                          {/* Thinking/reasoning panel — also shown on tool-call messages */}
-                          {message.thinking && (
-                            <Box sx={{ mb: 0.5 }}>
-                              <Box
-                                onClick={() => toggleThinking(String(message.id || idx))}
-                                sx={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  cursor: 'pointer',
-                                  px: 0.75,
-                                  py: 0.25,
-                                  borderRadius: '4px',
-                                  bgcolor: 'action.hover',
-                                  '&:hover': { bgcolor: 'action.selected' },
-                                }}
-                              >
-                                <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
-                                <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
-                                  {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
-                                </Typography>
-                                <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                                  {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
-                                </Icon>
-                              </Box>
-                              <Collapse in={expandedThinking.has(String(message.id || idx))}>
-                                <Box
-                                  sx={{
-                                    mt: 0.5,
-                                    p: 1,
-                                    borderRadius: '4px',
-                                    bgcolor: 'action.hover',
-                                    borderLeft: '3px solid',
-                                    borderColor: 'text.disabled',
-                                    maxHeight: 200,
-                                    overflowY: 'auto',
-                                  }}
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      color: 'text.secondary',
-                                      fontStyle: 'italic',
-                                      fontSize: '0.8rem',
-                                      whiteSpace: 'pre-wrap',
-                                    }}
-                                  >
-                                    {message.thinking}
-                                  </Typography>
-                                </Box>
-                              </Collapse>
-                            </Box>
-                          )}
-                          {/* Header row */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {overallStatus === 'running' ? (
-                              [0, 1, 2].map((i) => (
+                          {item.isLiveThinking && (
+                            <Box sx={{ display: 'inline-flex', gap: 0.5, ml: 0.5, alignItems: 'center' }}>
+                              {[0, 1, 2].map((i) => (
                                 <Box
                                   key={i}
                                   sx={{
-                                    width: 6,
-                                    height: 6,
+                                    width: 5,
+                                    height: 5,
                                     borderRadius: '50%',
-                                    backgroundColor: overallColor,
+                                    backgroundColor: 'text.secondary',
                                     animation: `${pulse} 1.4s ease-in-out infinite`,
                                     animationDelay: `${i * 0.2}s`,
                                   }}
                                 />
-                              ))
-                            ) : (
-                              <Icon sx={{ fontSize: '0.875rem', color: overallColor }}>
-                                {overallStatus === 'success' ? 'check_circle' : 'error'}
-                              </Icon>
-                            )}
-                            <Typography variant="caption" color={overallColor} sx={{ fontStyle: 'italic', userSelect: 'none' }}>
-                              {headerLabel}
+                              ))}
+                            </Box>
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {item.thoughtText && (
+                            <Tooltip title="Copy thought">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleCopyText(item.thoughtText || '')}
+                                sx={{ p: 0.25 }}
+                              >
+                                <Icon sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>content_copy</Icon>
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Box
+                            onClick={() => handleToggleThinking(item)}
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              cursor: 'pointer',
+                              px: 0.75,
+                              py: 0.25,
+                              borderRadius: '4px',
+                              bgcolor: 'action.hover',
+                              '&:hover': { bgcolor: 'action.selected' },
+                            }}
+                          >
+                            <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
+                              {isExpanded ? 'Hide reasoning' : 'View reasoning'}
                             </Typography>
+                            <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                              {isExpanded ? 'expand_less' : 'expand_more'}
+                            </Icon>
                           </Box>
+                        </Box>
+                      </Box>
+                      <Collapse in={isExpanded}>
+                        <Box
+                          sx={{
+                            mt: 0.5,
+                            maxHeight: 350,
+                            overflowY: 'auto',
+                            scrollbarWidth: 'thin',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'text.secondary',
+                              fontStyle: 'italic',
+                              fontSize: '0.825rem',
+                              lineHeight: 1.6,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              userSelect: 'text',
+                            }}
+                          >
+                            {item.thoughtText}
+                          </Typography>
+                        </Box>
+                      </Collapse>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
 
-                          {/* Per-call chips — hidden when an inline ToolPrompt (message.component) is present */}
-                          {!hasComponent(message) && (
+          if (item.itemType === 'processing') {
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
+                sx={{
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 0.5,
+                    maxWidth: '95%',
+                    backgroundColor: 'transparent',
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar
+                        sx={{ bgcolor: 'secondary.main' }}
+                        sizes='small'
+                        aria-label="assistant"
+                        src={getMessageAvatar(message, reactory)}
+                      >
+                        {!getMessageAvatar(message, reactory) && (
+                          <Icon>{getMessageAvatarIcon(message)}</Icon>
+                        )}
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
+                        {[0, 1, 2].map((i) => (
+                          <Box
+                            key={i}
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: 'text.secondary',
+                              animation: `${pulse} 1.4s ease-in-out infinite`,
+                              animationDelay: `${i * 0.2}s`,
+                            }}
+                          />
+                        ))}
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                          {selectedPersona?.name || 'Agent'} is thinking...
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
+
+          if (item.itemType === 'tool_call') {
+            const overallStatus = getOverallToolCallStatus(message);
+            const overallColor =
+              overallStatus === 'success' ? 'success.main' :
+              overallStatus === 'error'   ? 'error.main' :
+              'warning.main';
+            const validCalls = (message.tool_calls || []).filter(Boolean);
+            const headerLabel =
+              overallStatus === 'running'
+                ? (validCalls.length === 1 ? 'Invoking tool' : `Invoking ${validCalls.length} tools`)
+                : overallStatus === 'success'
+                ? (validCalls.length === 1 ? 'Tool completed' : `${validCalls.length} tools completed`)
+                : (validCalls.length === 1 ? 'Tool failed' : `${validCalls.length} tools (some failed)`);
+
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
+                sx={{
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 0.5,
+                    maxWidth: '95%',
+                    backgroundColor: 'transparent',
+                    border: '1px dashed',
+                    borderColor:
+                      overallStatus === 'success' ? 'success.main' :
+                      overallStatus === 'error'   ? 'error.main' :
+                      'warning.main',
+                    opacity: 0.9,
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar
+                        sx={{ bgcolor: 'warning.main' }}
+                        sizes='small'
+                        aria-label="tools"
+                      >
+                        <Icon>build</Icon>
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                        {/* Header row */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {overallStatus === 'running' ? (
+                            [0, 1, 2].map((i) => (
+                              <Box
+                                key={i}
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  backgroundColor: overallColor,
+                                  animation: `${pulse} 1.4s ease-in-out infinite`,
+                                  animationDelay: `${i * 0.2}s`,
+                                }}
+                              />
+                            ))
+                          ) : (
+                            <Icon sx={{ fontSize: '0.875rem', color: overallColor }}>
+                              {overallStatus === 'success' ? 'check_circle' : 'error'}
+                            </Icon>
+                          )}
+                          <Typography variant="caption" color={overallColor} sx={{ fontStyle: 'italic', userSelect: 'none' }}>
+                            {headerLabel}
+                          </Typography>
+                        </Box>
+
+                        {/* Per-call chips — hidden when an inline ToolPrompt (message.component) is present */}
+                        {!hasComponent(message) && (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.25 }}>
-                            {message.tool_calls.filter(Boolean).map((call, i) => {
+                            {validCalls.map((call, i) => {
                               if (!call) return null;
                               const callId = call.id ?? `${message.id}-${i}`;
                               // @ts-ignore
@@ -804,7 +933,6 @@ const ChatList = (props: {
                                 'build';
                               const expandKey = `${message.id}:${callId}`;
                               const isExpanded = expandedToolResults.has(expandKey);
-                              const isMaximized = maximizedToolResult === expandKey;
 
                               // Find result/error payload for this call
                               const resultPayload = message.tool_results?.find((r: any) => r.id === callId);
@@ -958,188 +1086,382 @@ const ChatList = (props: {
                               );
                             })}
                           </Box>
-                          )}
-                          {/* Inline tool prompt (e.g., approval) — renders inside the tool-call flow */}
-                          {hasComponent(message) && (
-                            <Box sx={{ mt: 0.25, width: '100%' }}>
-                              {renderComponent(message)}
-                            </Box>
-                          )}
+                        )}
+                        {/* Inline tool prompt (e.g., approval) — renders inside the tool-call flow */}
+                        {hasComponent(message) && (
+                          <Box sx={{ mt: 0.25, width: '100%' }}>
+                            {renderComponent(message)}
+                          </Box>
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
+
+          if (item.itemType === 'response') {
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
+                sx={{
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
+                }}
+              >
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 0.5,
+                    maxWidth: '95%',
+                    backdropFilter: 'blur(10px)',
+                    backgroundColor: getMessageBackgroundColor(message),
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar
+                        sx={{ bgcolor: 'secondary.main' }}
+                        sizes='small'
+                        aria-label="assistant"
+                        src={getMessageAvatar(message, reactory)}
+                      >
+                        {!getMessageAvatar(message, reactory) && (
+                          <Icon>smart_toy</Icon>
+                        )}
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      {message.content && (
+                        <Typography variant="body1">
+                          {memoizedRenderContent(typeof message.content === 'string' ? message.content : getMessageText(message))}
+                        </Typography>
+                      )}
+                      {/* Render images from content-parts (vision model messages) */}
+                      {Array.isArray(message.content) && (message.content as any[]).some((p) => p?.type === 'image_url') && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                          {(message.content as any[])
+                            .filter((part) => part?.type === 'image_url')
+                            .map((part, imgIdx) => (
+                              <img
+                                key={imgIdx}
+                                src={part.image_url?.url}
+                                alt={`Attached image ${imgIdx + 1}`}
+                                style={{
+                                  maxWidth: 300,
+                                  maxHeight: 300,
+                                  borderRadius: 4,
+                                  objectFit: 'contain',
+                                  cursor: 'pointer',
+                                  border: '1px solid rgba(0,0,0,0.12)',
+                                }}
+                                onClick={() => window.open(part.image_url?.url, '_blank')}
+                              />
+                            ))}
                         </Box>
-                      );
-                    })() : (
-                      <>
-                        {/* Collapsible thinking/reasoning panel */}
-                        {message.thinking && (
-                          <Box sx={{ mb: 0.5 }}>
-                            <Box
-                              onClick={() => toggleThinking(String(message.id || idx))}
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                cursor: 'pointer',
-                                px: 0.75,
-                                py: 0.25,
-                                borderRadius: '4px',
-                                bgcolor: 'action.hover',
-                                '&:hover': { bgcolor: 'action.selected' },
-                              }}
+                      )}
+                      {/* Render generated images from AI response */}
+                      {Array.isArray(message.images) && message.images.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                          {message.images.map((img, imgIdx) => {
+                            const src = img.b64_json
+                              ? `data:${img.mimeType || 'image/png'};base64,${img.b64_json}`
+                              : img.url;
+                            return (
+                              <img
+                                key={`gen-${imgIdx}`}
+                                src={src}
+                                alt={`Generated image ${imgIdx + 1}`}
+                                style={{
+                                  maxWidth: 512,
+                                  maxHeight: 512,
+                                  borderRadius: 8,
+                                  objectFit: 'contain',
+                                  cursor: 'pointer',
+                                  border: '1px solid rgba(0,0,0,0.12)',
+                                }}
+                                onClick={() => window.open(src, '_blank')}
+                              />
+                            );
+                          })}
+                        </Box>
+                      )}
+                      {hasComponent(message) && (
+                        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                          {renderComponent(message)}
+                        </Box>
+                      )}
+                      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" color="textSecondary">
+                          {typeof (message as any)?.timestamp === 'string' ?
+                            new Date(message.timestamp).toLocaleTimeString() :
+                            message.timestamp?.toLocaleTimeString()}
+                        </Typography>
+
+                        {/* Feedback buttons for regular assistant messages */}
+                        {shouldShowFeedbackButtons(message, idx) && (
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+                            <IconButton
+                              size="small"
+                              sx={{ fontSize: '0.875rem' }}
+                              onClick={() => handleRate(message, 'up')}
+                              title="Rate this response positively"
                             >
-                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
-                              <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
-                                {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
-                              </Typography>
-                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                                {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
-                              </Icon>
-                            </Box>
-                            <Collapse in={expandedThinking.has(String(message.id || idx))}>
+                              <Icon sx={{ fontSize: '1rem' }}>thumb_up</Icon>
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              sx={{ fontSize: '0.875rem' }}
+                              onClick={() => handleRate(message, 'down')}
+                              title="Rate this response negatively"
+                            >
+                              <Icon sx={{ fontSize: '1rem' }}>thumb_down</Icon>
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              sx={{ fontSize: '0.875rem' }}
+                              onClick={() => handleCopy(message)}
+                              title="Copy message to clipboard"
+                            >
+                              <Icon sx={{ fontSize: '1rem' }}>content_copy</Icon>
+                            </IconButton>
+                            {typeof message.content === 'string' && message.content.trim().length > 0 && (
+                              <TextToSpeechButton
+                                text={message.content}
+                                reactory={reactory}
+                                personaId={selectedPersona?.id}
+                                voice={message.voice || selectedPersona?.appearance?.voice?.[0] || (selectedPersona as any)?.voice}
+                                chatSessionId={chatState?.id}
+                                size="small"
+                              />
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
+
+          if (item.itemType === 'activity') {
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
+                sx={{
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 0.5,
+                    maxWidth: '95%',
+                    backgroundColor: 'transparent',
+                    border: '1px dashed',
+                    borderColor: 'info.main',
+                    opacity: 0.85,
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar sx={{ bgcolor: 'info.main' }} sizes='small' aria-label="activity">
+                        <Icon>tune</Icon>
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          color="info.main"
+                          sx={{ fontStyle: 'italic', userSelect: 'none' }}
+                        >
+                          {getMessageText(message)}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
+
+          if (item.itemType === 'error') {
+            return (
+              <ListItem
+                key={item.key}
+                alignItems="flex-start"
+                sx={{
+                  justifyContent: 'flex-start',
+                  mb: 0.5,
+                  padding: 1,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 0.5,
+                    maxWidth: '95%',
+                    backgroundColor: 'rgba(211,47,47,0.05)',
+                    border: '1px dashed',
+                    borderColor: 'error.main',
+                    opacity: 0.9,
+                  }}
+                >
+                  <Grid container spacing={1}>
+                    <Grid item>
+                      <Avatar sx={{ bgcolor: 'error.main' }} sizes='small' aria-label="error">
+                        <Icon>error_outline</Icon>
+                      </Avatar>
+                    </Grid>
+                    <Grid item xs>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>error</Icon>
+                          <Typography
+                            variant="caption"
+                            color="error.main"
+                            sx={{ fontWeight: 500, userSelect: 'none' }}
+                          >
+                            Error
+                            {(message as any).errorCount > 1 && (
                               <Box
+                                component="span"
                                 sx={{
-                                  mt: 0.5,
-                                  p: 1,
-                                  borderRadius: '4px',
-                                  bgcolor: 'action.hover',
-                                  borderLeft: '3px solid',
-                                  borderColor: 'text.disabled',
-                                  maxHeight: 200,
-                                  overflowY: 'auto',
+                                  ml: 0.75,
+                                  px: 0.75,
+                                  py: 0.125,
+                                  borderRadius: '10px',
+                                  bgcolor: 'error.main',
+                                  color: 'error.contrastText',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
                                 }}
                               >
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    color: 'text.secondary',
-                                    fontStyle: 'italic',
-                                    fontSize: '0.8rem',
-                                    whiteSpace: 'pre-wrap',
-                                  }}
-                                >
-                                  {message.thinking}
-                                </Typography>
+                                ×{(message as any).errorCount}
                               </Box>
-                            </Collapse>
-                          </Box>
-                        )}
-                        <Typography variant="body1">
-                          {memoizedRenderContent(getMessageText(message))}
-                        </Typography>
-                        {/* Render images from content-parts (vision model messages) */}
-                        {Array.isArray(message.content) && (message.content as any[]).some((p) => p?.type === 'image_url') && (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {(message.content as any[])
-                              .filter((part) => part?.type === 'image_url')
-                              .map((part, imgIdx) => (
-                                <img
-                                  key={imgIdx}
-                                  src={part.image_url?.url}
-                                  alt={`Attached image ${imgIdx + 1}`}
-                                  style={{
-                                    maxWidth: 300,
-                                    maxHeight: 300,
-                                    borderRadius: 4,
-                                    objectFit: 'contain',
-                                    cursor: 'pointer',
-                                    border: '1px solid rgba(0,0,0,0.12)',
-                                  }}
-                                  onClick={() => window.open(part.image_url?.url, '_blank')}
-                                />
-                              ))}
-                          </Box>
-                        )}
-                        {/* Render generated images from AI response */}
-                        {Array.isArray(message.images) && message.images.length > 0 && (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {message.images.map((img, imgIdx) => {
-                              const src = img.b64_json
-                                ? `data:${img.mimeType || 'image/png'};base64,${img.b64_json}`
-                                : img.url;
-                              return (
-                                <img
-                                  key={`gen-${imgIdx}`}
-                                  src={src}
-                                  alt={`Generated image ${imgIdx + 1}`}
-                                  style={{
-                                    maxWidth: 512,
-                                    maxHeight: 512,
-                                    borderRadius: 8,
-                                    objectFit: 'contain',
-                                    cursor: 'pointer',
-                                    border: '1px solid rgba(0,0,0,0.12)',
-                                  }}
-                                  onClick={() => window.open(src, '_blank')}
-                                />
-                              );
-                            })}
-                          </Box>
-                        )}
-                      </>
-                    )}
-                    {/* Render tool errors if present — only for non-tool-call messages (tool-call messages show errors inline per chip) */}
-                    {!isToolCallMessage(message) && Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (
-                      <Typography variant="body2" color="error" sx={{ fontWeight: 500, mt: 1 }}>
-                        {message.tool_errors.map((err, idx) => (
-                          <span key={idx}>
-                            {err.name ? `${err.name}: ` : ''}{err.error || JSON.stringify(err)}<br />
-                          </span>
-                        ))}
-                      </Typography>
-                    )}
-                    {hasComponent(message) && !isToolCallMessage(message) && (
-                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                        {renderComponent(message)}
+                            )}
+                          </Typography>
+                          <Box sx={{ flex: 1 }} />
+                          {onDismissError && (
+                            <Tooltip title="Dismiss">
+                              <IconButton
+                                size="small"
+                                onClick={() => onDismissError(message)}
+                                sx={{ p: 0.25 }}
+                              >
+                                <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>close</Icon>
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                        <Box
+                          sx={{
+                            p: 0.75,
+                            borderRadius: '4px',
+                            bgcolor: 'rgba(211,47,47,0.08)',
+                            border: '1px solid',
+                            borderColor: 'error.main',
+                            maxHeight: 120,
+                            overflowY: 'auto',
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            component="pre"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.7rem',
+                              color: 'error.main',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-all',
+                              m: 0,
+                            }}
+                          >
+                            {message.content}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </ListItem>
+            );
+          }
+
+          // User message
+          return (
+            <ListItem
+              key={item.key}
+              alignItems="flex-start"
+              sx={{
+                justifyContent: 'flex-end',
+                mb: 0.5,
+                padding: 1,
+              }}
+            >
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 0.5,
+                  maxWidth: '95%',
+                  backdropFilter: 'blur(10px)',
+                  backgroundColor: getMessageBackgroundColor(message),
+                }}
+              >
+                <Grid container spacing={1}>
+                  <Grid item>
+                    <Avatar
+                      sx={{ bgcolor: getMessageAvatarColor(message) }}
+                      sizes='small'
+                      aria-label={message.role}
+                      src={getMessageAvatar(message, reactory)}
+                    >
+                      {!getMessageAvatar(message, reactory) && (
+                        <Icon>{getMessageAvatarIcon(message)}</Icon>
+                      )}
+                    </Avatar>
+                  </Grid>
+                  <Grid item xs>
+                    <Typography variant="body1">
+                      {memoizedRenderContent(getMessageText(message))}
+                    </Typography>
+                    {/* Render images from content-parts (vision model messages) */}
+                    {Array.isArray(message.content) && (message.content as any[]).some((p) => p?.type === 'image_url') && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {(message.content as any[])
+                          .filter((part) => part?.type === 'image_url')
+                          .map((part, imgIdx) => (
+                            <img
+                              key={imgIdx}
+                              src={part.image_url?.url}
+                              alt={`Attached image ${imgIdx + 1}`}
+                              style={{
+                                maxWidth: 300,
+                                maxHeight: 300,
+                                borderRadius: 4,
+                                objectFit: 'contain',
+                                cursor: 'pointer',
+                                border: '1px solid rgba(0,0,0,0.12)',
+                              }}
+                              onClick={() => window.open(part.image_url?.url, '_blank')}
+                            />
+                          ))}
                       </Box>
                     )}
-                    {!isProcessingMessage(message) && !isToolCallMessage(message) && !isErrorMessage(message) && (
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="caption" color="textSecondary">
                         {typeof (message as any)?.timestamp === 'string' ?
                           new Date(message.timestamp).toLocaleTimeString() :
                           message.timestamp?.toLocaleTimeString()}
                       </Typography>
-
-                      {/* Feedback buttons for regular assistant messages */}
-                      {shouldShowFeedbackButtons(message, idx) && (
-                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                          <IconButton
-                            size="small"
-                            sx={{ fontSize: '0.875rem' }}
-                            onClick={() => handleRate(message, 'up')}
-                            title="Rate this response positively"
-                          >
-                            <Icon sx={{ fontSize: '1rem' }}>thumb_up</Icon>
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            sx={{ fontSize: '0.875rem' }}
-                            onClick={() => handleRate(message, 'down')}
-                            title="Rate this response negatively"
-                          >
-                            <Icon sx={{ fontSize: '1rem' }}>thumb_down</Icon>
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            sx={{ fontSize: '0.875rem' }}
-                            onClick={() => handleCopy(message)}
-                            title="Copy message to clipboard"
-                          >
-                            <Icon sx={{ fontSize: '1rem' }}>content_copy</Icon>
-                          </IconButton>
-                          {typeof message.content === 'string' && message.content.trim().length > 0 && (
-                            <TextToSpeechButton
-                              text={message.content}
-                              reactory={reactory}
-                              personaId={selectedPersona?.id}
-                              voice={message.voice || selectedPersona?.appearance?.voice?.[0] || (selectedPersona as any)?.voice}
-                              chatSessionId={chatState?.id}
-                              size="small"
-                            />
-                          )}
-                        </Box>
-                      )}
-
-                      {/* Retry button for user messages */}
                       {shouldShowRetryButton(message) && (
                         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                           <Tooltip title="Retry this message">
@@ -1162,13 +1484,12 @@ const ChatList = (props: {
                         </Box>
                       )}
                     </Box>
-                    )}
                   </Grid>
                 </Grid>
               </Paper>
             </ListItem>
-          </React.Fragment>
-        ))}
+          );
+        })}
       </List>
 
       {/* Maximized Tool Result Dialog */}

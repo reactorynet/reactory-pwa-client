@@ -470,11 +470,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
           if (hasToolCalls && incomingContent) {
             console.log('📩 [useChatFactory] COMPLETE: appending new message (existing has tool_calls)');
+            const thinkingAlreadyPresent = history.some(m => m.thinking && (m.thinking === finalThinking || (finalThinking && finalThinking.startsWith(m.thinking))));
             history.push({
               id: reactory.utils.uuid(),
               role: 'assistant',
               content: incomingContent,
-              thinking: finalThinking,
+              thinking: thinkingAlreadyPresent ? undefined : finalThinking,
               images: message.data.images || undefined,
               timestamp: new Date(),
               sessionId: prevState.id,
@@ -1343,16 +1344,48 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         if (allCompleted) {
           history.push(toolCallMessage);
-        } else {
+        } else if (existingToolCalls.length > 0) {
           history[lastIndex] = {
             ...history[lastIndex],
-            content: history[lastIndex].content === "Processing..."
-              ? `Calling tool: ${toolCall.data.name}`
-              : history[lastIndex].content,
-            // @ts-ignore
             tool_calls: [...existingToolCalls, toolCallEntry],
             timestamp: new Date(),
           };
+        } else {
+          // This is the first tool call of this turn.
+          // Check if lastIndex has thought content (either in thinking or streamed content).
+          const lastMsg = history[lastIndex];
+          const hasStreamedContent = Boolean(
+            lastMsg.content &&
+            lastMsg.content !== "Processing..." &&
+            !lastMsg.content.startsWith("Calling tool:")
+          );
+          const hasThinking = Boolean(lastMsg.thinking && lastMsg.thinking.trim().length > 0);
+
+          if (hasStreamedContent || hasThinking) {
+            // Preserve the thought on lastMsg, and push toolCallMessage separately
+            if (hasStreamedContent && !hasThinking) {
+              history[lastIndex] = {
+                ...lastMsg,
+                thinking: lastMsg.content,
+                content: "",
+              };
+            } else if (lastMsg.content === "Processing...") {
+              history[lastIndex] = {
+                ...lastMsg,
+                content: "",
+              };
+            }
+            history.push(toolCallMessage);
+          } else {
+            // No prior thought on placeholder — turn it into toolCallMessage
+            history[lastIndex] = {
+              ...history[lastIndex],
+              content: "",
+              // @ts-ignore
+              tool_calls: [toolCallEntry],
+              timestamp: new Date(),
+            };
+          }
         }
       } else {
         history.push(toolCallMessage);
