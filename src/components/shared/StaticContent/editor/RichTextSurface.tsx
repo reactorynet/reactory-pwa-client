@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import ReactQuill, { Quill } from 'react-quill';
 import {
@@ -80,7 +80,7 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
     // Register all custom blots and style attributors
     registerAllCustomBlots();
 
-    // Convert stored HTML (with <reactory /> and <table>) to Quill embed format
+    // Convert stored HTML (with <reactory /> and <table>) to Quill embed format synchronously
     const editorValue = useMemo(() => fullToEditorHtml(value), [value]);
 
     /**
@@ -93,14 +93,24 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
 
     const getEditor = useCallback(() => quillRef.current?.getEditor?.(), []);
 
+    const getSafeSelection = useCallback(() => {
+      const editor = getEditor();
+      if (!editor) return null;
+      try {
+        return editor.getSelection();
+      } catch {
+        return null;
+      }
+    }, [getEditor]);
+
     const saveCurrentSelection = useCallback(() => {
       const editor = getEditor();
       if (!editor) return { index: 0, length: 0 };
-      const range = editor.getSelection(true);
+      const range = getSafeSelection();
       const sel = range ? { index: range.index, length: range.length } : { index: editor.getLength(), length: 0 };
       setSavedSelection(sel);
       return sel;
-    }, [getEditor]);
+    }, [getEditor, getSafeSelection]);
 
     // Toolbar custom action handlers
     const handleTableToolbarClick = useCallback(() => {
@@ -129,41 +139,38 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
     const handleHrToolbarClick = useCallback(() => {
       const editor = getEditor();
       if (!editor) return;
-      const range = editor.getSelection(true);
+      const range = getSafeSelection();
       const index = range ? range.index : editor.getLength();
       editor.insertEmbed(index, 'hr', true, 'user');
-      editor.setSelection(index + 1, 0, 'silent');
-    }, [getEditor]);
+    }, [getEditor, getSafeSelection]);
 
     // Handle insertions from dialogs or imperative handle
     const applyInsertTable = useCallback(
       (config: TableConfig) => {
         const editor = getEditor();
         if (!editor) return;
-        const index = savedSelection?.index ?? editor.getSelection(true)?.index ?? editor.getLength();
+        const index = savedSelection?.index ?? getSafeSelection()?.index ?? editor.getLength();
         const tableHtml = createDefaultTableHtml(config.rows, config.cols, config.includeHeader);
         editor.insertEmbed(index, 'table-embed', { html: tableHtml }, 'user');
-        editor.setSelection(index + 1, 0, 'silent');
       },
-      [getEditor, savedSelection]
+      [getEditor, savedSelection, getSafeSelection]
     );
 
     const applyInsertImage = useCallback(
       (attributes: ImageAttributes) => {
         const editor = getEditor();
         if (!editor) return;
-        const index = savedSelection?.index ?? editor.getSelection(true)?.index ?? editor.getLength();
+        const index = savedSelection?.index ?? getSafeSelection()?.index ?? editor.getLength();
         editor.insertEmbed(index, 'image', attributes, 'user');
-        editor.setSelection(index + 1, 0, 'silent');
       },
-      [getEditor, savedSelection]
+      [getEditor, savedSelection, getSafeSelection]
     );
 
     const applyInsertLink = useCallback(
       (config: LinkConfig) => {
         const editor = getEditor();
         if (!editor) return;
-        const sel = savedSelection ?? editor.getSelection(true) ?? { index: 0, length: 0 };
+        const sel = savedSelection ?? getSafeSelection() ?? { index: 0, length: 0 };
 
         if (sel.length > 0) {
           // Wrap selected text in link
@@ -172,24 +179,23 @@ const RichTextSurface = forwardRef<RichTextSurfaceHandle, RichTextSurfaceProps>(
           // Insert link text at caret
           const text = config.text || config.url;
           editor.insertText(sel.index, text, 'link', config.url, 'user');
-          editor.setSelection(sel.index + text.length, 0, 'silent');
         }
       },
-      [getEditor, savedSelection]
+      [getEditor, savedSelection, getSafeSelection]
     );
 
     const applyUnlink = useCallback(() => {
       const editor = getEditor();
       if (!editor) return;
-      const sel = savedSelection ?? editor.getSelection(true) ?? { index: 0, length: 0 };
+      const sel = savedSelection ?? getSafeSelection() ?? { index: 0, length: 0 };
       editor.formatText(sel.index, Math.max(sel.length, 1), 'link', false, 'user');
-    }, [getEditor, savedSelection]);
+    }, [getEditor, savedSelection, getSafeSelection]);
 
     useImperativeHandle(ref, () => ({
       insertHtml: (html: string) => {
         const editor = getEditor();
         if (!editor) return;
-        const range = editor.getSelection(true);
+        const range = getSafeSelection();
         const index = range ? range.index : editor.getLength();
         editor.clipboard.dangerouslyPasteHTML(index, fullToEditorHtml(html), 'user');
       },

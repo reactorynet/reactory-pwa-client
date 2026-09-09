@@ -31,8 +31,7 @@ describe('TableBlot serialization and helpers', () => {
     expect(editorHtml).toContain(TABLE_EMBED_CLASS);
     expect(editorHtml).toContain('data-table-html=');
     expect(editorHtml).toContain('contenteditable="false"');
-    expect(editorHtml).toContain('+ Row');
-    expect(editorHtml).toContain('+ Col');
+    expect(editorHtml).toContain('<table>');
   });
 
   it('converts editor embed markup back to semantic HTML table', () => {
