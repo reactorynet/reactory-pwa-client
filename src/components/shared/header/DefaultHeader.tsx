@@ -198,8 +198,12 @@ const Logged = ({ id, apiStatus, reactory, open, anchorEl }) => {
 
   if (menus && menus.length) {
     menus.forEach((menu) => {
-      if (menu.target === 'top-right') {
-        menu.entries.forEach((menuItem, idx) => {
+      if (menu.target === 'top-right' && menu.enabled !== false) {
+        if (isArray(menu.roles) && menu.roles.length > 0 && (!loggedIn?.roles || !reactory.hasRole(menu.roles, loggedIn.roles))) {
+          return;
+        }
+        (menu.entries || []).forEach((menuItem, idx) => {
+          if (menuItem.enabled === false) return;
           let allow = true;
           if (isArray(menuItem.roles) && isArray(loggedIn.roles)) {
             allow = reactory.hasRole(menuItem.roles, loggedIn.roles);
@@ -360,8 +364,12 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
 
     if (apiStatus?.menus?.length) {
       apiStatus.menus.forEach((menu) => {
-        if (menu.target === 'left-nav') {
-          menu.entries.forEach((menuItem, mid) => {
+        if (menu.target === 'left-nav' && menu.enabled !== false) {
+          if (isArray(menu.roles) && menu.roles.length > 0 && (!apiStatus.loggedIn?.roles || !reactory.hasRole(menu.roles, apiStatus.loggedIn.roles))) {
+            return;
+          }
+          (menu.entries || []).forEach((menuItem, mid) => {
+            if (menuItem.enabled === false) return;
             let allow = true;
             if (isArray(menuItem.roles) && isArray(apiStatus.loggedIn.roles)) {
               allow = reactory.hasRole(menuItem.roles, apiStatus.loggedIn.roles);
@@ -372,13 +380,15 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
               let expandButton = null;
               let subnav = null;
 
-              if (menuItem.items && menuItem.items.length > 0) {
+              const validSubItems = (menuItem.items || []).filter((sub: any) => sub.enabled !== false);
+
+              if (validSubItems.length > 0) {
                 const isExpanded = expanded[menuItem.id] && expanded[menuItem.id].value === true;
                 
                 subnav = (
                   <Collapse in={isExpanded} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`}>
                     <List component="div" disablePadding>
-                      {menuItem.items.map((menu, index) => {
+                      {validSubItems.map((menu, index) => {
                         const goto = () => navigateTo(menu.link);
                         const sub_item = (
                           <ListItem 

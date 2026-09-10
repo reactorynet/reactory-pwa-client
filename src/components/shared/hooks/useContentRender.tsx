@@ -16,7 +16,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
-import { ReactoryTag, splitReactoryTags } from './reactoryTags';
+import { ReactoryTag, splitReactoryTags, hasReactoryTags } from './reactoryTags';
 
 /**
  * Mapping of common LaTeX math and arrow symbols to Unicode characters.
@@ -769,46 +769,91 @@ export const useContentRender = (
     const palette = theme?.palette || {};
     const mode = palette?.mode || 'light';
 
+    const cellMarkdownComponents = {
+      p: ({ children }: any) => <span>{children}</span>,
+      a: ({ children, href }: any) => (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      ),
+      code: ({ node, inline, className, children, ...props }: any) => {
+        const match = /language-(\w+)/.exec(className || '');
+        const codeText = String(children).replace(/\n$/, '');
+        if (!inline && (match || codeText.includes('\n'))) {
+          const lang = match ? match[1] : '';
+          return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+        }
+        return (
+          <code className={className} style={{
+            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            padding: '2px 4px',
+            borderRadius: '3px',
+            fontFamily: 'monospace',
+            fontSize: '0.875em',
+          }} {...props}>
+            {children}
+          </code>
+        );
+      },
+    };
+
+    const markdownCodeComponents = {
+      ...cellMarkdownComponents,
+    };
+
     /**
-     * Helper to render markdown cell content (bold, italic, code, links, math symbols)
-     * without unwanted paragraph wrapper margins.
+     * Renders a text segment, mounting <reactory /> components if present and enabled,
+     * or displaying them as formatted code tags when unmounted.
      */
-    const renderTableCellContent = (cellContent: string) => {
-      const formatted = replaceMathSymbols(cellContent);
-      if (!Markdown) return formatted;
+    const renderContentSegment = (text: string, keyPrefix: string, isInline: boolean = false) => {
+      if (!hasReactoryTags(text)) {
+        if (!Markdown) return replaceMathSymbols(text);
+        return isInline ? (
+          <Markdown components={cellMarkdownComponents}>{replaceMathSymbols(text)}</Markdown>
+        ) : (
+          <Markdown components={markdownCodeComponents}>{replaceMathSymbols(text)}</Markdown>
+        );
+      }
+
+      const segs = splitReactoryTags(text);
       return (
-        <Markdown
-          components={{
-            p: ({ children }: any) => <span>{children}</span>,
-            a: ({ children, href }: any) => (
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                {children}
-              </a>
-            ),
-            code: ({ node, inline, className, children, ...props }: any) => {
-              const match = /language-(\w+)/.exec(className || '');
-              const codeText = String(children).replace(/\n$/, '');
-              if (!inline && (match || codeText.includes('\n'))) {
-                const lang = match ? match[1] : '';
-                return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+        <React.Fragment key={keyPrefix}>
+          {segs.map((seg, sIdx) => {
+            const segKey = `${keyPrefix}-seg-${sIdx}`;
+            if (seg.kind === 'component') {
+              if (shouldMount) {
+                return renderReactoryComponent(seg.tag, segKey);
               }
               return (
-                <code className={className} style={{
-                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.875em',
-                }} {...props}>
-                  {children}
+                <code
+                  key={segKey}
+                  className="reactory-tag-preview"
+                  style={{
+                    backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.875em',
+                    color: mode === 'dark' ? '#90caf9' : '#1565c0',
+                  }}
+                >
+                  {seg.tag.raw}
                 </code>
               );
-            },
-          }}
-        >
-          {formatted}
-        </Markdown>
+            }
+            if (!Markdown) return replaceMathSymbols(seg.value);
+            return isInline ? (
+              <Markdown key={segKey} components={cellMarkdownComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+            ) : (
+              <Markdown key={segKey} components={markdownCodeComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+            );
+          })}
+        </React.Fragment>
       );
+    };
+
+    const renderTableCellContent = (cellContent: string, cellKey: string) => {
+      return renderContentSegment(cellContent, cellKey, true);
     };
     
     /**
@@ -860,7 +905,7 @@ export const useContentRender = (
                     backgroundColor: mode === 'dark' ? '#333' : '#f5f5f5',
                     fontWeight: 600,
                   }}>
-                    {renderTableCellContent(h)}
+                    {renderTableCellContent(h, `${key}-h-${i}`)}
                   </th>
                 ))}
               </tr>
@@ -874,7 +919,7 @@ export const useContentRender = (
                       padding: '6px 12px',
                       textAlign: alignments[ci] || 'left',
                     }}>
-                      {renderTableCellContent(cell)}
+                      {renderTableCellContent(cell, `${key}-r-${ri}-c-${ci}`)}
                     </td>
                   ))}
                 </tr>
@@ -972,11 +1017,7 @@ export const useContentRender = (
               if (before.trim()) {
                 subParts.push(
                   <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                    {Markdown ? (
-                      <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
-                    ) : (
-                      replaceMathSymbols(before)
-                    )}
+                    {renderContentSegment(before, `md-${idx}-before-${subIdx}`)}
                   </div>
                 );
               }
@@ -993,11 +1034,7 @@ export const useContentRender = (
             if (remainder.trim()) {
               subParts.push(
                 <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  {Markdown ? (
-                    <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
-                  ) : (
-                    replaceMathSymbols(remainder)
-                  )}
+                  {renderContentSegment(remainder, `md-${idx}-after-${subIdx}`)}
                 </div>
               );
             }
@@ -1013,6 +1050,13 @@ export const useContentRender = (
         }
         // HTML block
         if (/<[a-z][\s\S]*>/i.test(block)) {
+          if (hasReactoryTags(block)) {
+            return (
+              <div key={`html-${idx}`} className="reactor-html-content">
+                {renderContentSegment(block, `html-seg-${idx}`)}
+              </div>
+            );
+          }
           return (
             <div key={`html-${idx}`}
               className="reactor-html-content"
@@ -1023,44 +1067,14 @@ export const useContentRender = (
           );
         }
         // Plain text fallback
-        return block.split('\n').map((line, lineIdx) => (
-          <React.Fragment key={`text-${idx}-${lineIdx}`}>{line}{'\n'}</React.Fragment>
-        ));
+        return renderContentSegment(block, `text-${idx}`);
       });
 
       return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;
     };
 
-    const segments = splitReactoryTags(content);
-
-    return (
-      <React.Fragment>
-        {segments.map((segment, index) => {
-          if (segment.kind === 'component') {
-            if (shouldMount) {
-              return renderReactoryComponent(segment.tag, `reactory-${index}`);
-            }
-            return (
-              <code
-                key={`reactory-code-${index}`}
-                className="reactory-tag-preview"
-                style={{
-                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.875em',
-                  color: mode === 'dark' ? '#90caf9' : '#1565c0',
-                }}
-              >
-                {segment.tag.raw}
-              </code>
-            );
-          }
-          return renderMarkup(segment.value, `segment-${index}`);
-        })}
-      </React.Fragment>
-    );
+    // Render document through block processor
+    return <React.Fragment>{renderMarkup(content, 'root')}</React.Fragment>;
   };
 
   return { renderContent, detectContentType };

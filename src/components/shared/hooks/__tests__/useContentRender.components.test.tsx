@@ -353,5 +353,38 @@ describe('component mounting through useContentRender', () => {
       expect(screen.getByText(/failed to mount: Simulated mount crash/i)).toBeInTheDocument();
       spy.mockRestore();
     });
+
+    it('renders a markdown table with embedded reactory components in cells without breaking the table', () => {
+      const markdownTable =
+        '| Name | Component |\n' +
+        '| :--- | :--- |\n' +
+        '| Status | <reactory reactory-component="core.Label@1.0.0" reactory-props-text="Table Active" /> |\n';
+
+      const { container } = render(<Host content={markdownTable} mountComponents={true} />);
+
+      const table = container.querySelector('table');
+      expect(table).toBeInTheDocument();
+      expect(screen.getByTestId('label')).toHaveTextContent('Table Active');
+
+      const td = container.querySelector('td');
+      expect(td).toContainElement(screen.getByTestId('label'));
+    });
+
+    it('renders component tag as code inside table cell when mountComponents is false', () => {
+      const markdownTable =
+        '| Name | Component |\n' +
+        '| :--- | :--- |\n' +
+        '| Status | <reactory reactory-component="core.Label@1.0.0" reactory-props-text="Table Active" /> |\n';
+
+      const { container } = render(<Host content={markdownTable} mountComponents={false} />);
+
+      const table = container.querySelector('table');
+      expect(table).toBeInTheDocument();
+      expect(screen.queryByTestId('label')).not.toBeInTheDocument();
+
+      const td = container.querySelector('td');
+      expect(td).toBeInTheDocument();
+      expect(td?.textContent).toContain('<reactory reactory-component="core.Label@1.0.0"');
+    });
   });
 });
