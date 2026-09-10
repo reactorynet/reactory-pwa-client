@@ -392,6 +392,51 @@ export interface MarkupSegment {
 }
 
 /**
+ * Checks if a string should be rendered as HTML rather than Markdown.
+ * Detects full HTML documents, HTML wrappers (<p>, <div>, <article>, etc.),
+ * and sequences of HTML elements that do not contain markdown headings or lists.
+ */
+export const isHtmlContent = (text: string): boolean => {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+
+  // 1. Full HTML / XML document
+  if (/^<!DOCTYPE\s+html/i.test(trimmed) || /^<\?xml/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) {
+    return true;
+  }
+
+  // 2. If it has markdown headers, list markers, or blockquotes at the start of any line, it is Markdown
+  const lines = trimmed.split(/\r?\n/);
+  for (const line of lines) {
+    const l = line.trim();
+    if (/^#{1,6}\s+/.test(l)) return false; // # Header
+    if (/^[-*+]\s+/.test(l)) return false; // - List item
+    if (/^\d+\.\s+/.test(l)) return false; // 1. List item
+    if (/^>\s+/.test(l)) return false; // > Blockquote
+    if (/^[-*_]{3,}\s*$/.test(l)) return false; // --- Horizontal rule
+  }
+  if (/^\|.+\|\r?\n\|[-:| ]+\|/m.test(trimmed)) return false; // Table
+
+  // 3. Wrapped in common HTML block tags: <p>...</p>, <div>...</div>, <h1>...</h1>, etc.
+  if (/^<(html|body|div|p|article|section|main|header|footer|aside|nav|table|ul|ol|h[1-6]|blockquote)\b[^>]*>[\s\S]*<\/\1>\s*$/i.test(trimmed)) {
+    return true;
+  }
+
+  // 4. Consecutive or multiple HTML tags (e.g. <p>...</p><p>...</p> or <h1>...</h1><p>...</p>)
+  if (/^(<[a-z][a-z0-9]*\b[^>]*>[\s\S]*?<\/[a-z][a-z0-9]*>\s*)+$/i.test(trimmed)) {
+    return true;
+  }
+
+  // 5. Starts with an opening HTML tag and contains matching closing tags
+  if (/^<[a-z][a-z0-9]*\b[^>]*>/i.test(trimmed) && /<\/[a-z][a-z0-9]*>\s*$/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * Line-by-line state machine parser for fenced code blocks and prose.
  * Correctly isolates code blocks with backtick or tilde fences of arbitrary length
  * without prematurely closing on inline backticks or nested code samples.
@@ -413,8 +458,7 @@ export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
     if (proseLines.length > 0) {
       const prose = proseLines.join('\n');
       if (prose.trim()) {
-        // Only classify as HTML if strictly a full HTML document (e.g. <!DOCTYPE html> or <html>...</html>)
-        if (/^\s*<!DOCTYPE\s+html/i.test(prose) || /^\s*<html[\s\S]*<\/html>\s*$/i.test(prose)) {
+        if (isHtmlContent(prose)) {
           segments.push({ type: 'html', content: prose });
         } else {
           segments.push({ type: 'markdown', content: prose });
@@ -572,13 +616,8 @@ export const useContentRender = (
       return ContentType.CODE;
     }
 
-    // Check for XML-like document
-    if (/^\s*<\?xml[\s\S]*\?>/i.test(content)) {
-      return ContentType.HTML;
-    }
-
-    // Check for full HTML document
-    if (/^\s*<!DOCTYPE\s+html/i.test(content) || /^\s*<html[\s\S]*<\/html>\s*$/i.test(content)) {
+    // Check for HTML content
+    if (isHtmlContent(content)) {
       return ContentType.HTML;
     }
 
@@ -791,6 +830,21 @@ export const useContentRender = (
      */
     const renderContentSegment = (text: string, keyPrefix: string, isInline: boolean = false) => {
       if (!hasReactoryTags(text)) {
+        if (isHtmlContent(text)) {
+          return isInline ? (
+            <span
+              key={keyPrefix}
+              className="reactor-html-content"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+            />
+          ) : (
+            <div
+              key={keyPrefix}
+              className="reactor-html-content"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+            />
+          );
+        }
         if (!Markdown) return replaceMathSymbols(text);
         return isInline ? (
           <Markdown components={cellMarkdownComponents}>{replaceMathSymbols(text)}</Markdown>
@@ -823,6 +877,21 @@ export const useContentRender = (
                 >
                   {seg.tag.raw}
                 </code>
+              );
+            }
+            if (isHtmlContent(seg.value)) {
+              return isInline ? (
+                <span
+                  key={segKey}
+                  className="reactor-html-content"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(seg.value) }}
+                />
+              ) : (
+                <div
+                  key={segKey}
+                  className="reactor-html-content"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(seg.value) }}
+                />
               );
             }
             if (!Markdown) return replaceMathSymbols(seg.value);
@@ -944,7 +1013,14 @@ export const useContentRender = (
           );
         }
 
-        if (seg.type === 'html') {
+        if (seg.type === 'html' || isHtmlContent(seg.content)) {
+          if (hasReactoryTags(seg.content)) {
+            return (
+              <div key={`html-${idx}`} className="reactor-html-content">
+                {renderContentSegment(seg.content, `html-seg-${idx}`)}
+              </div>
+            );
+          }
           return (
             <div
               key={`html-${idx}`}
@@ -956,40 +1032,13 @@ export const useContentRender = (
           );
         }
 
-        // Prose segments are always rendered through the Markdown pipeline with table,
-        // math symbol, code snippet, and inline HTML support
+        // Prose segments are rendered with table, math symbol, code snippet, and embedded component support
         const block = seg.content;
         const tableRegex = /^(\|.+\|\r?\n\|[-:| ]+\|(?:\r?\n\|.+\|)*)/gm;
         const subParts: React.ReactNode[] = [];
         let lastEnd = 0;
         let tableMatch: RegExpExecArray | null;
         let subIdx = 0;
-
-        const markdownCodeComponents = {
-          code: ({ node, inline, className, children, ...props }: any) => {
-            const match = /language-(\w+)/.exec(className || '');
-            const codeText = String(children).replace(/\n$/, '');
-            const lang = match ? match[1] : '';
-            if (lang.toLowerCase() === 'mermaid') {
-              return <MermaidCard diagram={codeText} />;
-            }
-            if (!inline && (match || codeText.includes('\n'))) {
-              const lang = match ? match[1] : '';
-              return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
-            }
-            return (
-              <code className={className} style={{
-                backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                fontFamily: 'monospace',
-                fontSize: '0.875em',
-              }} {...props}>
-                {children}
-              </code>
-            );
-          },
-        };
 
         while ((tableMatch = tableRegex.exec(block)) !== null) {
           // Text before the table
@@ -998,7 +1047,7 @@ export const useContentRender = (
             if (before.trim()) {
               subParts.push(
                 <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
+                  {renderContentSegment(before, `md-${idx}-before-${subIdx}`)}
                 </div>
               );
             }
@@ -1015,11 +1064,7 @@ export const useContentRender = (
           if (remainder.trim()) {
             subParts.push(
               <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                {Markdown ? (
-                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
-                ) : (
-                  replaceMathSymbols(remainder)
-                )}
+                {renderContentSegment(remainder, `md-${idx}-after-${subIdx}`)}
               </div>
             );
           }
