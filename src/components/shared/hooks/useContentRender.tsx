@@ -413,7 +413,8 @@ export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
     if (proseLines.length > 0) {
       const prose = proseLines.join('\n');
       if (prose.trim()) {
-        if (/^\s*<[a-z][\s\S]*>\s*$/i.test(prose)) {
+        // Only classify as HTML if strictly a full HTML document (e.g. <!DOCTYPE html> or <html>...</html>)
+        if (/^\s*<!DOCTYPE\s+html/i.test(prose) || /^\s*<html[\s\S]*<\/html>\s*$/i.test(prose)) {
           segments.push({ type: 'html', content: prose });
         } else {
           segments.push({ type: 'markdown', content: prose });
@@ -559,45 +560,28 @@ export const useContentRender = (
    * Detects the type of content
    */
   const detectContentType = (content: string): ContentType => {
-    if (!content) return ContentType.MARKDOWN;
+    if (!content || !content.trim()) return ContentType.MARKDOWN;
 
     // Detect Mermaid code block
     if (/```mermaid[\s\S]*?```/i.test(content)) {
       return ContentType.MERMAID;
     }
 
-    // Check for Markdown
-    const markdownPatterns = [
-      /^#+ /, // Headers
-      /\[.+\]\(.+\)/, // Links
-      /\*\*.+\*\*/, // Bold
-      /\*.+\*/, // Italic
-      /^- /, // Lists
-      /^> /, // Blockquotes
-      /`{3}[\s\S]*`{3}/, // Code blocks
-      /!\[.+\]\(.+\)/, // Images
-      /^\|.+\|\r?\n\|[-:| ]+\|/m, // Tables (multiline flag so ^ matches line start)
-    ];
-    
-    if (markdownPatterns.some(pattern => pattern.test(content))) {
-      return ContentType.MARKDOWN;
+    // Check for pure code blocks (entire content is a code fence)
+    if (/^```[\s\S]*?```\s*$/m.test(content) && !content.replace(/```[\s\S]*?```/g, '').trim()) {
+      return ContentType.CODE;
     }
-    
-    // Check for HTML
-    if (/<[a-z][\s\S]*>/i.test(content)) {
+
+    // Check for XML-like document
+    if (/^\s*<\?xml[\s\S]*\?>/i.test(content)) {
       return ContentType.HTML;
     }
 
-    // Check for XML-like content
-    if (/^\s*<\?xml[\s\S]*\?>/i.test(content)) {
-      return ContentType.HTML; // Treat XML as HTML for rendering
+    // Check for full HTML document
+    if (/^\s*<!DOCTYPE\s+html/i.test(content) || /^\s*<html[\s\S]*<\/html>\s*$/i.test(content)) {
+      return ContentType.HTML;
     }
-    
-    // Check for code blocks
-    if (/```[\s\S]*```/.test(content)) {
-      return ContentType.CODE;
-    }
-    
+
     return ContentType.MARKDOWN;
   };
 
@@ -972,102 +956,78 @@ export const useContentRender = (
           );
         }
 
+        // Prose segments are always rendered through the Markdown pipeline with table,
+        // math symbol, code snippet, and inline HTML support
         const block = seg.content;
-        // Markdown block (if it looks like markdown)
-        if (detectContentType(block) === ContentType.MARKDOWN) {
-          // Split the block into table vs non-table sub-blocks so that
-          // tables are rendered natively (remark-gfm v4 is incompatible
-          // with react-markdown v8 and crashes on table parsing).
-          const tableRegex = /^(\|.+\|\r?\n\|[-:| ]+\|(?:\r?\n\|.+\|)*)/gm;
-          const subParts: React.ReactNode[] = [];
-          let lastEnd = 0;
-          let tableMatch: RegExpExecArray | null;
-          let subIdx = 0;
+        const tableRegex = /^(\|.+\|\r?\n\|[-:| ]+\|(?:\r?\n\|.+\|)*)/gm;
+        const subParts: React.ReactNode[] = [];
+        let lastEnd = 0;
+        let tableMatch: RegExpExecArray | null;
+        let subIdx = 0;
 
-          const markdownCodeComponents = {
-            code: ({ node, inline, className, children, ...props }: any) => {
-              const match = /language-(\w+)/.exec(className || '');
-              const codeText = String(children).replace(/\n$/, '');
-              const lang = match ? match[1] : '';
-              if (lang.toLowerCase() === 'mermaid') {
-                return <MermaidCard diagram={codeText} />;
-              }
-              if (!inline && (match || codeText.includes('\n'))) {
-                const lang = match ? match[1] : '';
-                return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
-              }
-              return (
-                <code className={className} style={{
-                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.875em',
-                }} {...props}>
-                  {children}
-                </code>
-              );
-            },
-          };
-
-          while ((tableMatch = tableRegex.exec(block)) !== null) {
-            // Text before the table
-            if (tableMatch.index > lastEnd) {
-              const before = block.substring(lastEnd, tableMatch.index);
-              if (before.trim()) {
-                subParts.push(
-                  <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
-                    {renderContentSegment(before, `md-${idx}-before-${subIdx}`)}
-                  </div>
-                );
-              }
+        const markdownCodeComponents = {
+          code: ({ node, inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            const codeText = String(children).replace(/\n$/, '');
+            const lang = match ? match[1] : '';
+            if (lang.toLowerCase() === 'mermaid') {
+              return <MermaidCard diagram={codeText} />;
             }
-            // The table itself
-            const tableNode = renderMarkdownTable(tableMatch[1], `md-${idx}-tbl-${subIdx++}`);
-            if (tableNode) subParts.push(tableNode);
-            lastEnd = tableMatch.index + tableMatch[0].length;
-          }
+            if (!inline && (match || codeText.includes('\n'))) {
+              const lang = match ? match[1] : '';
+              return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+            }
+            return (
+              <code className={className} style={{
+                backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                fontFamily: 'monospace',
+                fontSize: '0.875em',
+              }} {...props}>
+                {children}
+              </code>
+            );
+          },
+        };
 
-          // Remaining text after the last table (or all text if no tables)
-          if (lastEnd < block.length) {
-            const remainder = block.substring(lastEnd);
-            if (remainder.trim()) {
+        while ((tableMatch = tableRegex.exec(block)) !== null) {
+          // Text before the table
+          if (tableMatch.index > lastEnd) {
+            const before = block.substring(lastEnd, tableMatch.index);
+            if (before.trim()) {
               subParts.push(
-                <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                  {renderContentSegment(remainder, `md-${idx}-after-${subIdx}`)}
+                <div style={{ width: '100%' }} key={`md-${idx}-sub-${subIdx++}`}>
+                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(before)}</Markdown>
                 </div>
               );
             }
           }
-
-          return (
-            <div style={{ width: '100%' }}
-              className="reactor-markdown-content"
-              key={`md-${idx}`}>
-              {subParts}
-            </div>
-          );
+          // The table itself
+          const tableNode = renderMarkdownTable(tableMatch[1], `md-${idx}-tbl-${subIdx++}`);
+          if (tableNode) subParts.push(tableNode);
+          lastEnd = tableMatch.index + tableMatch[0].length;
         }
-        // HTML block
-        if (/<[a-z][\s\S]*>/i.test(block)) {
-          if (hasReactoryTags(block)) {
-            return (
-              <div key={`html-${idx}`} className="reactor-html-content">
-                {renderContentSegment(block, `html-seg-${idx}`)}
+
+        // Remaining text after the last table (or all text if no tables)
+        if (lastEnd < block.length) {
+          const remainder = block.substring(lastEnd);
+          if (remainder.trim()) {
+            subParts.push(
+              <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
+                <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
               </div>
             );
           }
-          return (
-            <div key={`html-${idx}`}
-              className="reactor-html-content"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(block)
-              }}
-            />
-          );
         }
-        // Plain text fallback
-        return renderContentSegment(block, `text-${idx}`);
+
+        return (
+          <div style={{ width: '100%' }}
+            className="reactor-markdown-content"
+            key={`md-${idx}`}>
+            {subParts}
+          </div>
+        );
       });
 
       return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;

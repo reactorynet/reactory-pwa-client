@@ -7,7 +7,32 @@ import {
   sanitizeMermaidSource,
   repairMermaidSyntax,
   detectDiagramType,
+  getDiagramImageFilename,
+  copyImageToClipboard,
+  downloadImageData,
+  captureViewportImage,
+  sanitizeSvgForRasterization,
+  base64ToBlob,
 } from '../MermaidDiagram';
+
+const SAMPLE_PNG_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+
+beforeAll(() => {
+  HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
+    fillRect: jest.fn(),
+    drawImage: jest.fn(),
+    scale: jest.fn(),
+  });
+  HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue(SAMPLE_PNG_BASE64);
+});
+
+afterAll(() => {
+  HTMLCanvasElement.prototype.getContext = originalGetContext;
+  HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+});
 
 describe('MermaidDiagram utilities', () => {
   describe('sanitizeMermaidSource', () => {
@@ -123,6 +148,229 @@ describe('MermaidDiagram utilities', () => {
       expect(detectDiagramType('unknownSyntax\n  something')).toBe('Diagram');
     });
   });
+
+  describe('getDiagramImageFilename', () => {
+    it('generates filename for flowchart', () => {
+      expect(getDiagramImageFilename('Flowchart')).toBe('mermaid_flowchart.png');
+      expect(getDiagramImageFilename('flowchart TD\n  A --> B')).toBe('mermaid_flowchart.png');
+    });
+
+    it('generates filename for sequence diagram', () => {
+      expect(getDiagramImageFilename('Sequence')).toBe('mermaid_sequence.png');
+      expect(getDiagramImageFilename('sequenceDiagram\n  A->>B: msg')).toBe('mermaid_sequence.png');
+    });
+
+    it('generates filename for multi-word diagram types', () => {
+      expect(getDiagramImageFilename('Class Diagram')).toBe('mermaid_class_diagram.png');
+      expect(getDiagramImageFilename('ER Diagram')).toBe('mermaid_er_diagram.png');
+      expect(getDiagramImageFilename('Gantt Chart')).toBe('mermaid_gantt_chart.png');
+      expect(getDiagramImageFilename('User Journey')).toBe('mermaid_user_journey.png');
+      expect(getDiagramImageFilename('C4 Diagram')).toBe('mermaid_c4_diagram.png');
+    });
+
+    it('handles empty, undefined, or fallback diagram types', () => {
+      expect(getDiagramImageFilename('')).toBe('mermaid_diagram.png');
+      expect(getDiagramImageFilename(null as any)).toBe('mermaid_diagram.png');
+      expect(getDiagramImageFilename('Diagram')).toBe('mermaid_diagram.png');
+    });
+  });
+
+  describe('base64ToBlob', () => {
+    it('converts base64 PNG data URL to a binary Blob with correct MIME type', () => {
+      const blob = base64ToBlob(SAMPLE_PNG_BASE64, 'image/png');
+      expect(blob).not.toBeNull();
+      expect(blob?.type).toBe('image/png');
+      expect(blob?.size).toBeGreaterThan(0);
+    });
+
+    it('returns null for empty or invalid inputs', () => {
+      expect(base64ToBlob('')).toBeNull();
+      expect(base64ToBlob(null as any)).toBeNull();
+      expect(base64ToBlob('not-a-base-64-string!@#$')).toBeNull();
+    });
+  });
+
+  describe('sanitizeSvgForRasterization', () => {
+    it('wraps <style> CSS content in CDATA to protect XML serialization', () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = '#mermaid-1 .node > rect { fill: #fff; }';
+      svg.appendChild(style);
+
+      const sanitized = sanitizeSvgForRasterization(svg, false);
+      const sanitizedStyle = sanitized.querySelector('style');
+      expect(sanitizedStyle?.textContent).toContain('<![CDATA[');
+      expect(sanitizedStyle?.textContent).toContain('#mermaid-1 .node > rect { fill: #fff; }');
+      expect(sanitizedStyle?.textContent).toContain(']]>');
+    });
+
+    it('converts <foreignObject> elements to SVG <text> elements to prevent canvas tainting', () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+      fo.setAttribute('x', '20');
+      fo.setAttribute('y', '30');
+      fo.setAttribute('width', '100');
+      fo.setAttribute('height', '40');
+
+      const div = document.createElement('div');
+      div.textContent = 'Node Label Text';
+      fo.appendChild(div);
+      svg.appendChild(fo);
+
+      const sanitized = sanitizeSvgForRasterization(svg, false);
+      expect(sanitized.querySelector('foreignObject')).toBeNull();
+
+      const textEl = sanitized.querySelector('text');
+      expect(textEl).not.toBeNull();
+      expect(textEl?.textContent).toBe('Node Label Text');
+      expect(textEl?.getAttribute('text-anchor')).toBe('middle');
+      expect(textEl?.getAttribute('dominant-baseline')).toBe('central');
+      expect(textEl?.getAttribute('x')).toBe('70'); // 20 + 100/2
+      expect(textEl?.getAttribute('y')).toBe('50'); // 30 + 40/2
+    });
+
+    it('handles multiline labels inside foreignObject with <tspan> elements', () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+      fo.setAttribute('x', '0');
+      fo.setAttribute('y', '0');
+      fo.setAttribute('width', '100');
+      fo.setAttribute('height', '60');
+
+      const div = document.createElement('div');
+      div.innerHTML = 'Line One<br>Line Two';
+      fo.appendChild(div);
+      svg.appendChild(fo);
+
+      const sanitized = sanitizeSvgForRasterization(svg, false);
+      const tspans = sanitized.querySelectorAll('text > tspan');
+      expect(tspans.length).toBe(2);
+      expect(tspans[0].textContent).toBe('Line One');
+      expect(tspans[1].textContent).toBe('Line Two');
+    });
+
+    it('ensures xmlns and xmlns:xlink attributes are set', () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const sanitized = sanitizeSvgForRasterization(svg, false);
+      expect(sanitized.getAttribute('xmlns')).toBe('http://www.w3.org/2000/svg');
+      expect(sanitized.getAttribute('xmlns:xlink')).toBe('http://www.w3.org/1999/xlink');
+    });
+  });
+
+  describe('copyImageToClipboard', () => {
+    it('copies base64 PNG text to clipboard', async () => {
+      const writeTextMock = jest.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const success = await copyImageToClipboard(SAMPLE_PNG_BASE64);
+      expect(success).toBe(true);
+      expect(writeTextMock).toHaveBeenCalledWith(SAMPLE_PNG_BASE64);
+    });
+
+    it('returns false when base64 string is empty', async () => {
+      const success = await copyImageToClipboard('');
+      expect(success).toBe(false);
+    });
+
+    it('writes binary Blob to clipboard when ClipboardItem is available', async () => {
+      const writeMock = jest.fn().mockResolvedValue(undefined);
+      const writeTextMock = jest.fn().mockResolvedValue(undefined);
+      (global as any).ClipboardItem = jest.fn().mockImplementation((items) => items);
+
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+          write: writeMock,
+        },
+      });
+
+      const blob = new Blob(['test-png-binary'], { type: 'image/png' });
+      const success = await copyImageToClipboard(SAMPLE_PNG_BASE64, blob);
+
+      expect(success).toBe(true);
+      expect(writeMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('downloadImageData', () => {
+    it('creates an anchor element and triggers download with given filename', () => {
+      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const filename = 'mermaid_flowchart.png';
+
+      const success = downloadImageData(SAMPLE_PNG_BASE64, filename);
+      expect(success).toBe(true);
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('uses createObjectURL when a Blob is passed or derived', () => {
+      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const createObjectURLMock = jest.fn().mockReturnValue('blob:http://localhost/mock-uuid');
+      const revokeObjectURLMock = jest.fn();
+      (window as any).URL.createObjectURL = createObjectURLMock;
+      (window as any).URL.revokeObjectURL = revokeObjectURLMock;
+
+      const blob = new Blob(['data'], { type: 'image/png' });
+      const success = downloadImageData(SAMPLE_PNG_BASE64, 'mermaid_diagram.png', blob);
+
+      expect(success).toBe(true);
+      expect(createObjectURLMock).toHaveBeenCalledWith(blob);
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+  });
+
+  describe('captureViewportImage', () => {
+    it('returns null if viewport and container are null', async () => {
+      const result = await captureViewportImage({
+        viewport: null,
+        container: null,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('captures viewport image using svgString fallback when svgEl is not yet mounted in container', async () => {
+      const viewport = document.createElement('div');
+      const container = document.createElement('div');
+      const rawSvgString = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300"><text>Fallback SVG</text></svg>';
+
+      const result = await captureViewportImage({
+        viewport,
+        container,
+        svgString: rawSvgString,
+        isDarkMode: false,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.base64Png).toMatch(/^data:image\/png;base64,/);
+    });
+
+    it('captures viewport image with complete base64Png and blob, avoiding truncated 100B fallbacks', async () => {
+      const viewport = document.createElement('div');
+      const container = document.createElement('div');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 400 300');
+      container.appendChild(svg);
+      viewport.appendChild(container);
+
+      const result = await captureViewportImage({
+        viewport,
+        container,
+        isDarkMode: false,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.base64Png).toMatch(/^data:image\/png;base64,/);
+      // Verify base64Png is not empty or a raw 100-byte slice
+      expect(result?.base64Png.length).toBeGreaterThan(100);
+      expect(result?.blob).not.toBeNull();
+      expect(result?.blob?.type).toBe('image/png');
+    });
+  });
 });
 
 describe('MermaidDiagram Component', () => {
@@ -131,7 +379,7 @@ describe('MermaidDiagram Component', () => {
     (mermaid.initialize as jest.Mock) = jest.fn();
     (mermaid.render as jest.Mock) = jest.fn().mockImplementation((id: string, text: string) => {
       return Promise.resolve({
-        svg: `<svg id="${id}" data-testid="mock-svg"><text>${text}</text></svg>`,
+        svg: `<svg id="${id}" data-testid="mock-svg" viewBox="0 0 300 150"><text>${text}</text></svg>`,
         bindFunctions: jest.fn(),
       });
     });
@@ -170,7 +418,6 @@ describe('MermaidDiagram Component', () => {
   });
 
   it('automatically repairs unquoted parentheses in node labels and renders successfully', async () => {
-    // When primary unquoted syntax fails in mermaid, the auto-repair should quote it and retry
     (mermaid.render as jest.Mock) = jest.fn().mockImplementation((id: string, text: string) => {
       if (text.includes('[Some label (xxxx)]')) {
         return Promise.reject(new Error('Syntax error on line 2: unquoted parenthesis'));
@@ -390,6 +637,131 @@ describe('MermaidDiagram Component', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Mermaid Diagram (Fullscreen)')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Save Image and Copy Image toolbar actions', () => {
+    it('renders "Copy image" and "Save image" buttons in visual mode by default', async () => {
+      render(
+        <MermaidDiagram testId="test-mermaid">
+          {`flowchart TD\n  A --> B`}
+        </MermaidDiagram>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('button', { name: 'Copy image' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save image' })).toBeInTheDocument();
+    });
+
+    it('does not render image export buttons when in code mode', async () => {
+      render(
+        <MermaidDiagram testId="test-mermaid" defaultMode="code">
+          {`flowchart TD\n  A --> B`}
+        </MermaidDiagram>
+      );
+
+      expect(screen.queryByRole('button', { name: 'Copy image' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Save image' })).not.toBeInTheDocument();
+    });
+
+    it('does not render image export buttons when allowExport={false}', async () => {
+      render(
+        <MermaidDiagram testId="test-mermaid" allowExport={false}>
+          {`flowchart TD\n  A --> B`}
+        </MermaidDiagram>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('button', { name: 'Copy image' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Save image' })).not.toBeInTheDocument();
+    });
+
+    it('copies base64 encoded PNG to clipboard and triggers onCopyImage callback when clicking "Copy image"', async () => {
+      const writeTextMock = jest.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      });
+
+      const onCopyImage = jest.fn();
+
+      render(
+        <MermaidDiagram testId="test-mermaid" onCopyImage={onCopyImage}>
+          {`flowchart TD\n  Start --> Finish`}
+        </MermaidDiagram>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+      });
+
+      const copyImageBtn = screen.getByRole('button', { name: 'Copy image' });
+
+      await act(async () => {
+        fireEvent.click(copyImageBtn);
+      });
+
+      await waitFor(() => {
+        expect(writeTextMock).toHaveBeenCalledWith(expect.stringMatching(/^data:image\/png;base64,/));
+      });
+
+      expect(onCopyImage).toHaveBeenCalledWith(expect.stringMatching(/^data:image\/png;base64,/));
+    });
+
+    it('triggers file download with filename mermaid_<diagram_type>.png and calls onSaveImage callback', async () => {
+      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const onSaveImage = jest.fn();
+
+      render(
+        <MermaidDiagram testId="test-mermaid" onSaveImage={onSaveImage}>
+          {`sequenceDiagram\n  Alice->>Bob: Hello`}
+        </MermaidDiagram>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+      });
+
+      const saveImageBtn = screen.getByRole('button', { name: 'Save image' });
+
+      await act(async () => {
+        fireEvent.click(saveImageBtn);
+      });
+
+      await waitFor(() => {
+        expect(clickSpy).toHaveBeenCalled();
+      });
+
+      expect(onSaveImage).toHaveBeenCalledWith('mermaid_sequence.png', expect.stringMatching(/^data:image\/png;base64,/));
+
+      clickSpy.mockRestore();
+    });
+
+    it('provides "Copy image" and "Save image" in the fullscreen dialog', async () => {
+      render(
+        <MermaidDiagram testId="test-mermaid">
+          {`flowchart TD\n  A --> B`}
+        </MermaidDiagram>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-svg')).toBeInTheDocument();
+      });
+
+      // Maximize
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Maximize diagram/i }));
+      });
+
+      expect(screen.getByRole('button', { name: 'Copy image (fullscreen)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save image (fullscreen)' })).toBeInTheDocument();
     });
   });
 });

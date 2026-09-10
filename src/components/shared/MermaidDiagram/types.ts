@@ -49,6 +49,18 @@ export interface MermaidDiagramProps {
    * Whether to show the maximize / full-screen overlay button (default: true)
    */
   allowMaximize?: boolean;
+  /**
+   * Whether to show save and copy image buttons in the toolbar (default: true)
+   */
+  allowExport?: boolean;
+  /**
+   * Optional callback fired when the diagram image is saved / downloaded
+   */
+  onSaveImage?: (filename: string, base64Png: string) => void;
+  /**
+   * Optional callback fired when the diagram image is copied to clipboard
+   */
+  onCopyImage?: (base64Png: string) => void;
   // Mermaid configuration options
   securityLevel?: "strict" | "loose" | "antiscript" | "sandbox";
   theme?: "forest" | "default" | "base" | "dark" | "neutral" | "null";

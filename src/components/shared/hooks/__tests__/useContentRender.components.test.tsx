@@ -128,6 +128,33 @@ describe('component mounting through useContentRender', () => {
       expect(snippet).toBeInTheDocument();
       expect(snippet.textContent).toContain('Block 1: Code block (` ```sh ... ``` `)');
     });
+
+    it('renders markdown with headings, inline code, and HTML tags between multiple code blocks through the Markdown component', () => {
+      const contentWithMarkupBetweenCode = [
+        '```graphql',
+        'query GetCommentsByContext($context: String!) {',
+        '  getCommentsByContext(context: $context) { id }',
+        '}',
+        '```',
+        '',
+        '#### 2. Interactive Text-Selection Launcher `ContentRenderer` attaches `mouseup` and `selectionchange` listeners.',
+        'Existing comments that carry a `quote` string (excluding `<pre>`, `<code>`, `<script>`, `<style>`).',
+        'It wraps matches in `<mark class="reactory-comment-highlight">`.',
+        '',
+        '```html',
+        '<mark class="reactory-comment-highlight">quoted text</mark>',
+        '```',
+      ].join('\n');
+
+      render(<Host content={contentWithMarkupBetweenCode} />);
+      const markdownBlocks = screen.getAllByTestId('markdown');
+      expect(markdownBlocks.length).toBeGreaterThanOrEqual(1);
+
+      const hostText = screen.getByTestId('host').textContent || '';
+      expect(hostText).toContain('#### 2. Interactive Text-Selection Launcher');
+      expect(hostText).toContain('Existing comments that carry a `quote` string');
+      expect(hostText).toContain('wraps matches in `<mark class="reactory-comment-highlight">`');
+    });
   });
 
   describe('html content', () => {
