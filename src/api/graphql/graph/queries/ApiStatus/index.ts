@@ -139,6 +139,8 @@ const FRAGMENTS = {
       name
       target
       roles
+      enabled
+      featureFlags
       entries {
         id
         ordinal
@@ -147,6 +149,8 @@ const FRAGMENTS = {
         external
         icon
         roles
+        enabled
+        featureFlags
         items {
           id
           ordinal
@@ -155,6 +159,19 @@ const FRAGMENTS = {
           external
           icon
           roles
+          enabled
+          featureFlags
+          items {
+            id
+            ordinal
+            title
+            link
+            external
+            icon
+            roles
+            enabled
+            featureFlags
+          }
         }
       }
 
