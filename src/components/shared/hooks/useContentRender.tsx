@@ -10,10 +10,13 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
+import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
-import { ReactoryTag, splitReactoryTags } from './reactoryTags';
+import { ReactoryTag, splitReactoryTags, hasReactoryTags } from './reactoryTags';
 
 /**
  * Mapping of common LaTeX math and arrow symbols to Unicode characters.
@@ -267,7 +270,7 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
       reactory?.emit?.('shell.execute', { command: cleanCommand });
       if (typeof reactory?.graphqlMutation === 'function') {
         reactory.graphqlMutation(
-          `mutation ExecuteReactorMacro($macroInput: ReactorExecuteMacroInput!) {
+          `mutation ExecuteReactorMacro($macroInput: ReactorMacroExecuteInput!) {
             ReactorExecuteMacro(macroInput: $macroInput) {
               ... on ReactorChatMessage { id role content }
               ... on ReactorErrorResponse { message }
@@ -333,24 +336,21 @@ export const CodeSnippet: React.FC<CodeSnippetProps> = ({
 
         <Stack direction="row" spacing={0.5} alignItems="center">
           {isShell && (
-            <Tooltip title={executing ? 'Executing...' : 'Run in terminal'}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleExecute}
-                  disabled={executing}
-                  aria-label="Execute command"
-                  sx={{
-                    color: executing ? 'primary.main' : 'text.secondary',
-                    '&:hover': { color: 'primary.main' },
-                  }}
-                >
-                  {executing ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon fontSize="small" />}
-                </IconButton>
-              </span>
+            <Tooltip title={executing ? 'Running…' : 'Execute command'}>
+              <IconButton
+                size="small"
+                onClick={handleExecute}
+                aria-label="Execute command"
+                disabled={executing}
+                sx={{
+                  color: executing ? 'primary.main' : 'text.secondary',
+                  '&:hover': { color: 'primary.main' },
+                }}
+              >
+                {executing ? <CircularProgress size={16} /> : <PlayArrowIcon fontSize="small" />}
+              </IconButton>
             </Tooltip>
           )}
-
           <Tooltip title={copied ? 'Copied!' : 'Copy code'}>
             <IconButton
               size="small"
@@ -473,10 +473,32 @@ export const parseMarkupBlocks = (text: string): MarkupSegment[] => {
   return segments;
 };
 
+export interface UseContentRenderOptions {
+  /**
+   * Whether to automatically mount embedded <reactory /> component tags into live React elements.
+   * Defaults to false so chat responses and text pipelines display tags safely as code
+   * unless explicitly enabled (e.g. in ContentEditor and ContentRenderer).
+   */
+  mountComponents?: boolean;
+}
+
+export interface RenderContentOptions {
+  /**
+   * Override the mountComponents setting for this render pass.
+   */
+  mountComponents?: boolean;
+}
+
 /**
  * Hook to detect content type and render it accordingly
  */
-export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
+export const useContentRender = (
+  reactoryProp?: Reactory.Client.ReactorySDK,
+  options?: UseContentRenderOptions
+) => {
+  const hookReactory = useReactory();
+  const reactory = reactoryProp || hookReactory;
+  const defaultMountComponents = options?.mountComponents ?? false;
   const {
     Material,
     Markdown,
@@ -498,6 +520,33 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
     MaterialIcons,
     MaterialLabs,
   } = Material;
+
+  /**
+   * Sanitizes HTML content while preserving tables, images, links, styles, and safe attributes.
+   */
+  const sanitizeHtml = (raw: string): string => {
+    if (!raw) return '';
+    if (!DOMPurify) return raw;
+    try {
+      if (typeof DOMPurify.sanitize === 'function') {
+        return DOMPurify.sanitize(raw, {
+          ADD_TAGS: [
+            'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+            'colgroup', 'col', 'caption', 'hr', 'figure', 'figcaption',
+            'mark', 'span', 'div', 'p', 'a', 'img', 'sub', 'sup',
+          ],
+          ADD_ATTR: [
+            'target', 'rel', 'style', 'class', 'width', 'height',
+            'align', 'border', 'cellpadding', 'cellspacing',
+            'title', 'alt', 'id',
+          ],
+        });
+      }
+    } catch {
+      return typeof DOMPurify.sanitize === 'function' ? DOMPurify.sanitize(raw) : raw;
+    }
+    return raw;
+  };
 
   useEffect(() => {
     //@ts-ignore
@@ -546,84 +595,249 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
   };
 
   /**
-   * Renders a single `<reactory />` tag as the live component it names.
+   * Helper to unwrap and validate a React component from the registry.
+   */
+  const resolveComponent = (raw: any): React.ComponentType<any> | null => {
+    if (!raw) return null;
+    if (typeof raw === 'function') return raw;
+    // React.forwardRef or React.memo objects have $typeof
+    if (typeof raw === 'object' && raw.$typeof) return raw;
+    // Descriptor or module exports with a component/default property
+    if (typeof raw === 'object') {
+      if (typeof raw.component === 'function' || (raw.component && raw.component.$typeof)) {
+        return raw.component;
+      }
+      if (typeof raw.default === 'function' || (raw.default && raw.default.$typeof)) {
+        return raw.default;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Renders a single `<reactory />` tag as the live component it names,
+   * with defensive component validation and ErrorBoundary isolation.
    */
   const renderReactoryComponent = (tag: ReactoryTag, key: string) => {
-    const Component = reactory.getComponent<any>(tag.fqn);
+    let rawComponent: any = null;
+    const cleanFqn = (tag.fqn || '')
+      .replace(/&quot;/g, '')
+      .replace(/["']/g, '')
+      .trim();
 
-    if (!Component) {
-      reactory.log(`Content references unregistered component "${tag.fqn}"`, {}, 'warning');
+    try {
+      rawComponent = reactory.getComponent<any>(cleanFqn);
+    } catch (err: any) {
+      reactory.log(`Failed to retrieve component "${cleanFqn}": ${err?.message}`, {}, 'error');
       return (
-        <span
+        <Box
           key={key}
-          data-reactory-missing={tag.fqn}
-          style={{
-            display: 'inline-block',
-            padding: '2px 6px',
-            borderRadius: 4,
-            border: `1px dashed ${reactory.muiTheme?.palette?.warning?.main || '#ed6c02'}`,
-            color: reactory.muiTheme?.palette?.text?.secondary,
+          data-reactory-error={cleanFqn}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.75,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'error.main',
+            backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
+            color: 'error.main',
             fontSize: '0.8125rem',
           }}
         >
-          Unknown component: {tag.fqn}
-        </span>
+          <ErrorOutlineIcon fontSize="small" color="error" />
+          <span>Failed to retrieve &quot;{cleanFqn}&quot;: {err?.message}</span>
+        </Box>
       );
     }
 
-    return <Component key={key} {...tag.props} />;
+    const Component = resolveComponent(rawComponent);
+
+    if (!Component) {
+      reactory.log(`Component "${cleanFqn}" is not a registered or callable component function (received ${typeof rawComponent})`, {}, 'warning');
+      return (
+        <Box
+          key={key}
+          data-reactory-missing={cleanFqn}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.75,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: '1px dashed',
+            borderColor: 'warning.main',
+            backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(237, 108, 2, 0.15)' : '#fff3e0'),
+            color: (t: any) => (t?.palette?.mode === 'dark' ? '#ffb74d' : '#e65100'),
+            fontSize: '0.8125rem',
+          }}
+        >
+          <WarningAmberIcon fontSize="small" />
+          <span>
+            {rawComponent ? `Component "${cleanFqn}" is not a function` : `Unknown component: ${cleanFqn}`}
+          </span>
+        </Box>
+      );
+    }
+
+    class ReactoryComponentErrorBoundary extends React.Component<
+      { fqn: string; children: React.ReactNode },
+      { hasError: boolean; error: Error | null }
+    > {
+      constructor(props: { fqn: string; children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+
+      static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+      }
+
+      componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        reactory.log(`Error mounting component tag "${this.props.fqn}": ${error?.message}`, { error, errorInfo }, 'error');
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <Box
+              component="span"
+              data-reactory-error={this.props.fqn}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.75,
+                my: 1,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'error.main',
+                backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
+                color: 'error.main',
+                fontSize: '0.8125rem',
+              }}
+            >
+              <ErrorOutlineIcon fontSize="small" color="error" />
+              <span>
+                <strong>{this.props.fqn}</strong> failed to mount: {this.state.error?.message || 'Render error'}
+              </span>
+            </Box>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    return (
+      <ReactoryComponentErrorBoundary key={key} fqn={cleanFqn}>
+        <Component {...tag.props} reactory={reactory} />
+      </ReactoryComponentErrorBoundary>
+    );
   };
 
   /**
    * Renders content by splitting into blocks (text, markdown, mermaid, code, etc.) and processing top-down
    */
-  const renderContent = (content: string) => {
+  const renderContent = (content: string, renderOptions?: RenderContentOptions) => {
     if (!content) return null;
 
-    const theme = reactory.muiTheme;
-    const { palette } = theme;
-    const { mode } = palette;
+    const shouldMount = renderOptions?.mountComponents ?? defaultMountComponents;
+
+    const theme: any = reactory?.muiTheme || reactory?.getTheme?.()?.options || {};
+    const palette = theme?.palette || {};
+    const mode = palette?.mode || 'light';
+
+    const cellMarkdownComponents = {
+      p: ({ children }: any) => <span>{children}</span>,
+      a: ({ children, href }: any) => (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      ),
+      code: ({ node, inline, className, children, ...props }: any) => {
+        const match = /language-(\w+)/.exec(className || '');
+        const codeText = String(children).replace(/\n$/, '');
+        if (!inline && (match || codeText.includes('\n'))) {
+          const lang = match ? match[1] : '';
+          return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+        }
+        return (
+          <code className={className} style={{
+            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            padding: '2px 4px',
+            borderRadius: '3px',
+            fontFamily: 'monospace',
+            fontSize: '0.875em',
+          }} {...props}>
+            {children}
+          </code>
+        );
+      },
+    };
+
+    const markdownCodeComponents = {
+      ...cellMarkdownComponents,
+    };
 
     /**
-     * Helper to render markdown cell content (bold, italic, code, links, math symbols)
-     * without unwanted paragraph wrapper margins.
+     * Renders a text segment, mounting <reactory /> components if present and enabled,
+     * or displaying them as formatted code tags when unmounted.
      */
-    const renderTableCellContent = (cellContent: string) => {
-      const formatted = replaceMathSymbols(cellContent);
-      if (!Markdown) return formatted;
+    const renderContentSegment = (text: string, keyPrefix: string, isInline: boolean = false) => {
+      if (!hasReactoryTags(text)) {
+        if (!Markdown) return replaceMathSymbols(text);
+        return isInline ? (
+          <Markdown components={cellMarkdownComponents}>{replaceMathSymbols(text)}</Markdown>
+        ) : (
+          <Markdown components={markdownCodeComponents}>{replaceMathSymbols(text)}</Markdown>
+        );
+      }
+
+      const segs = splitReactoryTags(text);
       return (
-        <Markdown
-          components={{
-            p: ({ children }: any) => <span>{children}</span>,
-            a: ({ children, href }: any) => (
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                {children}
-              </a>
-            ),
-            code: ({ node, inline, className, children, ...props }: any) => {
-              const match = /language-(\w+)/.exec(className || '');
-              const codeText = String(children).replace(/\n$/, '');
-              if (!inline && (match || codeText.includes('\n'))) {
-                const lang = match ? match[1] : '';
-                return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+        <React.Fragment key={keyPrefix}>
+          {segs.map((seg, sIdx) => {
+            const segKey = `${keyPrefix}-seg-${sIdx}`;
+            if (seg.kind === 'component') {
+              if (shouldMount) {
+                return renderReactoryComponent(seg.tag, segKey);
               }
               return (
-                <code className={className} style={{
-                  backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.875em',
-                }} {...props}>
-                  {children}
+                <code
+                  key={segKey}
+                  className="reactory-tag-preview"
+                  style={{
+                    backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.875em',
+                    color: mode === 'dark' ? '#90caf9' : '#1565c0',
+                  }}
+                >
+                  {seg.tag.raw}
                 </code>
               );
-            },
-          }}
-        >
-          {formatted}
-        </Markdown>
+            }
+            if (!Markdown) return replaceMathSymbols(seg.value);
+            return isInline ? (
+              <Markdown key={segKey} components={cellMarkdownComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+            ) : (
+              <Markdown key={segKey} components={markdownCodeComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+            );
+          })}
+        </React.Fragment>
       );
+    };
+
+    const renderTableCellContent = (cellContent: string, cellKey: string) => {
+      return renderContentSegment(cellContent, cellKey, true);
     };
     
     /**
@@ -675,7 +889,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
                     backgroundColor: mode === 'dark' ? '#333' : '#f5f5f5',
                     fontWeight: 600,
                   }}>
-                    {renderTableCellContent(h)}
+                    {renderTableCellContent(h, `${key}-h-${i}`)}
                   </th>
                 ))}
               </tr>
@@ -689,7 +903,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
                       padding: '6px 12px',
                       textAlign: alignments[ci] || 'left',
                     }}>
-                      {renderTableCellContent(cell)}
+                      {renderTableCellContent(cell, `${key}-r-${ri}-c-${ci}`)}
                     </td>
                   ))}
                 </tr>
@@ -734,8 +948,9 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
           return (
             <div
               key={`html-${idx}`}
+              className="reactor-html-content"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(seg.content),
+                __html: sanitizeHtml(seg.content),
               }}
             />
           );
@@ -818,17 +1033,8 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
       return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;
     };
 
-    const segments = splitReactoryTags(content);
-
-    return (
-      <React.Fragment>
-        {segments.map((segment, index) =>
-          segment.kind === 'component'
-            ? renderReactoryComponent(segment.tag, `reactory-${index}`)
-            : renderMarkup(segment.value, `segment-${index}`)
-        )}
-      </React.Fragment>
-    );
+    // Render document through block processor
+    return <React.Fragment>{renderMarkup(content, 'root')}</React.Fragment>;
   };
 
   return { renderContent, detectContentType };

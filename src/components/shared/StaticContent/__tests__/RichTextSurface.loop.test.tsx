@@ -101,4 +101,76 @@ describe('RichTextSurface controlled-value stability', () => {
     );
     expect(loopErrors()).toEqual([]);
   });
+
+  it('settles when mounted with an HTML table', () => {
+    render(
+      <Host initial={'<table><thead><tr><th>H1</th></tr></thead><tbody><tr><td>C1</td></tr></tbody></table>'} />
+    );
+    expect(loopErrors()).toEqual([]);
+  });
+
+  it('settles when a table is injected dynamically via ref without maximum update depth error', () => {
+    let surfaceHandle: any;
+    const HostWithRef: React.FC = () => {
+      const [value, setValue] = useState('<p>Start</p>');
+      return (
+        <RichTextSurface
+          ref={(r) => { surfaceHandle = r; }}
+          value={value}
+          onChange={setValue}
+        />
+      );
+    };
+
+    render(<HostWithRef />);
+    expect(loopErrors()).toEqual([]);
+
+    surfaceHandle?.insertTable?.({ rows: 2, cols: 2 });
+    expect(loopErrors()).toEqual([]);
+  });
+
+  it('settles when a reactory component tag is injected dynamically via ref without maximum update depth error', () => {
+    let surfaceHandle: any;
+    const HostWithRef: React.FC = () => {
+      const [value, setValue] = useState('<p>Start</p>');
+      return (
+        <RichTextSurface
+          ref={(r) => { surfaceHandle = r; }}
+          value={value}
+          onChange={setValue}
+        />
+      );
+    };
+
+    render(<HostWithRef />);
+    expect(loopErrors()).toEqual([]);
+
+    surfaceHandle?.insertHtml?.('<reactory reactory-component="core.Label@1.0.0" reactory-props-text="Injected" />');
+    expect(loopErrors()).toEqual([]);
+  });
+
+  it('updates content dynamically when text is inserted by the user', () => {
+    let surfaceHandle: any;
+    const values: string[] = [];
+    const HostWithRef: React.FC = () => {
+      const [value, setValue] = useState('<p>Hello</p>');
+      return (
+        <RichTextSurface
+          ref={(r) => { surfaceHandle = r; }}
+          value={value}
+          onChange={(v) => {
+            values.push(v);
+            setValue(v);
+          }}
+        />
+      );
+    };
+
+    render(<HostWithRef />);
+    surfaceHandle?.insertHtml?.('<p> World</p>');
+
+    expect(values.length).toBeGreaterThan(0);
+    expect(values[values.length - 1]).toContain('World');
+    expect(loopErrors()).toEqual([]);
+  });
 });

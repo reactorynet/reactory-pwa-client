@@ -116,13 +116,17 @@ export const parseReactoryTag = (raw: string): ReactoryTag | null => {
     const value = decodeEntities(attribute[2] ?? attribute[3] ?? attribute[4] ?? '');
 
     if (name === 'reactory-component' || name === 'component') {
-      fqn = value.trim();
+      let clean = value.trim();
+      clean = clean.replace(/^(&quot;|["'])+/, '').replace(/(&quot;|["'])+$/, '').trim();
+      fqn = clean;
       continue;
     }
 
     if (name.startsWith('reactory-props-')) {
       const propName = name.slice('reactory-props-'.length);
-      const coerced = coerceTagValue(value);
+      let propValue = value;
+      propValue = propValue.replace(/^(&quot;|["'])+/, '').replace(/(&quot;|["'])+$/, '');
+      const coerced = coerceTagValue(propValue);
       if (coerced !== undefined) props[propName] = coerced;
     }
   }

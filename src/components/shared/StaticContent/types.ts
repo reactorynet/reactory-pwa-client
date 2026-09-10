@@ -188,6 +188,10 @@ export interface ReactoryStaticContentProps {
    * Called after a successful save, with the persisted record.
    */
   onSaved?: (content: ReactoryStaticContent) => void;
+  /**
+   * Called when editing is cancelled.
+   */
+  onCancel?: () => void;
 }
 
 /**

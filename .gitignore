@@ -57,3 +57,12 @@ storybook-static
 
 coverage-app/*
 .yarn/*
+src/components/plugins/*
+!src/components/plugins/pluginImportFactory.ts
+!src/components/plugins/index.ts
+!src/components/plugins/README.md
+!src/components/plugins/example/
+!src/components/plugins/example/*
+# reactory-core plugin is a git submodule pointing at
+# git@github.com:reactorynet/reactory-client-core-pwa-plugin.git
+!src/components/plugins/reactory-core/

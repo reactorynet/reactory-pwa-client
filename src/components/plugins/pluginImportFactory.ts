@@ -2,8 +2,8 @@
  * Responsible for generating the __index.ts
  * imports file for client-side plugins and widgets.
  */
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import Reactory from '@reactorynet/reactory-core';
 
 interface IModuleDefinition {

@@ -78,7 +78,7 @@ const expandTemplate = (
 const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
   const { reactory } = props;
   const params = useParams();
-  const { renderContent } = useContentRender(reactory);
+  const { renderContent } = useContentRender(reactory, { mountComponents: true });
 
   const {
     editRoles = ['DEVELOPER'],
@@ -257,7 +257,10 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
     setEditing(true);
   }, [editDisplayMode, editLink, activeSlug, record?.title, title]);
 
-  const closeEditor = useCallback(() => setEditing(false), []);
+  const closeEditor = useCallback(() => {
+    setEditing(false);
+    props.onCancel?.();
+  }, [props.onCancel]);
 
   // Box and Paper have incompatible prop signatures, so the union is widened to
   // a plain element type for JSX use.

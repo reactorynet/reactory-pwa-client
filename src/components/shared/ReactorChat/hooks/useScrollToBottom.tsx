@@ -98,7 +98,6 @@ const ChatList = (props: {
 }) => {
 
   const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError, onDeleteToolCall } = props;
-  const { renderContent } = useContentRender(reactory);
 
   const {
     React,
@@ -107,6 +106,34 @@ const ChatList = (props: {
     React: Reactory.React,
     Material: Reactory.Client.Web.IMaterialModule
   }>(["react.React", "material-ui.Material"]);
+
+  // Persistent toggle for mounting embedded Reactory components in chat responses
+  const [mountComponents, setMountComponents] = React.useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem('reactory.chat.mountComponents') === 'true';
+      }
+    } catch {
+      // Ignore
+    }
+    return false;
+  });
+
+  const toggleMountComponents = React.useCallback(() => {
+    setMountComponents((prev: boolean) => {
+      const next = !prev;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('reactory.chat.mountComponents', String(next));
+        }
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const { renderContent } = useContentRender(reactory, { mountComponents });
   
   // Memoize the renderContent function to prevent unnecessary re-renders
   const memoizedRenderContent = React.useCallback(renderContent, [renderContent]);
@@ -1238,6 +1265,19 @@ const ChatList = (props: {
                                 size="small"
                               />
                             )}
+                            <Tooltip title={mountComponents ? "Unmount embedded components" : "Mount embedded components"}>
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  fontSize: '0.875rem',
+                                  color: mountComponents ? 'primary.main' : 'text.secondary',
+                                }}
+                                onClick={toggleMountComponents}
+                                aria-label={mountComponents ? "Unmount embedded components" : "Mount embedded components"}
+                              >
+                                <Icon sx={{ fontSize: '1rem' }}>{mountComponents ? 'widgets' : 'widgets_outlined'}</Icon>
+                              </IconButton>
+                            </Tooltip>
                           </Box>
                         )}
                       </Box>
@@ -1481,6 +1521,19 @@ const ChatList = (props: {
                               size="small"
                             />
                           )}
+                          <Tooltip title={mountComponents ? "Unmount embedded components" : "Mount embedded components"}>
+                            <IconButton
+                              size="small"
+                              sx={{
+                                fontSize: '0.875rem',
+                                color: mountComponents ? 'primary.main' : 'text.secondary',
+                              }}
+                              onClick={toggleMountComponents}
+                              aria-label={mountComponents ? "Unmount embedded components" : "Mount embedded components"}
+                            >
+                              <Icon sx={{ fontSize: '1rem' }}>{mountComponents ? 'widgets' : 'widgets_outlined'}</Icon>
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       )}
                     </Box>

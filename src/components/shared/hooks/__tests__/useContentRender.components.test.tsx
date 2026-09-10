@@ -57,8 +57,8 @@ const reactoryStub: any = {
   }),
 };
 
-const Host: React.FC<{ content: string }> = ({ content }) => {
-  const { renderContent } = useContentRender(reactoryStub);
+const Host: React.FC<{ content: string; mountComponents?: boolean }> = ({ content, mountComponents = true }) => {
+  const { renderContent } = useContentRender(reactoryStub, { mountComponents });
   return <div data-testid="host">{renderContent(content)}</div>;
 };
 
@@ -71,6 +71,19 @@ describe('component mounting through useContentRender', () => {
         <Host content={'# Heading\n\n<reactory reactory-component="core.Label@1.0.0" reactory-props-text="Mounted" />\n\nTrailing prose.'} />
       );
       expect(screen.getByTestId('label')).toHaveTextContent('Mounted');
+    });
+
+    it('renders component tag as formatted inline code when mountComponents is false by default', () => {
+      const DefaultHost: React.FC<{ content: string }> = ({ content }) => {
+        const { renderContent } = useContentRender(reactoryStub);
+        return <div data-testid="default-host">{renderContent(content)}</div>;
+      };
+
+      render(
+        <DefaultHost content={'Here is an example: <reactory reactory-component="core.Label@1.0.0" /> in text.'} />
+      );
+      expect(screen.queryByTestId('label')).not.toBeInTheDocument();
+      expect(screen.getByText('<reactory reactory-component="core.Label@1.0.0" />')).toBeInTheDocument();
     });
 
     it('does not leak the tag as visible text', () => {
@@ -323,6 +336,82 @@ describe('component mounting through useContentRender', () => {
 
       expect(mockPublish).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' }, 'shell');
       expect(mockReactory.emit).toHaveBeenCalledWith('shell.execute', { command: 'echo "Hello World"' });
+    });
+
+    it('handles component that is not a function gracefully', () => {
+      registry['test.NotAFunction@1.0.0'] = { notAComponent: true } as any;
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
+        return <div>{renderContent('<reactory reactory-component="test.NotAFunction@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText(/is not a function/i)).toBeInTheDocument();
+    });
+
+    it('unwraps component descriptor object with component property', () => {
+      const ValidInner: React.FC = () => <span>Unwrapped Component Content</span>;
+      registry['test.Wrapped@1.0.0'] = { component: ValidInner } as any;
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
+        return <div>{renderContent('<reactory reactory-component="test.Wrapped@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText('Unwrapped Component Content')).toBeInTheDocument();
+    });
+
+    it('handles component that throws an error on mount without crashing', () => {
+      const CrashingComponent: React.FC = () => {
+        throw new Error('Simulated mount crash');
+      };
+      registry['test.Crashing@1.0.0'] = CrashingComponent;
+
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const HostComponent: React.FC = () => {
+        const { renderContent } = useContentRender(reactoryStub, { mountComponents: true });
+        return <div>{renderContent('<reactory reactory-component="test.Crashing@1.0.0" />')}</div>;
+      };
+
+      render(<HostComponent />);
+      expect(screen.getByText(/failed to mount: Simulated mount crash/i)).toBeInTheDocument();
+      spy.mockRestore();
+    });
+
+    it('renders a markdown table with embedded reactory components in cells without breaking the table', () => {
+      const markdownTable =
+        '| Name | Component |\n' +
+        '| :--- | :--- |\n' +
+        '| Status | <reactory reactory-component="core.Label@1.0.0" reactory-props-text="Table Active" /> |\n';
+
+      const { container } = render(<Host content={markdownTable} mountComponents={true} />);
+
+      const table = container.querySelector('table');
+      expect(table).toBeInTheDocument();
+      expect(screen.getByTestId('label')).toHaveTextContent('Table Active');
+
+      const td = container.querySelector('td');
+      expect(td).toContainElement(screen.getByTestId('label'));
+    });
+
+    it('renders component tag as code inside table cell when mountComponents is false', () => {
+      const markdownTable =
+        '| Name | Component |\n' +
+        '| :--- | :--- |\n' +
+        '| Status | <reactory reactory-component="core.Label@1.0.0" reactory-props-text="Table Active" /> |\n';
+
+      const { container } = render(<Host content={markdownTable} mountComponents={false} />);
+
+      const table = container.querySelector('table');
+      expect(table).toBeInTheDocument();
+      expect(screen.queryByTestId('label')).not.toBeInTheDocument();
+
+      const td = container.querySelector('td');
+      expect(td).toBeInTheDocument();
+      expect(td?.textContent).toContain('<reactory reactory-component="core.Label@1.0.0"');
     });
   });
 });

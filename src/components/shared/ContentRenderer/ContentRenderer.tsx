@@ -69,6 +69,12 @@ export interface ContentRendererProps {
   commentsProps?: Partial<ReactoryCommentsProps>;
 
   /**
+   * Whether to automatically mount embedded <reactory /> component tags into live React elements.
+   * Defaults to true for ContentRenderer.
+   */
+  mountComponents?: boolean;
+
+  /**
    * Container element type to wrap the renderer
    * @default 'Box'
    */
@@ -232,7 +238,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     onCommentAdded,
   } = props;
 
-  const { renderContent } = useContentRender(reactory);
+  const { renderContent } = useContentRender(reactory, { mountComponents: props.mountComponents ?? true });
   const { Material } = typeof reactory?.getComponents === 'function'
     ? reactory.getComponents<{
         Material: Reactory.Client.Web.IMaterialModule;
@@ -565,7 +571,38 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
       <Box
         ref={contentBodyRef}
         className="reactory-content-body"
-        sx={{ width: '100%', position: 'relative' }}
+        sx={{
+          width: '100%',
+          position: 'relative',
+          '& table': {
+            width: '100%',
+            borderCollapse: 'collapse',
+            my: 2,
+            fontSize: '0.875rem',
+            '& th, & td': {
+              border: (t: Theme) => `1px solid ${t.palette.divider}`,
+              p: 1.25,
+              textAlign: 'left',
+            },
+            '& th': {
+              backgroundColor: (t: Theme) => t.palette.action.hover,
+              fontWeight: 600,
+            },
+            '& tr:nth-of-type(even) td': {
+              backgroundColor: (t: Theme) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
+            },
+          },
+          '& img': {
+            maxWidth: '100%',
+            height: 'auto',
+            borderRadius: 1,
+          },
+          '& hr': {
+            border: 'none',
+            borderTop: (t: Theme) => `1px solid ${t.palette.divider}`,
+            my: 2,
+          },
+        }}
       >
         {/* Floating action button on text selection */}
         {selectionButtonPos && (

@@ -25,8 +25,8 @@ const MobileBottomHeader: React.FC<HeaderProps> = ({ reactory }) => {
   const title = reactory.i18n.t(apiStatus.applicationName);
   
   // Extract bottom nav items
-  const bottomMenu = apiStatus.menus?.find((m: any) => m.target === 'bottom-nav');
-  const menuItems = bottomMenu ? bottomMenu.entries : [];
+  const bottomMenu = apiStatus.menus?.find((m: any) => m.target === 'bottom-nav' && m.enabled !== false);
+  const menuItems = bottomMenu ? (bottomMenu.entries || []).filter((item: any) => item.enabled !== false) : [];
   
   // Find current index based on route
   const getCurrentIndex = () => {
