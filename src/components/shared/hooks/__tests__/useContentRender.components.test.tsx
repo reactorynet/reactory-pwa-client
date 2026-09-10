@@ -165,6 +165,33 @@ describe('component mounting through useContentRender', () => {
       expect(screen.getByTestId('label')).toHaveTextContent('FromHtml');
       expect(screen.getByTestId('host').textContent).toContain('Some html');
     });
+
+    it('renders HTML paragraph tags as true HTML elements without leaking raw tags', () => {
+      const { container } = render(
+        <Host content={'<p>Reactor is an Agentic framework built on top the Reactory platform.</p>'} />
+      );
+      const p = container.querySelector('p');
+      expect(p).toBeInTheDocument();
+      expect(p).toHaveTextContent('Reactor is an Agentic framework built on top the Reactory platform.');
+      expect(container.textContent).not.toContain('<p>');
+      expect(container.textContent).not.toContain('</p>');
+    });
+
+    it('renders HTML paragraphs alongside mounted components without escaping HTML', () => {
+      const { container } = render(
+        <Host
+          content={
+            '<p>Reactor is an Agentic framework built on top the Reactory platform.</p>\n' +
+            '<reactory reactory-component="core.Label@1.0.0" reactory-props-text="Launch App" />'
+          }
+        />
+      );
+      const p = container.querySelector('p');
+      expect(p).toBeInTheDocument();
+      expect(p).toHaveTextContent('Reactor is an Agentic framework built on top the Reactory platform.');
+      expect(container.textContent).not.toContain('<p>');
+      expect(screen.getByTestId('label')).toHaveTextContent('Launch App');
+    });
   });
 
   describe('plain text content', () => {
@@ -393,7 +420,7 @@ describe('component mounting through useContentRender', () => {
       expect(table).toBeInTheDocument();
       expect(screen.getByTestId('label')).toHaveTextContent('Table Active');
 
-      const td = container.querySelector('td');
+      const td = container.querySelectorAll('td')[1];
       expect(td).toContainElement(screen.getByTestId('label'));
     });
 
@@ -409,7 +436,7 @@ describe('component mounting through useContentRender', () => {
       expect(table).toBeInTheDocument();
       expect(screen.queryByTestId('label')).not.toBeInTheDocument();
 
-      const td = container.querySelector('td');
+      const td = container.querySelectorAll('td')[1];
       expect(td).toBeInTheDocument();
       expect(td?.textContent).toContain('<reactory reactory-component="core.Label@1.0.0"');
     });
