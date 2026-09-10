@@ -590,3 +590,133 @@ export const arePanelPropsEqual = <P extends { open?: boolean }>(prev: P, next: 
   if (prevKeys.length !== nextKeys.length) return false;
   return prevKeys.every((key) => Object.is(prev[key], next[key]));
 };
+
+/**
+ * Deterministic comment thread contextId for a chat message:
+ * `reactor_chat_${sessionId}_${historyEntryId}`
+ */
+export const getChatMessageCommentContextId = (sessionId: string, messageId: string): string => {
+  return `reactor_chat_${sessionId}_${messageId}`;
+};
+
+export interface ChatCommentHighlightItem {
+  id: string;
+  quote?: string;
+  text?: string;
+  who?: {
+    firstName?: string;
+    lastName?: string;
+    [key: string]: any;
+  };
+  removed?: boolean;
+}
+
+/**
+ * Safely applies in-body highlight markers in the rendered DOM
+ * for chat message text annotations.
+ */
+export const applyDomHighlights = (
+  container: HTMLElement,
+  comments: ChatCommentHighlightItem[],
+  activeCommentId?: string,
+  onCommentClick?: (commentId: string) => void
+): void => {
+  if (!container) return;
+
+  // 1. Clear any existing injected marks
+  const existingMarks = container.querySelectorAll('mark.reactory-comment-highlight');
+  existingMarks.forEach((mark) => {
+    const parent = mark.parentNode;
+    if (parent) {
+      while (mark.firstChild) {
+        parent.insertBefore(mark.firstChild, mark);
+      }
+      parent.removeChild(mark);
+      parent.normalize();
+    }
+  });
+
+  const commentsWithQuotes = (comments || []).filter(
+    (c) => !c.removed && c.quote && c.quote.trim().length > 1
+  );
+
+  if (commentsWithQuotes.length === 0) return;
+
+  // Sort longest quote first
+  const sorted = [...commentsWithQuotes].sort((a, b) => b.quote!.length - a.quote!.length);
+
+  for (const comment of sorted) {
+    const quote = comment.quote!.trim();
+    if (!quote) continue;
+
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          const parentTag = node.parentElement?.tagName.toLowerCase();
+          if (parentTag === 'code' || parentTag === 'pre' || parentTag === 'script' || parentTag === 'style') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.parentElement?.classList?.contains('reactory-comment-highlight')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return node.nodeValue && node.nodeValue.toLowerCase().includes(quote.toLowerCase())
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_SKIP;
+        },
+      }
+    );
+
+    const textNodes: Text[] = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      textNodes.push(currentNode as Text);
+      currentNode = walker.nextNode();
+    }
+
+    for (const textNode of textNodes) {
+      const text = textNode.nodeValue || '';
+      const index = text.toLowerCase().indexOf(quote.toLowerCase());
+      if (index >= 0) {
+        const matchedText = text.substring(index, index + quote.length);
+        const mark = document.createElement('mark');
+        mark.className = `reactory-comment-highlight${activeCommentId === comment.id ? ' active' : ''}`;
+        mark.setAttribute('data-comment-id', comment.id);
+        mark.title = `${comment.who?.firstName || 'User'}: ${comment.text || ''}`;
+        mark.textContent = matchedText;
+
+        mark.style.backgroundColor = activeCommentId === comment.id
+          ? 'rgba(255, 179, 0, 0.55)'
+          : 'rgba(255, 235, 59, 0.45)';
+        mark.style.color = 'inherit';
+        mark.style.borderRadius = '0';
+        mark.style.padding = '0';
+        mark.style.margin = '0';
+        mark.style.lineHeight = 'inherit';
+        mark.style.borderBottom = '2px solid #f57f17';
+        mark.style.cursor = 'pointer';
+        mark.style.display = 'inline';
+
+        mark.onclick = (e) => {
+          e.stopPropagation();
+          if (onCommentClick) onCommentClick(comment.id);
+        };
+
+        const afterText = text.substring(index + quote.length);
+        const beforeText = text.substring(0, index);
+
+        const parent = textNode.parentNode;
+        if (parent) {
+          if (afterText) {
+            parent.insertBefore(document.createTextNode(afterText), textNode.nextSibling);
+          }
+          parent.insertBefore(mark, textNode.nextSibling);
+          textNode.nodeValue = beforeText;
+        }
+        break; // Highlight first match per quote
+      }
+    }
+  }
+};
+

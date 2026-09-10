@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import ChatList from '../hooks/useScrollToBottom';
 import { UXChatMessage } from '../types';
 
+jest.mock('../components/TextToSpeechButton', () => () => <button>TTS</button>);
+
 const mockReactory: any = {
   getUser: () => ({ loggedIn: { user: { id: 'user-1', firstName: 'Werner' } } }),
   getTheme: () => ({
@@ -18,6 +20,7 @@ const mockReactory: any = {
   }),
   getComponents: () => ({
     React,
+    Markdown: ({ children }: any) => <div>{children}</div>,
     Material: {
       MaterialCore: {
         Button: React.forwardRef((props: any, ref: any) => <button ref={ref} {...props} />),
@@ -44,6 +47,7 @@ const mockReactory: any = {
       },
     },
   }),
+  getComponent: (name: string) => (props: any) => <div>{name}</div>,
   i18n: {
     t: (key: string, opts?: any) => opts?.defaultValue || key,
   },

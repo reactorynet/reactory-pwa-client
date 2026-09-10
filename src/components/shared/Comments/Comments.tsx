@@ -161,10 +161,7 @@ const formatCommentDate = (dateVal: string | Date | undefined): string => {
   });
 };
 
-/**
- * Single Comment Card with recursive replies
- */
-const CommentItem: React.FC<{
+export interface CommentItemProps {
   comment: ReactoryCommentItem;
   currentUserId?: string;
   isAdmin?: boolean;
@@ -179,7 +176,12 @@ const CommentItem: React.FC<{
   onDelete: (commentId: string) => void;
   onUpvote: (commentId: string) => void;
   renderContent: (content: string) => React.ReactNode;
-}> = ({
+}
+
+/**
+ * Single Comment Card with recursive replies (memoized for performance)
+ */
+const CommentItem: React.FC<CommentItemProps> = React.memo(({
   comment,
   currentUserId,
   isAdmin,
@@ -375,7 +377,7 @@ const CommentItem: React.FC<{
       )}
     </Box>
   );
-};
+});
 
 /**
  * Universal Reactory Comments Component
@@ -694,6 +696,22 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
     }
   };
 
+  const handleStartReply = useCallback((id: string) => {
+    setReplyingToId(id);
+    setEditingId(null);
+  }, []);
+
+  const handleStartEdit = useCallback((id: string, text: string) => {
+    setEditingId(id);
+    setReplyingToId(null);
+    setCommentText(text);
+  }, []);
+
+  const handleStartDelete = useCallback((id: string) => {
+    setCommentToDelete(id);
+    setDeleteDialogOpen(true);
+  }, []);
+
   return (
     <Box sx={{ width: '100%' }}>
       {title && (
@@ -835,19 +853,9 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
               allowReactions={allowReactions}
               expandedReplies={expandedReplies}
               toggleReplies={toggleReplies}
-              onReply={(id) => {
-                setReplyingToId(id);
-                setEditingId(null);
-              }}
-              onEdit={(id, text) => {
-                setEditingId(id);
-                setReplyingToId(null);
-                setCommentText(text);
-              }}
-              onDelete={(id) => {
-                setCommentToDelete(id);
-                setDeleteDialogOpen(true);
-              }}
+              onReply={handleStartReply}
+              onEdit={handleStartEdit}
+              onDelete={handleStartDelete}
               onUpvote={handleUpvote}
               renderContent={renderContent}
             />

@@ -1015,7 +1015,11 @@ export const useContentRender = (
           if (remainder.trim()) {
             subParts.push(
               <div style={{ width: '100%', overflow: 'auto' }} key={`md-${idx}-sub-${subIdx++}`}>
-                <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
+                {Markdown ? (
+                  <Markdown components={markdownCodeComponents}>{replaceMathSymbols(remainder)}</Markdown>
+                ) : (
+                  replaceMathSymbols(remainder)
+                )}
               </div>
             );
           }

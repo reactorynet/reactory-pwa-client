@@ -1,8 +1,10 @@
-import { Tooltip, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, keyframes } from '@mui/material';
+import React from 'react';
+import { Tooltip, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Badge, Drawer, keyframes } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
-import { jsonToYaml } from '../utils';
+import { jsonToYaml, getChatMessageCommentContextId, applyDomHighlights } from '../utils';
+import { Comments, ReactoryCommentItem } from '@reactory/client-core/components/shared/Comments/Comments';
 import TextToSpeechButton from '../components/TextToSpeechButton';
 
 const isProcessingMessage = (message: UXChatMessage) =>
@@ -84,12 +86,190 @@ const pulse = keyframes`
 const isErrorMessage = (message: UXChatMessage) =>
   message.role === 'error';
 
+const EMPTY_COMMENTS: ReactoryCommentItem[] = [];
+
+interface AssistantMessageBodyProps {
+  message: UXChatMessage;
+  messageText: string;
+  comments: ReactoryCommentItem[];
+  activeCommentId?: string;
+  enableComments: boolean;
+  onCommentClick: (commentId: string) => void;
+  onStartCommentOnSelection: (quote: string) => void;
+  memoizedRenderContent: (content: string) => React.ReactNode;
+  Button: any;
+  Paper: any;
+  Box: any;
+  Icon: any;
+  Typography: any;
+}
+
+const AssistantMessageBody: React.FC<AssistantMessageBodyProps> = React.memo(({
+  message,
+  messageText,
+  comments,
+  activeCommentId,
+  enableComments,
+  onCommentClick,
+  onStartCommentOnSelection,
+  memoizedRenderContent,
+  Button,
+  Paper,
+  Box,
+  Icon,
+  Typography,
+}) => {
+  const contentBodyRef = React.useRef<HTMLDivElement>(null);
+  const [selectionButtonPos, setSelectionButtonPos] = React.useState<{ top: number; left: number } | null>(null);
+  const [pendingSelectionText, setPendingSelectionText] = React.useState<string>('');
+
+  const onCommentClickRef = React.useRef(onCommentClick);
+  onCommentClickRef.current = onCommentClick;
+
+  // Handle in-body DOM highlights - only run when text, comments, or activeCommentId changes
+  React.useEffect(() => {
+    if (contentBodyRef.current && enableComments && (comments.length > 0 || contentBodyRef.current.querySelector('mark.reactory-comment-highlight'))) {
+      applyDomHighlights(
+        contentBodyRef.current,
+        comments,
+        activeCommentId,
+        (commentId) => onCommentClickRef.current?.(commentId)
+      );
+    }
+  }, [messageText, comments, activeCommentId, enableComments]);
+
+  // Handle text selection in assistant content
+  const handleSelection = React.useCallback(() => {
+    if (!enableComments) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+      setSelectionButtonPos((prev) => (prev !== null ? null : prev));
+      setPendingSelectionText((prev) => (prev !== '' ? '' : prev));
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (selectedText.length < 2) {
+      setSelectionButtonPos((prev) => (prev !== null ? null : prev));
+      return;
+    }
+
+    const container = contentBodyRef.current;
+    if (!container) return;
+
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    const isInsideContainer = Boolean(
+      (anchorNode && container.contains(anchorNode)) ||
+      (focusNode && container.contains(focusNode)) ||
+      (anchorNode?.parentElement && container.contains(anchorNode.parentElement)) ||
+      (focusNode?.parentElement && container.contains(focusNode.parentElement))
+    );
+
+    if (isInsideContainer) {
+      try {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        setPendingSelectionText(selectedText);
+        setSelectionButtonPos({
+          top: Math.max(0, rect.top - containerRect.top - 44),
+          left: Math.max(10, rect.left - containerRect.left + rect.width / 2),
+        });
+      } catch {
+        // ignore range error
+      }
+    } else {
+      setSelectionButtonPos((prev) => (prev !== null ? null : prev));
+      setPendingSelectionText((prev) => (prev !== '' ? '' : prev));
+    }
+  }, [enableComments]);
+
+  React.useEffect(() => {
+    const handleMouseUp = () => {
+      setTimeout(handleSelection, 20);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('selectionchange', handleSelection);
+
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('selectionchange', handleSelection);
+    };
+  }, [handleSelection]);
+
+  const handleButtonClick = () => {
+    if (!pendingSelectionText) return;
+    onStartCommentOnSelection(pendingSelectionText);
+    setSelectionButtonPos(null);
+    setPendingSelectionText('');
+    window.getSelection()?.removeAllRanges();
+  };
+
+  return (
+    <Box
+      ref={contentBodyRef}
+      className="reactory-chat-message-body"
+      sx={{
+        width: '100%',
+        position: 'relative',
+      }}
+    >
+      {selectionButtonPos && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: selectionButtonPos.top,
+            left: selectionButtonPos.left,
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+          }}
+        >
+          <Paper
+            elevation={4}
+            sx={{
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'primary.main',
+              p: 0.5,
+            }}
+          >
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<Icon fontSize="small">add_comment</Icon>}
+              onMouseDown={(e: any) => e.preventDefault()}
+              onClick={handleButtonClick}
+              sx={{ textTransform: 'none', py: 0.5, px: 1.5, fontWeight: 600 }}
+            >
+              Comment on selection
+            </Button>
+          </Paper>
+        </Box>
+      )}
+
+      {message.content && (
+        <Typography variant="body1" component="div">
+          {memoizedRenderContent(messageText)}
+        </Typography>
+      )}
+    </Box>
+  );
+});
+
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
   messages: UXChatMessage[],
   personas?: IAIPersona[],
   selectedPersona?: IAIPersona | null,
   chatState?: ChatState,
+  commentLayout?: 'inline' | 'drawer',
+  enableComments?: boolean,
   onRetryMessage?: (message: UXChatMessage) => void,
   onRateMessage?: (message: UXChatMessage, rating: 'up' | 'down') => void,
   onCopyMessage?: (message: UXChatMessage) => void,
@@ -98,14 +278,132 @@ const ChatList = (props: {
 }) => {
 
   const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError, onDeleteToolCall } = props;
+  const enableComments = props.enableComments !== false && Boolean(chatState?.id);
+  const commentLayout = props.commentLayout || 'inline';
+
+  // Comments management
+  const [openCommentsMessageId, setOpenCommentsMessageId] = React.useState<string | null>(null);
+  const [activeCommentId, setActiveCommentId] = React.useState<string | undefined>(undefined);
+  const [selectedQuoteMap, setSelectedQuoteMap] = React.useState<Record<string, string>>({});
+  const [commentsMap, setCommentsMap] = React.useState<Record<string, ReactoryCommentItem[]>>({});
+  const fetchedMessageIdsRef = React.useRef<Set<string>>(new Set());
+
+  const fetchCommentsForMessage = React.useCallback(async (messageId: string) => {
+    if (!chatState?.id || !messageId) return;
+    const contextId = getChatMessageCommentContextId(chatState.id, messageId);
+    try {
+      if (typeof reactory?.graphqlQuery === 'function') {
+        const result = await reactory.graphqlQuery<{
+          getCommentsByContext: {
+            comments: ReactoryCommentItem[];
+          };
+        }, { context: string; contextId: string }>(
+          `
+          query GetCommentsByContext($context: String!, $contextId: String!) {
+            getCommentsByContext(context: $context, contextId: $contextId) {
+              comments {
+                id
+                text
+                when
+                quote
+                who {
+                  id
+                  firstName
+                  lastName
+                  avatar
+                  email
+                }
+                removed
+              }
+            }
+          }
+          `,
+          { context: 'ReactorChat', contextId }
+        );
+
+        if (result?.data?.getCommentsByContext?.comments) {
+          setCommentsMap((prev) => ({
+            ...prev,
+            [messageId]: result.data.getCommentsByContext.comments,
+          }));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [chatState?.id, reactory]);
+
+  React.useEffect(() => {
+    if (!enableComments || !chatState?.id) return;
+    const assistantMsgIds = messages
+      .filter((m) => m.role === 'assistant' && m.id)
+      .map((m) => m.id as string);
+
+    // Only fetch for message IDs that haven't been fetched yet
+    const unfetchedIds = assistantMsgIds.filter((id) => !fetchedMessageIdsRef.current.has(id));
+    if (unfetchedIds.length === 0) return;
+
+    unfetchedIds.forEach((id) => {
+      fetchedMessageIdsRef.current.add(id);
+      fetchCommentsForMessage(id);
+    });
+  }, [enableComments, chatState?.id, messages, fetchCommentsForMessage]);
+
+  React.useEffect(() => {
+    if (!enableComments || !reactory?.on || !chatState?.id) return;
+
+    const prefix = `reactor_chat_${chatState.id}_`;
+
+    const handleCommentEvent = (evt: any) => {
+      const contextId = evt?.contextId || evt?.ticketId;
+      if (typeof contextId === 'string' && contextId.startsWith(prefix)) {
+        const messageId = contextId.substring(prefix.length);
+        if (messageId) {
+          fetchCommentsForMessage(messageId);
+        }
+      }
+    };
+
+    reactory.on('core.CommentAdded', handleCommentEvent);
+    reactory.on('core.CommentUpdated', handleCommentEvent);
+    reactory.on('core.CommentDeleted', handleCommentEvent);
+
+    return () => {
+      reactory.off('core.CommentAdded', handleCommentEvent);
+      reactory.off('core.CommentUpdated', handleCommentEvent);
+      reactory.off('core.CommentDeleted', handleCommentEvent);
+    };
+  }, [enableComments, reactory, chatState?.id, fetchCommentsForMessage]);
+
+  const handleCommentActivate = React.useCallback((messageId: string, commentId: string) => {
+    setActiveCommentId(commentId);
+    setOpenCommentsMessageId(messageId);
+
+    setTimeout(() => {
+      const el = document.getElementById(`comment-${commentId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  }, []);
+
+  const toggleComments = React.useCallback((messageId: string) => {
+    setOpenCommentsMessageId((prev) => (prev === messageId ? null : messageId));
+  }, []);
+
+  const handleStartContextualComment = React.useCallback((messageId: string, quote: string) => {
+    setSelectedQuoteMap((prev) => ({
+      ...prev,
+      [messageId]: quote,
+    }));
+    setOpenCommentsMessageId(messageId);
+  }, []);
 
   const {
-    React,
     Material
   } = reactory.getComponents<{
-    React: Reactory.React,
     Material: Reactory.Client.Web.IMaterialModule
-  }>(["react.React", "material-ui.Material"]);
+  }>(["material-ui.Material"]);
 
   // Persistent toggle for mounting embedded Reactory components in chat responses
   const [mountComponents, setMountComponents] = React.useState<boolean>(() => {
@@ -1144,7 +1442,7 @@ const ChatList = (props: {
                   sx={{
                     p: 0.5,
                     maxWidth: '95%',
-                    backdropFilter: 'blur(10px)',
+                    backdropFilter: openCommentsMessageId === message.id ? 'none' : 'blur(10px)',
                     backgroundColor: getMessageBackgroundColor(message),
                   }}
                 >
@@ -1162,11 +1460,25 @@ const ChatList = (props: {
                       </Avatar>
                     </Grid>
                     <Grid item xs>
-                      {message.content && (
-                        <Typography variant="body1">
-                          {memoizedRenderContent(typeof message.content === 'string' ? message.content : getMessageText(message))}
-                        </Typography>
-                      )}
+                      <AssistantMessageBody
+                        message={message}
+                        messageText={typeof message.content === 'string' ? message.content : getMessageText(message)}
+                        comments={message.id && commentsMap[message.id] ? commentsMap[message.id] : EMPTY_COMMENTS}
+                        activeCommentId={activeCommentId}
+                        enableComments={enableComments}
+                        onCommentClick={(commentId) => {
+                          if (message.id) handleCommentActivate(message.id, commentId);
+                        }}
+                        onStartCommentOnSelection={(quote) => {
+                          if (message.id) handleStartContextualComment(message.id, quote);
+                        }}
+                        memoizedRenderContent={memoizedRenderContent}
+                        Button={Button}
+                        Paper={Paper}
+                        Box={Box}
+                        Icon={Icon}
+                        Typography={Typography}
+                      />
                       {/* Render images from content-parts (vision model messages) */}
                       {Array.isArray(message.content) && (message.content as any[]).some((p) => p?.type === 'image_url') && (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
@@ -1278,9 +1590,63 @@ const ChatList = (props: {
                                 <Icon sx={{ fontSize: '1rem' }}>{mountComponents ? 'widgets' : 'widgets_outlined'}</Icon>
                               </IconButton>
                             </Tooltip>
+                            {/* Comment button & count badge */}
+                            {enableComments && message.id && (
+                              <Tooltip title={openCommentsMessageId === message.id ? "Hide comments" : "Comments"}>
+                                <IconButton
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.875rem',
+                                    color: openCommentsMessageId === message.id || ((commentsMap[message.id]?.length || 0) > 0) ? 'primary.main' : 'text.secondary',
+                                  }}
+                                  onClick={() => toggleComments(message.id as string)}
+                                  aria-label={`Comments (${commentsMap[message.id]?.length || 0})`}
+                                >
+                                  <Badge badgeContent={commentsMap[message.id]?.length || 0} color="primary">
+                                    <Icon sx={{ fontSize: '1rem' }}>
+                                      {(commentsMap[message.id]?.length || 0) > 0 ? 'chat_bubble' : 'chat_bubble_outline'}
+                                    </Icon>
+                                  </Badge>
+                                </IconButton>
+                              </Tooltip>
+                            )}
                           </Box>
                         )}
                       </Box>
+                      {/* Expandable Comments Section (Inline Collapse) */}
+                      {commentLayout !== 'drawer' && enableComments && message.id && (
+                        <Collapse in={openCommentsMessageId === message.id} timeout={process.env.NODE_ENV === 'test' ? 0 : 'auto'} unmountOnExit>
+                          <Box
+                            sx={{
+                              mt: 1.5,
+                              pt: 1.5,
+                              borderTop: 1,
+                              borderColor: 'divider',
+                              width: '100%',
+                            }}
+                          >
+                            <Comments
+                              context="ReactorChat"
+                              contextId={getChatMessageCommentContextId(chatState?.id || '', message.id)}
+                              comments={message.id && commentsMap[message.id] ? commentsMap[message.id] : undefined}
+                              title="Comments"
+                              placeholder={selectedQuoteMap[message.id] ? "Comment on selected text..." : "Add a comment on this response..."}
+                              selectedQuote={selectedQuoteMap[message.id]}
+                              onClearQuote={() => {
+                                setSelectedQuoteMap((prev) => {
+                                  const next = { ...prev };
+                                  delete next[message.id as string];
+                                  return next;
+                                });
+                              }}
+                              onCommentAdded={() => {
+                                fetchCommentsForMessage(message.id as string);
+                              }}
+                              reactory={reactory}
+                            />
+                          </Box>
+                        </Collapse>
+                      )}
                     </Grid>
                   </Grid>
                 </Paper>
@@ -1715,6 +2081,49 @@ const ChatList = (props: {
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+      {/* Slide-out Drawer mode for comments */}
+      {commentLayout === 'drawer' && enableComments && openCommentsMessageId && (
+        <Drawer
+          anchor="right"
+          open={Boolean(openCommentsMessageId)}
+          onClose={() => setOpenCommentsMessageId(null)}
+          PaperProps={{
+            sx: {
+              width: { xs: '100%', sm: 480 },
+              p: 3,
+              bgcolor: 'background.paper',
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" fontWeight={600}>
+              Message Comments
+            </Typography>
+            <IconButton size="small" onClick={() => setOpenCommentsMessageId(null)}>
+              <Icon fontSize="small">close</Icon>
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          <Comments
+            context="ReactorChat"
+            contextId={getChatMessageCommentContextId(chatState?.id || '', openCommentsMessageId)}
+            title="Comments"
+            placeholder={selectedQuoteMap[openCommentsMessageId] ? "Comment on selected text..." : "Add a comment on this response..."}
+            selectedQuote={selectedQuoteMap[openCommentsMessageId]}
+            onClearQuote={() => {
+              setSelectedQuoteMap((prev) => {
+                const next = { ...prev };
+                delete next[openCommentsMessageId];
+                return next;
+              });
+            }}
+            onCommentAdded={() => {
+              fetchCommentsForMessage(openCommentsMessageId);
+            }}
+            reactory={reactory}
+          />
+        </Drawer>
       )}
     </div>
   );
