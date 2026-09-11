@@ -262,6 +262,16 @@ const AssistantMessageBody: React.FC<AssistantMessageBodyProps> = React.memo(({
   );
 });
 
+/**
+ * Default trailing window of rendered chat display items.
+ *
+ * A conversation returns a bounded history window from the server (see
+ * ReactorConversationLoadOptions.historyLimit), but even that can be larger
+ * than the browser should re-lay-out on every streaming flush. Rendering only
+ * the tail keeps a long conversation cheap; older items are one click away.
+ */
+const DEFAULT_RENDERED_ITEMS = 60;
+
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
   messages: UXChatMessage[],
@@ -275,11 +285,34 @@ const ChatList = (props: {
   onCopyMessage?: (message: UXChatMessage) => void,
   onDismissError?: (message: UXChatMessage) => void,
   onDeleteToolCall?: (message: UXChatMessage, callId: string) => void,
+  /**
+   * Maximum number of display items rendered at once. Defaults to
+   * DEFAULT_RENDERED_ITEMS. Older items are revealed by the "show earlier"
+   * control rather than being laid out up front.
+   */
+  maxRenderedItems?: number,
+  /**
+   * True when the server still holds history older than the loaded window, so
+   * the "show earlier" control should remain available even once every locally
+   * held item is visible.
+   */
+  hasServerEarlier?: boolean,
+  /**
+   * Requests the next page of older history from the server. Invoked by the
+   * "show earlier" control once the locally held items are exhausted.
+   */
+  onLoadEarlier?: () => void | Promise<void>,
 }) => {
 
   const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError, onDeleteToolCall } = props;
   const enableComments = props.enableComments !== false && Boolean(chatState?.id);
   const commentLayout = props.commentLayout || 'inline';
+
+  // How many trailing display items are currently rendered. Bounds the work a
+  // streaming flush has to do: a token update re-renders the visible tail, not
+  // the entire conversation.
+  const renderBatchSize = Math.max(1, props.maxRenderedItems ?? DEFAULT_RENDERED_ITEMS);
+  const [renderedCount, setRenderedCount] = React.useState<number>(renderBatchSize);
 
   // Comments management
   const [openCommentsMessageId, setOpenCommentsMessageId] = React.useState<string | null>(null);
@@ -936,6 +969,14 @@ const ChatList = (props: {
     });
   }
 
+  const hiddenEarlierCount = Math.max(0, displayItems.length - renderedCount);
+  const showEarlierControl =
+    hiddenEarlierCount > 0 || Boolean(props.hasServerEarlier);
+  const visibleItems =
+    hiddenEarlierCount > 0
+      ? displayItems.slice(displayItems.length - renderedCount)
+      : displayItems;
+
   return (
     <div
       ref={listRef}
@@ -949,10 +990,54 @@ const ChatList = (props: {
         scrollbarWidth: 'none',        
       }}
     >
+      {showEarlierControl && (
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-label="Show earlier messages"
+          onClick={() => {
+            // Once every locally held item is visible, ask the server for the
+            // previous page, if it has one.
+            if (hiddenEarlierCount <= 0 && props.onLoadEarlier) {
+              void props.onLoadEarlier();
+              return;
+            }
+            setRenderedCount((prev) => prev + renderBatchSize);
+          }}
+          onKeyDown={(event: React.KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              (event.currentTarget as HTMLElement).click();
+            }
+          }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.5,
+            py: 0.75,
+            my: 0.5,
+            cursor: 'pointer',
+            borderRadius: 1,
+            color: 'text.secondary',
+            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            '&:hover': {
+              backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+            },
+          }}
+        >
+          <Icon sx={{ fontSize: '1rem' }}>keyboard_double_arrow_up</Icon>
+          <Typography variant="caption" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+            {hiddenEarlierCount > 0
+              ? `Show earlier messages (${hiddenEarlierCount})`
+              : 'Show earlier messages'}
+          </Typography>
+        </Box>
+      )}
       <List sx={{
         padding: 0.5,
       }}>
-        {displayItems.map((item) => {
+        {visibleItems.map((item) => {
           const { message } = item;
           const idx = item.messageIndex;
 
@@ -2129,4 +2214,4 @@ const ChatList = (props: {
   );
 };
 
-export default ChatList;
+export default React.memo(ChatList);

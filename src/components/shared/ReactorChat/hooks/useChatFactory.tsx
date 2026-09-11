@@ -2943,6 +2943,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             files: (result as any).files ?? prevState.files,
             folders: (result as any).folders ?? prevState.folders,
             sidePanelState: (result as any).sidePanelState ?? null,
+            // Window metadata for the bounded history read, so the list can
+            // offer "show earlier" without a separate round trip.
+            historyWindow: (result as any).historyWindow ?? null,
             updated: new Date(),
           }));
 
@@ -4058,6 +4061,85 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     };
   }, []);
 
+  const loadingEarlierHistoryRef = React.useRef<boolean>(false);
+
+  /**
+   * Fetch the page of history immediately older than the loaded window and
+   * prepend it. Pages are system-free and user-anchored on the server, and any
+   * item already held locally is dropped, so a page can never duplicate the
+   * transcript. Driven by the ChatList "show earlier" control.
+   */
+  const loadEarlierHistory = React.useCallback(async () => {
+    const sessionId = chatState.id;
+    const before = chatState.historyWindow?.oldestId;
+    if (!sessionId || !before) return;
+    if (loadingEarlierHistoryRef.current) return;
+    loadingEarlierHistoryRef.current = true;
+
+    try {
+      const response = await reactory.graphqlQuery<
+        {
+          ReactorConversationHistory: {
+            id: string;
+            items: UXChatMessage[];
+            window: any;
+          } | null;
+        },
+        { id: string; before: string; limit: number }
+      >(
+        `
+        query ReactorConversationHistory($id: String!, $before: String, $limit: Int) {
+          ReactorConversationHistory(id: $id, before: $before, limit: $limit) {
+            id
+            items {
+              id
+              role
+              content
+              thinking
+              timestamp
+              images
+              tool_call_id
+              tool_calls { id type function { name arguments } status }
+              tool_results { id name content timestamp }
+              tool_errors { id name error timestamp }
+            }
+            window { total returned hasMoreBefore oldestId newestId }
+          }
+        }
+        `,
+        { id: sessionId, before, limit: 100 }
+      );
+
+      const page = response?.data?.ReactorConversationHistory;
+      if (!page || !Array.isArray(page.items)) return;
+
+      setChatState((prevState) => {
+        const existingIds = new Set(
+          (prevState.history || []).map((m: any) => String(m._id ?? m.id))
+        );
+        const older = page.items.filter(
+          (m: any) => !existingIds.has(String(m._id ?? m.id))
+        );
+        if (older.length === 0) {
+          return {
+            ...prevState,
+            historyWindow: page.window ?? prevState.historyWindow,
+          };
+        }
+        return {
+          ...prevState,
+          history: [...older, ...(prevState.history || [])],
+          historyWindow: page.window ?? prevState.historyWindow,
+        };
+      });
+    } catch (error) {
+      reactory.error('ChatFactory: loadEarlierHistory failed', error);
+      onError(error as Error);
+    } finally {
+      loadingEarlierHistoryRef.current = false;
+    }
+  }, [chatState.id, chatState.historyWindow?.oldestId, reactory, setChatState, onError]);
+
   return {
     busy,
     agentBusy,
@@ -4065,6 +4147,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     newChat,
     sendMessage,
     loadChat,
+    loadEarlierHistory,
     fetchConversationMeta,
     listChats: fetchConversations,
     listRecentChats: fetchRecentConversations,

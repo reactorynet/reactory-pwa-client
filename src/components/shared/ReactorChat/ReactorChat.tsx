@@ -333,6 +333,7 @@ export default (props) => {
     pinGraphPerspectiveForChat,
     newChat,
     loadChat,
+    loadEarlierHistory = (async () => {}) as () => Promise<void>,
     fetchConversationMeta,
     listChats,
     listRecentChats,
@@ -2495,6 +2496,8 @@ export default (props) => {
                   onCopyMessage={handleCopyMessage}
                   onDismissError={handleDismissError}
                   onDeleteToolCall={handleDeleteToolCall}
+                  hasServerEarlier={Boolean(chatState?.historyWindow?.hasMoreBefore)}
+                  onLoadEarlier={loadEarlierHistory}
                 />
               )}
             </Paper>

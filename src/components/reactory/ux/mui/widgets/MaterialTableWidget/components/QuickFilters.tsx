@@ -8,6 +8,8 @@ export interface QuickFiltersProps {
   variant?: 'buttons' | 'chips';
   multiSelect?: boolean;
   showClearButton?: boolean;
+  /** Controlled selection; forwarded to useQuickFilters so it survives re-renders. */
+  activeFilters?: string[];
 }
 
 /**
@@ -29,11 +31,13 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
   variant = 'buttons',
   multiSelect = false,
   showClearButton = true,
+  activeFilters: controlledActiveFilters,
 }) => {
   const { activeFilters, toggleFilter, clearFilters, isActive } = useQuickFilters({
     filters,
     multiSelect,
     onFilterChange,
+    activeFilters: controlledActiveFilters,
   });
 
   const hasActiveFilters = activeFilters.length > 0;
@@ -51,6 +55,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
               badgeContent={hasBadge ? filter.badge : undefined}
               color={filter.color || 'primary'}
               max={999}
+              showZero={typeof filter.badge === 'number'}
             >
               <Chip
                 label={filter.label}
@@ -97,6 +102,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
             badgeContent={hasBadge ? filter.badge : undefined}
             color={filter.color || 'primary'}
             max={999}
+            showZero={typeof filter.badge === 'number'}
           >
             <Button
               variant={active ? 'contained' : 'outlined'}

@@ -160,9 +160,16 @@ interface UserAvatarOptions {
   style?: React.CSSProperties;
   
   /**
-   * Click handler
+   * Click handler.
+   *
+   * Accepts either a function or a declarative reference in the form
+   * "componentFqn/method" (the convention already used by
+   * MaterialTableWidget addButtonProps.onClick). The declarative form lets a
+   * uiSchema wire an action without shipping a function, which cannot be
+   * expressed in a JSON schema. String handlers are invoked with
+   * ({ ...props, user }) so table-hosted pickers can read rowData.
    */
-  onClick?: (user: Partial<Reactory.Models.IUser> | null) => void;
+  onClick?: ((user: Partial<Reactory.Models.IUser> | null) => void) | string;
 
   /**
    * User list query to use for the user selector dialog
@@ -348,7 +355,7 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
     if (options.editable) {
       console.log('[UserAvatar] Opening dialog');
       setDialogOpen(true);
-    } else if (options.onClick) {
+    } else if (options.onClick && typeof options.onClick === 'function') {
       options.onClick(user);
     }
   };
@@ -361,7 +368,24 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
     setDialogOpen(false);
     
     if (options.onClick) {
-      options.onClick(selectedUser);
+      if (typeof options.onClick === 'function') {
+        options.onClick(selectedUser);
+      } else if (typeof options.onClick === 'string' && options.onClick.length > 0) {
+        // Declarative handler reference "componentFqn/method". Without this, an editable
+        // picker configured purely from a uiSchema had nothing to call and the selection
+        // was silently discarded (the dialog simply closed).
+        const [componentFqn, methodName] = options.onClick.split('/');
+        const handlerComponent: any = reactory && reactory.getComponent(componentFqn);
+        if (handlerComponent && typeof handlerComponent[methodName] === 'function') {
+          handlerComponent[methodName]({ ...props, user: selectedUser });
+        } else {
+          reactory?.log(
+            `UserAvatar: onClick handler "${options.onClick}" could not be resolved`,
+            { componentFqn, methodName },
+            'warn'
+          );
+        }
+      }
     }
   };
 

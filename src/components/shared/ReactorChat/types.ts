@@ -486,6 +486,19 @@ export type ChatState = {
    * A truncated version of the history of the chat session.
    */
   truncatedHistory?: ReactorConversationHistory
+
+  /**
+   * Window metadata for a bounded history read: how many items the conversation
+   * holds in total, how many were returned, and whether older items remain.
+   * Drives the "show earlier messages" control.
+   */
+  historyWindow?: {
+    total: number;
+    returned: number;
+    hasMoreBefore: boolean;
+    oldestId?: string | null;
+    newestId?: string | null;
+  } | null
   /**
    * Files attached to the chat session
    */

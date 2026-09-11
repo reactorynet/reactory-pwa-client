@@ -44,6 +44,7 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       tokenPressure
       files { id filename mimetype size path }
       folders { name path }
+      historyWindow { total returned hasMoreBefore oldestId newestId }
       parentSessionId
       chats {
         id

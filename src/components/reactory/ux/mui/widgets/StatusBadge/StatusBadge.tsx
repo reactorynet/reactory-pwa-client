@@ -161,6 +161,28 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
     return value || formData || '';
   }, [value, formData]);
 
+  /**
+   * Enumeration values are not cased consistently across the platform: the
+   * persistence layer stores snake_case (`in_progress`) while several UIs and
+   * filter definitions use kebab-case (`in-progress`). Normalising keys for map
+   * lookups means colour/icon maps resolve regardless of which convention
+   * produced the value, instead of silently falling back to a default.
+   */
+  const normalizeKey = (raw: any): string =>
+    String(raw ?? '').trim().toLowerCase().replace(/_/g, '-');
+
+  /** Case- and separator-insensitive lookup against a colour/icon map. */
+  const lookupMapped = (
+    map: { [key: string]: any } | undefined,
+    key: string
+  ): any => {
+    if (!map) return undefined;
+    if (map[key] !== undefined) return map[key];
+    const normalized = normalizeKey(key);
+    const match = Object.keys(map).find((k) => normalizeKey(k) === normalized);
+    return match !== undefined ? map[match] : undefined;
+  };
+
   // Get options from uiSchema
   const options = useMemo((): StatusBadgeOptions => {
     const defaultOptions: StatusBadgeOptions = {
@@ -185,8 +207,9 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
 
   // Get color for current status
   const chipColor = useMemo(() => {
-    if (options.colorMap && options.colorMap[statusValue]) {
-      return options.colorMap[statusValue];
+    const mappedColor = lookupMapped(options.colorMap, statusValue);
+    if (mappedColor) {
+      return mappedColor;
     }
     // Default colors based on common status patterns
     const defaultColors: { [key: string]: string } = {
@@ -199,15 +222,16 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
       cancelled: '#f44336',
       'on-hold': '#fbc02d',
     };
-    return defaultColors[`${statusValue}`?.toLowerCase() || ''] || theme.palette.primary.main;
+    return defaultColors[normalizeKey(statusValue)] || theme.palette.primary.main;
   }, [statusValue, options.colorMap, theme]);
 
   // Get icon for current status
   const chipIcon = useMemo(() => {
     if (!options.showIcon) return null;
     
-    if (options.iconMap && options.iconMap[statusValue]) {
-      return options.iconMap[statusValue];
+    const mappedIcon = lookupMapped(options.iconMap, statusValue);
+    if (mappedIcon) {
+      return mappedIcon;
     }
     
     // Default icons based on common status patterns
@@ -222,7 +246,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
       'on-hold': 'pause_circle',
     };
     
-    return defaultIcons[`${statusValue}`?.toLowerCase() || ''] || null;
+    return defaultIcons[normalizeKey(statusValue)] || null;
   }, [statusValue, options.iconMap, options.showIcon]);
 
   // Format label

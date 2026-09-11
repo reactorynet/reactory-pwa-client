@@ -22,6 +22,14 @@ export interface UseQuickFiltersOptions {
   filters: QuickFilterDefinition[];
   multiSelect?: boolean;
   onFilterChange?: (activeFilters: string[]) => void;
+  /**
+   * Controlled selection. When supplied the hook does not own the selection state, so the
+   * selection survives re-renders/remounts of this component. Without it, a consumer that
+   * re-renders on data change (the Support tickets toolbar does) could lose the internal
+   * selection between clicks, which made every click re-APPLY the filter and made it
+   * impossible to switch a filter off.
+   */
+  activeFilters?: string[];
 }
 
 export interface UseQuickFiltersResult {
@@ -49,31 +57,39 @@ export const useQuickFilters = ({
   filters,
   multiSelect = false,
   onFilterChange,
+  activeFilters: controlledActiveFilters,
 }: UseQuickFiltersOptions): UseQuickFiltersResult => {
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [internalActiveFilters, setActiveFilters] = useState<string[]>([]);
+  const isControlled = controlledActiveFilters !== undefined;
+  const activeFilters = isControlled ? controlledActiveFilters : internalActiveFilters;
 
   const toggleFilter = useCallback(
     (filterId: string) => {
-      setActiveFilters((prev) => {
-        let newFilters: string[];
+      // Compute the next selection OUTSIDE the state updater.
+      //
+      // Calling onFilterChange from within a setState updater is a side effect inside an
+      // impure function. React may invoke an updater more than once (and against evolving
+      // state), which emitted BOTH the newly selected filter and an immediate "cleared"
+      // selection. The cleared emission produced a second, unfiltered query that landed
+      // after the filtered one, so the grid always reverted to the full list and every
+      // quick filter appeared to do nothing.
+      const prev = activeFilters;
+      let newFilters: string[];
 
-        if (multiSelect) {
-          // Multi-select mode: toggle filter in array
-          if (prev.includes(filterId)) {
-            newFilters = prev.filter((id) => id !== filterId);
-          } else {
-            newFilters = [...prev, filterId];
-          }
-        } else {
-          // Single-select mode: replace or clear
-          newFilters = prev.includes(filterId) ? [] : [filterId];
-        }
+      if (multiSelect) {
+        // Multi-select mode: toggle filter in array
+        newFilters = prev.includes(filterId)
+          ? prev.filter((id) => id !== filterId)
+          : [...prev, filterId];
+      } else {
+        // Single-select mode: replace or clear
+        newFilters = prev.includes(filterId) ? [] : [filterId];
+      }
 
-        onFilterChange?.(newFilters);
-        return newFilters;
-      });
+      setActiveFilters(newFilters);
+      onFilterChange?.(newFilters);
     },
-    [multiSelect, onFilterChange]
+    [activeFilters, multiSelect, onFilterChange]
   );
 
   const clearFilters = useCallback(() => {

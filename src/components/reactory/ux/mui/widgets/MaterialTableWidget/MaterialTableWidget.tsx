@@ -596,6 +596,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   });
 
   const tableRef = useRef<any>(null);
+  const latestRequestRef = React.useRef(0);
+
   const isMountedRef = useRef(true);
   React.useEffect(() => {
     return () => { isMountedRef.current = false; };
@@ -750,6 +752,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const getData = useCallback(async (): Promise<MaterialTableRemoteDataReponse> => {
     reactory.debug('core.ReactoryMaterialTable data query', { query });
 
+    // Stamp this request. Only the most recently issued request is allowed to publish.
+    const requestId = ++latestRequestRef.current;
+
     // Set loading state
     setIsLoading(true);
     setError(null);
@@ -895,7 +900,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       setIsLoading(false);
     }
     
-    if (isMountedRef.current) {
+    // A single filter/search interaction can legitimately issue more than one query and
+    // responses may resolve out of order. Publishing unconditionally meant the last
+    // response to ARRIVE won - so a stale, unfiltered result could overwrite a correctly
+    // filtered one and the grid appeared not to filter at all.
+    if (isMountedRef.current && requestId === latestRequestRef.current) {
       setData(response);
       setIsLoading(false);
     }

@@ -171,19 +171,29 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
         break;
       }
       case "notification": {
-        reactory.createNotification(
-          template(
-            t(notification.title, {
-              defaultValue: notification.title,
-            })
-          )({
-            formData: result,
-          }),
-          {
-            type: "success",
-            showInAppNotification: true,
-          }
-        );
+        // Rendering the success notification must never throw. A template failure
+        // here previously aborted the remaining onSuccessMethod entries (such as
+        // the post-create redirect) and surfaced as an unhandled rejection even
+        // though the mutation itself had succeeded.
+        const fallbackTitle = notification?.title || "";
+        let message: any = fallbackTitle;
+        try {
+          const translated = t(fallbackTitle, { defaultValue: fallbackTitle });
+          message =
+            typeof translated === "string" && translated.includes("${")
+              ? template(translated)({ formData: result ?? {} })
+              : translated;
+        } catch (err) {
+          reactory.warning(
+            "Failed to render success notification message, falling back to raw title",
+            { err, notification }
+          );
+          message = fallbackTitle;
+        }
+        reactory.createNotification(message, {
+          type: "success",
+          showInAppNotification: true,
+        });
         break;
       }
       case "none": {
@@ -349,8 +359,18 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
         }
 
         let transformed = data ? cloneDeep(data) : null;
-        if (resultData && transformed !== null) {
-          transformed = transformData(transformed, name, resultMap) as TData;
+        if (resultData && name) {
+          // `resultMap` describes the shape of the MUTATION RESULT, so it must be
+          // mapped from the Apollo payload (`{ data: resultData }`) and not from the
+          // form's local data. Mapping the form data returns `null`, which then
+          // propagates into the success handlers (e.g. a notification template
+          // interpolating `formData.reference`) and throws. That throw aborted the
+          // remaining onSuccessMethod entries -- so a successful create showed no
+          // notification and never redirected.
+          const mappedResult = transformData({ data: resultData }, name, resultMap);
+          if (mappedResult !== null && mappedResult !== undefined) {
+            transformed = mappedResult as TData;
+          }
         }
 
         if (onSuccessMethod && !hasErrors) {
