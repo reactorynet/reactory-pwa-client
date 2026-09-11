@@ -72,11 +72,25 @@ const SelectWidget = (props: SelectWidgetProps) => {
       selectProps = {}
     } = uiOptions;
 
-    let variant = 'standard' as 'standard' | 'outlined' | 'filled'
-    if (theme.components?.MuiInput) {
-      // TODO fix the variant type
-      //variant = (theme.components.MuiInput.variants[0]?.props as 'standard' | 'outlined' | 'filled' || variant;
-    }
+    const resolveVariant = (): 'outlined' | 'filled' | 'standard' => {
+      const opts = (uiOptions || {}) as any;
+      const sProps = (selectProps || {}) as any;
+      if (opts?.variant && ['outlined', 'filled', 'standard'].includes(opts.variant)) {
+        return opts.variant;
+      }
+      if (sProps?.variant && ['outlined', 'filled', 'standard'].includes(sProps.variant)) {
+        return sProps.variant;
+      }
+      const selVariant = theme?.components?.MuiSelect?.defaultProps?.variant;
+      if (selVariant && ['outlined', 'filled', 'standard'].includes(selVariant)) return selVariant;
+      const tfVariant = theme?.components?.MuiTextField?.defaultProps?.variant;
+      if (tfVariant && ['outlined', 'filled', 'standard'].includes(tfVariant)) return tfVariant;
+      const fcVariant = theme?.components?.MuiFormControl?.defaultProps?.variant;
+      if (fcVariant && ['outlined', 'filled', 'standard'].includes(fcVariant)) return fcVariant;
+      return 'outlined';
+    };
+
+    const variant = resolveVariant();
 
     let InputComponent = Input;
     let inputLabelProps: any = {};
@@ -152,16 +166,26 @@ const SelectWidget = (props: SelectWidgetProps) => {
           required={required === true}>{self.props.schema.title}</InputLabel>
      * 
      */
+    const fieldLabel = (typeof uiSchema?.['ui:title'] === 'string' ? uiSchema['ui:title'] : undefined)
+      || schema?.title
+      || (typeof (props as any).label === 'string' ? (props as any).label : undefined)
+      || '';
+
+    const labelId = (props as any).labelId || (props.idSchema?.$id ? `${props.idSchema.$id}__label` : undefined);
+
     return (
       <StyledSelect
+        variant={variant}
+        label={variant === 'outlined' ? fieldLabel : undefined}
+        labelId={labelId}
+        input={variant === 'outlined' ? <OutlinedInput label={fieldLabel} notched={Boolean(formData !== null && formData !== undefined && String(formData).trim() !== '')} /> : undefined}
         {...selectProps}
         value={formData || ""}
         onChange={onSelectChanged}
         name={props.name}
         displayEmpty={true}
-        disabled = {disabled || readonly}
+        disabled={disabled || readonly}
         renderValue={renderSelectedValue}
-        // input={<InputComponent id={props.idSchema.$id} value={formData || ""} />}
         >
         {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
         {elements}

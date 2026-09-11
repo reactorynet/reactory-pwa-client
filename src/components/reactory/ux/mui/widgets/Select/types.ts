@@ -59,12 +59,18 @@ export interface SelectWidgetUISchema extends Reactory.Schema.IUISchema {
  * integrates with the ReactoryForm engine.
  */
 export interface SelectWidgetProps
-  extends Reactory.Client.IReactoryWidgetProps<
+  extends Partial<Reactory.Client.IReactoryWidgetProps<
     string | number | null,
     unknown,
     Reactory.Schema.ISchema,
     SelectWidgetUISchema
-  > {
+  >> {
+  /** The schema object for this field. */
+  schema?: any;
+  /** The uiSchema object for this field. */
+  uiSchema?: any;
+  /** The formContext passed from ReactoryForm. */
+  formContext?: any;
   /** The currently selected value. */
   formData: string | number | null;
   /** Callback fired when the user selects a new value. Passes `null` when cleared. */

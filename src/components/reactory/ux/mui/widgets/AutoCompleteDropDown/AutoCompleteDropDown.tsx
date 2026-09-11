@@ -334,10 +334,21 @@ function AutoCompleteDropDown<
                     }
                 }
 
+                const resolveVariant = (): 'outlined' | 'filled' | 'standard' => {
+                    const uiOpts = uiSchema?.['ui:options'] as any;
+                    if ($props?.variant && ['outlined', 'filled', 'standard'].includes($props.variant)) return $props.variant;
+                    if (uiOpts?.variant && ['outlined', 'filled', 'standard'].includes(uiOpts.variant)) return uiOpts.variant;
+                    const tfVariant = reactory?.muiTheme?.components?.MuiTextField?.defaultProps?.variant;
+                    if (tfVariant && ['outlined', 'filled', 'standard'].includes(tfVariant)) return tfVariant;
+                    const fcVariant = reactory?.muiTheme?.components?.MuiFormControl?.defaultProps?.variant;
+                    if (fcVariant && ['outlined', 'filled', 'standard'].includes(fcVariant)) return fcVariant;
+                    return 'outlined';
+                };
+
                 return (<TextField
                     {...params}
                     InputLabelProps={inputLabelProps}
-                    variant={themeDefaults.variant || $props.variant || "standard"}
+                    variant={resolveVariant()}
                     label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
                     inputProps={{
                         ...params.inputProps,

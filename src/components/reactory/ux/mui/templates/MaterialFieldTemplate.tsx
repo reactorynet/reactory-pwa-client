@@ -15,7 +15,8 @@ import {
   Toolbar,
   Tooltip,
   FormControlProps,
-} from '@mui/material'
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 
@@ -130,18 +131,47 @@ const MaterialFieldTemplateFunction = (props) => {
   let allowsNull = false;
   let schemaType = schema.type;
 
-  let themeVariant = 'standard';
-  if (theme && theme.MaterialInput) {
-    themeVariant = (theme.MaterialInput as any)?.variant || themeVariant;
-  }
+  const muiTheme = useTheme();
+
+  const resolveVariant = (): 'outlined' | 'filled' | 'standard' => {
+    const opts = (uiOptions || {}) as any;
+    if (opts?.variant && ['outlined', 'filled', 'standard'].includes(opts.variant)) {
+      return opts.variant;
+    }
+    if (opts?.componentProps?.variant && ['outlined', 'filled', 'standard'].includes(opts.componentProps.variant)) {
+      return opts.componentProps.variant;
+    }
+    const currentTheme: any = muiTheme || theme;
+    const textFieldVariant = currentTheme?.components?.MuiTextField?.defaultProps?.variant;
+    if (textFieldVariant && ['outlined', 'filled', 'standard'].includes(textFieldVariant)) {
+      return textFieldVariant;
+    }
+    const formControlVariant = currentTheme?.components?.MuiFormControl?.defaultProps?.variant;
+    if (formControlVariant && ['outlined', 'filled', 'standard'].includes(formControlVariant)) {
+      return formControlVariant;
+    }
+    const inputVariant = currentTheme?.components?.MuiInput?.defaultProps?.variant;
+    if (inputVariant && ['outlined', 'filled', 'standard'].includes(inputVariant)) {
+      return inputVariant;
+    }
+    if (currentTheme?.MaterialTextField?.variant) return currentTheme.MaterialTextField.variant;
+    if (currentTheme?.MaterialInput?.variant) return currentTheme.MaterialInput.variant;
+
+    return 'outlined';
+  };
+
+  const activeVariant = resolveVariant();
 
   let formControlProps: FormControlProps = {
     // className: classes.formControl,
     style: uiOptions ? uiOptions.style : {},
     fullWidth: true,
-    variant: 'standard',
-    key: id
-  }
+    variant: activeVariant,
+    key: id,
+    error: errors && errors.length > 0,
+    disabled: readonly === true || disabled === true,
+    required: required === true,
+  };
 
   if (uiOptions && uiOptions.fullWidth === false) {
     delete formControlProps.fullWidth;
@@ -175,42 +205,50 @@ const MaterialFieldTemplateFunction = (props) => {
     default: {
 
       const labelRef = React.useRef(null);
+      const labelId = `${id}__label`;
+      
       let inputLabelProps: any = {
         htmlFor: id,
+        id: labelId,
         required,
+        variant: activeVariant,
         color: uiOptions && uiOptions.labelProps && uiOptions.labelProps.color ? uiOptions.labelProps.color : 'primary',
         error: errors && errors.length > 0,
-        disabled: readonly === true,
+        disabled: readonly === true || disabled === true,
         ref: labelRef,
-      }
+      };
 
       if (uiOptions && uiOptions.labelProps) {
         inputLabelProps = { ...inputLabelProps, ...uiOptions.labelProps };
       }
 
       if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
-        
-        if(schemaType !== "number") {
+        if (schemaType !== "number") {
           inputLabelProps.shrink = false;
         } else {
           inputLabelProps.shrink = true;
         }
       } else {
-        // if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
         if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {
-          inputLabelProps.style = {};
           inputLabelProps.shrink = false;
         } else {
-          inputLabelProps.style = {
-            // backgroundColor: 'white',
-            // padding: '3px'
-          };
           inputLabelProps.shrink = true;
         }
-
       }
 
-      let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
+      // Background styling for outlined labels to prevent the border line cutting through the text
+      const paperBg = (muiTheme as any)?.palette?.background?.paper || (theme as any)?.palette?.background?.paper || '#ffffff';
+      inputLabelProps.style = {
+        ...(inputLabelProps.style || {}),
+        ...(activeVariant === 'outlined' ? {
+          backgroundColor: paperBg,
+          paddingLeft: '4px',
+          paddingRight: '4px',
+          marginLeft: '-4px',
+        } : {}),
+      };
+
+      let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}>{label}</InputLabel> : null;
 
       if (uiWidget && uiWidget && uiWidget.includes('Date')) {
         return <FormControl {...formControlProps}>          
@@ -224,10 +262,20 @@ const MaterialFieldTemplateFunction = (props) => {
       if (uiOptions && uiOptions.component === 'TextField') return (<>{children}</>);
 
       if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;      
+
+      let renderedChildren = children;
+      if (React.isValidElement(children)) {
+        renderedChildren = React.cloneElement(children as React.ReactElement<any>, {
+          label: (children.props as any)?.label || label,
+          labelId: (children.props as any)?.labelId || labelId,
+          id: (children.props as any)?.id || id,
+        });
+      }
+
       return (
         <FormControl {...formControlProps}>          
           {showLabel !== false ? labelComponent : null}
-          {children}
+          {renderedChildren}
           {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}
           {errors}
           {rawHelp}

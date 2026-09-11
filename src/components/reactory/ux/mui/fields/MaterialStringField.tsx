@@ -26,6 +26,31 @@ import {
 import { useTheme } from '@mui/material/styles';
 
 
+const resolveInputVariant = (theme: any, uiOptions: any): 'outlined' | 'filled' | 'standard' => {
+  if (uiOptions?.variant && ['outlined', 'filled', 'standard'].includes(uiOptions.variant)) {
+    return uiOptions.variant;
+  }
+  if (uiOptions?.componentProps?.variant && ['outlined', 'filled', 'standard'].includes(uiOptions.componentProps.variant)) {
+    return uiOptions.componentProps.variant;
+  }
+  const textFieldVariant = theme?.components?.MuiTextField?.defaultProps?.variant;
+  if (textFieldVariant && ['outlined', 'filled', 'standard'].includes(textFieldVariant)) {
+    return textFieldVariant;
+  }
+  const formControlVariant = theme?.components?.MuiFormControl?.defaultProps?.variant;
+  if (formControlVariant && ['outlined', 'filled', 'standard'].includes(formControlVariant)) {
+    return formControlVariant;
+  }
+  const inputVariant = theme?.components?.MuiInput?.defaultProps?.variant;
+  if (inputVariant && ['outlined', 'filled', 'standard'].includes(inputVariant)) {
+    return inputVariant;
+  }
+  if (theme?.MaterialTextField?.variant) return theme.MaterialTextField.variant;
+  if (theme?.MaterialInput?.variant) return theme.MaterialInput.variant;
+
+  return 'outlined';
+};
+
 const MaterialStringFieldWidget = (props) => {
   const theme = useTheme();
   
@@ -164,6 +189,8 @@ const MaterialStringFieldWidget = (props) => {
       }
     }
 
+    const activeVariant = resolveInputVariant(theme || reactory?.muiTheme, uiOptions);
+
     if (uiOptions.component === "TextField") {
 
       let inputProps: any = {
@@ -186,17 +213,8 @@ const MaterialStringFieldWidget = (props) => {
         )
       }
 
-      let themeDefaults: any = {
-        variant: 'standard'
-      };
-
-      if (reactory && reactory?.muiTheme?.MaterialTextField) {
-        themeDefaults = reactory?.muiTheme?.MaterialTextField
-      }
-
-
       let componentProps: Partial<TextFieldProps> = {
-        variant: themeDefaults.variant || uiOptions.variant || "standard",
+        variant: activeVariant,
         InputProps: inputProps,
         label: `${schema.title}${required ? ' *' : ''}`,
         value: localValue,
@@ -213,26 +231,31 @@ const MaterialStringFieldWidget = (props) => {
       return (<TextField {...componentProps} />);
 
     } else {
-      let themeDefaults: any = {};
-      if (reactory?.muiTheme?.MaterialInput) {
-        themeDefaults = reactory?.muiTheme?.MaterialInput;
-      }
+      let COMPONENT: any = Input;
+      let extraInputProps: any = {};
 
-      let COMPONENT = Input;
+      const fieldLabel = (typeof uiSchema?.['ui:title'] === 'string' ? uiSchema['ui:title'] : undefined)
+        || schema?.title
+        || (typeof props.label === 'string' ? props.label : undefined)
+        || '';
 
-      switch (themeDefaults.variant) {
-        case "outlined":
-        case "outline": {
+      switch (activeVariant) {
+        case "outlined": {
           COMPONENT = OutlinedInput;
+          extraInputProps.label = fieldLabel ? `${fieldLabel}${required ? ' *' : ''}` : undefined;
+          extraInputProps.notched = Boolean(localValue != null && String(localValue).trim() !== '') || inputLabelProps.shrink === true;
           break;
         }
-        case "filled":
-        case "fill": {
+        case "filled": {
           COMPONENT = FilledInput;
           break;
         }
+        case "standard":
+        default: {
+          COMPONENT = Input;
+          break;
+        }
       }
-
 
       return (
         <COMPONENT 
@@ -240,12 +263,15 @@ const MaterialStringFieldWidget = (props) => {
           type={args.type || 'text'} 
           onKeyDown={onKeyDown} 
           id={idSchema.$id}
+          fullWidth
           autoFocus={idSchema.id === props.formContext.$focus && props.formContext.$focus !== undefined}
           readOnly={uiOptions.readOnly === true} 
           value={localValue}
           onFocus={onFocus && (e => onFocus(id, e.target.value))}
-          onBlur={onBlur && (e => onFocus(id, e.target.value))}
-          onChange={onInputChanged} />
+          onBlur={onBlur && (e => onBlur(id, e.target.value))}
+          onChange={onInputChanged}
+          {...extraInputProps}
+        />
       )
     }
 

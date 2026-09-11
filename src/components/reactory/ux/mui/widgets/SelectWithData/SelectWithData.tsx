@@ -96,12 +96,24 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
   const [version, setVersion] = React.useState(0);
 
   try {
-    let variant: string | "standard" | "outlined" | "filled" = 'standard'
-    if (theme.components?.MuiInput) {
-      // TODO fix the variant type
-      //variant = (theme.components.MuiInput.variants[0]?.props as 'standard' | 'outlined' | 'filled') || variant;
-    }
+    const resolveVariant = (): 'outlined' | 'filled' | 'standard' => {
+      const opts = ((uiSchema?.['ui:options'] || {}) as any);
+      if (opts?.variant && ['outlined', 'filled', 'standard'].includes(opts.variant)) {
+        return opts.variant;
+      }
+      if (opts?.selectProps?.variant && ['outlined', 'filled', 'standard'].includes(opts.selectProps.variant)) {
+        return opts.selectProps.variant;
+      }
+      const selVariant = theme?.components?.MuiSelect?.defaultProps?.variant;
+      if (selVariant && ['outlined', 'filled', 'standard'].includes(selVariant)) return selVariant;
+      const tfVariant = theme?.components?.MuiTextField?.defaultProps?.variant;
+      if (tfVariant && ['outlined', 'filled', 'standard'].includes(tfVariant)) return tfVariant;
+      const fcVariant = theme?.components?.MuiFormControl?.defaultProps?.variant;
+      if (fcVariant && ['outlined', 'filled', 'standard'].includes(fcVariant)) return fcVariant;
+      return 'outlined';
+    };
 
+    let variant: "standard" | "outlined" | "filled" = resolveVariant();
     let InputComponent = Input;
     let inputLabelProps: any = {};
 
@@ -112,6 +124,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       }
       case 'filled': {
         InputComponent = FilledInput;
+        break;
       }
     }
 
@@ -250,14 +263,24 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       }, [formContext.formData])
 
       
+      const fieldLabel = (typeof uiSchema?.['ui:title'] === 'string' ? uiSchema['ui:title'] : undefined)
+        || schema?.title
+        || (typeof (props as any).label === 'string' ? (props as any).label : undefined)
+        || '';
+
+      const labelId = (props as any).labelId || (idSchema?.$id ? `${idSchema.$id}__label` : undefined);
+
       return (
         <Select
           {...selectProps}
           multiple={multiSelect === true}
           value={formData || ""}
           onChange={readOnly === true ? () => { } : onSelectChanged}
-          name={idSchema.$id}
+          name={idSchema?.$id}
           variant={variant}
+          label={variant === 'outlined' ? fieldLabel : undefined}
+          labelId={labelId}
+          input={variant === 'outlined' ? <OutlinedInput label={fieldLabel} notched={Boolean(formData !== null && formData !== undefined && String(formData).trim() !== '')} /> : undefined}
           data-version={version}
           // input={
           //   <InputComponent 
