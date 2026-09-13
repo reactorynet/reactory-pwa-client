@@ -54,6 +54,15 @@ const PassthroughChip: React.FC<any> = ({ label, children, onClick, onDelete, ic
   </div>
 );
 
+// Renders the `secondaryAction` element (e.g. edit/delete icon buttons) that
+// list rows attach, so those affordances are present in the DOM for tests.
+const PassthroughListItem: React.FC<any> = ({ children, secondaryAction, onClick, ...rest }) => (
+  <div onClick={onClick} {...rest}>
+    {children}
+    {secondaryAction}
+  </div>
+);
+
 export const mockMaterial = {
   MaterialCore: {
     Box: Passthrough,
@@ -77,11 +86,16 @@ export const mockMaterial = {
     DialogTitle: Passthrough,
     DialogContent: Passthrough,
     DialogActions: Passthrough,
+    DialogContentText: PassthroughText,
     useTheme: () => ({ palette: { mode: 'dark' } }),
     Menu: Passthrough,
     MenuItem: Passthrough,
+    List: Passthrough,
+    ListItem: PassthroughListItem,
+    ListItemButton: PassthroughButton,
     ListItemIcon: Passthrough,
     ListItemText: Passthrough,
+    ListItemAvatar: Passthrough,
     Accordion: Passthrough,
     AccordionSummary: Passthrough,
     AccordionDetails: Passthrough,
@@ -92,6 +106,8 @@ export const mockMaterial = {
     LinearProgress: Passthrough,
     Tooltip: ({ children }: any) => <>{children}</>,
     Divider: () => <hr />,
+    Alert: ({ children }: any) => <div role="alert">{children}</div>,
+    InputLabel: Passthrough,
   },
   MaterialIcons: {
     Mic: () => <span role="img" aria-label="mic">mic</span>,
@@ -104,6 +120,9 @@ export const mockMaterial = {
     ExpandMore: () => <span role="img" aria-label="expand_more">expand_more</span>,
     Settings: () => <span role="img" aria-label="settings">settings</span>,
     Delete: () => <span role="img" aria-label="delete">delete</span>,
+    Edit: () => <span role="img" aria-label="edit">edit</span>,
+    Close: () => <span role="img" aria-label="close">close</span>,
+    SwapHoriz: () => <span role="img" aria-label="swap_horiz">swap_horiz</span>,
     PlayArrow: () => <span role="img" aria-label="play_arrow">play_arrow</span>,
     HomeRepairService: () => <span role="img" aria-label="home_repair_service">home_repair_service</span>,
   },

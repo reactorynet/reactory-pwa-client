@@ -14,6 +14,7 @@ import {
   MacroToolDefinition,
   ToolApprovalMode,
   ChatState,
+  ChatDataInput,
   TodoList,
   SidePanelState,
   SubAgentSummary,
@@ -27,6 +28,9 @@ import {
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
 import ToolsPanel from './components/ToolsPanel';
 import ChatHistoryPanel from './components/ChatHistoryPanel';
+import ChatDataEditorDialog from './components/ChatDataEditorDialog';
+import ChatTransferDialog from './components/ChatTransferDialog';
+import { resolveChatSelectionTarget, isPersonaSwitch } from './hooks/chatSelection';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
@@ -334,6 +338,8 @@ export default (props) => {
     newChat,
     loadChat,
     loadEarlierHistory = (async () => {}) as () => Promise<void>,
+    loadArchivedHistory = (async () => {}) as () => Promise<void>,
+    archivedHistoryLoading = false,
     fetchConversationMeta,
     listChats,
     listRecentChats,
@@ -341,6 +347,8 @@ export default (props) => {
     chats,
     setChats,
     deleteChat,
+    updateChatData,
+    transferToPersona,
     deleteToolCall,
     isInitialized,
     isStreaming = false,
@@ -447,17 +455,68 @@ export default (props) => {
     };
   }, [location.search]);
 
+  const autoInitInProgress = React.useRef(false);
+  // Track whether the initial chat list has been loaded for the current persona
+  const chatListLoadedForPersonaRef = React.useRef<string | null>(null);
+
+  /**
+   * Load the conversation list for a specific persona and remember that we did.
+   * Used when a selection switches agent, so the history panel shows the new
+   * agent's conversations immediately.
+   */
+  const refreshChatListForPersona = useCallback(
+    async (personaId: string) => {
+      try {
+        const list = await listChats({
+          personaId,
+          use_case: useCase,
+          edges: hostEdges,
+        });
+        setChats((list || []) as ChatState[]);
+      } catch (error) {
+        reactory.log('ReactorChat: Failed to refresh chat list for persona', { error, personaId }, 'warning');
+      } finally {
+        chatListLoadedForPersonaRef.current = personaId;
+      }
+    },
+    [listChats, setChats, useCase, hostEdges, reactory],
+  );
+
   const handleSessionSwitch = useCallback((sessionId: string, personaId?: string) => {
     clearUnread(sessionId);
     if (chatState?.id === sessionId) return;
-    const pId = personaId || queryParams.personaId || selectedPersona?.id;
-    const searchQuery = `?sessionId=${sessionId}&personaId=${pId}`;
+
+    // Prefer the caller's explicit persona, then the session's own persona —
+    // looked up from the lists we already hold — before falling back to the
+    // URL or the current selection. Otherwise switching to a background session
+    // owned by another agent would keep this agent on screen.
+    const knownSession =
+      (backgroundSessions || []).find((s: any) => s.sessionId === sessionId) ||
+      (chats || []).find((c: any) => c.id === sessionId) ||
+      (recentSessions || []).find((c: any) => c.id === sessionId);
+
+    const target = resolveChatSelectionTarget({
+      sessionId,
+      explicitPersonaId: personaId,
+      chat: knownSession as any,
+      queryPersonaId: queryParams.personaId,
+      selectedPersonaId: selectedPersona?.id,
+    });
+
+    if (!target.sessionId || !target.personaId) return;
+
+    if (isPersonaSwitch(target, selectedPersona?.id)) {
+      selectPersona(target.personaId);
+      chatListLoadedForPersonaRef.current = null;
+      void refreshChatListForPersona(target.personaId);
+    }
+
     navigate({
       pathname: location.pathname,
-      search: searchQuery,
+      search: `?sessionId=${target.sessionId}&personaId=${target.personaId}`,
     });
-    loadChat(sessionId);
-  }, [clearUnread, chatState?.id, queryParams.personaId, selectedPersona?.id, navigate, location.pathname, loadChat]);
+    loadChat(target.sessionId);
+  }, [clearUnread, chatState?.id, backgroundSessions, chats, recentSessions, queryParams.personaId, selectedPersona?.id, selectPersona, refreshChatListForPersona, navigate, location.pathname, loadChat]);
 
   // Keep session ID in sync so useSessionLogger picks it up
   React.useEffect(() => {
@@ -697,6 +756,7 @@ export default (props) => {
     ChevronRight,
     NavigateNext,
     ArrowBack,
+    SwapHoriz,
   } = Material.MaterialIcons;
 
   // Memoize the filtered messages to prevent unnecessary re-renders
@@ -790,6 +850,13 @@ export default (props) => {
   const [todosPanelOpen, setTodosPanelOpen] = useState<boolean>(false);
   const [debugPanelOpen, setDebugPanelOpen] = useState<boolean>(false);
   const [subAgentsPanelOpen, setSubAgentsPanelOpen] = useState<boolean>(false);
+
+  // Manual conversation-metadata editor (title/summary/tags/status icon+colour).
+  const [chatDataEditorOpen, setChatDataEditorOpen] = useState<boolean>(false);
+  const [chatDataEditorChat, setChatDataEditorChat] = useState<ChatState | null>(null);
+
+  // Explicit "transfer this conversation to another agent" dialog.
+  const [chatTransferOpen, setChatTransferOpen] = useState<boolean>(false);
 
   // Parent session meta for the breadcrumb bar. Only populated when the
   // active session is a sub-agent child (chatState.parentSessionId set).
@@ -996,10 +1063,6 @@ export default (props) => {
     }
   }, [queryParams.sessionId, chatState?.id, loadChat]);
 
-  const autoInitInProgress = React.useRef(false);
-  // Track whether the initial chat list has been loaded for the current persona
-  const chatListLoadedForPersonaRef = React.useRef<string | null>(null);
-
   // Load chat list and auto-resume/init when persona changes.
   // The chat list is also refreshed when the history panel is opened.
   useEffect(() => {
@@ -1085,17 +1148,34 @@ export default (props) => {
   }, []);
 
   const handleChatSelect = useCallback((chat) => {
-    sessionLogger?.info(`Chat selected: ${chat.id}`, { chatId: chat.id, previousChatId: chatState?.id }, 'ReactorChat');
+    // A conversation belongs to the persona that owns it. Resolve from the
+    // conversation first — NOT the persona already in the URL — otherwise
+    // opening agent B's conversation while agent A is selected would only
+    // change the session id and render B's history under agent A.
+    const target = resolveChatSelectionTarget({
+      chat,
+      queryPersonaId: queryParams.personaId,
+      selectedPersonaId: selectedPersona?.id,
+    });
+
+    sessionLogger?.info(`Chat selected: ${chat.id}`, { chatId: chat.id, previousChatId: chatState?.id, personaId: target.personaId }, 'ReactorChat');
     console.log('ReactorChat: handleChatSelect called', {
       chatId: chat.id,
       currentChatId: chatState?.id,
+      targetPersonaId: target.personaId,
+      currentPersonaId: selectedPersona?.id,
       isManualNavigation: isManualNavigation.current,
       agentBusy
     });
 
     handleChatMenuClose(async () => {
-      // Prevent redundant operations if chat is already selected
-      if (chatState?.id === chat.id) {
+      if (!target.sessionId || !target.personaId) {
+        reactory.error('ReactorChat: Chat is missing a session or persona id', { chat });
+        return;
+      }
+
+      // Nothing to do only when both the session and the agent already match.
+      if (chatState?.id === target.sessionId && selectedPersona?.id === target.personaId) {
         console.log('ReactorChat: Chat already selected, skipping');
         return;
       }
@@ -1113,19 +1193,31 @@ export default (props) => {
 
       // Mark as manual navigation to prevent useEffect cascades
       isManualNavigation.current = true;
-      console.log('ReactorChat: Starting manual navigation for chat', chat.id);
+      console.log('ReactorChat: Starting manual navigation for chat', target.sessionId);
 
-      const personaParam = queryParams.personaId ? queryParams.personaId : chat.personaId;
-      const searchQuery = `?sessionId=${chat.id}&personaId=${personaParam}`;
-
-      navigate({
-        pathname: location.pathname,
-        search: searchQuery
-      });
-
-      // Load the session and only reset the flag once loading completes
       try {
-        await loadChat(chat.id);
+        // Switch the agent first so the header, prompt, tools and history all
+        // belong to the same persona as the conversation being opened.
+        if (isPersonaSwitch(target, selectedPersona?.id)) {
+          console.log('ReactorChat: Switching persona for selected chat', { from: selectedPersona?.id, to: target.personaId });
+          selectPersona(target.personaId);
+          // Force the per-persona chat list to reload for the new agent.
+          chatListLoadedForPersonaRef.current = null;
+        }
+
+        navigate({
+          pathname: location.pathname,
+          search: `?sessionId=${target.sessionId}&personaId=${target.personaId}`,
+        });
+
+        // Load the session and only reset the flag once loading completes
+        await loadChat(target.sessionId);
+
+        // Refresh the history list for the owning persona so the panel reflects
+        // the agent we just switched to without waiting for a manual refresh.
+        if (isPersonaSwitch(target, selectedPersona?.id)) {
+          await refreshChatListForPersona(target.personaId);
+        }
       } catch (error) {
         reactory.error('ReactorChat: Failed to load selected chat', error);
       } finally {
@@ -1133,7 +1225,7 @@ export default (props) => {
         console.log('ReactorChat: Manual navigation flag reset');
       }
     });
-  }, [chatState?.id, queryParams.personaId, navigate, location.pathname, handleChatMenuClose, loadChat]);
+  }, [chatState?.id, selectedPersona?.id, queryParams.personaId, navigate, location.pathname, handleChatMenuClose, loadChat, selectPersona, refreshChatListForPersona, reactory, sessionLogger, agentBusy]);
 
   const handlePersonaPanelToggle = useCallback(() => {
     // Close other panels first
@@ -1355,6 +1447,77 @@ export default (props) => {
   const handleChatHistoryPanelClose = useCallback(() => {
     setChatHistoryPanelOpen(false);
   }, []);
+
+  // Open the manual editor for a conversation from the history panel.
+  const handleChatEdit = useCallback((chat: ChatState) => {
+    setChatDataEditorChat(chat);
+    setChatDataEditorOpen(true);
+  }, []);
+
+  const handleChatDataEditorClose = useCallback(() => {
+    setChatDataEditorOpen(false);
+    setChatDataEditorChat(null);
+  }, []);
+
+  const handleChatDataSave = useCallback(
+    async (data: ChatDataInput) => {
+      const targetId = chatDataEditorChat?.id;
+      if (!targetId) return;
+      await updateChatData(targetId, data);
+      setChatDataEditorOpen(false);
+    },
+    [chatDataEditorChat?.id, updateChatData],
+  );
+
+  const handleChatTransferOpen = useCallback(() => {
+    if (!chatState?.id) return;
+    setChatTransferOpen(true);
+  }, [chatState?.id]);
+
+  const handleChatTransferClose = useCallback(() => {
+    setChatTransferOpen(false);
+  }, []);
+
+  /**
+   * Explicit handover: create a new conversation for the target agent seeded
+   * with this one's context, then switch to it. The source conversation is left
+   * intact and linked as the new session's parent.
+   */
+  const handleChatTransfer = useCallback(
+    async (targetPersonaId: string) => {
+      const targetPersona = personas?.find((p: any) => p.id === targetPersonaId);
+      const sourceSessionId = chatState?.id;
+      if (!targetPersona || !sourceSessionId) {
+        throw new Error('No active conversation to transfer');
+      }
+
+      isManualNavigation.current = true;
+      try {
+        const newSessionId = await transferToPersona(targetPersona, sourceSessionId);
+        if (!newSessionId) throw new Error('The transfer did not return a session');
+
+        // Adopt the receiving agent, then navigate to the seeded session.
+        selectPersona(targetPersona.id);
+        chatListLoadedForPersonaRef.current = null;
+
+        navigate({
+          pathname: location.pathname,
+          search: `?sessionId=${newSessionId}&personaId=${targetPersona.id}`,
+        });
+
+        await loadChat(newSessionId);
+        await refreshChatListForPersona(targetPersona.id);
+
+        setChatTransferOpen(false);
+      } catch (error) {
+        reactory.error('ReactorChat: Failed to transfer conversation', error);
+        throw error;
+      } finally {
+        isManualNavigation.current = false;
+      }
+    },
+    [personas, chatState?.id, transferToPersona, selectPersona, navigate, location.pathname, loadChat, refreshChatListForPersona, reactory],
+  );
 
   // Hoisted out of the JSX: as an inline arrow this prop was new on every
   // render, so ChatHistoryPanel could never be skipped by its memo.
@@ -2150,6 +2313,12 @@ export default (props) => {
       clickHandler: handleChatHistoryPanelToggle,
     },
     {
+      key: 'transfer',
+      icon: <SwapHoriz />,
+      title: il8n?.t('reactor.client.chat.transfer.action', { defaultValue: 'Transfer to another agent' }),
+      clickHandler: handleChatTransferOpen,
+    },
+    {
       key: 'fileExplorer',
       icon: (
         <Badge badgeContent={fileExplorerOpen ? undefined : 0} variant="dot" color="primary" invisible={!fileExplorerOpen}>
@@ -2213,7 +2382,7 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleShellConsoleToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, SwapHoriz, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleChatTransferOpen, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleShellConsoleToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
@@ -2498,6 +2667,12 @@ export default (props) => {
                   onDeleteToolCall={handleDeleteToolCall}
                   hasServerEarlier={Boolean(chatState?.historyWindow?.hasMoreBefore)}
                   onLoadEarlier={loadEarlierHistory}
+                  hasArchived={
+                    Number(chatState?.historyWindow?.archivedCount ?? 0) > 0
+                  }
+                  archivedCount={chatState?.historyWindow?.archivedCount ?? 0}
+                  loadingArchived={archivedHistoryLoading}
+                  onLoadArchived={loadArchivedHistory}
                 />
               )}
             </Paper>
@@ -2556,7 +2731,31 @@ export default (props) => {
               getPersona={getPersona}
               onChatSelect={handleChatSelect}
               onDeleteChat={deleteChat}
+              onEditChat={handleChatEdit}
+              onTransferChat={handleChatTransferOpen}
               onSearch={handleChatHistorySearch}
+              Material={Material}
+              il8n={il8n}
+            />
+
+            {/* Manual conversation-metadata editor */}
+            <ChatDataEditorDialog
+              open={chatDataEditorOpen}
+              chat={chatDataEditorChat}
+              onClose={handleChatDataEditorClose}
+              onSave={handleChatDataSave}
+              Material={Material}
+              il8n={il8n}
+            />
+
+            {/* Explicit transfer of this conversation to another agent */}
+            <ChatTransferDialog
+              open={chatTransferOpen}
+              personas={personas}
+              currentPersonaId={selectedPersona?.id}
+              sourceTitle={chatState?.title}
+              onClose={handleChatTransferClose}
+              onTransfer={handleChatTransfer}
               Material={Material}
               il8n={il8n}
             />

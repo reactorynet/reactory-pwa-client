@@ -7,6 +7,7 @@ import {
   Tooltip,
   Typography,
   Paper,
+  Icon,
   alpha,
   useTheme,
 } from '@mui/material';
@@ -28,7 +29,9 @@ export interface ActiveSessionsAvatarStackProps {
  * Each FAB displays an active background session / agent, complete with:
  * - Live status glow/pulse animations (thinking / tool execution / streaming)
  * - Notification badges for completed actions / unread responses
- * - Rich tooltips with status and message previews
+ * - Hover card showing the conversation title, its status (both the
+ *   agent-maintained status icon/colour and the live streaming state), the
+ *   summary when set, and a last-message preview
  * - Instant one-click switching to make that session active
  */
 export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps> = ({
@@ -94,6 +97,19 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
     return session.status === 'thinking' || session.status === 'streaming' || session.status === 'executing_tools';
   };
 
+  /**
+   * The conversation title is the most useful thing to show on hover — it is
+   * what distinguishes one of an agent's chats from another. Fall back to the
+   * persona name only when the conversation has no title yet, so we never print
+   * the same string twice.
+   */
+  const getSessionTitle = (session: TrackedSession): string | null => {
+    const title = (session.title || '').trim();
+    if (!title) return null;
+    if (title === (session.persona?.name || '').trim()) return null;
+    return title;
+  };
+
   return (
     <Box
       sx={{
@@ -138,6 +154,7 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
         const initial = (persona?.name || session.title || 'A').trim().charAt(0).toUpperCase();
         const isWaitingFocus = session.status === 'waiting_focus' || !!session.hasWaitingToolCalls;
         const isWaitingApproval = session.status === 'waiting_approval';
+        const sessionTitle = getSessionTitle(session);
         const showBadge = session.unread || isWaitingFocus || isWaitingApproval;
         const badgeContent = (isWaitingFocus || isWaitingApproval) ? '!' : undefined;
         const badgeColor = (isWaitingFocus || isWaitingApproval) ? 'warning' : (session.unread ? 'success' : 'primary');
@@ -157,7 +174,7 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
                   maxWidth: 240,
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                     {persona?.name || 'Agent'}
                   </Typography>
@@ -179,17 +196,70 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
                   )}
                 </Box>
 
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    color: statusColor,
-                    fontWeight: 600,
-                    mb: 0.25,
-                  }}
-                >
-                  ● {getStatusText(session)}
-                </Typography>
+                {/* Conversation title — the primary identifier in the hover card */}
+                {sessionTitle && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      fontWeight: 600,
+                      lineHeight: 1.3,
+                      mb: 0.5,
+                    }}
+                  >
+                    {sessionTitle}
+                  </Typography>
+                )}
+
+                {/* Status row: the conversation's own status icon/colour (set via
+                    updateChatData) followed by the live streaming status. */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                  {session.icon && (
+                    <Icon
+                      component="span"                      
+                      sx={{
+                        fontSize: 14,
+                        lineHeight: 1,
+                        color: session.color || statusColor,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {session.icon}
+                    </Icon>
+                  )}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: statusColor,
+                      fontWeight: 600,
+                    }}
+                  >
+                    ● {getStatusText(session)}
+                  </Typography>
+                </Box>
+
+                {session.summary && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      color: 'text.secondary',
+                      fontSize: '0.72rem',
+                      lineHeight: 1.25,
+                      mb: 0.25,
+                    }}
+                  >
+                    {session.summary}
+                  </Typography>
+                )}
 
                 {session.lastMessage && (
                   <Typography

@@ -22,6 +22,8 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
         tool_calls { id type function { name arguments } status }
         tool_results { id name content timestamp }
         tool_errors { id name error timestamp }
+        archived
+        archivedReason
       }
       vars
       tools {
@@ -44,12 +46,16 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       tokenPressure
       files { id filename mimetype size path }
       folders { name path }
-      historyWindow { total returned hasMoreBefore oldestId newestId }
+      historyWindow { total returned hasMoreBefore oldestId newestId archivedCount }
       parentSessionId
       chats {
         id
         personaId
         title
+        summary
+        tags
+        icon
+        color
         created
         updated
         user { id firstName lastName }

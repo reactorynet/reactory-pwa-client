@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import { isEventForSession } from './sessionRouting';
-import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus, WaitingClientToolCall } from "../types"
+import { IAIPersona, ChatDataInput, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus, WaitingClientToolCall } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
@@ -46,6 +46,22 @@ interface ChatFactoryHookResult {
   setChats: React.Dispatch<React.SetStateAction<any[]>>
   // function to delete a chat by id
   deleteChat: (chatSessionId: string) => Promise<void>
+  /**
+   * Update a conversation's descriptive metadata (title, summary, tags,
+   * status icon, colour). Only supplied fields are written. On success the
+   * matching entry in `chats` and the active `chatState` are patched in place
+   * so the history panel and header reflect the change immediately.
+   */
+  updateChatData: (chatSessionId: string, data: ChatDataInput) => Promise<Partial<ChatState> | null>
+  /**
+   * Explicitly transfer a conversation to another agent.
+   *
+   * Creates a NEW conversation owned by `targetPersona`, seeded with a context
+   * summary of `fromSessionId`, and returns the new session id. This is a
+   * deliberate handover rather than a re-label: the source agent's transcript
+   * is preserved and the new session links back to it via `parentSessionId`.
+   */
+  transferToPersona: (targetPersona: IAIPersona, fromSessionId?: string) => Promise<string | null>
   /** Deletes a tool call and its result from the active chat history */
   deleteToolCall: (toolCallId: string, messageId?: string) => Promise<void>
   // sends an audio file to the chat session
@@ -2241,6 +2257,82 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     [],
   );
 
+  const updateChatDataImpl = async (
+    chatSessionId: string,
+    data: ChatDataInput,
+  ): Promise<Partial<ChatState> | null> => {
+    sessionLogger?.info(
+      `Updating chat data`,
+      { chatSessionId, fields: Object.keys(data || {}) },
+      'useChatFactory',
+    );
+    try {
+      const result = await graph.updateChatData(chatSessionId, data);
+
+      if (result && (result as any).__typename === 'ReactorErrorResponse') {
+        throw new Error((result as any).message || 'Failed to update chat data');
+      }
+
+      if (!result) {
+        throw new Error('No response from server');
+      }
+
+      const updated = result as any;
+      const patch: Partial<ChatState> = {
+        title: updated.title ?? undefined,
+        summary: updated.summary ?? undefined,
+        tags: updated.tags ?? undefined,
+        icon: updated.icon ?? undefined,
+        color: updated.color ?? undefined,
+      };
+
+      // Patch the history list so an edited row updates without a full refetch.
+      setChats((prev) =>
+        (prev || []).map((c) => (c?.id === chatSessionId ? { ...c, ...patch } : c)),
+      );
+
+      // Patch the active session when the edited conversation is the one open.
+      setChatState((prev) =>
+        prev?.id === chatSessionId ? { ...prev, ...patch } : prev,
+      );
+
+      // Reconcile the history list with the server. The optimistic patch above
+      // gives instant feedback; this makes the list authoritative and picks up
+      // anything else the update may have touched. Scoped to this chat's use
+      // case / edges but deliberately NOT to a persona, because the history
+      // panel lists conversations across agents. A refresh failure must not
+      // fail the edit — the local patch already reflects it.
+      try {
+        const refreshFilter: any = {
+          ...(props?.useCase ? { use_case: props.useCase } : {}),
+          ...(Array.isArray(props?.edges) && props.edges.length > 0
+            ? { edges: props.edges }
+            : {}),
+        };
+        await fetchConversationsImpl(refreshFilter);
+      } catch (refreshError: any) {
+        reactory.log(
+          `ChatFactory: chat data saved but history refresh failed: ${refreshError?.message}`,
+          {},
+          'warning',
+        );
+      }
+
+      return patch;
+    } catch (error) {
+      onError(error);
+      throw error;
+    }
+  };
+
+  const updateChatDataImplRef = React.useRef(updateChatDataImpl);
+  updateChatDataImplRef.current = updateChatDataImpl;
+  const updateChatData = React.useCallback(
+    (chatSessionId: string, data: ChatDataInput) =>
+      updateChatDataImplRef.current(chatSessionId, data),
+    [],
+  );
+
   const deleteChatImplRef = React.useRef(deleteChatImpl);
   deleteChatImplRef.current = deleteChatImpl;
   const deleteChat = React.useCallback(
@@ -2301,6 +2393,79 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error);
     }
   };
+
+  /**
+   * Explicitly transfer the current conversation to another agent.
+   *
+   * Unlike `newChat`, which starts a blank session, this seeds the new session
+   * with a context summary of the source conversation (the server's
+   * `contextFromSessionId`) so the receiving agent can continue the work. The
+   * source session is untouched.
+   */
+  const transferToPersonaImpl = async (
+    targetPersona: IAIPersona,
+    fromSessionId?: string,
+  ): Promise<string | null> => {
+    const sourceSessionId = fromSessionId || chatState?.id;
+    if (!targetPersona?.id) {
+      throw new Error('A target persona is required to transfer a conversation');
+    }
+    if (!sourceSessionId) {
+      throw new Error('There is no active conversation to transfer');
+    }
+
+    sessionLogger?.info(
+      'Transferring conversation to another agent',
+      { targetPersonaId: targetPersona.id, fromSessionId: sourceSessionId },
+      'useChatFactory',
+    );
+
+    setOpBusy(true);
+    try {
+      // Reset transient per-turn state so the receiving session doesn't inherit
+      // the outgoing agent's streaming indicators.
+      setToolIterationLimitInfo(null);
+      setCompactionInfo(null);
+      setIsStreaming(false);
+      setWaitingForResponse(false);
+      setPendingToolCallResume(null);
+
+      if (reasoningFlushTimerRef.current) {
+        clearTimeout(reasoningFlushTimerRef.current);
+        reasoningFlushTimerRef.current = null;
+      }
+      reasoningBufferRef.current = '';
+      streamingCompleteRef.current = false;
+      sseReestablishedSessionIdRef.current = '';
+      pendingToolCallsRef.current = [];
+
+      sse.disconnect();
+
+      const newSessionId = await initializeChat(targetPersona, sourceSessionId);
+      if (!newSessionId) {
+        throw new Error('Failed to create the transferred session');
+      }
+
+      setIsInitialized(true);
+      reactory.info(
+        `ChatFactory: Transferred conversation ${sourceSessionId} to persona ${targetPersona.id} as ${newSessionId}`,
+      );
+      return newSessionId;
+    } catch (error) {
+      onError(error as Error);
+      throw error;
+    } finally {
+      setOpBusy(false);
+    }
+  };
+
+  const transferToPersonaImplRef = React.useRef(transferToPersonaImpl);
+  transferToPersonaImplRef.current = transferToPersonaImpl;
+  const transferToPersona = React.useCallback(
+    (targetPersona: IAIPersona, fromSessionId?: string) =>
+      transferToPersonaImplRef.current(targetPersona, fromSessionId),
+    [],
+  );
 
   const newChat = async (): Promise<string | null> => {
     sessionLogger?.info('Starting new chat', { personaId: persona?.id }, 'useChatFactory');
@@ -4140,6 +4305,88 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }, [chatState.id, chatState.historyWindow?.oldestId, reactory, setChatState, onError]);
 
+  const loadingArchivedHistoryRef = React.useRef<boolean>(false);
+  const [archivedHistoryLoading, setArchivedHistoryLoading] =
+    React.useState<boolean>(false);
+
+  /**
+   * Fetch the messages displaced from this conversation by truncation or
+   * compaction, and prepend them.
+   *
+   * The archived block is strictly older than the active transcript, so
+   * prepending is correct. Unlike `loadEarlierHistory` it is neither paged nor
+   * user-anchored: the server returns the discrete archived set. Items already
+   * held locally are dropped, so it can never duplicate the transcript. Driven
+   * by the ChatList "earlier, compacted" control.
+   */
+  const loadArchivedHistory = React.useCallback(async () => {
+    const sessionId = chatState.id;
+    if (!sessionId) return;
+    if (loadingArchivedHistoryRef.current) return;
+    loadingArchivedHistoryRef.current = true;
+    setArchivedHistoryLoading(true);
+
+    try {
+      const response = await reactory.graphqlQuery<
+        {
+          ReactorConversationArchivedHistory: {
+            id: string;
+            items: UXChatMessage[];
+            window: any;
+          } | null;
+        },
+        { id: string }
+      >(
+        `
+        query ReactorConversationArchivedHistory($id: String!) {
+          ReactorConversationArchivedHistory(id: $id) {
+            id
+            items {
+              id
+              role
+              content
+              thinking
+              timestamp
+              images
+              tool_call_id
+              tool_calls { id type function { name arguments } status }
+              tool_results { id name content timestamp }
+              tool_errors { id name error timestamp }
+              archived
+              archivedReason
+            }
+            window { total returned hasMoreBefore oldestId newestId }
+          }
+        }
+        `,
+        { id: sessionId }
+      );
+
+      const page = response?.data?.ReactorConversationArchivedHistory;
+      if (!page || !Array.isArray(page.items) || page.items.length === 0) return;
+
+      setChatState((prevState) => {
+        const existingIds = new Set(
+          (prevState.history || []).map((m: any) => String(m._id ?? m.id))
+        );
+        const older = page.items.filter(
+          (m: any) => !existingIds.has(String(m._id ?? m.id))
+        );
+        if (older.length === 0) return prevState;
+        return {
+          ...prevState,
+          history: [...older, ...(prevState.history || [])],
+        };
+      });
+    } catch (error) {
+      reactory.error('ChatFactory: loadArchivedHistory failed', error);
+      onError(error as Error);
+    } finally {
+      loadingArchivedHistoryRef.current = false;
+      setArchivedHistoryLoading(false);
+    }
+  }, [chatState.id, reactory, setChatState, onError]);
+
   return {
     busy,
     agentBusy,
@@ -4148,6 +4395,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     sendMessage,
     loadChat,
     loadEarlierHistory,
+    loadArchivedHistory,
+    archivedHistoryLoading,
     fetchConversationMeta,
     listChats: fetchConversations,
     listRecentChats: fetchRecentConversations,
@@ -4155,6 +4404,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     chats,
     setChats,
     deleteChat,
+    updateChatData,
+    transferToPersona,
     deleteToolCall,
     uploadFile,
     pinUserFileForChat,

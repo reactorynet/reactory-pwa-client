@@ -1,0 +1,21 @@
+mutation ReactorUpdateChatData($chatSessionId: String!, $input: ReactorUpdateChatDataInput!) {
+  ReactorUpdateChatData(chatSessionId: $chatSessionId, input: $input) {
+    __typename
+    ... on ReactorChatState {
+      id
+      title
+      summary
+      tags
+      icon
+      color
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

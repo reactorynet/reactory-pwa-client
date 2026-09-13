@@ -10,6 +10,10 @@ interface ChatHistoryPanelProps {
   getPersona?: (personaId: string) => IAIPersona | null;
   onChatSelect: (chat: ChatState) => void;
   onDeleteChat: (chatId: string) => void;
+  /** Open the manual editor for a conversation's title/summary/tags/status. */
+  onEditChat?: (chat: ChatState) => void;
+  /** Open the explicit "transfer this conversation to another agent" flow. */
+  onTransferChat?: (chat: ChatState) => void;
   onSearch?: (query: string) => void;
   Material: any;
   il8n: any;
@@ -23,6 +27,8 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   getPersona,
   onChatSelect,
   onDeleteChat,
+  onEditChat,
+  onTransferChat,
   onSearch,
   Material,
   il8n
@@ -34,6 +40,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
     Box,
     Typography,
     IconButton,
+    Button,
     List,
     ListItem,
     ListItemText,
@@ -219,6 +226,12 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                     {visibleChats.map((chat) => {
                       const label = chat.title
                         || il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
+                      // The agent maintains a status icon + colour (and optional tags/summary)
+                      // via the updateChatData tool; render them when present.
+                      const StatusIcon = chat.icon ? (Material.MaterialIcons as any)?.[chat.icon] : null;
+                      const statusColor = chat.color || 'text.secondary';
+                      const chatTags = Array.isArray(chat.tags) ? chat.tags : [];
+                      const isSelected = chatState?.id === chat.id;
 
                       return (
                         <ListItem
@@ -237,30 +250,71 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                           }}
                           onClick={() => onChatSelect(chat)}
                           secondaryAction={
-                            <IconButton
-                              edge="end"
-                              aria-label="Delete chat"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteChat(chat.id);
-                              }}
-                              size="small"
-                              color="error"
-                              sx={{
-                                opacity: 0.7,
-                                '&:hover': {
-                                  opacity: 1,
-                                }
-                              }}
-                            >
-                              <Material.MaterialIcons.Delete />
-                            </IconButton>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              {onEditChat && (
+                                <IconButton
+                                  edge="end"
+                                  aria-label="Edit conversation details"
+                                  title="Edit conversation details"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditChat(chat);
+                                  }}
+                                  size="small"
+                                  sx={{
+                                    opacity: 0.7,
+                                    '&:hover': {
+                                      opacity: 1,
+                                    }
+                                  }}
+                                >
+                                  <Material.MaterialIcons.Edit />
+                                </IconButton>
+                              )}
+                              <IconButton
+                                edge="end"
+                                aria-label="Delete chat"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteChat(chat.id);
+                                }}
+                                size="small"
+                                color="error"
+                                sx={{
+                                  opacity: 0.7,
+                                  '&:hover': {
+                                    opacity: 1,
+                                  }
+                                }}
+                              >
+                                <Material.MaterialIcons.Delete />
+                              </IconButton>
+                            </Box>
                           }
                         >
                           <ListItemText
+                            disableTypography
                             primary={
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: chatState?.id === chat.id ? 'bold' : 'normal' }}>
+                                {StatusIcon ? (
+                                  <Box
+                                    component={StatusIcon}
+                                    title={chat.icon}
+                                    sx={{ fontSize: 16, color: statusColor, flexShrink: 0 }}
+                                  />
+                                ) : chat.color ? (
+                                  <Box
+                                    sx={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: '50%',
+                                      bgcolor: statusColor,
+                                      flexShrink: 0,
+                                    }}
+                                    title="Conversation status"
+                                  />
+                                ) : null}
+                                <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
                                   {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
                                 </Typography>
                                 {chat.active && (
@@ -278,9 +332,45 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                               </Box>
                             }
                             secondary={
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(chat.created).toLocaleDateString()}
-                              </Typography>
+                              <Box component="span" sx={{ display: 'block' }}>
+                                {chat.summary && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="span"
+                                    sx={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                    }}
+                                  >
+                                    {chat.summary}
+                                  </Typography>
+                                )}
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    flexWrap: 'wrap',
+                                    mt: chat.summary ? 0.5 : 0,
+                                  }}
+                                >
+                                  <Typography variant="caption" color="text.secondary">
+                                    {new Date(chat.created).toLocaleDateString()}
+                                  </Typography>
+                                  {chatTags.slice(0, 3).map((tag: string) => (
+                                    <Chip
+                                      key={tag}
+                                      label={tag}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }}
+                                    />
+                                  ))}
+                                </Box>
+                              </Box>
                             }
                           />
                         </ListItem>
@@ -333,9 +423,37 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
           overflow: 'auto',
           p: 2
         }}>
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-            {il8n?.t('reactor.client.chat.history.preview', { defaultValue: 'Preview' })}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+              {il8n?.t('reactor.client.chat.history.preview', { defaultValue: 'Preview' })}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {onEditChat && chatState?.id && (
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<Material.MaterialIcons.Edit />}
+                  onClick={() => onEditChat(chatState)}
+                >
+                  {il8n?.t('reactor.client.chat.history.editDetails', {
+                    defaultValue: 'Edit details',
+                  })}
+                </Button>
+              )}
+              {onTransferChat && chatState?.id && (
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<Material.MaterialIcons.SwapHoriz />}
+                  onClick={() => onTransferChat(chatState)}
+                >
+                  {il8n?.t('reactor.client.chat.transfer.action', {
+                    defaultValue: 'Transfer',
+                  })}
+                </Button>
+              )}
+            </Box>
+          </Box>
           {chatState?.history && chatState.history.length > 0 ? (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

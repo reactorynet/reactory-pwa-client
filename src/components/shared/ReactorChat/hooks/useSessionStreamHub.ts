@@ -20,6 +20,15 @@ export interface TrackedSession {
   parentSessionId?: string;
   waitingToolCallCount?: number;
   hasWaitingToolCalls?: boolean;
+  /**
+   * Descriptive metadata maintained by the agent / user via `updateChatData`.
+   * Surfaced in the active-agent hover card alongside the live status.
+   */
+  summary?: string;
+  /** Material icon name describing the conversation status (e.g. "check_circle"). */
+  icon?: string;
+  /** Hex colour code tinting the status icon. */
+  color?: string;
 }
 
 export interface UseSessionStreamHubOptions {
@@ -386,6 +395,9 @@ export const useSessionStreamHub = ({
       sessionId: string;
       personaId: string;
       title?: string;
+      summary?: string;
+      icon?: string;
+      color?: string;
       updated?: Date;
       isSubAgent: boolean;
     }> = [];
@@ -403,6 +415,9 @@ export const useSessionStreamHub = ({
         sessionId: visit.sessionId,
         personaId: meta?.personaId || meta?.persona?.id || visit.personaId || 'unknown',
         title: meta?.title,
+        summary: meta?.summary,
+        icon: meta?.icon,
+        color: meta?.color,
         updated: meta?.updated ? new Date(meta.updated) : undefined,
         isSubAgent: false,
       });
@@ -413,6 +428,9 @@ export const useSessionStreamHub = ({
         sessionId: sub.id,
         personaId: sub.personaId,
         title: sub.title,
+        summary: sub.summary,
+        icon: sub.icon,
+        color: sub.color,
         updated: sub.updated ? new Date(sub.updated) : undefined,
         isSubAgent: true,
       });
@@ -423,6 +441,9 @@ export const useSessionStreamHub = ({
         sessionId: chat.id,
         personaId: chat.personaId || chat.persona?.id || 'unknown',
         title: chat.title,
+        summary: chat.summary,
+        icon: chat.icon,
+        color: chat.color,
         updated: chat.updated ? new Date(chat.updated) : (chat.created ? new Date(chat.created) : undefined),
         isSubAgent: false,
       });
@@ -441,11 +462,23 @@ export const useSessionStreamHub = ({
         const persona = resolvePersona(entry.personaId);
         const existing = prev[entry.sessionId];
         if (existing) {
-          // Keep live status/unread; only fill in metadata that was missing.
+          // Keep live status/unread, but refresh presentation metadata from the
+          // authoritative list entry whenever it carries a value — the agent can
+          // retitle a conversation mid-flight via `updateChatData`, and a
+          // fill-only-when-missing rule would leave the hover card stale.
           const persona_ = existing.persona || persona;
-          const title = existing.title || entry.title || persona_?.name || 'Conversation';
-          if (persona_ !== existing.persona || title !== existing.title) {
-            next[entry.sessionId] = { ...existing, persona: persona_, title };
+          const title = entry.title || existing.title || persona_?.name || 'Conversation';
+          const summary = entry.summary || existing.summary;
+          const icon = entry.icon || existing.icon;
+          const color = entry.color || existing.color;
+          if (
+            persona_ !== existing.persona ||
+            title !== existing.title ||
+            summary !== existing.summary ||
+            icon !== existing.icon ||
+            color !== existing.color
+          ) {
+            next[entry.sessionId] = { ...existing, persona: persona_, title, summary, icon, color };
             changed = true;
           } else {
             next[entry.sessionId] = existing;
@@ -458,6 +491,9 @@ export const useSessionStreamHub = ({
           personaId: entry.personaId,
           persona,
           title: entry.title || persona?.name || (entry.isSubAgent ? 'Sub-agent' : 'Conversation'),
+          summary: entry.summary,
+          icon: entry.icon,
+          color: entry.color,
           status: carryOverStatusRef.current.get(entry.sessionId) || 'idle',
           unread: false,
           lastUpdated: entry.updated || new Date(),

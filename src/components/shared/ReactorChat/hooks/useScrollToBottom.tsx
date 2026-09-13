@@ -302,6 +302,21 @@ const ChatList = (props: {
    * "show earlier" control once the locally held items are exhausted.
    */
   onLoadEarlier?: () => void | Promise<void>,
+  /**
+   * True when the conversation has messages displaced by truncation or
+   * compaction, so the "earlier, compacted" control should be offered. Peer of
+   * `hasServerEarlier`, but for the archived block rather than the transcript.
+   */
+  hasArchived?: boolean,
+  /** How many archived messages exist, for the control's label. */
+  archivedCount?: number | null,
+  /** True while the archived block is being fetched. */
+  loadingArchived?: boolean,
+  /**
+   * Loads the archived (compacted) block. The set is strictly older than the
+   * active transcript, so the parent prepends it.
+   */
+  onLoadArchived?: () => void | Promise<void>,
 }) => {
 
   const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError, onDeleteToolCall } = props;
@@ -972,6 +987,20 @@ const ChatList = (props: {
   const hiddenEarlierCount = Math.max(0, displayItems.length - renderedCount);
   const showEarlierControl =
     hiddenEarlierCount > 0 || Boolean(props.hasServerEarlier);
+
+  // The "earlier, compacted" control is the peer of "show earlier": same place,
+  // one level older. It is only offered when the conversation actually has
+  // displaced messages, and it is a discrete load rather than a page, because
+  // the archived set is a separate block rather than a continuation of the
+  // transcript.
+  const archivedCount = Math.max(0, Number(props.archivedCount ?? 0));
+  const showArchivedControl =
+    Boolean(props.hasArchived) && Boolean(props.onLoadArchived);
+  const archivedControlLabel = props.loadingArchived
+    ? 'Loading compacted messages…'
+    : archivedCount > 0
+      ? `Show earlier, compacted messages (${archivedCount})`
+      : 'Show earlier, compacted messages';
   const visibleItems =
     hiddenEarlierCount > 0
       ? displayItems.slice(displayItems.length - renderedCount)
@@ -990,6 +1019,43 @@ const ChatList = (props: {
         scrollbarWidth: 'none',        
       }}
     >
+      {showArchivedControl && (
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-label="Show earlier, compacted messages"
+          onClick={() => {
+            if (props.loadingArchived) return;
+            void props.onLoadArchived?.();
+          }}
+          onKeyDown={(event: React.KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              (event.currentTarget as HTMLElement).click();
+            }
+          }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.5,
+            py: 0.75,
+            my: 0.5,
+            cursor: props.loadingArchived ? 'progress' : 'pointer',
+            borderRadius: 1,
+            color: 'text.secondary',
+            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            '&:hover': {
+              backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+            },
+          }}
+        >
+          <Icon sx={{ fontSize: '1rem' }}>history_toggle_off</Icon>
+          <Typography variant="caption" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+            {archivedControlLabel}
+          </Typography>
+        </Box>
+      )}
       {showEarlierControl && (
         <Box
           role="button"

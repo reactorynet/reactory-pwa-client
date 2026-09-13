@@ -1,6 +1,7 @@
 import { gql } from "@apollo/client";
 import Reactory from "@reactorynet/reactory-core";
 import {
+  ChatDataInput,
   ChatState,
   ToolApprovalMode,
   UXChatMessage,
@@ -38,6 +39,7 @@ import REACTOR_UNPIN_FOLDER from "./mutations/ReactorUnpinFolderFromSession.grap
 import REACTOR_SESSION_LOG from "./mutations/ReactorSessionLog.graphql";
 import REACTOR_PATCH_SYSTEM_PROMPT from "./mutations/ReactorSystemPromptPatch.graphql";
 import REACTOR_SPEECH_SYNTHESIZE from "./mutations/ReactorSpeechSynthesize.graphql";
+import REACTOR_UPDATE_CHAT_DATA from "./mutations/ReactorUpdateChatData.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -77,6 +79,20 @@ export type ReactorChatResponse =
       expiry?: Date;
       headers?: any;
     })
+  | ({ __typename: "ReactorErrorResponse" } & {
+      code: string;
+      message: string;
+      details?: any;
+      timestamp?: Date;
+      recoverable?: boolean;
+      suggestion?: string;
+    });
+
+export type ReactorUpdateChatDataResult =
+  | ({ __typename: "ReactorChatState" } & Pick<
+      ChatState,
+      "id" | "title" | "summary" | "tags" | "icon" | "color"
+    >)
   | ({ __typename: "ReactorErrorResponse" } & {
       code: string;
       message: string;
@@ -580,6 +596,22 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSetSidePanelState;
   };
 
+  /**
+   * Update the descriptive metadata (title, summary, tags, icon, colour) of a
+   * conversation. Only the supplied fields are written. Mirrors the agent's
+   * `updateChatData` tool so the UI can edit the same fields manually.
+   */
+  const updateChatData = async (
+    chatSessionId: string,
+    input: ChatDataInput
+  ): Promise<ReactorUpdateChatDataResult | null> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorUpdateChatData: ReactorUpdateChatDataResult },
+      { chatSessionId: string; input: ChatDataInput }
+    >(REACTOR_UPDATE_CHAT_DATA as any, { chatSessionId, input });
+    return response?.data?.ReactorUpdateChatData ?? null;
+  };
+
   return {
     startChatSession,
     sendMessage,
@@ -608,6 +640,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     unpinFolderFromSession,
     sendSessionLog,
     setSidePanelState,
+    updateChatData,
     transcribeAudio,
     synthesizeSpeech,
   };

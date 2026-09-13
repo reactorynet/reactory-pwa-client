@@ -311,6 +311,14 @@ export type UXChatMessage = ChatMessage & {
   errorCount?: number;
   /** Optional voice key for text-to-speech synthesis */
   voice?: string;
+  /**
+   * True when the server reported this message as displaced from the active
+   * transcript by truncation or compaction. Archived items are only loaded on
+   * request, via the "earlier, compacted" expander.
+   */
+  archived?: boolean | null;
+  /** Why it was archived: `truncated`, `compacted` or `cleared`. */
+  archivedReason?: string | null;
 }
 
 export interface MCPClient {
@@ -330,6 +338,19 @@ export interface MCPClient {
   name?: string
   description?: string
 }
+
+/**
+ * The descriptive metadata of a conversation that can be edited manually or by
+ * the agent (`updateChatData`). Every field is optional; only supplied fields
+ * are written. This mirrors the server's `ReactorUpdateChatDataInput`.
+ */
+export type ChatDataInput = {
+  title?: string;
+  summary?: string;
+  tags?: string[];
+  icon?: string;
+  color?: string;
+};
 
 /**
  * Represents the state of a chat session.
@@ -358,6 +379,14 @@ export type ChatState = {
    * A short title for the conversation, auto-generated from the user's first message.
    */
   title?: string
+  /** A 1-2 sentence summary of what the conversation is about. Set by the agent via updateChatData. */
+  summary?: string
+  /** Free-form tags for grouping and discovery in the chat history. */
+  tags?: string[]
+  /** Material icon name describing the conversation status (e.g. "check_circle"). */
+  icon?: string
+  /** Hex colour code used to tint the status icon (e.g. "#2e7d32"). */
+  color?: string
   /**
    * The persona that is associated with the chat session.
    */
@@ -498,6 +527,12 @@ export type ChatState = {
     hasMoreBefore: boolean;
     oldestId?: string | null;
     newestId?: string | null;
+    /**
+     * How many messages this conversation has displaced by truncation or
+     * compaction. Drives the "earlier, compacted" expander, which is only
+     * offered when there is something to show.
+     */
+    archivedCount?: number | null;
   } | null
   /**
    * Files attached to the chat session
@@ -713,6 +748,11 @@ export interface SubAgentSummary {
   created?: string | Date;
   updated?: string | Date;
   user?: { id?: string; firstName?: string; lastName?: string };
+  /** Descriptive metadata maintained via `updateChatData` (shown in hover cards). */
+  summary?: string;
+  tags?: string[];
+  icon?: string;
+  color?: string;
 }
 
 // ── File Explorer state ────────────────────────────────────────────────
