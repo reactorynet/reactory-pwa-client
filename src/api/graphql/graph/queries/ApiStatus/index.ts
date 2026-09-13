@@ -114,6 +114,20 @@ const FRAGMENTS = {
       exact
       redirect
       componentProps
+      header {
+        show
+        title
+        componentFqn
+        props
+        propsMap
+      }
+      footer {
+        show
+        title
+        componentFqn
+        props
+        propsMap
+      }
       args {
         key
         value

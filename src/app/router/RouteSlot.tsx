@@ -10,7 +10,11 @@ export interface RouteSlotProps {
 const RouteSlot: React.FC<RouteSlotProps> = ({ config, fallback }) => {
   const reactory = useReactory();
 
-  if (!config || config.show === false) {
+  if (config && config.show === false) {
+    return null;
+  }
+
+  if (!config) {
     return fallback ? <>{fallback}</> : null;
   }
 
