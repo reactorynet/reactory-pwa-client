@@ -15,7 +15,7 @@ describe('RouteSlot', () => {
     expect(screen.getByTestId('fallback')).toBeTruthy();
   });
 
-  it('renders fallback when show is false', () => {
+  it('does not render when show is false', () => {
     const reactory = createMockReactory({ components: { 'core.Header@1.0.0': Header } });
     renderWithRouter(
       <RouteSlot
@@ -24,7 +24,8 @@ describe('RouteSlot', () => {
       />,
       reactory,
     );
-    expect(screen.getByTestId('fallback')).toBeTruthy();
+    expect(screen.queryByTestId('fallback')).toBeNull();
+    expect(screen.queryByTestId('slot-header')).toBeNull();
   });
 
   it('renders the registered slot component', () => {
