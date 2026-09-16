@@ -1053,7 +1053,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       macros: personaMacros,  // Include persona macros
       tools: uniquePersonaTools,  // Include persona tools
       tokenCount: 0,
-      maxTokens: persona?.maxTokens || 8000,
+      // maxTokens is deliberately NOT set here. The context window is owned by the
+      // provider registry on the server and arrives with the init/session response;
+      // a client-side constant would be a second, unauthorised source of a limit.
       tokenPressure: 0,
       sendMessage
     }
