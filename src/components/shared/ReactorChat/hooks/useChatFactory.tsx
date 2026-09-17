@@ -7,6 +7,32 @@ import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
 import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 import { chatShellBus } from '../components/Shell/chatShellBus';
+import {
+  cacheClientToolResult,
+  evictClientToolResults,
+  getCachedClientToolResult,
+} from './macros/clientToolResultCache';
+
+/**
+ * The scope client tool results are cached under.
+ *
+ * `localStorage` is per-origin, not per-account, so without this a shared browser
+ * profile that switches users could show one account's cached tool output to the
+ * next — and the index of conversations is itself information. The user id is the
+ * natural scope: it is already the boundary every other per-user decision uses.
+ *
+ * Falls back to the cache module's anonymous scope when no identity is resolvable,
+ * which still keeps the entry out of any *named* user's namespace.
+ */
+const resolveCacheScope = (reactory: any): string => {
+  try {
+    const loggedIn = reactory?.getUser?.()?.loggedIn;
+    return String(loggedIn?.user?.id ?? loggedIn?.id ?? '').trim();
+  } catch {
+    return '';
+  }
+};
+
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -262,6 +288,86 @@ const EXEC_TOOL_CALL_MUTATION = `
   }
 `;
 
+const SYNC_CLIENT_CAPABILITIES_MUTATION = `
+  mutation ReactorSyncClientCapabilities(
+    $chatSessionId: String!
+    $macros: Any
+    $tools: Any
+  ) {
+    ReactorSyncClientCapabilities(
+      chatSessionId: $chatSessionId
+      macros: $macros
+      tools: $tools
+    ) {
+      synced
+      clientMacros
+      clientTools
+      macrosTotal
+      toolsTotal
+    }
+  }
+`;
+
+const PENDING_CLIENT_TOOL_CALLS_QUERY = `
+  query ReactorPendingClientToolCalls($chatSessionId: String!) {
+    ReactorPendingClientToolCalls(chatSessionId: $chatSessionId) {
+      toolCallId
+      toolName
+      args
+      status
+      createdAt
+    }
+  }
+`;
+
+/**
+ * Re-advertise this client's macros and tools onto a session.
+ *
+ * Module-level rather than a hook callback because it needs no React state and
+ * must be callable from two independent places: session *creation* and session
+ * *resume*. Capabilities were originally advertised only at creation, so a
+ * reload or a reconnect left a stale set on the server. When the recorded set no
+ * longer matches what the browser can run, a client-side tool goes unrecognised,
+ * the server cannot classify it as client-only, and the turn dies on a macro
+ * error — the failure is a broken conversation, not a missing feature.
+ *
+ * Fire-and-forget by contract: a failed sync must never stop a chat opening, and
+ * the next establish retries it.
+ */
+const syncClientCapabilitiesToSession = async (
+  reactory: any,
+  chatSessionId: string,
+  clientMacros: MacroComponentDefinition<unknown>[] | undefined,
+  clientTools: any[],
+  label: string,
+): Promise<void> => {
+  if (!chatSessionId) return;
+  try {
+    await reactory.graphqlMutation(SYNC_CLIENT_CAPABILITIES_MUTATION, {
+      chatSessionId,
+      macros: (clientMacros ?? []).map((macro: any) => ({
+        nameSpace: macro.nameSpace,
+        name: macro.name,
+        version: macro.version,
+        description: macro.description,
+        alias: macro.alias,
+        roles: macro.roles,
+        // The macro's own tool declarations are part of its capability. Omitting
+        // them left a macro that advertises itself only through `tools` with no
+        // server-side definition at all, so its calls could not be classified.
+        tools: macro.tools ?? [],
+      })),
+      tools: [...(clientTools ?? [])],
+    });
+  } catch (error: any) {
+    reactory.log(
+      `ChatFactory: client capability sync failed (${label}): ${error?.message}`,
+      {},
+      'warning',
+    );
+  }
+};
+
 const COMPLETE_CLIENT_TOOL_CALLS_MUTATION = `
   mutation ReactorCompleteClientToolCalls(
     $chatSessionId: String!
@@ -339,6 +445,56 @@ const safeJsonParse = (str: any) => {
   } catch (e) {
     return {};
   }
+}
+
+/**
+ * The client-side macros and their tool definitions, as this browser declares them.
+ *
+ * Extracted so the creation path and the resume path advertise an identical set.
+ * Two hand-maintained copies of this walk would drift, and the drift would be
+ * silent: the session would simply stop recognising a tool the browser can run.
+ *
+ * `Object.values` is used rather than `.filter` on the array so the module's
+ * default export works whether it is an array or a keyed map — the imported
+ * registry has been both.
+ */
+export const collectClientCapabilities = (
+  macroRegistry: MacroComponentDefinition<unknown>[] | Record<string, MacroComponentDefinition<unknown>>,
+): { clientMacros: MacroComponentDefinition<unknown>[]; clientTools: any[] } => {
+  const all = Array.isArray(macroRegistry)
+    ? macroRegistry
+    : Object.values(macroRegistry ?? {});
+
+  const clientMacros = all.filter((macro) => (macro as any)?.runat === 'client');
+
+  const clientTools: any[] = [];
+  const seen = new Set<string>();
+
+  for (const macro of clientMacros) {
+    for (const tool of ((macro as any)?.tools ?? []) as any[]) {
+      if (tool?.type !== 'function') continue;
+      const toolName = tool?.function?.name;
+      // Deduplicate by name: two macros may legitimately declare the same tool,
+      // and the server keys its tool set by name.
+      if (!toolName || seen.has(toolName)) continue;
+      seen.add(toolName);
+      clientTools.push({
+        type: tool.type,
+        propsMap: tool.propsMap,
+        roles: tool.roles,
+        runat: 'client',
+        function: {
+          icon: tool.function.icon,
+          name: tool.function.name,
+          roles: tool.roles,
+          description: tool.function.description,
+          parameters: tool.function.parameters,
+        },
+      });
+    }
+  }
+
+  return { clientMacros, clientTools };
 };
 
 const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
@@ -354,6 +510,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
 
+  // Resolved once per render: the signed-in user does not change without a reload,
+  // and every cache call needs the same value.
+  const cacheScope = resolveCacheScope(props.reactory);
+
   /**
    * Does a streaming event belong to the chat window currently on screen?
    * See `sessionRouting.ts` — the rule fails closed on an unlabelled event.
@@ -361,6 +521,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const isForActiveSession = (eventSessionId?: string): boolean =>
     isEventForSession(eventSessionId, activeSessionIdRef.current);
 
+  /**
+   * Replay surface for client-side tool completions, exposed via a ref.
+   *
+   * When a client runs a client-side tool and the completion call then fails —
+   * a dropped connection, a closed tab, a browser that slept mid-request — the
+   * assistant message keeps a `tool_call` that nothing ever answers. The
+   * transcript is then permanently malformed: the next provider request carries a
+   * tool call with no tool result, which providers reject or mis-handle.
+   *
+   * Assigned after the callback is defined, so callers earlier in the render
+   * (`loadChatImpl`, the SSE `onReconnected` handler) can reach the newest
+   * version. Same pattern as `completeClientToolCallsRef`.
+   */
+  const replayPendingClientToolCallsRef = React.useRef<((chatSessionId: string) => Promise<number>) | null>(null);
   /** Session id currently being fetched by `loadChat`, or null. Re-entrancy guard. */
   const loadInFlightRef = React.useRef<string | null>(null);
 
@@ -1703,6 +1877,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         setNetworkStatus('connected');
         setNetworkError(null);
         setNetworkReconnectAttempt(0);
+
+        // A transport reconnect is precisely when a client-tool completion is
+        // most likely to have gone missing: the tool ran locally, the report to
+        // the server did not. Ask what is still unanswered and replay it, so a
+        // dropped connection cannot leave a tool call nothing will ever answer.
+        const sessionId = activeSessionIdRef.current;
+        if (sessionId && replayPendingClientToolCallsRef.current) {
+          void replayPendingClientToolCallsRef.current(sessionId);
+        }
       },
       onReconnectFailed: () => {
         setNetworkStatus('error');
@@ -1913,6 +2096,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             macros: ((chat as any).macros?.length > 0) ? (chat as any).macros : (prevState.macros || []),
             tools: ((chat as any).tools?.length > 0) ? (chat as any).tools : (prevState.tools || []),
           }));
+          // Re-advertise this client's macros and tools onto the session.
+          //
+          // ReactorStartChatSession records them only at creation, so a resumed
+          // session can carry a stale set and a tool the browser can run then goes
+          // unrecognised server-side — the model calls it and the turn fails on a
+          // macro error. Syncing on every establish keeps the recorded set
+          // converging on what this client actually supports.
+          // Re-advertise onto the new session via the shared helper, so the
+          // creation and resume paths cannot drift apart.
+          await syncClientCapabilitiesToSession(
+            reactory,
+            chat.id as string,
+            clientMacros,
+            clientTools,
+            'create',
+          );
+
           return chat.id as string;
         }
         throw new Error('No session ID in initialization response');
@@ -1946,6 +2146,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           token: sseResult.token,
           expiry: sseResult.expiry,
         });
+        // Same re-advertisement as the non-SSE branch, through the shared helper.
+        await syncClientCapabilitiesToSession(reactory, sseSessionId, clientMacros, clientTools, 'create-sse');
+
         return sseSessionId;
       }
 
@@ -3244,6 +3447,37 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Mark as initialized since we're loading an existing session
           setIsInitialized(true);
 
+          // Re-advertise this client's capabilities onto the *resumed* session.
+          //
+          // This is the case the whole sync exists for. ReactorStartChatSession
+          // records a client's macros once, at creation; a page reload, a new tab
+          // or a navigation back into the conversation loads the transcript and
+          // never re-advertises. The session then holds whatever set it was born
+          // with, which may no longer match what this browser can run — and a
+          // client-side tool the server cannot classify fails the turn outright.
+          {
+            const { clientMacros: resumedMacros, clientTools: resumedTools } =
+              collectClientCapabilities(macros);
+            await syncClientCapabilitiesToSession(
+              reactory,
+              chatSessionId,
+              resumedMacros,
+              resumedTools,
+              'resume',
+            );
+          }
+
+          // Recover any client-tool completion that never reached the server.
+          //
+          // A reload is the other moment a completion is likely to have been
+          // lost, alongside a transport reconnect. Without this the transcript
+          // keeps a `tool_call` nothing ever answers, and every later provider
+          // request carries it. Fire-and-forget: recovery must never block the
+          // chat from opening.
+          if (replayPendingClientToolCallsRef.current) {
+            void replayPendingClientToolCallsRef.current(chatSessionId);
+          }
+
           // Re-establish the SSE transport for streaming sessions.
           // The EventSource from the previous page visit is gone, so
           // the server has no active transport for this conversation.
@@ -3437,6 +3671,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       return null;
     }
 
+    if (results.length > 0) {
+      for (const result of results) {
+        cacheClientToolResult(cacheScope, chatState.id, {
+          toolCallId: result.toolCallId,
+          toolName: result.toolName,
+          result: result.result,
+          isError: result.isError,
+          error: result.error,
+          decision: (result as any).decision,
+          userInstruction: (result as any).userInstruction,
+        });
+      }
+    }
+
     try {
       const resp = await reactory.graphqlMutation<{
         ReactorCompleteClientToolCalls: ReactorSendMessageResponse;
@@ -3459,6 +3707,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       if (data.__typename === "ReactorErrorResponse") {
         throw new Error((data as any).message);
+      }
+
+      // The server holds these results now, so the local copies are dead weight
+      // consuming quota. Deliberately *after* the error check above: a rejection or
+      // a thrown mutation must leave the cache intact, which is the entire reason
+      // the entry is cached before the call in the first place.
+      if (results.length > 0) {
+        evictClientToolResults(
+          cacheScope,
+          chatState.id,
+          results.map((result) => result.toolCallId),
+        );
       }
 
       if (data.__typename === "ReactorInitiateSSE") {
@@ -3496,7 +3756,238 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [chatState?.id, persona?.id, protocol, reactory, sse, setIsStreaming, setWaitingForResponse, setAgentBusy]);
 
   // Keep the ref in sync so useMacros' executeMacro always calls the latest version.
-  completeClientToolCallsRef.current = completeClientToolCalls;
+
+  /**
+   * Recover client-side tool calls the server never got an answer for.
+   *
+   * The recovery half of the client-tool contract, and the reason it is needed:
+   * a completion call can fail after the tool itself has already run — a dropped
+   * connection, a closed tab, a browser suspended mid-request. The assistant
+   * message keeps a `tool_call` with no result, so the transcript is permanently
+   * malformed and every subsequent provider request carries an unanswered tool
+   * call. Nothing recovered from that before; a client now asks the server what is
+   * outstanding and reports it.
+   *
+   * HOW A CALL IS RECOVERED, in order of preference:
+   *
+   *  1. **Replay.** The result was written to a durable local cache before it was
+   *     reported, so it is re-reported verbatim and the macro is never invoked.
+   *     This is a true replay and works for every client macro — including `amq`,
+   *     `login` and `logout`, whose re-execution would be a second side effect.
+   *  2. **Re-run**, only when no result was cached. The tool genuinely has to run
+   *     again for output to exist, so this is restricted to macros whose repetition
+   *     is a re-render rather than an effect (`RERUN_SAFE_MACROS`).
+   *  3. **Report unrecoverable.** A cache miss on a side-effecting macro. Logged
+   *     with the tool names rather than dropped, so an operator can see it.
+   *
+   * Preference 1 is what removed the old blanket "never replay side-effecting
+   * macros" restriction: the risk was never in *recovering* the call, it was in
+   * *re-running* it, and a stored result removes the need to run anything.
+   */
+  const replayPendingClientToolCalls = React.useCallback(async (
+    chatSessionId: string,
+  ): Promise<number> => {
+    if (!chatSessionId || !persona?.id) return 0;
+
+    // Macros safe to *re-execute*, used only when no result was cached.
+    //
+    // This is no longer the replay policy — replay now re-reports a stored result
+    // and never runs the macro, which works for every client macro. What remains
+    // here is the degraded mode: if the tab lost the result before it could be
+    // stored, the only way to produce output is to run the tool again, and that is
+    // acceptable only for macros whose repetition is a re-render rather than a
+    // second side effect. `amq` publishes an event; `login`/`logout` mutate session
+    // state, so those are reported as unrecoverable rather than fired twice.
+    //
+    // Deliberately an allow-list: a new client macro is not re-run until someone
+    // confirms that repeating it is safe.
+    const RERUN_SAFE_MACROS = new Set([
+      'chart', 'd3', 'image', 'form', 'component',
+      'side_panel_state', 'sidePanelState', 'graph_perspective', 'graphPerspective',
+      'host_fields', 'host_field_update',
+    ]);
+
+    let pending: Array<{ toolCallId: string; toolName: string; args?: any }> = [];
+    try {
+      const resp = await reactory.graphqlQuery<{
+        ReactorPendingClientToolCalls: Array<{ toolCallId: string; toolName: string; args?: any }>;
+      }, { chatSessionId: string }>(PENDING_CLIENT_TOOL_CALLS_QUERY, { chatSessionId });
+      pending = resp?.data?.ReactorPendingClientToolCalls ?? [];
+    } catch (error: any) {
+      reactory.log(
+        `ChatFactory: pending client tool lookup failed: ${error?.message}`,
+        {},
+        'warning',
+      );
+      return 0;
+    }
+
+    if (pending.length === 0) return 0;
+
+    // Classify each outstanding call by how — or whether — its result can be
+    // recovered.
+    //
+    // A cached result is re-reported verbatim and the macro is never executed. That
+    // works for EVERY client macro, including the side-effecting ones that must
+    // never run twice, which is what turns this from a re-run into a real replay.
+    // Re-execution is now only the fallback when no result was captured, so the set
+    // consulted below answers a narrower question than it used to and is named
+    // accordingly.
+    const fromCache: typeof pending = [];
+    const needRerun: typeof pending = [];
+    const unrecoverable: typeof pending = [];
+
+    for (const call of pending) {
+      if (getCachedClientToolResult(cacheScope, chatSessionId, call.toolCallId)) {
+        fromCache.push(call);
+      } else if (RERUN_SAFE_MACROS.has(call.toolName)) {
+        needRerun.push(call);
+      } else {
+        unrecoverable.push(call);
+      }
+    }
+
+    // Heal the transcript for whatever cannot be recovered.
+    //
+    // Previously this only logged a warning and moved on, which left the assistant's
+    // `tool_call` permanently unanswered — exactly the malformed state this whole
+    // recovery path exists to fix. Silence is the worst of the three options: the
+    // turn never completes, the model never learns the tool ran, and nothing surfaces
+    // to the user.
+    //
+    // Reporting an error result is honest. The tool *did* execute; what was lost was
+    // its output, and no amount of cleverness can reconstruct a value that was only
+    // ever held in a tab whose storage was unavailable or full. So the model is told
+    // that plainly and asked to re-issue the call, which is a real user-visible
+    // remedy rather than a shrug.
+    //
+    // Reached only when a cache miss coincides with a macro whose re-execution is
+    // unsafe — a narrow residual, because for every replay-safe macro the fallback
+    // simply runs it again.
+    if (unrecoverable.length > 0) {
+      reactory.log(
+        `ChatFactory: ${unrecoverable.length} client tool call(s) could not be recovered — ` +
+          `no cached result and re-running is not known to be safe ` +
+          `(${unrecoverable.map((c) => c.toolName).join(', ')}). Reporting them as errors so the ` +
+          `conversation is not left waiting on an unanswered tool call.`,
+        { toolCallIds: unrecoverable.map((c) => c.toolCallId) },
+        'warning',
+      );
+    }
+
+    if (fromCache.length === 0 && needRerun.length === 0 && unrecoverable.length === 0) return 0;
+
+    sessionLogger?.info(
+      `Recovering ${fromCache.length} client tool call(s) from cache` +
+        (needRerun.length > 0 ? `, re-running ${needRerun.length}` : ''),
+      {
+        cached: fromCache.map((c) => c.toolName),
+        rerun: needRerun.map((c) => c.toolName),
+        chatSessionId,
+      },
+      'useChatFactory',
+    );
+
+    const results: Array<{
+      toolCallId: string;
+      toolName: string;
+      result?: any;
+      isError?: boolean;
+      error?: string;
+      decision?: string;
+      userInstruction?: string;
+    }> = [];
+
+    // Replay: re-report what the tool produced. The macro is deliberately NOT
+    // invoked — re-executing a renderer to reproduce output we already hold would
+    // be wasteful at best, and wrong for anything with an external effect.
+    for (const call of fromCache) {
+      const cached = getCachedClientToolResult(cacheScope, chatSessionId, call.toolCallId);
+      if (!cached) continue; // Evicted between classification and here.
+
+      results.push({
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        result: cached.result,
+        isError: cached.isError,
+        error: cached.error,
+        decision: cached.decision,
+        userInstruction: cached.userInstruction,
+      });
+    }
+
+    // Fallback: no stored result, so the tool has to run again for its output to
+    // exist at all. Restricted to macros whose repetition is harmless.
+    for (const call of needRerun) {
+      const macro = findMacroByAlias(call.toolName) ?? findMacroByName(call.toolName);
+      if (!macro) {
+        results.push({
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          isError: true,
+          error: `Client macro not found: ${call.toolName}`,
+        });
+        continue;
+      }
+
+      try {
+        const result = await executeMacro(macro, call.args, 'auto', call.toolCallId);
+        results.push({
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          result:
+            result?.content
+            ?? (result != null
+              ? (typeof result === 'string' ? result : JSON.stringify(result))
+              : `Client tool "${call.toolName}" replayed successfully (no content returned).`),
+        });
+      } catch (error: any) {
+        results.push({
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          isError: true,
+          error: error?.message || String(error),
+        });
+      }
+    }
+
+    // Unrecoverable: the tool ran but its output is gone and re-running it is
+    // unsafe. Reported as an error so the call is answered and the turn can finish.
+    for (const call of unrecoverable) {
+      results.push({
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        isError: true,
+        error:
+          `The client-side tool "${call.toolName}" was executed in the browser, but its result could not be ` +
+          `recovered after a connection interruption and re-running it is not considered safe for this tool. ` +
+          `Ask the user to re-issue the request so it can run again.`,
+      });
+    }
+
+    // `continueProcessing: false` — the results are reported first, then a single
+    // continuation is requested below. Letting each report continue the loop would
+    // drive one provider turn per replayed call.
+    try {
+      await completeClientToolCalls(results, false);
+    } catch (error: any) {
+      reactory.error('ChatFactory: failed to report replayed client tool results', error);
+      return 0;
+    }
+
+    // One continuation for the whole batch, so the agent sees the real outputs
+    // and can finish the turn it was interrupted mid-way through.
+    try {
+      await completeClientToolCalls([], true);
+    } catch (error: any) {
+      reactory.error('ChatFactory: failed to continue after client tool replay', error);
+    }
+
+    return results.length;
+  }, [persona?.id, reactory, sessionLogger, findMacroByAlias, findMacroByName, executeMacro, completeClientToolCalls, cacheScope]);
+
+  // Keep the ref in sync so callers defined earlier in the render can reach it.
+  replayPendingClientToolCallsRef.current = replayPendingClientToolCalls;
 
   /**
    * Remove the approval component from a message.
