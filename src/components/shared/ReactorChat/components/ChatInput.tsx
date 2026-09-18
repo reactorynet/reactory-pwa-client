@@ -345,7 +345,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onKeyPress={handleKeyPress}
             onPaste={supportsImages ? handlePaste : undefined}
             multiline
-            maxRows={4}
+            maxRows={8}
             autoFocus={true}
             variant="outlined"
             disabled={disabled}
