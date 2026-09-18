@@ -3105,27 +3105,24 @@ export default (props) => {
             />
           </Box>
           {agentBusy && (
-            (chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
-              chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
-              <Tooltip title="Stop execution">
-                <IconButton
-                  size="small"
-                  onClick={() => interruptExecution()}
-                  sx={{
-                    p: 0.25,
-                    color: 'text.secondary',
-                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
-                    backdropFilter: 'blur(10px) saturate(120%)',
-                    WebkitBackdropFilter: 'blur(10px) saturate(120%)',
-                    border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                    pointerEvents: 'auto',
-                    '&:hover': { color: 'error.main' },
-                  }}
-                >
-                  <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
-                </IconButton>
-              </Tooltip>
-            )
+            <Tooltip title="Stop execution">
+              <IconButton
+                size="small"
+                onClick={() => interruptExecution()}
+                sx={{
+                  p: 0.25,
+                  color: 'text.secondary',
+                  bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                  backdropFilter: 'blur(10px) saturate(120%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                  border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                  pointerEvents: 'auto',
+                  '&:hover': { color: 'error.main' },
+                }}
+              >
+                <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
         <ChatInput
