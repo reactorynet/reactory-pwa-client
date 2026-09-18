@@ -3232,7 +3232,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         chatState?.botId ||
         'reactor';
       if (!sessionId) {
-        reactory.warn('[useChatFactory] Cannot interrupt: missing sessionId');
+        reactory.warning('[useChatFactory] Cannot interrupt: missing sessionId');
         return;
       }
       setAgentBusy(false);
