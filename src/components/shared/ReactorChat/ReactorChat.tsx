@@ -420,7 +420,6 @@ export default (props) => {
   // Track multi-session and sub-agent background streams and unread statuses
   const {
     backgroundSessions,
-    activePersonaSessionCount,
     clearUnread,
   } = useSessionStreamHub({
     reactory,
@@ -2384,6 +2383,12 @@ export default (props) => {
     }] : []),
   ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, SwapHoriz, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleChatTransferOpen, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleShellConsoleToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
 
+  const pendingToolCallCount =
+    (waitingClientToolCalls?.length || 0) +
+    (pendingToolCallResume?.toolCalls?.length || 0);
+  const hasPendingToolCalls =
+    hasWaitingClientToolCalls || !!pendingToolCallResume || pendingToolCallCount > 0;
+
   return (
     <Box
       sx={{
@@ -2942,10 +2947,11 @@ export default (props) => {
           '#4caf50'
         }
         mainBadgeContent={
-          hasWaitingClientToolCalls ? '!' :
-          (activePersonaSessionCount > 1 ? activePersonaSessionCount : undefined)
+          hasPendingToolCalls
+            ? (pendingToolCallCount > 0 ? pendingToolCallCount : '!')
+            : undefined
         }
-        mainBadgeColor={hasWaitingClientToolCalls ? 'warning' : 'primary'}
+        mainBadgeColor="warning"
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
           label: action.title,
