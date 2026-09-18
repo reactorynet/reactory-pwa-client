@@ -2057,8 +2057,10 @@ export default (props) => {
   }, []);
 
   // Helper function to get tool icon
-  const getToolIcon = useCallback((tool) => {
-    const toolName = tool.function?.name?.toLowerCase() || '';
+  const getToolIcon = useCallback((tool: any) => {
+    if (tool?.function?.icon) return tool.function.icon;
+    if (tool?.icon) return tool.icon;
+    const toolName = tool.function?.name?.toLowerCase() || tool.name?.toLowerCase() || '';
 
     // Map tool names to icons
     if (toolName.includes('search') || toolName.includes('find')) return 'search';

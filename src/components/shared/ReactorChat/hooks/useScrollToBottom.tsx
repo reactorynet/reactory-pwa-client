@@ -69,6 +69,107 @@ const getOverallToolCallStatus = (message: UXChatMessage): ReactorToolCallStatus
   return 'running';
 };
 
+/**
+ * Resolves the display icon for a tool call.
+ * Checks the tool call itself, chatState tools/macros, persona tools/macros,
+ * and falls back to a name-based heuristic before defaulting to 'build'.
+ */
+const getToolCallIcon = (
+  call: any,
+  chatState?: ChatState,
+  selectedPersona?: IAIPersona | null,
+  personas?: IAIPersona[]
+): string => {
+  if (!call) return 'build';
+
+  // 1. Direct on tool call
+  if (call.function?.icon) return call.function.icon;
+  if (call.icon) return call.icon;
+
+  const toolName = call.function?.name ?? call.name;
+  if (!toolName) return 'build';
+
+  // 2. Look in chatState.tools
+  const chatTool = chatState?.tools?.find(
+    (t: any) => (t.function?.name || t.name) === toolName
+  );
+  if (chatTool?.function?.icon) return chatTool.function.icon;
+  if (chatTool?.icon) return chatTool.icon;
+
+  // 3. Look in selectedPersona.tools
+  const personaTool = selectedPersona?.tools?.find(
+    (t: any) => (t.function?.name || t.name) === toolName
+  );
+  if (personaTool?.function?.icon) return personaTool.function.icon;
+  if (personaTool?.icon) return personaTool.icon;
+
+  // 4. Look in chatState.macros
+  const chatMacro = chatState?.macros?.find(
+    (m: any) => m.name === toolName || m.alias === toolName
+  );
+  if (chatMacro?.icon) return chatMacro.icon;
+  if (chatMacro?.tools) {
+    const subTool = chatMacro.tools.find(
+      (t: any) => (t.function?.name || t.name) === toolName
+    );
+    if (subTool?.function?.icon) return subTool.function.icon;
+    if (subTool?.icon) return subTool.icon;
+  }
+
+  // 5. Look in selectedPersona.macros
+  const personaMacro = selectedPersona?.macros?.find(
+    (m: any) => m.name === toolName || m.alias === toolName
+  );
+  if (personaMacro?.icon) return personaMacro.icon;
+  if (personaMacro?.tools) {
+    const subTool = personaMacro.tools.find(
+      (t: any) => (t.function?.name || t.name) === toolName
+    );
+    if (subTool?.function?.icon) return subTool.function.icon;
+    if (subTool?.icon) return subTool.icon;
+  }
+
+  // 6. Look in any available persona
+  if (personas) {
+    for (const p of personas) {
+      const pt = p.tools?.find(
+        (t: any) => (t.function?.name || t.name) === toolName
+      );
+      if (pt?.function?.icon) return pt.function.icon;
+      if (pt?.icon) return pt.icon;
+      const pm = p.macros?.find(
+        (m: any) => m.name === toolName || m.alias === toolName
+      );
+      if (pm?.icon) return pm.icon;
+      if (pm?.tools) {
+        const subTool = pm.tools.find(
+          (t: any) => (t.function?.name || t.name) === toolName
+        );
+        if (subTool?.function?.icon) return subTool.function.icon;
+        if (subTool?.icon) return subTool.icon;
+      }
+    }
+  }
+
+  // 7. Heuristic fallback based on tool name
+  const lower = toolName.toLowerCase();
+  if (lower === 'shell' || lower === 'bash') return 'handyman';
+  if (lower === 'updatechatdata') return 'edit_note';
+  if (lower.includes('search') || lower.includes('find')) return 'search';
+  if (lower.includes('read') || lower.includes('file')) return 'description';
+  if (lower.includes('write') || lower.includes('create')) return 'edit';
+  if (lower.includes('delete') || lower.includes('remove')) return 'delete';
+  if (lower.includes('database') || lower.includes('mongo') || lower.includes('sql') || lower.includes('db')) return 'storage';
+  if (lower.includes('code') || lower.includes('script')) return 'code';
+  if (lower.includes('terminal')) return 'terminal';
+  if (lower.includes('graph')) return 'share';
+  if (lower.includes('project')) return 'folder';
+  if (lower.includes('workflow')) return 'account_tree';
+  if (lower.includes('ticket') || lower.includes('support')) return 'support_agent';
+
+  return 'build';
+};
+
 interface ChatDisplayItem {
   key: string;
   itemType: 'user' | 'error' | 'activity' | 'processing' | 'thought' | 'tool_call' | 'response';
@@ -1323,6 +1424,9 @@ const ChatList = (props: {
                 : overallStatus === 'success'
                 ? (validCalls.length === 1 ? 'Tool completed' : `${validCalls.length} tools completed`)
                 : (validCalls.length === 1 ? 'Tool failed' : `${validCalls.length} tools (some failed)`);
+            const mainToolIcon = validCalls.length > 0
+              ? getToolCallIcon(validCalls[0], chatState, selectedPersona, personas)
+              : 'build';
 
             return (
               <ListItem
@@ -1355,7 +1459,7 @@ const ChatList = (props: {
                         sizes='small'
                         aria-label="tools"
                       >
-                        <Icon>build</Icon>
+                        <Icon>{mainToolIcon}</Icon>
                       </Avatar>
                     </Grid>
                     <Grid item xs>
@@ -1403,10 +1507,11 @@ const ChatList = (props: {
                                 callStatus === 'success' ? 'rgba(46,125,50,0.1)' :
                                 callStatus === 'error'   ? 'rgba(211,47,47,0.1)' :
                                 'rgba(255,167,38,0.1)';
+                              const toolIcon = getToolCallIcon(call, chatState, selectedPersona, personas);
                               const callIcon =
                                 callStatus === 'success' ? 'check_circle' :
                                 callStatus === 'error'   ? 'error' :
-                                'build';
+                                toolIcon;
                               const expandKey = `${message.id}:${callId}`;
                               const isExpanded = expandedToolResults.has(expandKey);
 
