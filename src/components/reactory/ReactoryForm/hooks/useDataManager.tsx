@@ -111,8 +111,8 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   const { schema } = formDefinition;
 
-  const getData = async () => { 
-    reactory.debug(`${SIGN} getData`, { formData, formContext, props });
+  const getData = async (bypassCache = false) => { 
+    reactory.debug(`${SIGN} getData`, { formData, formContext, props, bypassCache });
     setIsDataLoading(true);
 
     //for each of the data managers, call the getData method
@@ -136,6 +136,11 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
         formData,
         formContext,
         props,
+        // An explicit "run" (submit / refresh) must reach the server rather
+        // than replay a cached response — otherwise re-running a query after
+        // changing a value can return the previous result. `bypassCache` also
+        // lets a form's own `options.fetchPolicy` apply on ordinary loads.
+        fetchPolicy: bypassCache ? 'network-only' : undefined,
       });
     }
 
@@ -197,6 +202,29 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     setIsDataLoading(false);
   };
 
+  /**
+   * Query-only forms (e.g. core.SQLQueryForm, core.GraphQLQueryForm) declare
+   * `graphql.query` but no `graphql.mutation`. For those, "submit" means "run
+   * the query" — which is what the toolbar button promises. Without this the
+   * GraphQL data manager's `onSubmit` early-returns on the missing mutation and
+   * the button silently does nothing.
+   *
+   * A form with a mutation keeps its existing behaviour; a form with neither
+   * is unaffected.
+   */
+  const activeGraphDefinition: any = graphDefinition || formDefinition.graphql;
+
+  const formHasMutation = Boolean(
+    activeGraphDefinition?.mutation &&
+      Object.keys(activeGraphDefinition.mutation || {}).length > 0
+  );
+
+  const formHasQuery = Boolean(
+    activeGraphDefinition?.query ||
+      (activeGraphDefinition?.queries &&
+        Object.keys(activeGraphDefinition.queries || {}).length > 0)
+  );
+
   const onSubmit = (submitEvent: SchemaFormOnSubmitEventProps<unknown>) => {
     reactory.log(`${SIGN} ↩ onSubmit`, submitEvent);
 
@@ -236,9 +264,26 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
       void socketDataManager.onSubmit(submitEvent.formData);
     }
 
-    //@ts-ignore
-    // getData();
-    // setIsQueryComplete(false);
+    // Query-only form: re-execute the query so the toolbar button does what it
+    // says. Two things must happen:
+    //
+    //   1. Emit the form's refresh event. A results grid wired for server-side
+    //      paging (MaterialTableWidget with `remoteData: true`) owns its own
+    //      fetching and re-runs the query with its current page — it does not
+    //      read this form's data. Without this, Execute Query would not refresh
+    //      the grid.
+    //   2. Re-run `getData`, for forms whose results ARE bound into formData
+    //      (e.g. core.GraphQLQueryForm). `getData` reads the current `formData`,
+    //      which `onChange` has already kept in step with what the user sees.
+    //
+    // Where both apply the query runs twice — once for each consumer. That is a
+    // deliberate correctness-over-efficiency trade; the grid-owned fetch is the
+    // one that can page.
+    if (!formHasMutation && formHasQuery) {
+      setIsQueryComplete(false);
+      reactory.emit(`${FQN}::refresh`, { source: SIGN });
+      void getData(true);
+    }
     setVersion(version + 1);
   };
 
@@ -274,7 +319,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   // Refreshes the form data
   const refresh = () => { 
-    getData();
+    getData(true);
   };
 
   const validate = () => { };
@@ -304,7 +349,10 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     // panels) opt out of the dirty gate with submitProps.requireDirty: false.
     const requireDirty = submitProps.requireDirty !== false;
 
-    // Resolve title text with i18n support (`text` accepted as an alias)
+    // Resolve title text with i18n support (`text` accepted as an alias).
+    // `ui:options.submitText` is the older Reactory convention (used by forms
+    // such as core.SQLQueryForm) and was previously ignored here, so those
+    // forms rendered a generic "Submit" despite declaring their own label.
     let titleText = submitProps.titleText || submitProps.text || "Submit";
     if (reactory.i18n && reactory.i18n.t && typeof titleText === 'string' && titleText.includes(':')) {
        try {
@@ -314,8 +362,9 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
          }
        }
 
-    // Resolve icon from submitIconProps or submitIcon on ui:form
-    let icon = 'save';
+    // Resolve icon from submitIconProps (ui:form or ui:options), falling back
+    // to the legacy `ui:options.submitIcon` name, then to a save icon.
+    let icon = uiOptions?.submitIcon || 'save';
     let iconProps: any = uiSchema["ui:form"]?.submitIconProps || uiOptions?.submitIconProps || {};
     if (iconProps.icon) {
       icon = iconProps.icon;

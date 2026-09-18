@@ -141,6 +141,56 @@ const CacheComponent = ({ reactory, classes }) => {
   );
 };
 
+// Development mode toggle, persisted via the Reactory API (localForage).
+//
+// Restored: commit f76d8369 replaced this component with
+// ToggleRouteInspectorComponent and reused its slot in `renderMenuItems`, which
+// left no way to turn development mode ON from the UI — both
+// ToggleRouteInspectorComponent below and RouteInspectorPreferenceButton in the
+// toolbar render only while development mode is already enabled.
+const ToggleDevelopComponent = ({ reactory }) => {
+  const theme = useTheme();
+  const [enabled, setEnabled] = useState(() => reactory.isDevelopmentMode() === true);
+
+  const toggle = () => {
+    const next = reactory.isDevelopmentMode() !== true;
+    reactory.setDevelopmentMode(next);
+    // Consumers depend on this event to re-evaluate their own visibility:
+    // RouteInspectorPreferenceButton (toolbar) and ToggleRouteInspectorComponent
+    // listen for it, and StaticContent bumps its permission version on it.
+    reactory.emit('onReactoryDevelopmentModeChanged', next);
+    setEnabled(next);
+  };
+
+  if (reactory.hasRole(['DEVELOPER']) === false) {
+    return null;
+  }
+
+  return (
+    <ListItem
+      key="reactory.development_mode"
+      onClick={toggle}
+      data-testid="development-mode-menu-toggle"
+      sx={{
+        color: theme.palette.text.primary,
+        borderBottom: 'none',
+        '&:hover': {
+          backgroundColor: theme.palette.action.hover,
+        },
+        cursor: 'pointer',
+      }}
+    >
+      <ListItemIcon>
+        <Icon color={enabled ? 'secondary' : 'inherit'}>build</Icon>
+      </ListItemIcon>
+      <ListItemText
+        primary={<span>DEVELOPMENT</span>}
+        secondary={<span>{enabled ? '(enabled)' : '(disabled)'}</span>}
+      />
+    </ListItem>
+  );
+};
+
 // Route inspector FAB toggle, persisted in localStorage
 const ToggleRouteInspectorComponent = ({ reactory }) => {
   const theme = useTheme();
@@ -283,6 +333,11 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
   };
   const onLoginEvent = () => setVersion(version + 1);
   const onApiStatusTotalsChanged = (totals) => setApiStatus(totals);
+
+  // Development mode changes visibility of other drawer entries (the route
+  // inspector toggle) and therefore needs a header re-render. The toggle itself
+  // emits this event; RouteInspectorPreferenceButton already listens on it.
+  const onDevelopmentModeChanged = () => setVersion(version + 1);
 
   const navigateTo = (where = '/', toggleDrawer = false) => {
     const nav = () => {
@@ -507,6 +562,9 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
 
     // Cache and development components
     menuItems.push(<CacheComponent key="cache" reactory={reactory} classes={{}} />);
+    // Development mode must come before the route inspector: the inspector item
+    // only renders once development mode is enabled.
+    menuItems.push(<ToggleDevelopComponent key="dev" reactory={reactory} />);
     menuItems.push(<ToggleRouteInspectorComponent key="route-inspector" reactory={reactory} />);
 
     return menuItems;
@@ -519,12 +577,15 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     reactory.on(ReactoryApiEventNames.onLogin, onLoginEvent);
     reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.on('onApiStatusTotalsChange', onApiStatusTotalsChanged);
+    reactory.on('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
 
     return () => {
       reactory.removeListener(ReactoryApiEventNames.onHideMenu, onHideMenu);
       reactory.removeListener(ReactoryApiEventNames.onShowMenu, onShowMenu);
       reactory.removeListener(ReactoryApiEventNames.onLogin, onLoginEvent);
       reactory.removeListener(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+      reactory.removeListener('onApiStatusTotalsChange', onApiStatusTotalsChanged);
+      reactory.removeListener('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
     };
   }, []);
 

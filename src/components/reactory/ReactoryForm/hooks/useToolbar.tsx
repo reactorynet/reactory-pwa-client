@@ -1,4 +1,5 @@
 import { Button, Icon, Toolbar, Tooltip, Fab } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { useReactory } from "@reactory/client-core/api";
 import { template } from "lodash";
 import React, { useCallback } from "react";
@@ -234,9 +235,24 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
 
   const theme = reactory.muiTheme;
 
-  const toolbarSx = uiOptions.toolbarSx || {
+  // Action bar layout. The previous implementation set no alignment, so MUI's
+  // default `justify-content: normal` pushed the submit button to the far left
+  // — inconsistent with the platform's other screens (e.g. the Route editor),
+  // which right-align their actions. Actions are grouped and pushed to the end
+  // here; a caller-supplied `ui:options.toolbarSx` still wins because it is
+  // merged last.
+  const toolbarSx = {
     backgroundColor: theme.palette.background.paper,
-  };
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 1,
+    flexWrap: 'wrap',
+    // `uiOptions` is loosely typed, so the spread widens to a union of system
+    // prop shapes that MUI's `sx` signature rejects. The assertion restores the
+    // SxProps contract without loosening anything else in this hook.
+    ...((uiOptions.toolbarSx || {}) as object),
+  } as SxProps<Theme>;
 
   const FormToolbar = () => (
     <Toolbar 

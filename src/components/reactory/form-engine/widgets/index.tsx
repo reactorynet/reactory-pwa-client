@@ -151,6 +151,9 @@ export function reactoryWidgets(): Record<string, React.ComponentType<WidgetProp
     SearchWidget: AdaptedSearchWidget,
     SelectWidget: AdaptedSelectWidget,
     SelectWithDataWidget: AdaptedSelectWithDataWidget,
+    // Alias: several form definitions reference the widget without the
+    // `Widget` suffix. Keep both names so FQN resolution never misses.
+    SelectWithData: AdaptedSelectWithDataWidget,
     SliderWidget: AdaptedSliderWidget,
     StaticContentWidget: AdaptedStaticContentWidget,
     StepperWidget: AdaptedStepperWidget,

@@ -10,7 +10,7 @@
  * plugin registration takes effect on the next render.
  */
 
-import type * as React from 'react';
+import * as React from 'react';
 import { resolveFqn, type FqnKind } from './resolveFqn';
 
 /**
@@ -48,6 +48,48 @@ export interface ReactoryRegistry {
 
 const DEFAULT_REGISTERED_EVENT = 'componentRegistered';
 
+const MEMO_TYPE = Symbol.for('react.memo');
+const FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
+
+/**
+ * rjsf v5 accepts a registry entry as a component only when
+ * `typeof value === 'function'` or `react-is` reports memo/forwardRef.
+ *
+ * With React 17 plus `react-is@18` (a transitive dependency of `@rjsf/utils`)
+ * those `react-is` checks return **false** for genuine `React.memo` /
+ * `React.forwardRef` objects — see
+ * `__tests__/widgets/widgetValidity.test.tsx`, which exercises rjsf's own
+ * `getWidget`. Any such value coming back from the SDK's component registry
+ * would make rjsf throw "Unsupported widget definition: object".
+ *
+ * Normalise those to a plain function wrapper so the `typeof` branch succeeds.
+ * Detection uses the well-known `$typeof` symbols rather than `react-is`,
+ * because `react-is` is precisely what is unreliable in this dependency set.
+ */
+export function toPlainComponent(
+  value: unknown,
+): React.ComponentType<any> | undefined {
+  if (typeof value === 'function') return value as React.ComponentType<any>;
+
+  if (value && typeof value === 'object') {
+    const tag = (value as { $typeof?: unknown }).$typeof;
+    if (tag === MEMO_TYPE || tag === FORWARD_REF_TYPE) {
+      const Inner = value as React.ComponentType<any>;
+      const Wrapped: React.FC<any> = (props) => React.createElement(Inner, props);
+      const innerName =
+        (value as any).displayName ??
+        (value as any).type?.displayName ??
+        (value as any).type?.name ??
+        (value as any).render?.name ??
+        'Component';
+      Wrapped.displayName = `ReactoryResolved(${innerName})`;
+      return Wrapped;
+    }
+  }
+
+  return undefined;
+}
+
 /**
  * Construct a fresh registry. Each form mount should create its own to avoid
  * stale cache bleed across forms with different SDK contexts.
@@ -80,13 +122,11 @@ export function createReactoryRegistry(options: ReactoryRegistryOptions): Reacto
       const cached = cache.get(name);
       return cached ?? undefined;
     }
-    const resolved = resolveFqn(
-      { reactory: options.reactory, onMiss: options.onMiss },
-      name,
-      kind,
+    const resolved = toPlainComponent(
+      resolveFqn({ reactory: options.reactory, onMiss: options.onMiss }, name, kind),
     );
-    cache.set(name, resolved);
-    return resolved ?? undefined;
+    cache.set(name, resolved ?? null);
+    return resolved;
   };
 
   const fieldsProxy = new Proxy(fieldStatic, {
@@ -149,11 +189,9 @@ export function createReactoryRegistry(options: ReactoryRegistryOptions): Reacto
       widgetCache.delete(name);
     },
     resolveFqn(name, kind) {
-      return resolveFqn(
-        { reactory: options.reactory, onMiss: options.onMiss },
-        name,
-        kind,
-      );
+      return toPlainComponent(
+        resolveFqn({ reactory: options.reactory, onMiss: options.onMiss }, name, kind),
+      ) ?? null;
     },
     clearCache() {
       fieldCache.clear();

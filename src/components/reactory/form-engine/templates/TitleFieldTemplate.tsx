@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Typography } from '@mui/material';
 import type { TitleFieldProps } from '@rjsf/utils';
 
 interface UITitleFieldOptions {
@@ -24,11 +25,24 @@ function DefaultTitle({
   title: string;
   required?: boolean;
 }): React.ReactElement {
+  // `h5` + `title-field` are the long-standing contract for a field title
+  // (asserted by the template tests and targeted by any consumer CSS), so the
+  // element and class are preserved while typography comes from the MUI theme.
   return (
-    <h5 className="title-field" id={`${id}__title`}>
+    <Typography
+      component="h5"
+      variant="subtitle1"
+      className="title-field"
+      id={`${id}__title`}
+      sx={{ fontWeight: 600, lineHeight: 1.5, mb: 0.5, color: 'text.primary' }}
+    >
       {title}
-      {required ? ' *' : ''}
-    </h5>
+      {required ? (
+        <Typography component="span" className="required-indicator" sx={{ color: 'error.main' }} aria-hidden="true">
+          {' *'}
+        </Typography>
+      ) : null}
+    </Typography>
   );
 }
 

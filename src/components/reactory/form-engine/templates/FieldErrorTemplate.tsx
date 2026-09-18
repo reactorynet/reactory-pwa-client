@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Box, Typography } from '@mui/material';
 import type { FieldErrorProps } from '@rjsf/utils';
 
 interface UIFieldErrorOptions {
@@ -52,12 +53,33 @@ export function ReactoryFieldErrorTemplate(props: FieldErrorProps): React.ReactE
 
   return (
     <>
-      {stringOverride ? <p className="error-summary">{stringOverride}</p> : null}
-      <ul role="alert">
+      {stringOverride ? (
+        <Typography
+          component="p"
+          variant="caption"
+          className="error-summary"
+          sx={{ color: 'error.main', lineHeight: 1.43, m: 0 }}
+        >
+          {stringOverride}
+        </Typography>
+      ) : null}
+      <Box
+        component="ul"
+        role="alert"
+        sx={{
+          m: 0,
+          pl: 2.5,
+          color: 'error.main',
+          fontSize: '0.75rem',
+          lineHeight: 1.43,
+        }}
+      >
         {errorList.map((e, i) => (
-          <li key={i}>{e}</li>
+          <Box component="li" key={i}>
+            {e}
+          </Box>
         ))}
-      </ul>
+      </Box>
     </>
   );
 }

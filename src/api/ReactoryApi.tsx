@@ -262,6 +262,7 @@ const FORM_QUERY_SEGMENTS = {
     defaultUiSchemaKey
     defaultFormValue
     roles
+    options
   `,
   FORM_SCHEMAS: `
     schema
