@@ -5,6 +5,22 @@ import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
 import i18n, { TOptions as I18nFormatOptions } from "i18next";
 
+/**
+ * Resolves the vertical gap between a grid field's children to a CSS length.
+ *
+ * Accepts the same values as MUI's `spacing` - a number of theme spacing units,
+ * or an explicit CSS length - and falls back to 8px per unit when the theme is
+ * not available (early bootstrap, tests).
+ */
+export const resolveSectionGap = (spacing: any, theme?: any): string => {
+  if (typeof spacing === 'string') return spacing;
+  if (typeof spacing === 'number' && Number.isFinite(spacing)) {
+    const themed = theme?.spacing?.(spacing);
+    return typeof themed === 'string' ? themed : `${spacing * 8}px`;
+  }
+  return '16px';
+};
+
 const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props) => { 
   const reactory = useReactory();
   const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
@@ -96,6 +112,24 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   if (uiSchema['ui:grid-options']) {
     gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options'] };
   }
+
+  // MUI's Grid spaces the items *within* a container (Grid2 emits a CSS `gap`),
+  // so the things a grid field stacks vertically had no gap between them at
+  // all: the title, the description and every `ui:grid-layout` row are separate
+  // elements, and each row is its own Grid container. A section therefore read
+  // as one compressed block.
+  // Worse, a shrunk outlined label is absolutely positioned, so it overhangs its
+  // own field by ~9px - with no gap to absorb that, the next row's label landed
+  // straight on the previous row's helper text.
+  // Stacking the section's children in a column, using the grid's own spacing as
+  // the gap, restores the rhythm without touching any form definition.
+  const sectionStyles: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: resolveSectionGap(gridOptions.spacing, reactory?.muiTheme),
+    // Caller styles win, so a form can still take over the container layout.
+    ...(gridOptions.containerStyles || {}),
+  };
 
   const getAvailableKey = (preferredKey, formData) => {
     var index = 0;
@@ -276,12 +310,12 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
 
   switch (gridOptions.container) {
     case "div": {
-      return (<div style={gridOptions.containerStyles}>{grid_content}</div>)
+      return (<div style={sectionStyles}>{grid_content}</div>)
     }
     case "Paper":
     default: {
       return (<Paper 
-        style={gridOptions.containerStyles} 
+        style={sectionStyles} 
         elevation={gridOptions.elevation || 1} 
         {...gridOptions.containerProps}>{grid_content}</Paper>)
     }

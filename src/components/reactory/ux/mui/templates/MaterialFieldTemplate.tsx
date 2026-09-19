@@ -20,6 +20,8 @@ import { useTheme } from '@mui/material/styles';
 
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 
+import { resolveFieldLabelStyle } from '../utils/fieldLabelStyle';
+
 const MaterialFieldTemplateFunction = (props) => {
 
   const {
@@ -236,17 +238,28 @@ const MaterialFieldTemplateFunction = (props) => {
         }
       }
 
-      // Background styling for outlined labels to prevent the border line cutting through the text
-      const paperBg = (muiTheme as any)?.palette?.background?.paper || (theme as any)?.palette?.background?.paper || '#ffffff';
-      inputLabelProps.style = {
-        ...(inputLabelProps.style || {}),
-        ...(activeVariant === 'outlined' ? {
-          backgroundColor: paperBg,
-          paddingLeft: '4px',
-          paddingRight: '4px',
-          marginLeft: '-4px',
-        } : {}),
-      };
+      // The label must show the surface the field sits on, so it must not paint
+      // a colour of its own. An outlined label lives in the notch MUI cuts in
+      // the fieldset border, and that gap is transparent - so leaving the label
+      // transparent is what makes it inherit the surface, whether that is
+      // `background.default`, a Card's elevation overlay, or a custom Paper.
+      // Hard-coding `palette.background.paper` only looked right in light mode,
+      // where every surface is white; in dark mode it showed as a contrasting
+      // patch behind the label.
+      // A form can still reinstate a shield for a widget that does not cut a
+      // notch via `ui:options.labelProps.style.backgroundColor` (merged last).
+      inputLabelProps.style = resolveFieldLabelStyle({
+        variant: activeVariant,
+        style: {
+          // Layout-neutral offsets retained from when this label painted an
+          // opaque shield: they widen the label box by 4px a side and shift it
+          // back, so the text sits in the same place with or without a shield.
+          ...(activeVariant === 'outlined'
+            ? { paddingLeft: '4px', paddingRight: '4px', marginLeft: '-4px' }
+            : {}),
+          ...(inputLabelProps.style || {}),
+        },
+      });
 
       let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}>{label}</InputLabel> : null;
 

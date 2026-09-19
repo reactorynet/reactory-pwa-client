@@ -139,3 +139,53 @@ describe('ReactoryObjectFieldTemplate', () => {
     expect(onAddClickInner).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ReactoryObjectFieldTemplate grid spacing', () => {
+  const gridProps = (overrides: Partial<ObjectFieldTemplateProps> = {}) =>
+    baseProps({
+      uiSchema: {
+        'ui:grid-layout': [
+          { name: { md: 6 }, email: { md: 6 } },
+          { phone: { md: 12 } },
+        ],
+      },
+      properties: [
+        property('name', <input data-testid="name" />),
+        property('email', <input data-testid="email" />),
+        property('phone', <input data-testid="phone" />),
+      ],
+      ...overrides,
+    });
+
+  it('renders the grid when ui:grid-layout is supplied', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...gridProps()} />);
+
+    expect(container.querySelector('[data-grid-layout="ui:grid-layout"]')).not.toBeNull();
+  });
+
+  /**
+   * Regression guard: the grid had `rowGap: 0`, so fields that wrapped onto a
+   * second row had no vertical gap. A field's helper text then sat flush against
+   * the next row's input, and because an outlined label is absolutely positioned
+   * (overhanging its field by ~9px) the next row's label landed on top of it -
+   * content read as compressed on top of itself.
+   */
+  it('gives wrapped grid rows a vertical gap, not just a column gap', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...gridProps()} />);
+    const grid = container.querySelector('[data-grid-layout="ui:grid-layout"]') as HTMLElement;
+
+    const styles = window.getComputedStyle(grid);
+    const columnGap = parseFloat(styles.columnGap || '0');
+    const rowGap = parseFloat(styles.rowGap || '0');
+
+    expect(rowGap).toBeGreaterThan(0);
+    expect(rowGap).toBe(columnGap);
+  });
+
+  it('keeps the column gap on the grid', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...gridProps()} />);
+    const grid = container.querySelector('[data-grid-layout="ui:grid-layout"]') as HTMLElement;
+
+    expect(parseFloat(window.getComputedStyle(grid).columnGap)).toBeGreaterThan(0);
+  });
+});

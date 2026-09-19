@@ -108,7 +108,12 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
         display: 'grid',
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
         columnGap: 2,
-        rowGap: 0,
+        // Fields that wrap onto a second grid row need vertical rhythm too.
+        // With `rowGap: 0` a field's helper text sat flush against the next
+        // row's input, and because an outlined label is absolutely positioned
+        // (overhanging its field) the next row's label landed on top of it.
+        // Match the column gap so the grid is evenly spaced in both axes.
+        rowGap: 2,
         width: '100%',
       }}
     >

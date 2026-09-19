@@ -16,6 +16,7 @@ import { useTheme } from '@mui/material/styles';
 import ReactoryApi from '@reactory/client-core/api/ReactoryApi';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactorynet/reactory-core';
+import { resolveFieldLabelStyle } from '../../utils/fieldLabelStyle';
 
 const PREFIX = 'SelectWithDataWidgetComponent';
 
@@ -237,13 +238,15 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       if (hasValue) {
         inputLabelProps.shrink = true;
         
-        // Add specific styling for outlined variant when label is shrunk
+        // Labels must show the surface the field sits on - an outlined label
+        // sits in the fieldset notch, so it stays transparent and inherits the
+        // surface instead of painting `palette.background.paper` (which only
+        // matched in light mode).
         if (variant === 'outlined') {
-          inputLabelProps.style = {
-            ...inputLabelProps.style,
-            backgroundColor: theme.palette.background.paper,
-            padding: '4px'
-          };
+          inputLabelProps.style = resolveFieldLabelStyle({
+            variant,
+            style: { padding: '4px', ...inputLabelProps.style },
+          });
         }
       }
       

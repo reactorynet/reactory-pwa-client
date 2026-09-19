@@ -252,6 +252,8 @@ const FORM_QUERY_SEGMENTS = {
     title
     tags
     display
+    icon
+    avatar
     name
     nameSpace
     description
