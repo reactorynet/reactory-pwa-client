@@ -162,6 +162,7 @@ export type MacroToolDefinition = {
   roles?: string[],
   enabled?: boolean;
   category?: string;
+  icon?: string;
   /**
    * Which tool-approval modes this tool is available in.
    * Omit to make the tool available in every mode.

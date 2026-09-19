@@ -3224,11 +3224,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const interruptExecution = async (reason?: string) => {
     try {
-      const sessionId = chatState.id;
-      if (!sessionId) return;
+      const sessionId = chatState?.id;
+      const personaId =
+        persona?.id ||
+        chatState?.personaId ||
+        (chatState?.persona as any)?.id ||
+        chatState?.botId ||
+        'reactor';
+      if (!sessionId) {
+        reactory.warning('[useChatFactory] Cannot interrupt: missing sessionId');
+        return;
+      }
+      setAgentBusy(false);
+      setIsStreaming(false);
+      setWaitingForResponse(false);
       await graph.interruptToolExecution(
         sessionId,
-        chatState.botId || persona?.id,
+        personaId,
         reason || 'User requested stop',
       );
     } catch (error) {

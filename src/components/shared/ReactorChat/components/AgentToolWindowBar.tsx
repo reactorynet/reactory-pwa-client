@@ -395,6 +395,7 @@ const AgentToolWindowBar: React.FC<AgentToolWindowBarProps> = ({
         sx={{
           zIndex: 1001,
           '& .MuiBadge-badge': {
+            zIndex: (t) => t.zIndex.fab + 1,
             fontSize: '0.72rem',
             fontWeight: 800,
             height: 20,

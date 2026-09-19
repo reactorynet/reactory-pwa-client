@@ -420,7 +420,6 @@ export default (props) => {
   // Track multi-session and sub-agent background streams and unread statuses
   const {
     backgroundSessions,
-    activePersonaSessionCount,
     clearUnread,
   } = useSessionStreamHub({
     reactory,
@@ -2058,8 +2057,10 @@ export default (props) => {
   }, []);
 
   // Helper function to get tool icon
-  const getToolIcon = useCallback((tool) => {
-    const toolName = tool.function?.name?.toLowerCase() || '';
+  const getToolIcon = useCallback((tool: any) => {
+    if (tool?.function?.icon) return tool.function.icon;
+    if (tool?.icon) return tool.icon;
+    const toolName = tool.function?.name?.toLowerCase() || tool.name?.toLowerCase() || '';
 
     // Map tool names to icons
     if (toolName.includes('search') || toolName.includes('find')) return 'search';
@@ -2383,6 +2384,12 @@ export default (props) => {
       clickHandler: handleDebugPanelToggle,
     }] : []),
   ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, SwapHoriz, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleChatTransferOpen, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleShellConsoleToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
+
+  const pendingToolCallCount =
+    (waitingClientToolCalls?.length || 0) +
+    (pendingToolCallResume?.toolCalls?.length || 0);
+  const hasPendingToolCalls =
+    hasWaitingClientToolCalls || !!pendingToolCallResume || pendingToolCallCount > 0;
 
   return (
     <Box
@@ -2942,10 +2949,11 @@ export default (props) => {
           '#4caf50'
         }
         mainBadgeContent={
-          hasWaitingClientToolCalls ? '!' :
-          (activePersonaSessionCount > 1 ? activePersonaSessionCount : undefined)
+          hasPendingToolCalls
+            ? (pendingToolCallCount > 0 ? pendingToolCallCount : '!')
+            : undefined
         }
-        mainBadgeColor={hasWaitingClientToolCalls ? 'warning' : 'primary'}
+        mainBadgeColor="warning"
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
           label: action.title,
@@ -3097,27 +3105,24 @@ export default (props) => {
             />
           </Box>
           {agentBusy && (
-            (chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
-              chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
-              <Tooltip title="Stop execution">
-                <IconButton
-                  size="small"
-                  onClick={() => interruptExecution()}
-                  sx={{
-                    p: 0.25,
-                    color: 'text.secondary',
-                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
-                    backdropFilter: 'blur(10px) saturate(120%)',
-                    WebkitBackdropFilter: 'blur(10px) saturate(120%)',
-                    border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                    pointerEvents: 'auto',
-                    '&:hover': { color: 'error.main' },
-                  }}
-                >
-                  <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
-                </IconButton>
-              </Tooltip>
-            )
+            <Tooltip title="Stop execution">
+              <IconButton
+                size="small"
+                onClick={() => interruptExecution()}
+                sx={{
+                  p: 0.25,
+                  color: 'text.secondary',
+                  bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                  backdropFilter: 'blur(10px) saturate(120%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                  border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                  pointerEvents: 'auto',
+                  '&:hover': { color: 'error.main' },
+                }}
+              >
+                <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
         <ChatInput
