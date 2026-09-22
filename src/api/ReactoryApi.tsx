@@ -386,7 +386,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   CDN_ROOT: string;
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
-  CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
+  CLIENT_PUBLIC_KEY: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
+  CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
   formSchemas: Reactory.Forms.IReactoryForm[]
   /**
    * This is a map of form schemas that have been loaded from the server
@@ -567,7 +568,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
     this.API_ROOT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
     this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
-    this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
+    this.CLIENT_PUBLIC_KEY = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
+    this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
     this.formSchemas = [];
     this.formSchemaMap = {};
     this.formValidationMaps = {};

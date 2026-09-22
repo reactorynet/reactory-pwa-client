@@ -132,7 +132,7 @@ npm test -- --watch
 - Required environment variables:
   - `REACT_APP_API_ENDPOINT`: Backend API URL
   - `REACT_APP_CLIENT_KEY`: Client identifier
-  - `REACT_APP_CLIENT_PASSWORD`: Authentication password
+  - `REACT_APP_CLIENT_PUBLIC_KEY`: Authentication public key for browser requests
   - `REACT_APP_THEME`: UI theme configuration
 
 ### Development Commands

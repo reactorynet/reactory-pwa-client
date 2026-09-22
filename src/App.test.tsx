@@ -173,7 +173,7 @@ jest.mock('./components/utility/query-string', () => {
 
 jest.mock('./app/constants', () => ({
   REACT_APP_CLIENT_KEY: 'test',
-  REACT_APP_CLIENT_PASSWORD: 'test',
+  REACT_APP_CLIENT_PUBLIC_KEY: 'test',
   REACT_APP_API_ENDPOINT: 'http://test.com',
   classes: {},
   packageInfo: {},
