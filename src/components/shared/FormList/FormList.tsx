@@ -4,7 +4,7 @@ import { useReactory } from '@reactory/client-core/api';
 import { resolveFormIcon, getFormImageSrc } from './resolveFormIcon';
 
 /** The actions a form card / row can dispatch. */
-export type FormListAction = 'view' | 'edit' | 'develop';
+export type FormListAction = 'view' | 'edit' | 'develop' | 'submissions';
 
 export interface FormListProps {
   mode?: 'list' | 'favourites';
@@ -34,7 +34,26 @@ export interface FormItem {
   lastModified?: Date;
   isFavourite?: boolean;
   tags?: string[];
+  /**
+   * The form's generic submission configuration. Present when the form opted
+   * into the submission pipeline; `canExplore` is resolved server side against
+   * the current user's roles.
+   */
+  submission?: {
+    enabled?: boolean;
+    allowAnonymous?: boolean;
+    canExplore?: boolean;
+    readRoles?: string[];
+  };
 }
+
+/**
+ * Whether the submissions explorer should be offered for a form. The server
+ * resolves `canExplore` against the caller's roles, so the list never has to
+ * re-derive the permission - it only has to respect it.
+ */
+export const canExploreSubmissions = (form?: FormItem): boolean =>
+  form?.submission?.enabled === true && form?.submission?.canExplore === true;
 
 interface FormListDependencies {
   React: Reactory.React;
@@ -145,7 +164,8 @@ const FormList: React.FC<FormListProps> = ({
     Folder,
     Settings,
     Refresh,
-    Close
+    Close,
+    Storage
   } = Material.MaterialIcons;
 
   // No debounced auto-search anymore. Search applies only on Enter (or explicit apply).
@@ -523,6 +543,20 @@ const FormList: React.FC<FormListProps> = ({
           >
             Develop
           </Button>
+
+          {canExploreSubmissions(form) && (
+            <Button
+              size="small"
+              startIcon={<Storage />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleFormSelect(form, 'submissions');
+              }}
+            >
+              Data
+            </Button>
+          )}
         </CardActions>
       </Card>
     );
@@ -793,6 +827,16 @@ const FormList: React.FC<FormListProps> = ({
           <ListItemText>Develop</ListItemText>
         </MenuItem>
         
+        {canExploreSubmissions(selectedForm) && (
+          <MenuItem onClick={() => {
+            if (selectedForm) handleFormSelect(selectedForm, 'submissions');
+            handleMenuClose();
+          }}>
+            <ListItemIcon><Storage /></ListItemIcon>
+            <ListItemText>Explore Submissions</ListItemText>
+          </MenuItem>
+        )}
+
         <MenuItem onClick={() => {
           if (selectedForm) handleFavouriteToggle(selectedForm);
           handleMenuClose();

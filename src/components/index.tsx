@@ -45,6 +45,11 @@ import ChipLabel from './shared/ChipLabel';
 import TagCloud from './shared/TagCloud';
 import MaterialInput from './shared/MaterialInput';
 import FormSubmissionComponent from './shared/FormSubmissionComponent';
+import {
+  SubmissionSummary,
+  SubmissionDetail,
+  SubmissionQueryBuilder,
+} from './shared/FormSubmissions';
 import ImageComponent from './shared/ImageComponent';
 import ConditionalIconComponent from './shared/ConditionalIconComponent';
 import LabelComponent from '@reactory/client-core/components/reactory/ux/mui/widgets/LabelWidget';
@@ -273,6 +278,30 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     version: '1.0.0',
     description: 'A component that handles form submission logic, including validation, API calls, and success/error handling.',
     tags: ['form', 'submission', 'validation', 'api'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryFormSubmissionSummary',
+    component: SubmissionSummary,
+    version: '1.0.0',
+    description: 'Renders a compact one line preview of a form submission\'s data in the submissions explorer table.',
+    tags: ['form', 'submission', 'explorer', 'table'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryFormSubmissionDetail',
+    component: SubmissionDetail,
+    version: '1.0.0',
+    description: 'The expanded view of a single form submission, labelling fields with the source form\'s schema titles.',
+    tags: ['form', 'submission', 'explorer', 'detail'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryFormSubmissionQueryBuilder',
+    component: SubmissionQueryBuilder,
+    version: '1.0.0',
+    description: 'The data query field for the submissions explorer - a validated JSON predicate over the submitted form data.',
+    tags: ['form', 'submission', 'explorer', 'query', 'form widget'],
   },
   {
     nameSpace: 'core',
@@ -1116,6 +1145,14 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: require('@reactory/client-core/components/reactory/ux/mui/widgets/RelativeTime').default,
     description: 'A component for displaying relative time (e.g., "2 hours ago") with automatic updates.',
     tags: ['time', 'relative', 'display', 'updates'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'ChipArray',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/ChipArray').default,
+    description: 'A chip array component for displaying and managing lists of tags or arguments as chips.',
+    tags: ['chips', 'tags', 'array', 'widget'],
   },
   {
     nameSpace: 'core',

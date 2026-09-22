@@ -265,6 +265,14 @@ const FORM_QUERY_SEGMENTS = {
     defaultFormValue
     roles
     options
+    submission {
+      enabled
+      allowAnonymous
+      allowUpdate
+      canExplore
+      readRoles
+      submitRoles
+    }
   `,
   FORM_SCHEMAS: `
     schema
