@@ -214,6 +214,20 @@ const ReactoryFormRouter = (props) => {
       );
     }
 
+    // Handle /{formId}/submissions - the generic submission explorer.
+    // The explorer is itself a Reactory form; the form being explored is
+    // passed as its form data so that every query is scoped to that fqn.
+    if (relativePath.length === 2 && relativePath[1] === 'submissions') {
+      const currentFormId = relativePath[0];
+      return (
+        <ReactoryForm
+          formId="core.ReactoryFormSubmissions@1.0.0"
+          mode="view"
+          formData={{ fqn: currentFormId, filter: {}, submissions: [] }}
+        />
+      );
+    }
+
     // Handle /{formId}/view
     if (relativePath.length === 2 && relativePath[1] === 'view') {
       const currentFormId = relativePath[0];

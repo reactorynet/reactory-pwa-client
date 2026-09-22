@@ -262,6 +262,14 @@ const FORM_QUERY_SEGMENTS = {
     defaultUiSchemaKey
     defaultFormValue
     roles
+    submission {
+      enabled
+      allowAnonymous
+      allowUpdate
+      canExplore
+      readRoles
+      submitRoles
+    }
   `,
   FORM_SCHEMAS: `
     schema
