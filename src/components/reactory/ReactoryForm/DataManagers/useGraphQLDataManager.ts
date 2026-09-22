@@ -411,8 +411,15 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
 
   const getData = async <TData>(props: any): Promise<TData> => {
     setIsBusy(true);
-    let nextData: TData = localData ? reactory.utils.lodash.cloneDeep(localData) as TData : null;
-    const { queryKey = null } = props || {};
+    const { queryKey = null, formData: queryFormData, fetchPolicy } = props || {};
+
+    // Prefer the caller-supplied `formData`. `localData` is this manager's own
+    // snapshot, which is empty on first render (before schema defaults have been
+    // applied) and after a page-level reset — mapping query variables from it
+    // produces `{}`, so the request went out with no variables at all. Callers
+    // in `useDataManager` pass the live form data; use it when present.
+    const sourceData = queryFormData ?? localData;
+    let nextData: TData = sourceData ? reactory.utils.lodash.cloneDeep(sourceData) as TData : null;
     if (
       graphql &&
       (graphql?.query || (graphql?.queries && Object.keys(graphql.queries || {}).length > 0))
@@ -458,7 +465,14 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
       }
       let transformed = false;
       try {
-        const queryResponse = await reactory.graphqlQuery(query.text, variables);
+        // A form that declares `options.fetchPolicy` gets it; an explicit
+        // caller-supplied policy (e.g. the SQL editor's "run" action, which must
+        // reach the server rather than replay a cached response) takes priority.
+        const queryOptions = fetchPolicy
+          ? { fetchPolicy }
+          : (query.options ? { ...query.options } : undefined);
+
+        const queryResponse = await reactory.graphqlQuery(query.text, variables, queryOptions);
         let resultMap = query.resultMap || null;
         let resultData = queryResponse?.data?.[query.name];
         // get the object from the data based on the query name

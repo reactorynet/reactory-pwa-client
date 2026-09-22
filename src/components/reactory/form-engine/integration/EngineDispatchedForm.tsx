@@ -19,6 +19,7 @@ import * as React from 'react';
 import LegacySchemaForm from '@reactory/client-core/components/reactory/form';
 import { useReactoryForm, type FormEngine } from '../hooks/useReactoryForm';
 import { reactoryWidgets } from '../widgets';
+import { reactoryFields } from '../fields';
 import { useReactoryFeatureFlag, FORMS_ENGINE_V5_FQN } from '../hooks/useReactoryFeatureFlag';
 
 export interface EngineDispatchedFormProps {
@@ -51,6 +52,21 @@ export const EngineDispatchedForm: React.FC<EngineDispatchedFormProps> = (props)
 
   const engine = chooseEngine(formDef, v5FlagOn);
 
+  // The Reactory wrapper owns the form toolbar, and with it the submit
+  // affordance: the legacy fork's SchemaForm rendered only the SchemaField tree
+  // and never rjsf's form chrome. rjsf v5's `<Form>` renders its own
+  // SubmitButton, which would put a second, unbranded "Submit" button inside
+  // the form body (below the toolbar). Default it off so v5 matches fork
+  // behaviour; a form that explicitly configures `ui:submitButtonOptions` still
+  // wins, and `ui:options.submitText` / `submitIcon` are honoured by the
+  // wrapper's own SubmitButton (see useDataManager).
+  const requestedUiSchema = (rest.uiSchema ?? {}) as Record<string, unknown>;
+  const uiSchemaForEngine =
+    'ui:submitButtonOptions' in requestedUiSchema
+      ? requestedUiSchema
+      : { ...requestedUiSchema, 'ui:submitButtonOptions': { norender: true } };
+
+
   // The hook is always called (rules of hooks) even when we end up using the
   // fork — its internal short-circuit returns null for `form` when engine is
   // not v5, so the cost is low.
@@ -58,11 +74,14 @@ export const EngineDispatchedForm: React.FC<EngineDispatchedFormProps> = (props)
   // the hook's narrow signature; we accept the loosening at the boundary.
   const v5HookArgs = {
     schema: rest.schema,
-    uiSchema: rest.uiSchema,
+    uiSchema: uiSchemaForEngine,
     formData: rest.formData,
     formContext: { ...formContext, reactory, formDef },
     engine,
     staticWidgets: reactoryWidgets(),
+    // Reactory field overrides. Carries `GridLayout`, which forms such as
+    // core.SQLQueryForm declare via `ui:field: 'GridLayout'` + `ui:grid-layout`.
+    staticFields: reactoryFields(),
     onChange: rest.onChange,
     onSubmit: rest.onSubmit,
     onError: rest.onError,

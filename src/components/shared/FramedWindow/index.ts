@@ -1,1 +1,1 @@
-export { default as FramedWindow, ReportViewerComponent, GraphiqlWindow } from './FramedWindow'; 
+export { default as FramedWindow, ReportViewerComponent } from './FramedWindow'; 

@@ -163,6 +163,10 @@ const MaterialStringFieldWidget = (props) => {
       inputLabelProps.shrink = uiOptions.forceShrinkLabel === true;
     } else {
       inputLabelProps.shrink = true;
+      // No background is set on the label on purpose: the label sits in the
+      // notch MUI cuts in the fieldset border, and staying transparent is what
+      // makes it inherit whatever surface the field is on. The padding only
+      // widens the label box so the offset matches the field template's label.
       inputLabelProps.style = {
         padding: '4px'
       };

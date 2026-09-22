@@ -252,6 +252,8 @@ const FORM_QUERY_SEGMENTS = {
     title
     tags
     display
+    icon
+    avatar
     name
     nameSpace
     description
@@ -262,6 +264,7 @@ const FORM_QUERY_SEGMENTS = {
     defaultUiSchemaKey
     defaultFormValue
     roles
+    options
     submission {
       enabled
       allowAnonymous

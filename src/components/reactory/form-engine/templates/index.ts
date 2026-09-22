@@ -2,16 +2,19 @@
  * Barrel export for the Reactory v5 templates.
  *
  * The shape returned by `reactoryTemplates()` matches `Partial<TemplatesType>`
- * from `@rjsf/utils` so it can be passed directly to `<Form templates=...>`
- * (or `withTheme(...)`).
+ * from `@rjsf/utils` so it can be passed directly to `<Form templates=...>`.
  *
- * Each entry comes from one of the per-template files in this directory.
- * Adding a new template only requires updating this barrel.
+ * Per ADR-0004 this is Reactory's own MUI v6 template set — we do not depend
+ * on `@rjsf/mui`. `BaseInputTemplate` is the important one: rjsf resolves it
+ * via `getTemplate('BaseInputTemplate')` for the text, email, url, tel, date,
+ * time, datetime, color, password, number and textarea widgets, so supplying
+ * it themes all of those at once instead of leaving them as raw `<input>`.
  */
 
 import type { TemplatesType } from '@rjsf/utils';
 
 import { ReactoryArrayFieldTemplate } from './ArrayFieldTemplate';
+import { ReactoryBaseInputTemplate } from './BaseInputTemplate';
 import { ReactoryFieldTemplate } from './FieldTemplate';
 import { ReactoryObjectFieldTemplate } from './ObjectFieldTemplate';
 import { ReactoryTitleFieldTemplate } from './TitleFieldTemplate';
@@ -25,6 +28,7 @@ import * as ReactoryButtonTemplates from './ButtonTemplates';
 
 export {
   ReactoryArrayFieldTemplate,
+  ReactoryBaseInputTemplate,
   ReactoryFieldTemplate,
   ReactoryObjectFieldTemplate,
   ReactoryTitleFieldTemplate,
@@ -44,6 +48,7 @@ export {
 export function reactoryTemplates(): Partial<TemplatesType> {
   return {
     ArrayFieldTemplate: ReactoryArrayFieldTemplate as TemplatesType['ArrayFieldTemplate'],
+    BaseInputTemplate: ReactoryBaseInputTemplate as TemplatesType['BaseInputTemplate'],
     FieldTemplate: ReactoryFieldTemplate as TemplatesType['FieldTemplate'],
     ObjectFieldTemplate: ReactoryObjectFieldTemplate as TemplatesType['ObjectFieldTemplate'],
     TitleFieldTemplate: ReactoryTitleFieldTemplate as TemplatesType['TitleFieldTemplate'],

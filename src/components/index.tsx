@@ -38,7 +38,7 @@ import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/ReactoryCoreDialog';
-import { FramedWindow, ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
+import { FramedWindow, ReportViewerComponent } from './shared/FramedWindow';
 
 import TabbedNavigation from './shared/TabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
@@ -748,7 +748,6 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     description: 'A collection of Material-UI based form widgets specifically designed for Reactory forms and data handling.',
     tags: ['material-ui', 'form widgets', 'reactory', 'forms'],
   },
-  GraphiqlWindow.meta,
   SlideOutLauncher.meta,
   {
     nameSpace: 'core',

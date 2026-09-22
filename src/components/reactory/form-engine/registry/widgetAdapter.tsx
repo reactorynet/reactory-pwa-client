@@ -66,6 +66,26 @@ export interface ReactoryWidgetLikeProps {
  * Returns a memoized component to avoid unnecessary re-renders when
  * `formContext` identity changes (which it does on every parent update
  * unless the parent memoizes it).
+ *
+ * IMPORTANT — why the returned value is a plain function, not `React.memo`:
+ *
+ * rjsf v5's `getWidget` decides whether a registry entry is a component with:
+ *
+ *   typeof widget === 'function'
+ *     || ReactIs.isForwardRef(createElement(widget))
+ *     || ReactIs.isMemo(widget)
+ *
+ * This app runs React 17 while `@rjsf/utils` depends on `react-is@^18.2.0
+ * (resolved to 18.3.1). With that pairing `isMemo()` and `isForwardRef()`
+ * return **false** even for genuine `React.memo(...)` / `React.forwardRef(...)`
+ * objects — verified with rjsf's own `getWidget` in
+ * `__tests__/widgets/widgetValidity.test.tsx`. So returning `React.memo(Inner)`
+ * made rjsf fall through to `typeof widget !== 'string'` and throw
+ * "Unsupported widget definition: object" for every adapted widget, which
+ * crashed any form rendering a Reactory catalogue widget on the v5 engine.
+ *
+ * Returning a plain function satisfies the `typeof` branch, and the memoised
+ * implementation is still used internally, so render-skipping is preserved.
  */
 export function adaptWidget<TProps extends ReactoryWidgetLikeProps>(
   Widget: React.ComponentType<TProps>,
@@ -77,12 +97,17 @@ export function adaptWidget<TProps extends ReactoryWidgetLikeProps>(
     // model in the public adapter type. The cast lets us pass them through.
     return <Widget {...(adapted as unknown as TProps)} />;
   };
-  Inner.displayName = `Adapted(${displayName})`;
-  const Memoized = React.memo(Inner) as React.MemoExoticComponent<React.FC<WidgetProps>> & {
-    displayName?: string;
-  };
-  Memoized.displayName = `Adapted(${displayName})`;
-  return Memoized as unknown as React.ComponentType<WidgetProps>;
+  Inner.displayName = `AdaptedInner(${displayName})`;
+
+  // Memoised implementation — identity is stable for the life of the module.
+  const MemoizedInner = React.memo(Inner);
+
+  // Plain function wrapper presented to rjsf. See the doc comment above.
+  const Adapted: React.FC<WidgetProps> = (props) =>
+    React.createElement(MemoizedInner as unknown as React.ComponentType<WidgetProps>, props);
+  Adapted.displayName = `Adapted(${displayName})`;
+
+  return Adapted as unknown as React.ComponentType<WidgetProps>;
 }
 
 /**

@@ -16,6 +16,7 @@ import { useTheme } from '@mui/material/styles';
 import ReactoryApi from '@reactory/client-core/api/ReactoryApi';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactorynet/reactory-core';
+import { resolveFieldLabelStyle } from '../../utils/fieldLabelStyle';
 
 const PREFIX = 'SelectWithDataWidgetComponent';
 
@@ -206,9 +207,13 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
                   data[resultItem]
               } catch  {}
               
-              _menuItems.forEach((menu_item: any) => {
-                if (menu_item.key) {
-                  _key_map[menu_item.key] = menu_item;
+              // Index options by the configured label key so the selected
+              // value can be resolved back to its option for display.
+              // Falls back to `key` for the legacy option shape.
+              (Array.isArray(_menuItems) ? _menuItems : []).forEach((menu_item: any) => {
+                const mapKey = menu_item?.[labelKey] ?? menu_item?.key;
+                if (mapKey !== undefined && mapKey !== null) {
+                  _key_map[mapKey] = menu_item;
                 }
               });
               setKeyMap(_key_map);
@@ -233,13 +238,15 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       if (hasValue) {
         inputLabelProps.shrink = true;
         
-        // Add specific styling for outlined variant when label is shrunk
+        // Labels must show the surface the field sits on - an outlined label
+        // sits in the fieldset notch, so it stays transparent and inherits the
+        // surface instead of painting `palette.background.paper` (which only
+        // matched in light mode).
         if (variant === 'outlined') {
-          inputLabelProps.style = {
-            ...inputLabelProps.style,
-            backgroundColor: theme.palette.background.paper,
-            padding: '4px'
-          };
+          inputLabelProps.style = resolveFieldLabelStyle({
+            variant,
+            style: { padding: '4px', ...inputLabelProps.style },
+          });
         }
       }
       
@@ -291,27 +298,41 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
           renderValue={(_value: any) => {
             reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems });
             if (key_map.loading) return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Loading</span>;
+
+            const isEmptyValue = _value === null || _value === undefined || _value === '' || (Array.isArray(_value) && _value.length === 0);
             
-            // Handle null/empty value selection
-            if (_value === null || _value === undefined || _value === '' || (Array.isArray(_value) && _value.length === 0)) {
+            // Handle null/empty value selection. `menuItems` is cleared at the
+            // start of every fetch, so guard the read rather than assuming [0].
+            if (isEmptyValue) {
               if (_value === '' && allowNullSelect) {
                 return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>None</span>;
               }
-              return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
+              const isLoading = menuItems.length > 0 && (menuItems[0] as any)?.id === 'loading';
+              return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{isLoading ? 'Loading' : 'Select'}</span>;
             }
 
             if (Array.isArray(_value))
               return _value.join(', ');
-            else {
-              if (labelFormat) {
-                return reactory.utils.template(labelFormat)({ option: key_map[_value] });
-              } else {
-                if (key_map[_value] && key_map[_value].label) {
-                  return reactory.utils.template(key_map[_value].label)({ option: key_map[_value] });
-                }
-                return _value;
+
+            // Resolve the option that produced this value. When the current
+            // value is absent from the fetched options (e.g. a schema default
+            // pointing at a connection the caller cannot access) fall back to
+            // the raw value instead of throwing inside the label template.
+            const selected = key_map[_value];
+            if (labelFormat) {
+              if (!selected) return String(_value);
+              try {
+                return reactory.utils.template(labelFormat)({ option: selected });
+              } catch (labelError) {
+                return String(_value);
               }
             }
+
+            if (selected && selected.label) {
+              return reactory.utils.template(selected.label)({ option: selected });
+            }
+
+            return selected ? String(selected[labelKey] ?? _value) : String(_value);
 
           }}>
 
@@ -336,8 +357,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
                   label = `💥 ${templateErr.message}`;
                 }
               }
-              // Add null checks for option, option[valueKey], and option[labelKey]
-              const optionValue = option && option[valueKey] ? option[valueKey] : '';
+              // Guard against null options and falsy-but-valid values (0, false).
+              const optionValue = option && option[valueKey] !== undefined && option[valueKey] !== null ? option[valueKey] : '';
               const optionKey = option && option[labelKey] !== undefined ? option[labelKey] : index;
               return (
                 <MenuItem key={optionKey} value={optionValue}>

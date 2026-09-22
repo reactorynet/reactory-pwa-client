@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Typography } from '@mui/material';
 import type { DescriptionFieldProps } from '@rjsf/utils';
 
 interface UIDescriptionFieldOptions {
@@ -22,10 +23,18 @@ function DefaultDescription({
   id: string;
   description: string | React.ReactElement;
 }): React.ReactElement {
+  // `p` + `description-field` are the long-standing contract; typography comes
+  // from the MUI theme (caption scale, secondary text colour).
   return (
-    <p className="description-field" id={`${id}__description`}>
+    <Typography
+      component="p"
+      variant="caption"
+      className="description-field"
+      id={`${id}__description`}
+      sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.43, m: 0 }}
+    >
       {description}
-    </p>
+    </Typography>
   );
 }
 
@@ -73,6 +82,7 @@ export function ReactoryDescriptionFieldTemplate(props: DescriptionFieldProps): 
   }
 
   const displayDesc = typeof rawUiDesc === 'string' ? rawUiDesc : description;
+  if (displayDesc === undefined || displayDesc === null || displayDesc === '') return null;
   return <DefaultDescription id={id} description={displayDesc} />;
 }
 

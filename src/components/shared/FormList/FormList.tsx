@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReactory } from '@reactory/client-core/api';
+import { resolveFormIcon, getFormImageSrc } from './resolveFormIcon';
 
 /** The actions a form card / row can dispatch. */
 export type FormListAction = 'view' | 'edit' | 'develop' | 'submissions';
@@ -86,7 +87,7 @@ const FormList: React.FC<FormListProps> = ({
     return params.get('search') || initialSearchQuery || '';
   });
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'name' | 'modified' | 'usage'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -150,7 +151,6 @@ const FormList: React.FC<FormListProps> = ({
     Add,
     ViewModule,
     ViewList,
-    TableChart,
     Sort,
     FilterList,
     Star,
@@ -162,7 +162,6 @@ const FormList: React.FC<FormListProps> = ({
     GetApp,
     CloudUpload,
     Folder,
-    Description,
     Settings,
     Refresh,
     Close,
@@ -346,6 +345,62 @@ const FormList: React.FC<FormListProps> = ({
     });
   }, [reactory]);
 
+  // A form's visual identity in the avatar slot: the Material icon the form
+  // declares (`form.icon`, e.g. "SupervisedUserCircle" or "table_view"), and
+  // only when the form declares no (resolvable) icon do we fall back to the
+  // first letter of the form name.
+  const renderFormBadge = useCallback((form: FormItem) => {
+    const IconComponent = resolveFormIcon(Material?.MaterialIcons, form.icon);
+    if (IconComponent) return <IconComponent />;
+    return form.name?.charAt(0)?.toUpperCase() || '';
+  }, [Material]);
+
+  // The form's image. A form definition carries a single image url in its
+  // `avatar` field; we surface it *below* the form's textual content rather
+  // than inside the small avatar badge. Broken urls (a form that declares the
+  // conventional CDN path before the asset exists) are hidden instead of
+  // rendering the browser's broken-image placeholder.
+  const FormImage = useCallback(({ form, variant }: { form: FormItem; variant: 'card' | 'list' }) => {
+    const src = getFormImageSrc(form);
+
+    if (!src) return null;
+
+    const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+      e.currentTarget.style.display = 'none';
+    };
+
+    return (
+      <Box
+        component="img"
+        src={src}
+        alt={`${form.title || form.name} image`}
+        loading="lazy"
+        data-testid="form-image"
+        onError={handleError}
+        sx={variant === 'card' ? {
+          display: 'block',
+          width: '100%',
+          height: 120,
+          objectFit: 'contain',
+          bgcolor: 'action.hover',
+          borderTop: '1px solid',
+          borderColor: 'divider'
+        } : {
+          display: 'block',
+          width: '100%',
+          maxWidth: 240,
+          height: 96,
+          objectFit: 'contain',
+          bgcolor: 'action.hover',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          mt: 1
+        }}
+      />
+    );
+  }, [Box]);
+
   // Render form card
   const FormCard = useCallback(({ form }: { form: FormItem }) => {
     // Handle card click - only trigger for content area, not action buttons
@@ -376,15 +431,14 @@ const FormList: React.FC<FormListProps> = ({
       >
         <CardContent sx={{ flexGrow: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-            <Avatar 
-              src={form.avatar}
-              sx={{ 
+            <Avatar
+              sx={{
                 bgcolor: 'primary.main',
                 width: 40,
-                height: 40 
+                height: 40
               }}
             >
-              {form.icon ? <Description /> : form.name?.charAt(0)?.toUpperCase()}
+              {renderFormBadge(form)}
             </Avatar>
             
             <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -446,7 +500,10 @@ const FormList: React.FC<FormListProps> = ({
             </Typography>
           )}
         </CardContent>
-        
+
+        {/* Form image sits below the card content */}
+        <FormImage form={form} variant="card" />
+
         <CardActions 
           data-testid="card-actions"
           sx={{ justifyContent: 'space-between', pt: 0 }}
@@ -503,7 +560,7 @@ const FormList: React.FC<FormListProps> = ({
         </CardActions>
       </Card>
     );
-  }, [handleFormSelect, handleFavouriteToggle, handleMenuOpen]);
+  }, [handleFormSelect, handleFavouriteToggle, handleMenuOpen, renderFormBadge, FormImage]);
 
   // Render form list item
   const FormListItem = useCallback(({ form }: { form: FormItem }) => (
@@ -521,8 +578,8 @@ const FormList: React.FC<FormListProps> = ({
       onClick={() => handleFormSelect(form, 'view')}
     >
       <ListItemIcon>
-        <Avatar src={form.avatar}>
-          {form.icon ? <Description /> : form.name?.charAt(0)?.toUpperCase()}
+        <Avatar>
+          {renderFormBadge(form)}
         </Avatar>
       </ListItemIcon>
       
@@ -545,6 +602,8 @@ const FormList: React.FC<FormListProps> = ({
                 {form.description}
               </Typography>
             )}
+            {/* Form image sits below the row content */}
+            <FormImage form={form} variant="list" />
           </Box>
         }
       />
@@ -563,7 +622,7 @@ const FormList: React.FC<FormListProps> = ({
         </IconButton>
       </Box>
     </ListItem>
-  ), [handleFormSelect, handleMenuOpen]);
+  ), [handleFormSelect, handleMenuOpen, renderFormBadge, FormImage]);
 
   // Speed dial actions
   const speedDialActions = useMemo(() => [
@@ -634,9 +693,6 @@ const FormList: React.FC<FormListProps> = ({
             </ToggleButton>
             <ToggleButton value="list">
               <ViewList />
-            </ToggleButton>
-            <ToggleButton value="table">
-              <TableChart />
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>

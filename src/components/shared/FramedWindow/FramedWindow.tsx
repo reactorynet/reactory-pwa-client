@@ -9,7 +9,6 @@ import Reactory from '@reactorynet/reactory-core';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
 import { useReactory } from '@reactory/client-core/api';
-import { safeCDNUrl } from '@reactory/client-core/utils/safeUrl';
 
 
 const defaultFrameProps = {
@@ -88,46 +87,6 @@ FramedWindow.defaultProps = {
   sendApi: true,
   messageHandlers: []
 };
-
-function _GraphiqlWindow({ reactory }) {
-  
-  const { themeOptions } = reactory.getUser();
-  let color1 = themeOptions && themeOptions.palette && themeOptions.palette.primary1Color 
-    ? themeOptions.palette.primary1Color 
-    : 'unset'
-
-  const queryparams = {      
-    'x-client-key': reactory.CLIENT_KEY,
-    'x-client-pwd': reactory.CLIENT_PWD,
-    'auth_token': reactory.getAuthToken(), 
-    'color1':  color1,
-  };
-  
-  return (
-    <FramedWindow 
-      id={`reactory-graphiql-window`}
-      frameProps={{ url: `${safeCDNUrl(`plugins/graphiql/index.html`)}?${reactory.utils.queryString.stringify(queryparams)}` }}
-      method={'get'}
-      reactory={reactory}
-      containerProps={{
-        id: `reactory-graphiql-window-container`,
-        ...FramedWindow.defaultProps.containerProps,
-      }} 
-      header={undefined} 
-      footer={undefined}/>)
-}
-
-_GraphiqlWindow.meta = {
-  nameSpace: 'core',
-  name: 'ReactoryGraphiQLExplorer',
-  version: '1.0.0',
-  component: withReactory(_GraphiqlWindow),
-  tags: ['graphql', 'development'],
-  description: 'Graphql Express Explorer',
-  roles: ['DEVELOPER', 'ADMIN']
-};
-
-export const GraphiqlWindow = _GraphiqlWindow;
 
 export interface ReportViewerProperties extends Reactory.Client.IReactoryWiredComponent {  
   folder: string,
