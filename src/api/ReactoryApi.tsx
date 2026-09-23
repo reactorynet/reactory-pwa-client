@@ -59,10 +59,12 @@ import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
 import { ReactoryPluginLoader } from './ReactoryPluginLoader';
 
-const {
-  REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
-  REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
-} = process.env;
+// The anonymous account the PWA signs in as before a user logs in. Only
+// REACT_APP_* variables reach the bundle, so these are public by design; the
+// server-side account must hold the ANON role only. The fallbacks match the
+// accounts seeded by existing development databases.
+const REACTORY_APPLICATION_ANONUSER_EMAIL = process.env.REACT_APP_ANONUSER_EMAIL || 'anonymous@reactory.local';
+const REACTORY_APPLICATION_ANONUSER_PASSWORD = process.env.REACT_APP_ANONUSER_PASSWORD || 'anonymous-password';
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -387,6 +389,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PUBLIC_KEY: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
+  /**
+   * @deprecated The browser no longer holds the tenant secret. This alias
+   * carries the public key for templates that still interpolate CLIENT_PWD;
+   * send it as `x-client-public-key`, never as `x-client-pwd`.
+   */
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
   formSchemas: Reactory.Forms.IReactoryForm[]
   /**
@@ -1594,7 +1601,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   getApplicationRoles(): string[] {
-    const { roles } = this.getUser()?.loggedIn;
+    const { roles } = this.getUser()?.loggedIn ?? {};
     return roles || [];
   }
 

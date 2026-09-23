@@ -129,16 +129,17 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint -c eslint.ci.config.mjs --no-inline-config src",
     "analyze": "source-map-explorer 'build/reactory/static/js/*.js'",
     "analyze:lasec-crm": "source-map-explorer 'build/lasec-crm/static/js/*.js'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:ci": "jest -c jest.ci.config.ts --ci --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov --watchAll=false --forceExit",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "lint:legacy": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .ts,.tsx"
   },
   "eslintConfig": {
     "parser": "@babel/eslint-parser",
