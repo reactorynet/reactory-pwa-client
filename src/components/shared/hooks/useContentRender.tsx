@@ -391,15 +391,50 @@ export interface MarkupSegment {
   language?: string;
 }
 
+export interface IsHtmlContentOptions {
+  /**
+   * Treat the input as an inline *fragment* rather than a whole document.
+   *
+   * The default document rules require the entire string to be markup, because a
+   * chat message such as "use `<strong>` for emphasis" is prose that happens to
+   * mention a tag. A label or grid cell is the opposite case: it is a short
+   * fragment whose markup is the whole point, so
+   * `<strong>Acme</strong> (openai)` — which is markup *plus* a trailing caption —
+   * must count as HTML. Without this, such a fragment fell through to the
+   * Markdown path, where raw HTML is escaped and the tags were displayed
+   * literally.
+   *
+   * Markdown *structure* still wins: a string with headings, list markers or
+   * blockquotes is prose whatever tags it contains.
+   */
+  fragment?: boolean;
+}
+
+/**
+ * Elements that make a string markup when it is being treated as a fragment.
+ *
+ * Deliberately an allow-list rather than "any tag-like token", so that prose
+ * containing a bare `<` (e.g. "latency < 200ms") is not mistaken for markup.
+ */
+const FRAGMENT_HTML_TAG = /<(?:a|b|br|code|em|h[1-6]|hr|i|img|li|mark|ol|p|pre|s|small|span|strong|sub|sup|table|tbody|td|th|thead|tr|u|ul|div)\b[^>]*>/i;
+
 /**
  * Checks if a string should be rendered as HTML rather than Markdown.
  * Detects full HTML documents, HTML wrappers (<p>, <div>, <article>, etc.),
  * and sequences of HTML elements that do not contain markdown headings or lists.
+ *
+ * With `options.fragment`, also detects a mixed inline fragment such as
+ * `<strong>Name</strong> (caption)`; see `IsHtmlContentOptions.fragment`.
  */
-export const isHtmlContent = (text: string): boolean => {
+export const isHtmlContent = (
+  text: string,
+  options?: IsHtmlContentOptions
+): boolean => {
   if (!text || typeof text !== 'string') return false;
   const trimmed = text.trim();
   if (!trimmed) return false;
+
+  const allowFragment = options?.fragment === true;
 
   // 1. Full HTML / XML document
   if (/^<!DOCTYPE\s+html/i.test(trimmed) || /^<\?xml/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) {
@@ -430,6 +465,13 @@ export const isHtmlContent = (text: string): boolean => {
 
   // 5. Starts with an opening HTML tag and contains matching closing tags
   if (/^<[a-z][a-z0-9]*\b[^>]*>/i.test(trimmed) && /<\/[a-z][a-z0-9]*>\s*$/i.test(trimmed)) {
+    return true;
+  }
+
+  // 6. Fragment mode: this is a label or cell, so markup mixed with captions still
+  //    counts as HTML. Reached only after the markdown-structure guards above, so a
+  //    document is never reclassified as HTML just because it contains a tag.
+  if (allowFragment && FRAGMENT_HTML_TAG.test(trimmed)) {
     return true;
   }
 
@@ -531,6 +573,18 @@ export interface RenderContentOptions {
    * Override the mountComponents setting for this render pass.
    */
   mountComponents?: boolean;
+
+  /**
+   * Render the content as a single inline fragment instead of a block document.
+   *
+   * The block pipeline wraps everything it emits in `<div>`s (and splits on code
+   * fences and markdown tables). That is right for a message or a document, but
+   * wrong for a label or a grid cell: a `<div>` inside a `<Typography>` is invalid
+   * nesting, and the block margins distort the cell. With `inline` the content is
+   * rendered whole as inline elements, and HTML fragments (markup mixed with
+   * captions) are detected via `isHtmlContent(..., { fragment: true })`.
+   */
+  inline?: boolean;
 }
 
 /**
@@ -543,19 +597,34 @@ export const useContentRender = (
   const hookReactory = useReactory();
   const reactory = reactoryProp || hookReactory;
   const defaultMountComponents = options?.mountComponents ?? false;
+
+  /**
+   * Whether there is an SDK to render through.
+   *
+   * `withReactory` injects the SDK from context and overwrites any prop, so a
+   * component rendered outside a `ReactoryProvider` — a test harness, or a
+   * widget mounted into a detached DOM node — receives `null` here. Reading
+   * `getComponents` off that threw and blanked the subtree. The hook now
+   * degrades to escaped text instead, and `renderContent` refuses to emit HTML
+   * without a sanitizer to run it through.
+   */
+  const hasSdk = Boolean(reactory && typeof (reactory as any).getComponents === 'function');
+
   const {
-    Material,
-    Markdown,
-    MarkdownGfm,
-    DOMPurify,
-    PrismCode,
-  } = reactory.getComponents<{
-    Material: Reactory.Client.Web.IMaterialModule;
-    Markdown: any;
-    MarkdownGfm: any;
-    DOMPurify: any;
-    PrismCode: any;
-  }>(["material-ui.Material", "core.Markdown", "core.MarkdownGfm", "core.DOMPurify", "core.PrismCode"]);
+    Material = {} as any,
+    Markdown = null,
+    MarkdownGfm = null,
+    DOMPurify = null,
+    PrismCode = null,
+  } = hasSdk
+    ? reactory.getComponents<{
+        Material: Reactory.Client.Web.IMaterialModule;
+        Markdown: any;
+        MarkdownGfm: any;
+        DOMPurify: any;
+        PrismCode: any;
+      }>(["material-ui.Material", "core.Markdown", "core.MarkdownGfm", "core.DOMPurify", "core.PrismCode"])
+    : ({} as any);
 
   // Mermaid re-init logic
   const mermaidRef = useRef<HTMLDivElement>(null);
@@ -786,8 +855,22 @@ export const useContentRender = (
   const renderContent = (content: string, renderOptions?: RenderContentOptions) => {
     if (!content) return null;
 
-    const shouldMount = renderOptions?.mountComponents ?? defaultMountComponents;
+    // Without an SDK there is no sanitizer, so HTML must not be injected. A
+    // string child is escaped by React, which keeps the content legible and safe
+    // rather than blanking the subtree or trusting the markup.
+    if (!hasSdk) return String(content);
 
+    const shouldMount = renderOptions?.mountComponents ?? defaultMountComponents;
+    /**
+     * Fragment mode.
+     *
+     * When set, HTML detection also accepts markup mixed with captions, so a
+     * label such as `<strong>Acme</strong> (openai)` renders as HTML instead of
+     * displaying its tags. Gated on the explicit `inline` option rather than
+     * applied globally, so the document pipeline (chat, articles, comments)
+     * keeps treating prose that merely mentions a tag as prose.
+     */
+    const renderAsFragment = renderOptions?.inline === true;
     const theme: any = reactory?.muiTheme || reactory?.getTheme?.()?.options || {};
     const palette = theme?.palette || {};
     const mode = palette?.mode || 'light';
@@ -830,7 +913,7 @@ export const useContentRender = (
      */
     const renderContentSegment = (text: string, keyPrefix: string, isInline: boolean = false) => {
       if (!hasReactoryTags(text)) {
-        if (isHtmlContent(text)) {
+        if (isHtmlContent(text, { fragment: renderAsFragment })) {
           return isInline ? (
             <span
               key={keyPrefix}
@@ -879,7 +962,7 @@ export const useContentRender = (
                 </code>
               );
             }
-            if (isHtmlContent(seg.value)) {
+            if (isHtmlContent(seg.value, { fragment: renderAsFragment })) {
               return isInline ? (
                 <span
                   key={segKey}
@@ -1081,6 +1164,16 @@ export const useContentRender = (
 
       return <React.Fragment key={keyPrefix}>{children}</React.Fragment>;
     };
+
+    // An inline fragment is emitted whole.
+    //
+    // The block processor is deliberately skipped: it wraps every segment in a
+    // `<div>` and splits on code fences and markdown tables, neither of which
+    // belongs in a label or grid cell. A `<div>` inside the containing
+    // `<Typography>` would also be invalid nesting.
+    if (renderAsFragment) {
+      return <React.Fragment>{renderContentSegment(content, 'inline', true)}</React.Fragment>;
+    }
 
     // Render document through block processor
     return <React.Fragment>{renderMarkup(content, 'root')}</React.Fragment>;

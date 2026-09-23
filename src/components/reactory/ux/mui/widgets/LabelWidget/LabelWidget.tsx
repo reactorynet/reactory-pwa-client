@@ -6,6 +6,10 @@ import { useTheme } from '@mui/material/styles';
 import { template, isNil } from 'lodash';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactorynet/reactory-core';
+import {
+  useContentRender,
+  isHtmlContent,
+} from '@reactory/client-core/components/shared/hooks/useContentRender';
 
 interface ExtendedTheme extends Theme {
   extensions?: {
@@ -83,6 +87,25 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   const theme = useTheme() as ExtendedTheme;
 
   const {  reactory, formData, value, uiSchema, idSchema, formContext } = props;
+
+  /**
+   * Content rendering for labels.
+   *
+   * A column definition can carry markup in its `format` — the AI provider and
+   * model grids emit `<strong>${rowData.name}</strong> (${rowData.id})` to bold
+   * the name against its id. `labelText` is a plain string, so rendering it as
+   * text displayed the tags verbatim: the cell read `<strong>OpenAI</strong>
+   * (openai)`.
+   *
+   * The renderer is the shared content pipeline rather than
+   * `dangerouslySetInnerHTML`, for two reasons. It sanitizes through DOMPurify —
+   * `labelText` is built from row data by a template, so it is not trusted
+   * markup — and it understands HTML *fragments*, which is exactly this shape:
+   * markup with a trailing caption, which the document-level detector
+   * deliberately rejects. The previous `renderHtml` option injected raw,
+   * unsanitized HTML, so this also closes that hole.
+   */
+  const { renderContent } = useContentRender(reactory);
 
   const getOptions = (): Partial<Reactory.Schema.IUILabelWidgetOptions> => {
     if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>;
@@ -344,13 +367,38 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     _copyToClip = copyToClipboard === true;
   }
 
-  if (_renderHtml && LabelBody === null) {
-    LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{ __html: labelText }}></Typography>
+  /**
+   * Whether this label contains markup, and so must go through the renderer.
+   *
+   * `fragment: true` is what makes this work for these labels. The default
+   * document rules require the whole string to be markup, and a column format
+   * ends with a caption — `<strong>OpenAI</strong> (openai)` — so it would not
+   * qualify, fall through to the Markdown path, and have its tags escaped.
+   */
+  const labelIsHtml =
+    typeof labelText === 'string' && isHtmlContent(labelText, { fragment: true });
+
+  /**
+   * The label body as renderable content.
+   *
+   * `renderHtml: true` is still honoured, but now routed through the sanitizing
+   * pipeline instead of `dangerouslySetInnerHTML`, so an existing caller that
+   * opted into HTML gains sanitization rather than losing its behaviour. Plain
+   * text is passed through untouched, leaving the common case — every ordinary
+   * form label — on exactly the path it used before.
+   */
+  const labelContent =
+    _renderHtml || labelIsHtml
+      ? renderContent(String(labelText ?? ''), { inline: true })
+      : labelText;
+
+  if ((_renderHtml || labelIsHtml) && LabelBody === null) {
+    LabelBody = <Typography variant={_variant} classes={{ root: classes.labelText }}>{labelContent}</Typography>
   } else {
     if (_iconPosition == 'inline') {
-      LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography classes={{ root: classes.labelText }} variant={_variant}>{labelText}</Typography></div>
+      LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography classes={{ root: classes.labelText }} variant={_variant}>{labelContent}</Typography></div>
     } else {
-      LabelBody = <Typography variant={_variant} classes={{ root: classes.labelText }}>{labelText}</Typography>
+      LabelBody = <Typography variant={_variant} classes={{ root: classes.labelText }}>{labelContent}</Typography>
     }
   }
 
