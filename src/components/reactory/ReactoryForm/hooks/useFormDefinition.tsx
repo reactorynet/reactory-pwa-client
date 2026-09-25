@@ -15,6 +15,7 @@ import { useFormContext } from "./useContext";
 import { useStateStore } from "../stateManagement/useStateStore";
 import { usePerformanceMonitor } from "../performanceOptimization/usePerformanceMonitor";
 import { ReactoryFormState } from "../types-v2";
+import { applyIntegrity } from '@reactory/client-core/api/subresourceIntegrity';
 
 // Feature flags for upgrade phases — stable booleans, no hooks.
 // useSimpleFeatureFlag causes infinite re-renders due to unstable
@@ -248,6 +249,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
                 styleLink.id = resourceId;
                 styleLink.href = resource.uri;
                 styleLink.rel = "stylesheet";
+                applyIntegrity(styleLink, resource as { integrity?: string });
                 document.head.append(styleLink);
                 debug(`${SIGN} Injecting stylesheet`, { resource });
                 break;
@@ -257,6 +259,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
                 scriptLink.id = resourceId;
                 scriptLink.src = resource.uri;
                 scriptLink.type = "text/javascript";
+                applyIntegrity(scriptLink, resource as { integrity?: string });
                 document.body.append(scriptLink);
                 debug(`${SIGN} Injecting script`, { resource });
                 // setTimeout(() => {

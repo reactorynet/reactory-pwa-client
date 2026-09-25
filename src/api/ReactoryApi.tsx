@@ -298,6 +298,7 @@ const FORM_QUERY_SEGMENTS = {
       required
       expr
       uri
+      integrity
     }
     uiSchemas {
       id
