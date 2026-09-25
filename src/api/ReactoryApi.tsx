@@ -58,6 +58,7 @@ import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
 import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
 import { ReactoryPluginLoader } from './ReactoryPluginLoader';
+import { resolveComponentKey } from './componentResolution';
 
 // The anonymous account the PWA signs in as before a user logs in. Only
 // REACT_APP_* variables reach the bundle, so these are public by design; the
@@ -557,6 +558,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.afterLogin = this.afterLogin.bind(this);
     this.registerComponent = this.registerComponent.bind(this);
     this.getComponent = this.getComponent.bind(this);
+    this.findComponentEntry = this.findComponentEntry.bind(this);
     this.mountComponent = this.mountComponent.bind(this);
     this.showModalWithComponent = this.showModalWithComponent.bind(this);
     this.getComponents = this.getComponents.bind(this);
@@ -1627,8 +1629,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
 
-  private ensureVersion(fqn: Reactory.FQN): Reactory.FQN {
-    return `${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`;
+  private reportedFqnResolutions = new Set<string>();
+
+  /**
+   * The register entry for an FQN, resolved by version (see
+   * componentResolution.ts). Each non-exact resolution is reported once.
+   */
+  findComponentEntry(fqn: Reactory.FQN): Reactory.Client.IReactoryComponentRegister[string] | undefined {
+    const { key, note, warn } = resolveComponentKey(fqn, this.componentRegister as Record<string, unknown>);
+    if (note && !this.reportedFqnResolutions.has(fqn)) {
+      this.reportedFqnResolutions.add(fqn);
+      if (warn) this.warning(`Component FQN: ${note}`);
+      else this.debug(`Component FQN: ${note}`);
+    }
+    return key ? this.componentRegister[key] : undefined;
   }
 
   registerComponent(
@@ -1679,7 +1693,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
     try {
-      const found = this.componentRegister[this.ensureVersion(fqn)];
+      const found = this.findComponentEntry(fqn);
       if (found && found.component) {
         let ComponentToReturn = found.component as T;
         if (found.useReactory === true) {
@@ -1712,7 +1726,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       let component = null;
       let $name: string = '';
       if (typeof fqn === 'string') {
-        component = componentRegister[`${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = this.findComponentEntry(fqn);
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
@@ -1731,7 +1745,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
       if (typeof fqn === 'object') { 
         const lookupFqn = fqn.fqn || fqn.id;
-        component = componentRegister[`${lookupFqn.trim()}${lookupFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = this.findComponentEntry(lookupFqn);
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? hasRole(component.roles) : true;

@@ -102,24 +102,24 @@ describe('resolveFqn', () => {
     expect(reactory.logCalls.some((l) => l.level === 'debug' && l.message.includes('$GLOBAL$'))).toBe(true);
   });
 
-  it('strips @version suffix and resolves the bare name', () => {
+  it('passes the @version suffix to the SDK, which resolves by version', () => {
     const Marker = () => null;
-    const reactory = createMockReactorySDK({ components: { 'core.Marker': Marker } });
+    const reactory = createMockReactorySDK({ components: { 'core.Marker@1.0.0': Marker } });
     expect(resolveFqn({ reactory }, 'core.Marker@1.0.0', 'field')).toBe(Marker);
-    expect(reactory.getComponentCalls).toEqual(['core.Marker']);
+    expect(reactory.getComponentCalls).toEqual(['core.Marker@1.0.0']);
   });
 
-  it('logs a debug message when ignoring a version suffix', () => {
-    const reactory = createMockReactorySDK({ components: { 'a.B': () => null } });
+  it('no longer logs that the version is ignored', () => {
+    const reactory = createMockReactorySDK({ components: { 'a.B@1.2.3': () => null } });
     resolveFqn({ reactory }, 'a.B@1.2.3', 'field');
-    expect(reactory.logCalls.some((l) => l.level === 'debug' && l.message.includes('@version'))).toBe(true);
+    expect(reactory.logCalls.some((l) => l.message.includes('@version'))).toBe(false);
   });
 
   it('handles both prefix and version together', () => {
     const Marker = () => null;
-    const reactory = createMockReactorySDK({ components: { 'core.Marker': Marker } });
+    const reactory = createMockReactorySDK({ components: { 'core.Marker@1.0.0': Marker } });
     expect(resolveFqn({ reactory }, '$GLOBAL$core.Marker@1.0.0', 'widget')).toBe(Marker);
-    expect(reactory.getComponentCalls).toEqual(['core.Marker']);
+    expect(reactory.getComponentCalls).toEqual(['core.Marker@1.0.0']);
   });
 
   it('returns null and logs error when the SDK throws', () => {

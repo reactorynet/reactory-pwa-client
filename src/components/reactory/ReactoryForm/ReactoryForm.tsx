@@ -10,6 +10,7 @@ import { useNavigate, useLocation, useParams, Params } from 'react-router';
 
 import queryString from '@reactory/client-core/components/utility/query-string';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
+import { resolveComponentKey } from '@reactory/client-core/api/componentResolution';
 
 import {
   Card,
@@ -153,13 +154,15 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
       if (form?.dependencies && form.dependencies.length > 0) {
         form.dependencies.forEach((_dep: Reactory.Forms.IReactoryComponentDefinition) => {
+          const { key } = resolveComponentKey(_dep.fqn, reactory.componentRegister as Record<string, unknown>);
+          const entry = key ? reactory.componentRegister[key] : undefined;
           _dependency_state.dependencies[_dep.fqn] = {
-            available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
+            available: entry !== null && entry !== undefined,
             component: null
           };
 
           if (_dependency_state.dependencies[_dep.fqn].available === true) {
-            _dependency_state.dependencies[_dep.fqn].component = reactory.componentRegister[_dep.fqn].component
+            _dependency_state.dependencies[_dep.fqn].component = entry.component
           } else {
             _dependency_state.passed = false;
           }

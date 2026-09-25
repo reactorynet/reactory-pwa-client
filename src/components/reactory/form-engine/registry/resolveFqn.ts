@@ -13,7 +13,7 @@
  * Accepted input forms:
  *   - "TextWidget"             → not a FQN; not handled here, return null
  *   - "core.MyField"           → FQN, resolve via reactory.getComponent
- *   - "core.MyField@1.0.0"     → FQN with version; version stripped + warned
+ *   - "core.MyField@1.0.0"     → FQN with version; the SDK resolves it by version
  *   - "$GLOBAL$core.MyField"   → app-wide plugin prefix; stripped + warned
  *   - "$GLOBAL$core.MyField@1" → both prefix and version
  */
@@ -118,17 +118,15 @@ export function resolveFqn(
     );
   }
 
-  if (parsed.version !== undefined) {
-    deps.reactory.debug?.(
-      `[form-engine] resolveFqn: ignoring @version suffix on "${name}" (version pinning not yet enforced).`,
-    );
-  }
+  // The version goes to the SDK, which resolves it to the highest compatible
+  // registered version (api/componentResolution.ts), as ADR-0003 anticipated.
+  const lookup = parsed.version !== undefined ? `${parsed.resolvable}@${parsed.version}` : parsed.resolvable;
 
   let resolved: unknown;
   try {
-    resolved = deps.reactory.getComponent(parsed.resolvable);
+    resolved = deps.reactory.getComponent(lookup);
   } catch (err) {
-    deps.reactory.error?.(`[form-engine] resolveFqn: SDK getComponent threw for "${parsed.resolvable}"`, err);
+    deps.reactory.error?.(`[form-engine] resolveFqn: SDK getComponent threw for "${lookup}"`, err);
     deps.onMiss?.(kind, name);
     return null;
   }

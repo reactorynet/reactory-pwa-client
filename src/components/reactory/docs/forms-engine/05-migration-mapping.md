@@ -126,6 +126,6 @@ A `codemod` script under `scripts/forms-engine-codemod.ts` rewrites the common d
 
 These are tracked in [`12-risk-register.md`](./12-risk-register.md):
 
-1. **`@version` suffix in FQNs** — should `core.MyField@1.0.0` resolve to a specific version? The fork doesn't support it; we can add it during the migration. Default behaviour: ignore version, log a warning.
+1. **`@version` suffix in FQNs** — should `core.MyField@1.0.0` resolve to a specific version? The fork doesn't support it; we can add it during the migration. Resolved (WP-C3): the SDK resolves the highest compatible version (same major, not lower), warns on a mismatch, and refuses it with `REACT_APP_FQN_VERSION_MODE=strict`.
 2. **`ui:hidden` semantics for validation** — should hidden fields validate? Recommended: no. Match modern rjsf default. Document explicitly.
 3. **`ui:title.field` returning a component that itself has `ui:title`** — recursion bound. Recommended: hard cap at depth 3, log warning.
