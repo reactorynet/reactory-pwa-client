@@ -75,8 +75,10 @@ jobs:
           BABEL_ENV=production
           ENV
 
+      # yarn exec puts the project's binaries (env-cmd) on PATH; build.sh calls
+      # them bare, which only worked where they were installed globally.
       - name: Build static bundle
-        run: bin/build.sh reactory podman
+        run: yarn exec bin/build.sh reactory podman
 
       # The image copies the bundle built above (build/reactory/podman), so it
       # builds in this job; on its own it had no bundle to copy.
