@@ -12,16 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: "yarn"
-
+      # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
+      # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
+
+      - name: Enable Corepack for the selected Node
+        run: corepack enable
+
+      # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --no-immutable
 
       - name: Run TypeCheck
         run: yarn typecheck
@@ -31,16 +37,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: "yarn"
-
+      # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
+      # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
+
+      - name: Enable Corepack for the selected Node
+        run: corepack enable
+
+      # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --no-immutable
 
       # Correctness rules only (eslint.ci.config.mjs).
       - name: Run ESLint
@@ -51,16 +63,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: "yarn"
-
+      # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
+      # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
+
+      - name: Enable Corepack for the selected Node
+        run: corepack enable
+
+      # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --no-immutable
 
       - name: Run Tests
         run: yarn test:ci

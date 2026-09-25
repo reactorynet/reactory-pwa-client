@@ -31,28 +31,31 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  build-image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build client image
-        run: docker build -f config/env/reactory/Dockerfile -t reactory-pwa-client:ci .
-
   build-static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
+      # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
 
-      - name: Enable Corepack (Yarn 4)
+      - name: Enable Corepack for the selected Node
         run: corepack enable
 
+      # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --no-immutable
 
       - name: Build static bundle
         run: bin/build.sh reactory podman
+
+      # The image copies the bundle built above (build/reactory/podman), so it
+      # builds in this job; on its own it had no bundle to copy.
+      - name: Build client image
+        run: docker build -f config/env/reactory/Dockerfile -t reactory-pwa-client:ci .
