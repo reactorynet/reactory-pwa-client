@@ -35,6 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # src/components/plugins/reactory-core is a submodule the bundle imports.
+          submodules: true
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -51,6 +54,26 @@ jobs:
       # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
       - name: Install dependencies
         run: yarn install --no-immutable
+
+      # config/env/ is gitignored, so CI writes a throwaway podman environment.
+      # Every value is public by design (REACT_APP_* ship in the bundle).
+      - name: Write a placeholder podman environment
+        run: |
+          [ -f config/env/reactory/.env.podman ] || cat > config/env/reactory/.env.podman <<'ENV'
+          REACT_APP_API_ENDPOINT=http://localhost:4000
+          REACT_APP_CDN=http://localhost:4000/cdn
+          REACT_APP_TITLE='reactory:reactory.application.title'
+          REACT_APP_THEME=reactory
+          REACT_APP_CLIENT_KEY=reactory
+          REACT_APP_SHORTNAME=reactory:reactory.application.title
+          REACT_APP_CLIENT_PUBLIC_KEY=ci-public-key
+          REACT_APP_THEME_PRIMARY=#f95e20
+          REACT_APP_THEME_BG=#424242
+          CI=false
+          PORT=3000
+          NODE_ENV=production
+          BABEL_ENV=production
+          ENV
 
       - name: Build static bundle
         run: bin/build.sh reactory podman
