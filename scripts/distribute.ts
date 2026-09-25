@@ -34,7 +34,7 @@ const appPackage = require(paths.appPackageJson);
 const publicUrl = paths.publicUrl;
 const {
     REACT_APP_CLIENT_KEY,
-    REACT_APP_CLIENT_PASSWORD,
+    REACT_APP_CLIENT_PUBLIC_KEY,
     REACT_APP_CDN,
     REACT_APP_API_ENDPOINT,
     REACT_APP_WEBROOT,
@@ -54,7 +54,7 @@ const doUpload = function () {
     const token = btoa(process.env.REACT_APP_UPLOAD_BTOA)
     const headers = {
         'x-client-key': REACT_APP_CLIENT_KEY,
-        'x-client-pwd': REACT_APP_CLIENT_PASSWORD,
+        'x-client-public-key': REACT_APP_CLIENT_PUBLIC_KEY,
         'content-type': 'application/json'
     }
 

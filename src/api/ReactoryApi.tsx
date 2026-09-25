@@ -58,11 +58,14 @@ import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
 import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
 import { ReactoryPluginLoader } from './ReactoryPluginLoader';
+import { resolveComponentKey } from './componentResolution';
 
-const {
-  REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
-  REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
-} = process.env;
+// The anonymous account the PWA signs in as before a user logs in. Only
+// REACT_APP_* variables reach the bundle, so these are public by design; the
+// server-side account must hold the ANON role only. The fallbacks match the
+// accounts seeded by existing development databases.
+const REACTORY_APPLICATION_ANONUSER_EMAIL = process.env.REACT_APP_ANONUSER_EMAIL || 'anonymous@reactory.local';
+const REACTORY_APPLICATION_ANONUSER_PASSWORD = process.env.REACT_APP_ANONUSER_PASSWORD || 'anonymous-password';
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -295,6 +298,7 @@ const FORM_QUERY_SEGMENTS = {
       required
       expr
       uri
+      integrity
     }
     uiSchemas {
       id
@@ -386,7 +390,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   CDN_ROOT: string;
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
-  CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
+  CLIENT_PUBLIC_KEY: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
+  /**
+   * @deprecated The browser no longer holds the tenant secret. This alias
+   * carries the public key for templates that still interpolate CLIENT_PWD;
+   * send it as `x-client-public-key`, never as `x-client-pwd`.
+   */
+  CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
   formSchemas: Reactory.Forms.IReactoryForm[]
   /**
    * This is a map of form schemas that have been loaded from the server
@@ -549,6 +559,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.afterLogin = this.afterLogin.bind(this);
     this.registerComponent = this.registerComponent.bind(this);
     this.getComponent = this.getComponent.bind(this);
+    this.findComponentEntry = this.findComponentEntry.bind(this);
     this.mountComponent = this.mountComponent.bind(this);
     this.showModalWithComponent = this.showModalWithComponent.bind(this);
     this.getComponents = this.getComponents.bind(this);
@@ -567,7 +578,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
     this.API_ROOT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
     this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
-    this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
+    this.CLIENT_PUBLIC_KEY = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
+    this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
     this.formSchemas = [];
     this.formSchemaMap = {};
     this.formValidationMaps = {};
@@ -1592,7 +1604,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   getApplicationRoles(): string[] {
-    const { roles } = this.getUser()?.loggedIn;
+    const { roles } = this.getUser()?.loggedIn ?? {};
     return roles || [];
   }
 
@@ -1618,8 +1630,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
 
-  private ensureVersion(fqn: Reactory.FQN): Reactory.FQN {
-    return `${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`;
+  private reportedFqnResolutions = new Set<string>();
+
+  /**
+   * The register entry for an FQN, resolved by version (see
+   * componentResolution.ts). Each non-exact resolution is reported once.
+   */
+  findComponentEntry(fqn: Reactory.FQN): Reactory.Client.IReactoryComponentRegister[string] | undefined {
+    const { key, note, warn } = resolveComponentKey(fqn, this.componentRegister as Record<string, unknown>);
+    if (note && !this.reportedFqnResolutions.has(fqn)) {
+      this.reportedFqnResolutions.add(fqn);
+      if (warn) this.warning(`Component FQN: ${note}`);
+      else this.debug(`Component FQN: ${note}`);
+    }
+    return key ? this.componentRegister[key] : undefined;
   }
 
   registerComponent(
@@ -1670,7 +1694,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
     try {
-      const found = this.componentRegister[this.ensureVersion(fqn)];
+      const found = this.findComponentEntry(fqn);
       if (found && found.component) {
         let ComponentToReturn = found.component as T;
         if (found.useReactory === true) {
@@ -1703,7 +1727,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       let component = null;
       let $name: string = '';
       if (typeof fqn === 'string') {
-        component = componentRegister[`${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = this.findComponentEntry(fqn);
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
@@ -1722,7 +1746,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
       if (typeof fqn === 'object') { 
         const lookupFqn = fqn.fqn || fqn.id;
-        component = componentRegister[`${lookupFqn.trim()}${lookupFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = this.findComponentEntry(lookupFqn);
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? hasRole(component.roles) : true;

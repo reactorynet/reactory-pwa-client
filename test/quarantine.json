@@ -1,0 +1,48 @@
+{
+  "_comment": [
+    "Suites excluded from `yarn test:ci` (WP-A8). Every entry failed on the unmodified baseline of 2026-09-23.",
+    "Remove an entry when its suite is fixed; add one only with a reason and an issue link. `yarn test` still runs everything."
+  ],
+  "suites": [
+    {
+      "path": "src/components/reactory/ux/mui/widgets/MaterialTableWidget/hooks/__tests__/useQuickFilters.test.ts",
+      "reason": "3 failing test(s), e.g. \"should remove specific filter when toggled off\": Error: expect(received).toHaveLength(expected)",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/reactory/ux/mui/widgets/MaterialTableWidget/components/__tests__/AdvancedFilterPanel.test.tsx",
+      "reason": "8 failing test(s), e.g. \"should not render content when closed\": Error: expect(element).not.toBeInTheDocument()",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/shared/UserList/hooks/__tests__/useUserFilters.test.tsx",
+      "reason": "3 failing test(s), e.g. \"should initialize with initial quick filters\": Error: expect(received).toContain(expected) // indexOf",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/reactory/ReactoryForm/phase4/tests/phase4RealTimeCollaborationTests.test.ts",
+      "reason": "3 failing test(s), e.g. \"should export collaboration types\": Error: expect(received).toBeDefined()",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/shared/UserList/hooks/__tests__/useUserSelection.test.tsx",
+      "reason": "1 failing test(s), e.g. \"should respect max selection limit\": Error: expect(received).toBe(expected) // Object.is equality",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/shared/FormEditor/FormEditor.test.tsx",
+      "reason": "8 failing test(s), e.g. \"renders all tabs correctly\": TestingLibraryElementError: Found multiple elements with the role \"tab\" and name `/schema/i`",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/shared/hooks/__tests__/reactoryTags.test.ts",
+      "reason": "1 failing test(s), e.g. \"decodes entity-escaped attribute values\": Error: expect(received).toBe(expected) // Object.is equality",
+      "issue": "TODO: open a ticket and link it here"
+    },
+    {
+      "path": "src/components/shared/UserList/hooks/__tests__/useUserQuery.test.tsx",
+      "reason": "Suite exhausts the JavaScript heap even when run alone (FATAL ERROR: heap out of memory), which kills the Jest worker. Likely an unbounded re-render or retry loop in the hook under test.",
+      "issue": "TODO: open a ticket and link it here"
+    }
+  ]
+}

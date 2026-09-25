@@ -36,7 +36,7 @@ REACT_APP_CLIENT_KEY=reactory
 REACT_APP_SHORTNAME=Reactory
 
 # The client password
-REACT_APP_CLIENT_PASSWORD=xxxxxxxxxxxxxxxxx
+REACT_APP_CLIENT_PUBLIC_KEY=xxxxxxxxxxxxxxxxx
 
 # The primary color for the Reactory theme
 REACT_APP_THEME_PRIMARY=#1a2049

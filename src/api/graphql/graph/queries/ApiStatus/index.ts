@@ -239,6 +239,7 @@ const FRAGMENTS = {
       options
       enabled
       roles
+      integrity
     }
   `
 };

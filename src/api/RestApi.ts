@@ -2,12 +2,12 @@ import { safeCDNUrl, safeUrl } from "@reactory/client-core/utils/safeUrl";
 
 const api_root = process.env.REACT_APP_API_ENDPOINT;
 const api_client_id = process.env.REACT_APP_CLIENT_KEY;
-const api_client_password = process.env.REACT_APP_CLIENT_PASSWORD;
+const api_client_public_key = process.env.REACT_APP_CLIENT_PUBLIC_KEY;
 
 const api_headers = {
   'Accept': 'application/json',
   'X-Client-Key': api_client_id,
-  'X-Client-Pwd': api_client_password,
+  'X-Client-Public-Key': api_client_public_key,
   'Content-Type': 'application/json'
 }
 
@@ -23,7 +23,7 @@ export const login = (email, password) => {
         'authorization': `Basic ${token}`,
         'accept': 'application/json',
         'x-client-key': api_client_id,
-        'x-client-pwd': api_client_password,
+        'x-client-public-key': api_client_public_key,
         'content-type': 'application/json'
       }
     }).then((response) => response.json())

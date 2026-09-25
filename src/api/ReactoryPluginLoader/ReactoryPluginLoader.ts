@@ -1,4 +1,5 @@
 import { ReactoryApiEventNames } from "@reactory/client-core/api/ApiEventNames";
+import { applyIntegrity } from "@reactory/client-core/api/subresourceIntegrity";
 
 export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoaderOptions): Promise<void> => {
   const {
@@ -89,6 +90,7 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
       scriptLink.attributes['data-plugin-platform'] = platform;
       scriptLink.attributes['data-plugin-last-update'] = new Date().toISOString();
       scriptLink.type = 'text/javascript';
+      applyIntegrity(scriptLink, plugin as { integrity?: string });
       scriptLink.onload = () => { 
         debug(`Plugin ${name} injected. Waiting for components to be loaded...`);
       }

@@ -17,7 +17,7 @@ const packageInfo: any = require('../../package.json');
 
 const {
   REACT_APP_CLIENT_KEY,
-  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_CLIENT_PUBLIC_KEY,
   REACT_APP_API_ENDPOINT,
   REACT_APP_APP_TITLE = packageInfo.displayName
 } = process.env;
@@ -26,7 +26,7 @@ const {
 
 if (localStorage) {
   localStorage.setItem('REACT_APP_CLIENT_KEY', REACT_APP_CLIENT_KEY);
-  localStorage.setItem('REACT_APP_CLIENT_PASSWORD', REACT_APP_CLIENT_PASSWORD);
+  localStorage.setItem('REACT_APP_CLIENT_PUBLIC_KEY', REACT_APP_CLIENT_PUBLIC_KEY);
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
 }
 
@@ -59,7 +59,7 @@ export default async () => {
         ...headers,
         authorization: currentToken ? `Bearer ${currentToken}` : "",
         'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
-        'x-client-pwd': `${process.env.REACT_APP_CLIENT_PASSWORD}`,
+        'x-client-public-key': `${process.env.REACT_APP_CLIENT_PUBLIC_KEY}`,
         'x-client-version': `${packageInfo.version}`,
         'x-client-name': REACT_APP_APP_TITLE,
         'apollo-require-preflight': 'true'

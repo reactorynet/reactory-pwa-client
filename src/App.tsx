@@ -18,7 +18,7 @@ import { Theme, CssBaseline } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { 
   REACT_APP_CLIENT_KEY,
-  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_CLIENT_PUBLIC_KEY,
   REACT_APP_API_ENDPOINT,
   classes,
   packageInfo
@@ -91,7 +91,7 @@ const StyledRouter = styled(Router)(({ theme }: { theme: Theme }) => {
 
 if (localStorage) {
   localStorage.setItem('REACT_APP_CLIENT_KEY', REACT_APP_CLIENT_KEY);
-  localStorage.setItem('REACT_APP_CLIENT_PASSWORD', REACT_APP_CLIENT_PASSWORD);
+  localStorage.setItem('REACT_APP_CLIENT_PUBLIC_KEY', REACT_APP_CLIENT_PUBLIC_KEY);
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
 }
 
@@ -181,7 +181,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   //@ts-ignore
   const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
     clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
-    clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
+    publicKey: `${localStorage.getItem('REACT_APP_CLIENT_PUBLIC_KEY')}`,
     $version: `${packageInfo.version}-${license.version}`,
     useNavigation
   }));
