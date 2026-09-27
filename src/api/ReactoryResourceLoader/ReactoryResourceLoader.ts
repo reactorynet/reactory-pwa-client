@@ -1,3 +1,5 @@
+import { applyIntegrity } from "@reactory/client-core/api/subresourceIntegrity";
+
 const ValidResourceTypes = ['style', 'script'];
 
 export const ReactoryResourceLoader = async (options: Reactory.Forms.IResourceLoaderOptions): Promise<void> => {
@@ -51,6 +53,7 @@ export const ReactoryResourceLoader = async (options: Reactory.Forms.IResourceLo
       styleLink.id = resourceId;
       styleLink.href = resource.uri;
       styleLink.rel = 'stylesheet';
+      applyIntegrity(styleLink, resource as { integrity?: string });
       document.head.append(styleLink)
       break;
     }
@@ -59,6 +62,7 @@ export const ReactoryResourceLoader = async (options: Reactory.Forms.IResourceLo
       scriptLink.id = resourceId;
       scriptLink.src = resource.uri;
       scriptLink.type = 'text/javascript';
+      applyIntegrity(scriptLink, resource as { integrity?: string });
       document.body.append(scriptLink)
       break;
     }

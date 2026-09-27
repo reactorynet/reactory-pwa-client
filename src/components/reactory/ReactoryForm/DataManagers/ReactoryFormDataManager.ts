@@ -50,8 +50,6 @@ export default (reactory: Reactory.Client.ReactorySDK) => ({
 
           if (graphElement.resultMap && Object.getOwnPropertyNames(graphElement.resultMap).length > 0) {
             nextFormData = reactory.utils.objectMapper(nextFormData, graphElement.resultMap);
-          } else {
-            nextFormData = nextFormData;
           }
 
           break;

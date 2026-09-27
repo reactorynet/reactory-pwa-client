@@ -46,6 +46,7 @@ On top of that we land enterprise features the fork can't carry: conditional ren
 | Live | [Phase 3 closeout](./phase-3-closeout.md) | Phase 3 actuals vs estimate, deferrals, lessons, Phase 4 re-baseline. |
 | Live | [Phase 4 closeout](./phase-4-closeout.md) | Phase 4 actuals vs estimate, deferrals, lessons, Phase 5 re-baseline. |
 | Live | [Phase 5 closeout](./phase-5-closeout.md) | Phase 5 actuals vs estimate, final state of the migration program, post-Phase-5 work. |
+| Plan | [Consolidation plan](./16-consolidation-plan.md) | Retiring the fork (spec WP-C5): inventory, adapter gaps, migration waves, estimates. |
 | Recipe | [Migrate a form to v5](./recipes/migrate-a-form-to-v5.md) | Per-form migration steps, rollback procedures, known limitations. |
 
 ## At a glance

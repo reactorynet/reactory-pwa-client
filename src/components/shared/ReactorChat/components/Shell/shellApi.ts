@@ -10,19 +10,19 @@
 type ReactorySDK = Reactory.Client.ReactorySDK & {
   API_ROOT: string;
   CLIENT_KEY: string;
-  CLIENT_PWD: string;
+  CLIENT_PUBLIC_KEY: string;
   getAuthToken: () => string | null;
 };
 
 /**
  * Auth headers for a REST call, matching ReactoryApolloClient exactly.
  *
- * `x-client-pwd` is not optional: the ReactoryClient middleware resolves the
- * partner with `validatePassword(clientPwd)` and answers 401 without it. It
- * keeps a five-minute cache of validated client keys, so a request missing the
- * header only appears to work while some other call (a GraphQL query) has
- * recently warmed that cache — which is exactly the kind of bug that shows up
- * as "works while I'm chatting, dead after a restart".
+ * The tenant is identified by `x-client-key` plus the tenant's public key.
+ * The server accepts the public key only from an Origin on the tenant's
+ * whitelist; the tenant secret never reaches the browser. Both headers are
+ * required: the ReactoryClient middleware answers 401 without a credential,
+ * and its five-minute cache would otherwise hide a missing header until a
+ * restart.
  */
 function authHeaders(reactory: ReactorySDK): Record<string, string> {
   const token = reactory.getAuthToken?.();
@@ -31,7 +31,7 @@ function authHeaders(reactory: ReactorySDK): Record<string, string> {
     Accept: 'application/json',
     authorization: token ? `Bearer ${token}` : '',
     'x-client-key': reactory.CLIENT_KEY,
-    'x-client-pwd': reactory.CLIENT_PWD,
+    'x-client-public-key': reactory.CLIENT_PUBLIC_KEY,
   };
 }
 

@@ -757,6 +757,26 @@ describe('Component Registry', () => {
     expect(result).toBe(DummyComponent);
   });
 
+  it('getComponent should resolve a compatible version when the exact one is not registered', async () => {
+    const api = await createApi();
+    api.registerComponent('test', 'Button', '1.4.0', DummyComponent);
+
+    expect(api.getComponent('test.Button@1.2.0')).toBe(DummyComponent);
+    expect(api.getComponents(['test.Button@1.2.0'])).toEqual({ Button: DummyComponent });
+  });
+
+  it('getComponent should not resolve across a major version in strict mode', async () => {
+    const previous = process.env.REACT_APP_FQN_VERSION_MODE;
+    process.env.REACT_APP_FQN_VERSION_MODE = 'strict';
+    try {
+      const api = await createApi();
+      api.registerComponent('test', 'Button', '2.0.0', DummyComponent);
+      expect(api.getComponent('test.Button@1.0.0')).toBeNull();
+    } finally {
+      process.env.REACT_APP_FQN_VERSION_MODE = previous;
+    }
+  });
+
   it('getComponent should return null for unregistered component', async () => {
     const api = await createApi();
 

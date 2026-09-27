@@ -64,7 +64,7 @@ export default (props) => {
     secondary = reactory?.muiTheme?.palette?.secondary || { main: '#dc004e' },
     background = reactory?.muiTheme?.palette?.background || { default: '#ffffff' },
     text = reactory?.muiTheme?.palette?.text || { primary: '#000000' }  ,
-  } = reactory?.muiTheme?.palette;
+  } = reactory?.muiTheme?.palette ?? {};
 
   const {
     React,

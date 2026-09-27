@@ -3,7 +3,7 @@ import { createStreamingSession, openShell } from '../shellApi';
 const reactory: any = {
   API_ROOT: 'http://localhost:4000',
   CLIENT_KEY: 'towerstone',
-  CLIENT_PWD: 'sonicwasadog',
+  CLIENT_PUBLIC_KEY: 'towerstone-public-key',
   getAuthToken: () => 'jwt-token',
 };
 
@@ -19,8 +19,8 @@ describe('shellApi auth headers', () => {
   });
 
   /**
-   * The ReactoryClient middleware resolves the partner with
-   * `validatePassword(x-client-pwd)` and answers 401 without it. It also caches
+   * The ReactoryClient middleware resolves the partner from the public key
+   * (bound to Origin) and answers 401 without it. It also caches
    * validated client keys for five minutes, so omitting the header fails only
    * intermittently — hence the explicit assertion.
    */
@@ -36,7 +36,7 @@ describe('shellApi auth headers', () => {
           Accept: 'application/json',
           authorization: 'Bearer jwt-token',
           'x-client-key': 'towerstone',
-          'x-client-pwd': 'sonicwasadog',
+          'x-client-public-key': 'towerstone-public-key',
         },
         body: JSON.stringify({ channelId: 'chat-1' }),
       }),
@@ -46,7 +46,8 @@ describe('shellApi auth headers', () => {
   it('authenticates every shell route the same way', async () => {
     await openShell(reactory, { channelId: 'chat-1' });
     const headers = fetchMock.mock.calls[0][1].headers;
-    expect(headers['x-client-pwd']).toBe('sonicwasadog');
+    expect(headers['x-client-public-key']).toBe('towerstone-public-key');
+    expect(headers['x-client-pwd']).toBeUndefined();
     expect(headers['x-client-key']).toBe('towerstone');
   });
 

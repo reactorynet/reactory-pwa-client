@@ -1,6 +1,6 @@
 const {
   REACT_APP_CLIENT_KEY = 'reactory',
-  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_CLIENT_PUBLIC_KEY,
   REACT_APP_API_ENDPOINT = 'http://localhost:4000',
 } = process.env;
 
@@ -22,7 +22,7 @@ const packageInfo = {
 
 export {
   REACT_APP_CLIENT_KEY,
-  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_CLIENT_PUBLIC_KEY,
   REACT_APP_API_ENDPOINT,
   classes,
   packageInfo

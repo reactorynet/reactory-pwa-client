@@ -47,7 +47,7 @@ Every adapter export gets co-located `__tests__/X.test.ts`. The non-negotiable c
 - Component reference passthrough.
 - Dotted FQN — single namespace dot.
 - Dotted FQN — multi-level (`material.ui.MyField`).
-- FQN with `@version` suffix → strips version, logs warning.
+- FQN with `@version` suffix → passed to the SDK with the version; the SDK resolves it by version.
 - FQN with `$GLOBAL$` prefix → strips prefix.
 - Missing FQN → returns null + emits `onMiss`.
 - SDK throws → returns null + structured error log.

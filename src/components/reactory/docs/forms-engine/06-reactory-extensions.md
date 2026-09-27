@@ -35,7 +35,7 @@ export function createReactoryRegistry(options: ReactoryRegistryOptions): Reacto
 
 1. If `name` is already a function/component reference → return it.
 2. If `name` matches `staticWidgets` (or `staticFields` for fields) → return it.
-3. If `name` contains a `.` → call `reactory.getComponent(name)`. Strip `@version` suffix if present and log a debug warning that version pinning is not yet enforced.
+3. If `name` contains a `.` → call `reactory.getComponent(name)`, keeping any `@version` suffix: the SDK resolves it to the highest compatible registered version (`api/componentResolution.ts`, spec WP-C3).
 4. If still nothing → return `null`. Caller (the dispatcher inside rjsf) decides how to render: typically `UnsupportedFieldTemplate`.
 
 **Tests (≥30):**

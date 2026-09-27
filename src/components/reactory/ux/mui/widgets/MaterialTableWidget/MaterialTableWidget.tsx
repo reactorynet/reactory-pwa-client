@@ -2113,7 +2113,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     const callAdd = () => {
       if (uiOptions?.addButtonProps) {
-        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.addButtonProps;
+        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.addButtonProps ?? {};
 
         if (onClick?.length > 0) {
           const [onClickComponent, onClickName] = onClick.split("/");
@@ -2140,7 +2140,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     const callDelete = () => {
       if (uiOptions?.deleteButtonProps) {
-        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.deleteButtonProps;
+        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.deleteButtonProps ?? {};
         if (onClick?.length > 0) {
           const [onClickComponent, onClickName] = onClick.split("/");
         

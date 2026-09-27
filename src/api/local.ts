@@ -1,9 +1,6 @@
 import Reactory from "@reactorynet/reactory-core";
 
-const {
-  REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
-  REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
-} = process.env;
+const REACTORY_APPLICATION_ANONUSER_EMAIL = process.env.REACT_APP_ANONUSER_EMAIL || 'anonymous@reactory.local';
 
 /**
  * The default user when no user is logged is returned 

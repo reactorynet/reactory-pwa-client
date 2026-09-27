@@ -147,7 +147,7 @@ function ReportViewer({
       const queryparams = {
         ...data,
         'x-client-key': reactory.CLIENT_KEY,
-        'x-client-pwd': reactory.CLIENT_PWD,
+        'x-client-public-key': reactory.CLIENT_PUBLIC_KEY,
         'auth_token': reactory.getAuthToken(),
         'view': 'inline',      
       };
@@ -181,7 +181,7 @@ function ReportViewer({
     const queryparams = {
       ...data,
       'x-client-key': reactory.CLIENT_KEY,
-      'x-client-pwd': reactory.CLIENT_PWD,
+      'x-client-public-key': reactory.CLIENT_PUBLIC_KEY,
       'auth_token': reactory.getAuthToken(),
       'view': 'attachment',      
     };
