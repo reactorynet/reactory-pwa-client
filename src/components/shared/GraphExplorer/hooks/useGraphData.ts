@@ -6,11 +6,17 @@
  * (graphqlMutation does not throw on GraphQL errors) so failures surface to
  * the UI as real messages rather than silent no-ops.
  *
- * A one-shot capability probe (schema introspection over Query field names)
- * gates the traversal/persistence API so the component still works against
- * servers that only expose per-node children expansion — perspectives then
- * fall back to localStorage. When introspection is disabled the probe
- * assumes the full API (the current server) instead of degrading silently.
+ * A one-shot capability probe gates the traversal/persistence API so the
+ * component still works against servers that only expose per-node children
+ * expansion — perspectives then fall back to localStorage.
+ *
+ * The probe asks the system graph about its own fields (a validated
+ * field-presence document, see CAPABILITY_PROBE_QUERY). It deliberately does
+ * not introspect the GraphQL schema: `__type`/`__schema` is a different
+ * capability, served only in development by the express graph middleware
+ * (`introspection: NODE_ENV === 'development'`), so an introspection probe is
+ * answered with HTTP 400 in production and surfaces as an error on mount.
+ * Validation of the real graph fields, by contrast, is always performed.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -159,6 +165,74 @@ const FULL_CAPABILITIES: GraphCapabilities = {
   graphPath: true,
 };
 
+/**
+ * Capability probe document.
+ *
+ * Every selection is gated behind `@include(if: false)`: validation still
+ * type-checks the field and its arguments — which is the signal we want — but
+ * the field is dropped before execution, so a valid probe runs no resolvers
+ * and costs one empty round trip. Fields the server does not define come back
+ * as `GRAPHQL_VALIDATION_FAILED` errors naming the offending field.
+ */
+const CAPABILITY_PROBE_QUERY = `query GraphExplorerCapabilities {
+  ReactorSubgraph(rootId: 0, limit: 1) @include(if: false) { truncated }
+  ReactorNodes(ids: [0]) @include(if: false) { id }
+  ReactorNodeLinks @include(if: false) { paging { hasNext } }
+  ReactorGraphPath(sourceId: 0, targetId: 0) @include(if: false) { found }
+  ReactorGraphPerspectives @include(if: false) { id }
+}`;
+
+/** The Query field each capability is gated on — mirrors the probe above. */
+const CAPABILITY_FIELDS: Array<[keyof GraphCapabilities, string]> = [
+  ['subgraphQuery', 'ReactorSubgraph'],
+  ['batchNodes', 'ReactorNodes'],
+  ['nodeLinks', 'ReactorNodeLinks'],
+  ['graphPath', 'ReactorGraphPath'],
+  ['savePerspective', 'ReactorGraphPerspectives'],
+];
+
+const CANNOT_QUERY_FIELD = /Cannot query field "([^"]+)"/;
+const UNKNOWN_FIELD_NAMES = /Cannot query field "([^"]+)"/g;
+
+/**
+ * `Query` field names the server reported as unknown.
+ *
+ * Accepts every shape the failure can take: a resolved result carrying
+ * `errors` (the client's default `errorPolicy: 'all'`), or a thrown
+ * ApolloError — an unknown field is a validation error, which Apollo Server
+ * answers with HTTP 400, so it arrives on `networkError.result.errors`.
+ */
+const missingQueryFields = (value: any): Set<string> => {
+  const errors: any[] = [
+    ...(Array.isArray(value?.errors) ? value.errors : []),
+    ...(Array.isArray(value?.graphQLErrors) ? value.graphQLErrors : []),
+    ...(Array.isArray(value?.networkError?.result?.errors) ? value.networkError.result.errors : []),
+  ];
+  const missing = new Set<string>();
+  for (const error of errors) {
+    const message = typeof error?.message === 'string' ? error.message : '';
+    const isUnknownField =
+      error?.extensions?.code === 'GRAPHQL_VALIDATION_FAILED' || CANNOT_QUERY_FIELD.test(message);
+    if (!message || !isUnknownField) continue;
+    UNKNOWN_FIELD_NAMES.lastIndex = 0;
+    let match = UNKNOWN_FIELD_NAMES.exec(message);
+    while (match) {
+      missing.add(match[1]);
+      match = UNKNOWN_FIELD_NAMES.exec(message);
+    }
+  }
+  return missing;
+};
+
+/** Everything the probe did not report as unknown is present. */
+const capabilitiesFromMissingFields = (missing: Set<string>): GraphCapabilities => {
+  const capabilities: GraphCapabilities = { ...FULL_CAPABILITIES };
+  for (const [capability, field] of CAPABILITY_FIELDS) {
+    if (missing.has(field)) capabilities[capability] = false;
+  }
+  return capabilities;
+};
+
 /** graphqlQuery/graphqlMutation resolve with `errors` instead of throwing. */
 const assertNoErrors = (response: any, fallback: string): void => {
   const errors = response?.errors;
@@ -198,37 +272,42 @@ export function useGraphData(): UseGraphDataReturn {
     }
   }, []);
 
-  // One-shot capability probe.
+  // One-shot capability probe — against the graph API, never the schema
+  // (see CAPABILITY_PROBE_QUERY for why introspection is the wrong tool).
   useEffect(() => {
     let cancelled = false;
     const probe = async () => {
+      let resolved: GraphCapabilities = FULL_CAPABILITIES;
       try {
-        const response = await reactory.graphqlQuery<
-          { __type: { fields: Array<{ name: string }> } | null },
-          Record<string, never>
-        >(`query GraphExplorerCapabilities { __type(name: "Query") { fields { name } } }`, {});
-        const fieldList = response.data?.__type?.fields;
-        if (cancelled) return;
-        if (!fieldList) {
-          // Introspection disabled — assume the current server surface rather
-          // than silently degrading to localStorage perspectives.
-          setCapabilities(FULL_CAPABILITIES);
-          return;
+        const response = await reactory.graphqlQuery<any, any>(CAPABILITY_PROBE_QUERY, {});
+        const missing = missingQueryFields(response);
+        if (missing.size > 0) {
+          resolved = capabilitiesFromMissingFields(missing);
+          reactory.log(
+            'GraphExplorer: server is missing graph traversal fields — using compatibility paths',
+            { missing: Array.from(missing) },
+            'warn'
+          );
         }
-        const fields = new Set(fieldList.map((f) => f.name));
-        setCapabilities({
-          subgraphQuery: fields.has('ReactorSubgraph'),
-          batchNodes: fields.has('ReactorNodes'),
-          nodeLinks: fields.has('ReactorNodeLinks'),
-          savePerspective: fields.has('ReactorGraphPerspectives'),
-          graphPath: fields.has('ReactorGraphPath'),
-        });
       } catch (err) {
-        reactory.log('GraphExplorer capability probe failed — assuming full API', { err }, 'warn');
-        if (!cancelled) setCapabilities(FULL_CAPABILITIES);
-      } finally {
-        if (!cancelled) setCapabilitiesResolved(true);
+        const missing = missingQueryFields(err);
+        if (missing.size > 0) {
+          resolved = capabilitiesFromMissingFields(missing);
+          reactory.log(
+            'GraphExplorer: server is missing graph traversal fields — using compatibility paths',
+            { missing: Array.from(missing) },
+            'warn'
+          );
+        } else {
+          // A transport, auth or server fault says nothing about which graph
+          // fields exist — assume the full surface rather than silently
+          // degrading to localStorage perspectives.
+          reactory.log('GraphExplorer capability probe failed — assuming full API', { err }, 'warn');
+        }
       }
+      if (cancelled) return;
+      setCapabilities(resolved);
+      setCapabilitiesResolved(true);
     };
     probe();
     return () => {

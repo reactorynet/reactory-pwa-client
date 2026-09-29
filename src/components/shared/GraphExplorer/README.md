@@ -274,8 +274,7 @@ tested without three.js, and portable to a web worker later.
 
 `useGraphData` mirrors the WorkflowDesigner `useGraphQL` pattern (typed
 inline queries via `reactory.graphqlQuery`). On mount it runs a one-shot
-**capability probe** (introspection of Query field names) and gates the
-newer server API:
+**capability probe** and gates the newer server API:
 
 | Capability            | Used for                          | Fallback                     |
 | --------------------- | --------------------------------- | ---------------------------- |
@@ -285,7 +284,17 @@ newer server API:
 | `ReactorGraphPath`    | path tool                         | disabled                     |
 | `ReactorGraphPerspectives` | perspective persistence      | `localStorage` (multi-entry) |
 
-If introspection is disabled the probe assumes the full API rather than
+The probe validates a document that references the five graph fields with
+every selection gated behind `@include(if: false)` — validation still
+type-checks each field and its arguments, but the selection is dropped before
+execution, so a valid probe runs no resolvers and costs one empty round trip.
+It deliberately does **not** introspect the schema (`__type` / `__schema`):
+introspection is a different capability, served only in development
+(`introspection: NODE_ENV === 'development'` in the express graph middleware),
+so an introspection probe gets `400` in production and shows up as an error the
+moment the explorer mounts. Unknown fields come back per-field, so a server
+that exposes only part of the API degrades exactly the capabilities it lacks;
+any other probe failure (transport, auth, 5xx) assumes the full API rather than
 silently degrading. Other operations used: `ReactorProject.graphNodeId`
 (route → root), `ReactorConversationNode` (chat root), `ReactorNodesByTerm`,
 `ReactorCreate/Update/DeleteNodeLink`, `ReactorUpdateNode` (data payload),
