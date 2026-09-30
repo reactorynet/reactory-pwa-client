@@ -140,6 +140,21 @@ const MaterialObjectTemplate = (props) => {
   let ContainerComponent = Paper;
   let ContainerStyles = {};
 
+  // `ui:options.variant: 'section'` renders the object as a padded, outlined
+  // section. Opt-in, so existing forms keep the bare-Paper default. Note the
+  // bare default never actually received the StyledPaper padding declared at
+  // the top of this module, which is why nested objects looked flush to their
+  // edges; sections now supply real padding.
+  const isSection = uiOptions?.variant === 'section';
+  const sectionStyles = isSection
+    ? {
+        padding: theme.spacing(2),
+        marginBottom: theme.spacing(2),
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: theme.shape.borderRadius,
+      }
+    : {};
+
   if(uiOptions?.container) {      
     if( typeof uiOptions.containerStyles === 'object') {
       ContainerStyles = { ...uiOptions.containerStyles }
@@ -173,9 +188,18 @@ const MaterialObjectTemplate = (props) => {
     ContainerStyles = { ...uiOptions.style, ...ContainerStyles }
   }
 
+  if(isSection) {
+    // Section defaults sit beneath any author-supplied container/style values.
+    ContainerStyles = { ...sectionStyles, ...ContainerStyles };
+  }
+
+  const containerExtras = isSection && ContainerComponent === Paper ? { variant: 'outlined' as const } : {};
+
   return (
-    <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>        
-      {isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
+    <ContainerComponent className={classes.root} key={key} style={ContainerStyles} {...containerExtras}>        
+      {isNil(titleText) === false && isEmpty(titleText) === false ? (
+        <Typography gutterBottom variant={isSection ? 'subtitle1' : undefined} sx={isSection ? { fontWeight: 600, mb: 1.5 } : undefined}>{titleText}</Typography>
+      ) : null }
       {isNil(description) === false ? <Typography gutterBottom component="p">{(() => { try { return template(description)({ formData: props.formData }); } catch (e) { return description; } })()}</Typography> : null }
       {toolbar}
       {properties.map(element => element.content)}

@@ -9,8 +9,9 @@
 import * as React from 'react';
 import { ReactoryGridLayoutField } from './GridLayoutField';
 import { ReactoryObjectField } from './ObjectWidgetField';
+import { ReactoryTabbedLayoutField } from './TabbedLayoutField';
 
-export { ReactoryGridLayoutField, ReactoryObjectField };
+export { ReactoryGridLayoutField, ReactoryObjectField, ReactoryTabbedLayoutField };
 
 export function reactoryFields(): Record<string, React.ComponentType<any>> {
   return {
@@ -21,5 +22,10 @@ export function reactoryFields(): Record<string, React.ComponentType<any>> {
     // the widget, as the legacy fork does. Delegates to rjsf's ObjectField
     // when no widget is named. See ObjectWidgetField.tsx.
     ObjectField: ReactoryObjectField as unknown as React.ComponentType<any>,
+    // Tabbed layout: `ui:field: 'TabbedLayout'` + `ui:tab-layout`. The legacy
+    // fork resolves this key from `ux/mui/fields` (MaterialTabbedField); the v5
+    // field map did not, so the tabs were silently ignored. See
+    // TabbedLayoutField.tsx.
+    TabbedLayout: ReactoryTabbedLayoutField as unknown as React.ComponentType<any>,
   };
 }

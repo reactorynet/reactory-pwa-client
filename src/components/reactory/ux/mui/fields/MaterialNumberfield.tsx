@@ -6,6 +6,8 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
+import { fieldHasValue } from '../utils/fieldValuePresence';
+
 const MaterialNumberfield = (props: any, context: any) => {
   const theme = useTheme();
   const { uiSchema, registry, onChange, schema, required, formData } = props;
@@ -37,12 +39,23 @@ const MaterialNumberfield = (props: any, context: any) => {
     || (typeof props.label === 'string' ? props.label : undefined)
     || '';
 
+  // The notch and the label's shrink state are two halves of the same
+  // outlined-field behaviour. The visible label is rendered by the field
+  // template, which lifts it into the notch exactly when the field holds a
+  // value; the notch must therefore be cut under the very same condition, or
+  // the border gap and the label disagree and the label renders over the
+  // value. `fieldHasValue` treats `0` (and any other numeric value) as
+  // entered, which the previous `String(formData).trim() !== ''` check also
+  // did - the mismatch came from the template, and both now share one rule.
+  const hasValue = fieldHasValue(formData);
+  const dontShrinkLabel = (uiOptions as any)?.labelProps?.dontShrink === true;
+
   let ComponentToRender: any = Input;
   let extraProps: any = {};
   if (variant === 'outlined') {
     ComponentToRender = OutlinedInput;
     extraProps.label = fieldLabel ? `${fieldLabel}${required ? ' *' : ''}` : undefined;
-    extraProps.notched = Boolean(formData !== null && formData !== undefined && String(formData).trim() !== '');
+    extraProps.notched = hasValue && dontShrinkLabel === false;
   } else if (variant === 'filled') {
     ComponentToRender = FilledInput;
   }

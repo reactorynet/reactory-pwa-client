@@ -257,6 +257,17 @@ Registered under the `ui:field: 'ConditionalField'` key, and **automatically act
 
 These replace `MaterialGridField` and `MaterialTabbedField` (which currently aliases AccordionLayout/SteppedLayout/ListLayout). They are direct replacements — same `ui:field` keys, same `ui:options` shape — implemented over rjsf's `ObjectFieldTemplate` props rather than the fork's mutation-heavy approach.
 
+> **Correction (2026-09-29).** The parenthetical above is misleading and was read as "these are not implemented". `MaterialGridField` and `MaterialTabbedField` **do exist today** at `ux/mui/fields/` and are wired into the fork via `ux/mui/fields/index.ts`:
+>
+> | `ui:field` key | legacy fork component | v5 component |
+> |---|---|---|
+> | `GridLayout` | `MaterialGridField` | `ReactoryGridLayoutField` |
+> | `TabbedLayout` | `MaterialTabbedField` | `ReactoryTabbedLayoutField` |
+> | `AccordionLayout` / `SteppedLayout` / `ListLayout` | `MaterialTabbedField` | — (falls back to ObjectField) |
+> | `ColumnLayout` / `PageLayout` | `MaterialGridField` | — |
+>
+> On the **v5** engine `ui:field` strings resolve only from `reactoryFields()` (or a dotted FQN). `TabbedLayout` was missing from that map, so rjsf silently fell back to the default `ObjectField` and the tabs never rendered — a silent failure, not an error. It is now registered (see §17). The legacy aliases above still fall back to `ObjectField` on v5.
+
 ## 12. Schema preprocessing (interpolation)
 
 The fork does **not** do `${variable}` substitution; widget code does. We preserve that boundary — the engine remains pure with respect to schema/uiSchema.
@@ -304,3 +315,90 @@ export { ADDITIONAL_PROPERTY_FLAG } from './deprecated';
 ```
 
 `ReactoryForm`, `ReactoryFormRouter`, and the public types stay where they are. `form-engine/` is consumed only by the wrappers and by app code that needs to register custom fields/widgets.
+
+## 16. Object sections — `ui:options.variant: 'section'`
+
+**Location:** `templates/ObjectFieldTemplate.tsx` (v5) and
+`components/reactory/ux/mui/templates/MaterialObjectTemplate.tsx` (legacy fork).
+
+A nested object renders its own properties inside a container. Historically that
+container had no padding — the v5 fieldset used `padding: 0`, and the legacy
+`MaterialObjectTemplate` rendered a bare MUI `Paper` whose declared
+`StyledPaper` padding was never applied — so an object's content sat flush
+against its container's edges.
+
+Setting `variant: 'section'` on the object's uiSchema gives it a padded,
+bordered section with a heading, on both engines:
+
+```ts
+sampling: {
+  'ui:options': { variant: 'section' },
+  'ui:grid-layout': [
+    { temperature: { xs: 12, sm: 4 }, topP: { xs: 12, sm: 4 }, topK: { xs: 12, sm: 4 } },
+  ],
+},
+```
+
+Behaviour:
+
+- **Opt-in.** Objects without `variant: 'section'` render exactly as before, so
+  existing forms are unaffected.
+- **Padding.** The container gets `padding: theme.spacing(2)` (16px) plus a
+  `divider`-coloured border, `borderRadius` and bottom margin.
+- **Inner layout.** `ui:grid-layout` inside the section lays its fields out on
+  the 12-column grid, exactly as at the top level.
+- **Heading.** The object's `schema.title` renders as the section heading; the
+  fieldset/legend semantics (and `aria-labelledby`) are preserved.
+- **Marker.** The v5 fieldset carries `data-variant="section"` for tests and
+  debugging.
+
+Note: an object may also be placed inside a tab; see §17 for the tabbed layout
+(`ui:field: 'TabbedLayout'` + `ui:tab-layout`), which composes with both
+grids and sections.
+## 17. Tabbed layout — `ui:field: 'TabbedLayout'` + `ui:tab-layout`
+
+**Location:** `form-engine/fields/TabbedLayoutField.tsx` (v5) and
+`ux/mui/fields/MaterialTabbedField.tsx` (legacy fork).
+
+Groups an object's properties into MUI tabs. Both engines share the contract:
+
+```ts
+'ui:field': 'TabbedLayout',
+'ui:tab-layout': [
+  { title: 'Identity', icon: 'badge', fields: ['providerId', 'modelKey', 'name'] },
+  { field: 'rateLimits',        title: 'Limits' },   // legacy single-property form
+],
+'ui:tab-options': { useRouter: false, tabsProps: {}, appBarProps: {} },
+'ui:options':     { activeTab: 'query', activeTabKey: 'tab' },
+```
+
+- **Single or grouped.** `field: 'x'` selects one property (the legacy contract);
+  `fields: ['a','b']` groups several **flat** properties into one tab. The latter
+  lets a form adopt tabs without nesting its schema — so formData shape and any
+  GraphQL input mapping stay unchanged.
+- **Supported on BOTH engines.** `fields` is honoured by the v5 field *and* by
+  `MaterialTabbedField`. This matters: the fork is what runs whenever the
+  `core.FormsEngineV5` flag is off, so a `fields` entry that only v5 understood
+  rendered **no tab bar and no panels** (a blank form) for those users. A form's
+  `ui:tab-layout` must not depend on which engine the viewer resolves to.
+- **Composes with grids.** When the object also declares `ui:grid-layout`, the
+  active tab's fields are laid out on the same 12-column grid (`buildGridSpans`),
+  so tabs and grids are not mutually exclusive.
+- **Missing properties are dropped.** Tabs (and fields) whose properties are not
+  in the schema are skipped, so a layout may name optional fields safely.
+- **Query-backed selection.** `activeTab: 'query'` + `activeTabKey` deep-link the
+  active tab.
+
+### Why it was missing on v5
+
+On the v5 engine `ui:field` strings resolve from `reactoryFields()` or a dotted
+FQN. `TabbedLayout` was not registered, so rjsf silently substituted the default
+`ObjectField` — the tabs never appeared and nothing errored. `TabbedLayout` is
+now registered; `GridLayout` and `ObjectField` are unchanged. The `AccordionLayout`
+/ `SteppedLayout` / `ListLayout` aliases remain legacy-only.
+
+### Composing with sections
+
+A tab's contents may include a nested object rendered as a padded section
+(§16); e.g. the AI Model editor's **Advanced** tab holds the `sampling` and
+`thinking` sections.

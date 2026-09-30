@@ -189,3 +189,52 @@ describe('ReactoryObjectFieldTemplate grid spacing', () => {
     expect(parseFloat(window.getComputedStyle(grid).columnGap)).toBeGreaterThan(0);
   });
 });
+/**
+ * `ui:options.variant: 'section'` renders a nested object as a padded, bordered
+ * section. Before this existed, an object's content sat flush against its
+ * container edges (the v5 fieldset had `padding: 0`), which is what the AI
+ * provider/model editors exposed on their Sampling/Thinking/Rate-limits blocks.
+ */
+describe('ReactoryObjectFieldTemplate — section variant', () => {
+  const sectionProps = (overrides: Partial<ObjectFieldTemplateProps> = {}) =>
+    baseProps({
+      uiSchema: { 'ui:options': { variant: 'section' } },
+      ...overrides,
+    });
+
+  it('renders a bare fieldset by default', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...baseProps()} />);
+    const fieldset = container.querySelector('fieldset.object-field');
+    expect(fieldset).toBeTruthy();
+    expect(fieldset).not.toHaveAttribute('data-variant');
+  });
+
+  it('marks the fieldset as a section when ui:options.variant is "section"', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...sectionProps()} />);
+    const fieldset = container.querySelector('fieldset.object-field');
+    expect(fieldset).toHaveAttribute('data-variant', 'section');
+  });
+
+  it('lays a section out on the 12-column grid when it declares ui:grid-layout', () => {
+    const { container } = render(
+      <ReactoryObjectFieldTemplate
+        {...sectionProps({
+          uiSchema: {
+            'ui:options': { variant: 'section' },
+            'ui:grid-layout': [{ name: { xs: 12, md: 6 }, email: { xs: 12, md: 6 } }],
+          },
+        })}
+      />,
+    );
+    const grid = container.querySelector('[data-grid-layout="ui:grid-layout"]');
+    expect(grid).toBeTruthy();
+  });
+
+  it('keeps the section heading and its accessible name', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...sectionProps()} />);
+    const legend = container.querySelector('legend.object-field-title');
+    expect(legend).toBeTruthy();
+    expect(legend?.textContent).toContain('Person');
+    expect(container.querySelector('fieldset')?.getAttribute('aria-labelledby')).toBe('root__title');
+  });
+});

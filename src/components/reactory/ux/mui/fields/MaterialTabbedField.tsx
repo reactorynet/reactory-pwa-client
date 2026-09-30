@@ -31,6 +31,25 @@ interface TabPanelProps {
   value: any;
 }
 
+/**
+ * Resolve the property names a tab owns.
+ *
+ * `field: 'x'` is the original contract (one property per tab). `fields: ['a','b']`
+ * groups several flat properties into one tab, which lets a form adopt tabs
+ * without nesting its schema — so the formData shape (and any GraphQL mapping)
+ * is unchanged.
+ *
+ * The v5 equivalent (`form-engine/fields/TabbedLayoutField.tsx`) implements the
+ * same contract. `fields` MUST be supported on both engines: this component is
+ * what runs whenever the `core.FormsEngineV5` flag is off, and it previously
+ * ignored `fields` entirely — so a `fields`-based `ui:tab-layout` rendered no tab
+ * bar and no panels (a blank form) on the fork.
+ */
+const resolveTabFields = (tabDef: any): string[] => {
+  if (Array.isArray(tabDef?.fields) && tabDef.fields.length > 0) return tabDef.fields;
+  if (typeof tabDef?.field === 'string' && tabDef.field.length > 0) return [tabDef.field];
+  return [];
+};
 
 const MaterialTabbedField = (props) => {
 
@@ -80,16 +99,20 @@ const MaterialTabbedField = (props) => {
           break;
       }      
     }
+    // Default to the first tab. Without this the initial index is `undefined`,
+    // so `tindex === value` is never true and no panel renders on first paint
+    // (a blank form) unless the form happened to configure `activeTab`.
+    return 0;
   }
 
   const getTabIndex = (field: string) => {
-    const index = reactory.utils.lodash.findIndex(layout, { field });
+    const index = reactory.utils.lodash.findIndex(layout, (tabDef: any) => resolveTabFields(tabDef).indexOf(field) !== -1);
     if (index < 0) return 0;
     return index || 0;
   }
 
   const getTabKey = (index: number) => {
-    return layout[index].field
+    return resolveTabFields(layout[index])[0];
   }
 
   const [value, setValue] = React.useState(getActiveTabIndex());
@@ -206,8 +229,11 @@ const MaterialTabbedField = (props) => {
       <AppBar {...options.appBarProps}>
         <Tabs {...TabsProps}>
           {layout.map((tabDef, tindex) => {
-            if (schema.properties[tabDef.field]) {
-              let tabUISchema = uiSchema[tabDef.field] || {};
+            const tabFieldNames = resolveTabFields(tabDef);
+            const firstField = tabFieldNames[0];
+
+            if (tabFieldNames.some((fieldName) => schema.properties[fieldName])) {
+              let tabUISchema = uiSchema[firstField] || {};
               let tabUIOptions = tabUISchema["ui:options"] || {}
 
               //textColor={theme.palette[tabUIOptions.textColor || "primary"].contrastText} 
@@ -219,7 +245,7 @@ const MaterialTabbedField = (props) => {
                   color={
                     //@ts-ignore
                     theme.palette[tabUIOptions.textColor || "primary"].contrastText}
-                  label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} 
+                  label={`${tabDef.title || (schema.properties[firstField] && schema.properties[firstField].title) || firstField}`} 
                   {...a11yProps(tindex)} />)
             }
           })}
@@ -227,27 +253,32 @@ const MaterialTabbedField = (props) => {
         </Tabs>
       </AppBar>
       {layout.map((tabDef, tindex) => {
-        if (schema.properties[tabDef.field] && tindex === value) {
+        const tabFieldNames = resolveTabFields(tabDef).filter((fieldName) => schema.properties[fieldName]);
+
+        if (tabFieldNames.length > 0 && tindex === value) {
 
           return (<Box key={tindex} role="tabpanel"
 
             id={`full-width-tabpanel-${tindex}`}
             aria-labelledby={`full-width-tab-${tindex}`} p={1}>
 
-            <SchemaField
-              name={tabDef.field}
-              required={isRequired(tabDef.field)}
-              schema={schema.properties[tabDef.field]}
-              uiSchema={uiSchema[tabDef.field]}
-              errorSchema={errorSchema[tabDef.field]}
-              idSchema={idSchema[tabDef.field]}
-              formData={formData?.[tabDef.field]}
-              formContext={formContext}
-              onChange={onPropertyChange(tabDef.field)}
-              onBlur={onBlur}
-              registry={props.registry}
-              disabled={disabled}
-              readonly={readonly} />
+            {tabFieldNames.map((fieldName) => (
+              <SchemaField
+                key={fieldName}
+                name={fieldName}
+                required={isRequired(fieldName)}
+                schema={schema.properties[fieldName]}
+                uiSchema={uiSchema[fieldName]}
+                errorSchema={errorSchema && errorSchema[fieldName]}
+                idSchema={idSchema[fieldName]}
+                formData={formData?.[fieldName]}
+                formContext={formContext}
+                onChange={onPropertyChange(fieldName)}
+                onBlur={onBlur}
+                registry={props.registry}
+                disabled={disabled}
+                readonly={readonly} />
+            ))}
 
           </Box>)
 

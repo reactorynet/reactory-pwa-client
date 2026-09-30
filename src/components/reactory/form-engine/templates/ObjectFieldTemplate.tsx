@@ -93,6 +93,11 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
   const hasGridLayout = Object.keys(gridSpans).length > 0;
   const useGrid = hasGridLayout || uiOptions.layout === 'grid';
 
+  // `ui:options.variant: 'section'` renders the object as a padded, bordered
+  // section instead of a bare fieldset. Opt-in: the default presentation is
+  // unchanged so existing forms keep their current look.
+  const isSection = uiOptions.variant === 'section';
+
   const additionalAllowed = schema.additionalProperties !== false && schema.additionalProperties !== undefined;
   const titleId = `${idSchema.$id}__title`;
   const descId = `${idSchema.$id}__description`;
@@ -141,7 +146,22 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
       className="object-field"
       aria-labelledby={showTitle ? titleId : undefined}
       data-object-id={idSchema.$id}
-      sx={{ border: 0, margin: 0, padding: 0, width: '100%', mb: 1 }}
+      data-variant={isSection ? 'section' : undefined}
+      sx={
+        isSection
+          ? {
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              // Inner padding so a section's content is not flush with the edges.
+              p: 2,
+              margin: 0,
+              width: '100%',
+              mb: 2,
+              bgcolor: 'background.paper',
+            }
+          : { border: 0, margin: 0, padding: 0, width: '100%', mb: 1 }
+      }
     >
       {showTitle ? (
         <Box
@@ -150,9 +170,9 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
           id={titleId}
           sx={{
             p: 0,
-            mb: 0.5,
+            mb: isSection ? 1.5 : 0.5,
             fontWeight: 600,
-            fontSize: '1rem',
+            fontSize: isSection ? '1.0625rem' : '1rem',
             lineHeight: 1.5,
             color: 'text.primary',
           }}
@@ -171,7 +191,13 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
           component="p"
           className="object-field-description"
           id={descId}
-          sx={{ m: 0, mb: 1.5, color: 'text.secondary', fontSize: '0.75rem', lineHeight: 1.43 }}
+          sx={{
+            m: 0,
+            mb: isSection ? 2 : 1.5,
+            color: 'text.secondary',
+            fontSize: '0.75rem',
+            lineHeight: 1.43,
+          }}
         >
           {description}
         </Box>

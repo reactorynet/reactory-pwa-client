@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from 'react';
-import { isNil, isEmpty, isArray } from 'lodash';
+import { isNil, isArray } from 'lodash';
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import {
@@ -21,6 +21,7 @@ import { useTheme } from '@mui/material/styles';
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 
 import { resolveFieldLabelStyle } from '../utils/fieldLabelStyle';
+import { fieldHasValue } from '../utils/fieldValuePresence';
 
 const MaterialFieldTemplateFunction = (props) => {
 
@@ -221,21 +222,30 @@ const MaterialFieldTemplateFunction = (props) => {
       };
 
       if (uiOptions && uiOptions.labelProps) {
-        inputLabelProps = { ...inputLabelProps, ...uiOptions.labelProps };
+        // `dontShrink` is a template-level directive, not an `InputLabel` prop.
+        // Pull it out so it is not spread onto the DOM as an invalid
+        // attribute; the shrink decision below still reads it from uiOptions.
+        const { dontShrink, ...labelProps } = uiOptions.labelProps as any;
+        inputLabelProps = { ...inputLabelProps, ...labelProps };
       }
 
-      if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
-        if (schemaType !== "number") {
-          inputLabelProps.shrink = false;
-        } else {
-          inputLabelProps.shrink = true;
-        }
+      // Whether the field actually holds a value decides whether the label is
+      // lifted into the fieldset notch. `fieldHasValue` is used instead of
+      // `lodash.isEmpty` because the latter reports `true` for every primitive
+      // number and boolean (`isEmpty(2000)` and `isEmpty(0)` are both `true`),
+      // which made a filled numeric field look empty: the label stayed in its
+      // resting position and rendered straight over the value, while the number
+      // widget had already cut the notch.
+      const hasValue = fieldHasValue(formData);
+
+      if (hasValue === false) {
+        // Empty: the label rests inside the control as a placeholder. MUI lifts
+        // it automatically once the control gains focus.
+        inputLabelProps.shrink = false;
+      } else if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
+        inputLabelProps.shrink = false;
       } else {
-        if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {
-          inputLabelProps.shrink = false;
-        } else {
-          inputLabelProps.shrink = true;
-        }
+        inputLabelProps.shrink = true;
       }
 
       // The label must show the surface the field sits on, so it must not paint

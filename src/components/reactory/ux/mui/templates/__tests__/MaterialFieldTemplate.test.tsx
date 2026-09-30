@@ -91,3 +91,68 @@ describe('MaterialFieldTemplate label surface', () => {
     expect(getLabel().style.backgroundColor).toBe('rgb(1, 2, 3)');
   });
 });
+
+/**
+ * Regression guard for numeric field labels.
+ *
+ * `lodash.isEmpty` reports `true` for **every** primitive number
+ * (`isEmpty(2000)` and `isEmpty(0)` are both `true`). The template used it to
+ * decide whether a field was filled, so a numeric field holding a value was
+ * treated as empty: the label stayed in its resting position (shrink=false)
+ * while the number widget had already cut the notch, and the label rendered
+ * straight over the value.
+ */
+describe('MaterialFieldTemplate label shrink for numeric fields', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const renderNumeric = (
+    formData: unknown,
+    type: string = 'integer',
+    uiSchema: any = {}
+  ) =>
+    renderTemplate({
+      id: 'root_maxOutputTokens',
+      label: 'Max Output Tokens',
+      schema: { type, title: 'Max Output Tokens' },
+      idSchema: { $id: 'root_maxOutputTokens' },
+      formData,
+      uiSchema,
+    });
+
+  const shrinkState = (): string | null =>
+    screen.getByText('Max Output Tokens').getAttribute('data-shrink');
+
+  it('lifts the label for an integer field that holds a value', () => {
+    renderNumeric(2000);
+
+    expect(shrinkState()).toBe('true');
+  });
+
+  it('lifts the label for a number field that holds zero', () => {
+    renderNumeric(0, 'number');
+
+    expect(shrinkState()).toBe('true');
+  });
+
+  it('lifts the label for a number field that holds a fractional value', () => {
+    renderNumeric(0.25, 'number');
+
+    expect(shrinkState()).toBe('true');
+  });
+
+  it('leaves the label resting for an empty integer field', () => {
+    renderNumeric(undefined);
+
+    expect(shrinkState()).toBe('false');
+  });
+
+  it('honours labelProps.dontShrink even when a value is present', () => {
+    renderNumeric(2000, 'integer', {
+      'ui:options': { labelProps: { dontShrink: true } },
+    });
+
+    expect(shrinkState()).toBe('false');
+  });
+});
