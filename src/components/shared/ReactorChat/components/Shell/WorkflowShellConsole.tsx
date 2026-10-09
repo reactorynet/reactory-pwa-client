@@ -78,7 +78,18 @@ const WorkflowShellConsole: React.FC<WorkflowShellConsoleProps> = ({ reactory, c
         </div>
       )}
       {terminals.map((t) => (
-        <div key={t.shellSessionId} style={{ border: '1px solid #333', borderRadius: 4, overflow: 'hidden' }}>
+        <div
+          key={t.shellSessionId}
+          style={{
+            border: '1px solid #333',
+            borderRadius: 4,
+            overflow: 'hidden',
+            // Don't let the column squeeze earlier panes as more steps stream in.
+            flexGrow: 0,
+            flexShrink: 0,
+            minHeight: paneHeight + 27,
+          }}
+        >
           <div style={{ padding: '4px 8px', fontFamily: 'monospace', fontSize: 11, color: '#9cdcfe', background: '#252526', display: 'flex', justifyContent: 'space-between' }}>
             <span>{t.command || t.shellSessionId}</span>
             {t.exited && <span style={{ color: t.exitCode ? '#f48771' : '#4ec9b0' }}>exit {t.exitCode ?? 0}</span>}

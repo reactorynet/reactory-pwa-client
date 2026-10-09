@@ -50,6 +50,22 @@ describe('ChatShellConsole', () => {
     expect(screen.getByText(/Shell command output will appear here/i)).toBeInTheDocument();
   });
 
+  it('gives every pane a minimum height so stacked runs cannot be squeezed thinner', () => {
+    chatShellBus.setActiveConversation(CHAT);
+    for (let i = 0; i < 6; i++) {
+      chatShellBus.push(CHAT, ev(`s${i}`, 'start', { command: `cmd-${i}` }));
+    }
+
+    render(<ChatShellConsole />);
+
+    for (let i = 0; i < 6; i++) {
+      const pane = screen.getByTestId(`pane-s${i}`);
+      // Shrinkable panes in a scrolling column get thinner with every run added.
+      expect(pane.style.flexShrink).toBe('0');
+      expect(parseInt(pane.style.minHeight, 10)).toBeGreaterThanOrEqual(200);
+    }
+  });
+
   it('shows the empty state when there are no runs', () => {
     chatShellBus.setActiveConversation(CHAT);
     render(<ChatShellConsole />);

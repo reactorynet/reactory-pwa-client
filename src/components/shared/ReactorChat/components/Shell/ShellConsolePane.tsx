@@ -13,6 +13,12 @@ export interface ShellConsolePaneProps {
   /** Terminal height (px) when expanded inline. Default 600. */
   expandedHeight?: number;
   /**
+   * Minimum pane height (px). Panes must never shrink below this — stacked in a
+   * scrolling column, a shrinkable pane would be squeezed thinner with every
+   * command added. Defaults to the collapsed terminal height (+ header).
+   */
+  minHeight?: number;
+  /**
    * Renders the read-only terminal at the requested height. The pane calls this
    * with a number for the inline views and `'100%'` for the enlarged dialog.
    */
@@ -54,6 +60,9 @@ const headerStyle: React.CSSProperties = {
   color: '#9cdcfe',
 };
 
+/** Approximate rendered height of the header bar (control height + padding + border). */
+const HEADER_HEIGHT = 27;
+
 const titleStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
@@ -79,6 +88,7 @@ const ShellConsolePane: React.FC<ShellConsolePaneProps> = ({
   status,
   height = 200,
   expandedHeight = 600,
+  minHeight,
   renderTerminal,
   getCopyText,
   modalTitle,
@@ -87,6 +97,11 @@ const ShellConsolePane: React.FC<ShellConsolePaneProps> = ({
   const [enlarged, setEnlarged] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const copyTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Height the terminal renders at: expanded inline, or collapsed otherwise.
+  const terminalHeight = expanded ? expandedHeight : height;
+  // Never let a pane be squeezed below its collapsed terminal + the header bar.
+  const paneMinHeight = minHeight ?? height + HEADER_HEIGHT;
 
   React.useEffect(
     () => () => {
@@ -140,12 +155,19 @@ const ShellConsolePane: React.FC<ShellConsolePaneProps> = ({
 
   return (
     <div
+      data-testid={`pane-${id}`}
       style={{
         border: '1px solid #333',
         borderRadius: 4,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        // A stack of panes in a scrolling column must not be shrunk to fit:
+        // without `flexShrink: 0` (and a min-height) each new pane makes the
+        // others thinner.
+        flexGrow: 0,
+        flexShrink: 0,
+        minHeight: paneMinHeight,
       }}
     >
       <div style={headerStyle}>
@@ -162,8 +184,10 @@ const ShellConsolePane: React.FC<ShellConsolePaneProps> = ({
         {control('Open in enlarged view', () => setEnlarged(true), '\u26F6', `maximize-${id}`)}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0 }}>
-        {renderTerminal(expanded ? expandedHeight : height)}
+      {/* min-height floors the terminal area so a squeezed pane can never clip
+          it away; the terminal itself still fills the available space. */}
+      <div style={{ flex: '1 1 auto', minHeight: terminalHeight, overflow: 'hidden' }}>
+        {renderTerminal(terminalHeight)}
       </div>
 
       {enlarged &&
