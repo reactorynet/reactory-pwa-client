@@ -70,7 +70,11 @@ describe('ShellConsolePane', () => {
       <ShellConsolePane id="s1" title="$ ls -la" renderTerminal={renderTerminal} getCopyText={() => 'hello'} />,
     );
 
-    fireEvent.click(screen.getByLabelText('copy-s1'));
+    // `writeText` resolves asynchronously and flips the copied state, so flush
+    // it inside act to avoid an "update not wrapped in act" warning.
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('copy-s1'));
+    });
 
     expect(writeText).toHaveBeenCalledWith('hello');
   });
