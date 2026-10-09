@@ -119,6 +119,7 @@ import { UserProfile } from './shared/UserProfile';
 import { useContentRender } from './shared/hooks/useContentRender';
 import { ContentRenderer } from './shared/ContentRenderer';
 import { Comments } from './shared/Comments/Comments';
+import { MyComments } from './shared/Comments/MyComments';
 import { MermaidDiagram } from './shared/MermaidDiagram';
 import { CommentAnnotation } from './shared/Comments/CommentAnnotation';
 import { 
@@ -1177,6 +1178,14 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: Comments,
     description: 'Threaded commenting component with reactions, editing, soft deletion, and real-time AMQ updates.',
     tags: ['comments', 'threads', 'discussion', 'social', 'collaboration'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'MyComments',
+    version: '1.0.0',
+    component: MyComments,
+    description: 'A user-scoped lookup surface listing every comment the signed-in user has authored, with back-links to the originating content, chat session or support ticket.',
+    tags: ['comments', 'activity', 'my-comments', 'lookup', 'review'],
   },
   {
     nameSpace: 'core',

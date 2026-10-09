@@ -56,6 +56,17 @@ export interface ReactoryCommentItem {
   removed?: boolean;
   parentId?: string;
   quote?: string;
+  /**
+   * The context category this comment belongs to
+   * (e.g. 'ReactoryContent', 'ReactorChat', 'ReactorySupportTicket').
+   * Present on comments returned by `getMyComments`.
+   */
+  context?: string;
+  /**
+   * The identifier of the resource this comment is attached to.
+   * Present on comments returned by `getMyComments`.
+   */
+  contextId?: string;
   metadata?: Record<string, any>;
   replies?: ReactoryCommentItem[];
 }

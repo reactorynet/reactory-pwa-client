@@ -442,3 +442,92 @@ describe('component mounting through useContentRender', () => {
     });
   });
 });
+
+/**
+ * Regression: comment-on-selection depends on the rendered DOM surviving
+ * ContentRenderer's re-render cycle. `selectionchange` fires continuously while
+ * the user drags, each firing sets state, and each state update re-runs
+ * `renderContent`. If that re-render swaps the component types used for
+ * specially formatted content (table cells, inline `code`), React unmounts and
+ * remounts the subtree, the browser collapses the selection, and the
+ * comment-on-selection button never appears. These tests lock the renderer
+ * identities so the DOM - and therefore the selection range - is preserved.
+ */
+describe('renderer identity stability across re-renders', () => {
+  /**
+   * A Markdown stand-in that actually honours the `components` prop, unlike the
+   * module-level stub above. It renders inline code (backtick runs) through the
+   * supplied `code` renderer, which is exactly the path that used to remount.
+   */
+  const createRecordingStub = () => {
+    const seen: any[] = [];
+
+    const Markdown: React.FC<any> = ({ children, components }) => {
+      seen.push(components);
+      const text = String(children);
+      const parts = text.split(/(`[^`]*`)/g).filter((part) => part.length > 0);
+      return (
+        <div data-testid="markdown">
+          {parts.map((part, i) =>
+            part.startsWith('`') && part.endsWith('`')
+              ? React.createElement(components.code, { key: i, inline: true, children: part.slice(1, -1) })
+              : <React.Fragment key={i}>{part}</React.Fragment>
+          )}
+        </div>
+      );
+    };
+
+    const stub: any = {
+      muiTheme: { palette: { mode: 'light' } },
+      log: jest.fn(),
+      getComponent: () => null,
+      getComponents: () => ({
+        Material: { MaterialCore: {}, MaterialIcons: {}, MaterialLabs: {} },
+        Markdown,
+        MarkdownGfm: null,
+        DOMPurify: { sanitize: (html: string) => html },
+        PrismCode: null,
+      }),
+    };
+
+    return { stub, seen };
+  };
+
+  const content = 'Prose with `special tag` inline.';
+
+  it('reuses the markdown renderer identities across re-renders', () => {
+    const { stub, seen } = createRecordingStub();
+    const Host: React.FC<{ n: number }> = ({ n }) => {
+      const { renderContent } = useContentRender(stub, { mountComponents: true });
+      return <div data-n={n}>{renderContent(content)}</div>;
+    };
+
+    const { rerender } = render(<Host n={0} />);
+    rerender(<Host n={1} />);
+
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    const first = seen[0];
+    const last = seen[seen.length - 1];
+    // A fresh renderer on every render is what forces React to remount.
+    expect(last.code).toBe(first.code);
+    expect(last.p).toBe(first.p);
+  });
+
+  it('does not remount the inline-code DOM node on re-render', () => {
+    const { stub } = createRecordingStub();
+    const Host: React.FC<{ n: number }> = ({ n }) => {
+      const { renderContent } = useContentRender(stub, { mountComponents: true });
+      return <div data-n={n}>{renderContent(content)}</div>;
+    };
+
+    const { container, rerender } = render(<Host n={0} />);
+    const before = container.querySelector('code');
+    expect(before).not.toBeNull();
+
+    rerender(<Host n={1} />);
+    const after = container.querySelector('code');
+
+    // Same node instance => the browser selection range stays anchored.
+    expect(after).toBe(before);
+  });
+});

@@ -3768,6 +3768,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [chatState?.id, persona?.id, protocol, reactory, sse, setIsStreaming, setWaitingForResponse, setAgentBusy]);
 
   // Keep the ref in sync so useMacros' executeMacro always calls the latest version.
+  //
+  // This assignment was missing, so the ref stayed `null` for the lifetime of the
+  // session. `executeMacro` (useMacros.tsx) reports every client-macro result
+  // through `onClientToolComplete` -> this ref, and that hand-off is guarded by
+  // `if (completeClientToolCallsRef.current)`. With the ref null, each report was
+  // silently discarded, the server logged `Receiving 0 client tool result(s)` for
+  // every client-tool turn, and the model never saw any client-tool output — which
+  // left the tool call unanswered and the turn unable to continue.
+  completeClientToolCallsRef.current = completeClientToolCalls;
 
   /**
    * Recover client-side tool calls the server never got an answer for.

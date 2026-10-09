@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   IconButton,
@@ -17,6 +17,81 @@ import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidD
 import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
 import { ReactoryTag, splitReactoryTags, hasReactoryTags } from './reactoryTags';
+
+/**
+ * Mermaid wrapper for zoom/pan/fullscreen diagrams.
+ *
+ * Hoisted to module scope so its component identity is stable across renders.
+ * An inline definition is a brand new function every render, which makes React
+ * unmount and remount the diagram and tears down any active text selection.
+ */
+const MermaidCard: React.FC<{ diagram: string; message?: string }> = ({ diagram }) => (
+  <Box sx={{ my: 1.5 }}>
+    <MermaidDiagram>{diagram}</MermaidDiagram>
+  </Box>
+);
+
+/**
+ * Error boundary isolating a single mounted `<reactory />` component so a mount
+ * failure renders an inline marker instead of blanking the subtree.
+ *
+ * Hoisted to module scope with the SDK injected as a prop. Defining this class
+ * inside the render path created a new component type on every render, forcing
+ * React to remount the mounted component subtree each time and collapsing any
+ * selection anchored inside it.
+ */
+class ReactoryComponentErrorBoundary extends React.Component<
+  { fqn: string; reactory?: any; children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { fqn: string; reactory?: any; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    this.props.reactory?.log(
+      `Error mounting component tag "${this.props.fqn}": ${error?.message}`,
+      { error, errorInfo },
+      'error'
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box
+          component="span"
+          data-reactory-error={this.props.fqn}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.75,
+            my: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'error.main',
+            backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
+            color: 'error.main',
+            fontSize: '0.8125rem',
+          }}
+        >
+          <ErrorOutlineIcon fontSize="small" color="error" />
+          <span>
+            <strong>{this.props.fqn}</strong> failed to mount: {this.state.error?.message || 'Render error'}
+          </span>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /**
  * Mapping of common LaTeX math and arrow symbols to Unicode characters.
@@ -626,6 +701,53 @@ export const useContentRender = (
       }>(["material-ui.Material", "core.Markdown", "core.MarkdownGfm", "core.DOMPurify", "core.PrismCode"])
     : ({} as any);
 
+  const theme: any = reactory?.muiTheme || reactory?.getTheme?.()?.options || {};
+  const palette: any = theme?.palette || {};
+  const mode: 'dark' | 'light' = palette?.mode === 'dark' ? 'dark' : 'light';
+
+  /**
+   * Markdown renderer overrides.
+   *
+   * These maps - and the `p`, `a` and `code` renderer functions they contain -
+   * must keep a stable identity across renders. Building them inside
+   * `renderContent` handed React a new component type on every render, so the
+   * affected subtree was unmounted and remounted instead of updated. That
+   * replaced the text nodes the user was selecting (table cells go through the
+   * `p` override; inline spans through `code`), collapsing the selection and
+   * breaking comment-on-selection for specially formatted markdown.
+   */
+  const cellMarkdownComponents = useMemo(() => ({
+    p: ({ children }: any) => <span>{children}</span>,
+    a: ({ children, href }: any) => (
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    ),
+    code: ({ node, inline, className, children, ...props }: any) => {
+      const match = /language-(\w+)/.exec(className || '');
+      const codeText = String(children).replace(/\n$/, '');
+      if (!inline && (match || codeText.includes('\n'))) {
+        const lang = match ? match[1] : '';
+        return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
+      }
+      return (
+        <code className={className} style={{
+          backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+          padding: '2px 4px',
+          borderRadius: '3px',
+          fontFamily: 'monospace',
+          fontSize: '0.875em',
+        }} {...props}>
+          {children}
+        </code>
+      );
+    },
+  }), [mode, reactory]);
+
+  const markdownCodeComponents = useMemo(() => ({
+    ...cellMarkdownComponents,
+  }), [cellMarkdownComponents]);
+
   // Mermaid re-init logic
   const mermaidRef = useRef<HTMLDivElement>(null);
   const { 
@@ -691,15 +813,6 @@ export const useContentRender = (
     }
 
     return ContentType.MARKDOWN;
-  };
-
-  // Wrapper for Mermaid diagrams with zoom, pan, and fullscreen capabilities
-  const MermaidCard = ({ diagram, message }: { diagram: string; message?: string }) => {
-    return (
-      <Box sx={{ my: 1.5 }}>
-        <MermaidDiagram>{diagram}</MermaidDiagram>
-      </Box>
-    );
   };
 
   /**
@@ -793,57 +906,8 @@ export const useContentRender = (
       );
     }
 
-    class ReactoryComponentErrorBoundary extends React.Component<
-      { fqn: string; children: React.ReactNode },
-      { hasError: boolean; error: Error | null }
-    > {
-      constructor(props: { fqn: string; children: React.ReactNode }) {
-        super(props);
-        this.state = { hasError: false, error: null };
-      }
-
-      static getDerivedStateFromError(error: Error) {
-        return { hasError: true, error };
-      }
-
-      componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        reactory.log(`Error mounting component tag "${this.props.fqn}": ${error?.message}`, { error, errorInfo }, 'error');
-      }
-
-      render() {
-        if (this.state.hasError) {
-          return (
-            <Box
-              component="span"
-              data-reactory-error={this.props.fqn}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.75,
-                my: 1,
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'error.main',
-                backgroundColor: (t: any) => (t?.palette?.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee'),
-                color: 'error.main',
-                fontSize: '0.8125rem',
-              }}
-            >
-              <ErrorOutlineIcon fontSize="small" color="error" />
-              <span>
-                <strong>{this.props.fqn}</strong> failed to mount: {this.state.error?.message || 'Render error'}
-              </span>
-            </Box>
-          );
-        }
-        return this.props.children;
-      }
-    }
-
     return (
-      <ReactoryComponentErrorBoundary key={key} fqn={cleanFqn}>
+      <ReactoryComponentErrorBoundary key={key} fqn={cleanFqn} reactory={reactory}>
         <Component {...tag.props} reactory={reactory} />
       </ReactoryComponentErrorBoundary>
     );
@@ -871,41 +935,6 @@ export const useContentRender = (
      * keeps treating prose that merely mentions a tag as prose.
      */
     const renderAsFragment = renderOptions?.inline === true;
-    const theme: any = reactory?.muiTheme || reactory?.getTheme?.()?.options || {};
-    const palette = theme?.palette || {};
-    const mode = palette?.mode || 'light';
-
-    const cellMarkdownComponents = {
-      p: ({ children }: any) => <span>{children}</span>,
-      a: ({ children, href }: any) => (
-        <a href={href} target="_blank" rel="noopener noreferrer">
-          {children}
-        </a>
-      ),
-      code: ({ node, inline, className, children, ...props }: any) => {
-        const match = /language-(\w+)/.exec(className || '');
-        const codeText = String(children).replace(/\n$/, '');
-        if (!inline && (match || codeText.includes('\n'))) {
-          const lang = match ? match[1] : '';
-          return <CodeSnippet code={codeText} language={lang} mode={mode} reactory={reactory} />;
-        }
-        return (
-          <code className={className} style={{
-            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-            padding: '2px 4px',
-            borderRadius: '3px',
-            fontFamily: 'monospace',
-            fontSize: '0.875em',
-          }} {...props}>
-            {children}
-          </code>
-        );
-      },
-    };
-
-    const markdownCodeComponents = {
-      ...cellMarkdownComponents,
-    };
 
     /**
      * Renders a text segment, mounting <reactory /> components if present and enabled,
