@@ -127,15 +127,6 @@ interface ReactoryHOCProps {
   [key: string]: any,
 }
 
-interface ReactoryRouterProps {
-  reactory: Reactory.Client.ReactorySDK,
-  auth_validated: boolean,
-  user: Reactory.Models.IUser,
-  authenticating: boolean,
-  header: React.ReactElement
-  footer: React.ReactElement
-}
-
 export interface LoadingStepState {
   id: string;
   label: string;

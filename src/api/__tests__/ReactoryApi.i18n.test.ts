@@ -213,9 +213,16 @@ describe('ReactoryApi language handling', () => {
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBeNull();
   });
 
+  it('rejects a bundle whose echoed locale does not match the request', async () => {
+    // The server ignores `lang` and always answers with the English bundle.
+    const api = makeApi(() => BUNDLES.en);
+
+    const bundle = await api.fetchTranslationBundle('af');
+
+    expect(bundle).toBeNull();
+  });
+
   it('never advertises a language the server cannot actually resolve', async () => {
-    // The server ignores `lang` and always answers with the English bundle, so
-    // the echoed locale does not match the request and the bundle is rejected.
     const api = makeApi(() => BUNDLES.en);
 
     await api.initi18n();
@@ -224,13 +231,25 @@ describe('ReactoryApi language handling', () => {
     expect(api.i18n.t('reactory.about.title')).toBe('About Reactory');
   });
 
-  it('keeps the newest choice when switches overlap', async () => {
+  it('keeps the newest choice when a slower earlier switch completes last', async () => {
     const api = makeApi();
     await api.initi18n();
 
-    const first = api.setLanguage('af');
-    const second = api.setLanguage('en');
-    await Promise.all([first, second]);
+    // Force the first switch through the on-demand load path and make it slow,
+    // so the earlier request is still in flight when the later one finishes.
+    // Without the generation guard the late completion would win.
+    (api as any).loadedLanguages = new Set(['en']);
+    mockApolloQuery.mockImplementation(async ({ variables }: any) => {
+      if (variables?.lang === 'af') {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return { data: { ReactoryTranslation: BUNDLES.af }, errors: [] };
+      }
+      return { data: { ReactoryTranslation: BUNDLES.en }, errors: [] };
+    });
+
+    const slow = api.setLanguage('af');
+    const fast = api.setLanguage('en');
+    await Promise.all([slow, fast]);
 
     expect(api.i18n.language).toBe('en');
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');

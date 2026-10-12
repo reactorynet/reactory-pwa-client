@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactory } from '@reactory/client-core/api';
+import { ReactoryApiEventNames } from '@reactory/client-core/api/ApiEventNames';
 import {
   buildGetContentQuery,
   CREATE_CONTENT_MUTATION,
@@ -87,7 +88,29 @@ export const useStaticContent = ({
 }: UseStaticContentArgs) => {
   const hookReactory = useReactory();
   const reactory = propReactory || hookReactory;
-  const activeLocale = normaliseLang(locale || reactory?.i18n?.language);
+
+  // A language switch changes the locale content resolves into, but nothing
+  // subscribes to i18next directly (components read `reactory.i18n.t`). This
+  // version is bumped by `onLanguageChanged` so the hook re-resolves even when
+  // its host sits behind a memo boundary that a language change does not reach.
+  const [languageVersion, setLanguageVersion] = useState(0);
+
+  useEffect(() => {
+    if (!reactory) return undefined;
+    const onLanguageChanged = () => setLanguageVersion((current) => current + 1);
+    reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
+    return () => {
+      reactory.removeListener(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
+    };
+  }, [reactory]);
+
+  const activeLocale = useMemo(
+    () => normaliseLang(locale || reactory?.i18n?.language),
+    // `languageVersion` is the trigger: the i18n instance identity does not
+    // change when its active language does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, reactory, languageVersion]
+  );
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [record, setRecord] = useState<ReactoryStaticContent | null>(null);
