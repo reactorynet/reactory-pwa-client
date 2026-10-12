@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -15,6 +15,8 @@ import { withReactory } from '@reactory/client-core/api';
 import { compose } from 'redux';
 import { useNavigate, useLocation } from 'react-router';
 import { isArray } from 'lodash';
+import { ReactoryApiEventNames } from '@reactory/client-core/api/ApiEventNames';
+import { translateMenuTitle } from './menuTitle';
 
 const MobileBottomHeader: React.FC<HeaderProps> = ({ reactory }) => {
   const theme = useTheme();
@@ -23,10 +25,37 @@ const MobileBottomHeader: React.FC<HeaderProps> = ({ reactory }) => {
   
   const apiStatus = reactory.$user;
   const title = reactory.i18n.t(apiStatus.applicationName);
-  
+
+  // i18next does not notify React, and this header is rendered from a memoised
+  // route tree, so it must bump its own version when the language changes or
+  // the bottom-nav labels keep the previous language.
+  const [languageVersion, setLanguageVersion] = useState(0);
+
+  useEffect(() => {
+    if (!reactory?.on) return undefined;
+    const onLanguageChanged = () => setLanguageVersion((current) => current + 1);
+    reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
+    return () => {
+      reactory.removeListener(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
+    };
+  }, [reactory]);
+
   // Extract bottom nav items
   const bottomMenu = apiStatus.menus?.find((m: any) => m.target === 'bottom-nav' && m.enabled !== false);
-  const menuItems = bottomMenu ? (bottomMenu.entries || []).filter((item: any) => item.enabled !== false) : [];
+  const menuItems = useMemo(
+    () => (bottomMenu ? (bottomMenu.entries || []).filter((item: any) => item.enabled !== false) : []),
+    [bottomMenu]
+  );
+
+  // Titles arrive as translation keys (optionally namespaced) or literal text,
+  // and are resolved for the active language.
+  const menuLabels = useMemo(
+    () => menuItems.map((item: any) => translateMenuTitle(reactory, item.title)),
+    // `languageVersion` is the trigger: the i18n instance identity does not
+    // change when its active language does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [menuItems, reactory, languageVersion]
+  );
   
   // Find current index based on route
   const getCurrentIndex = () => {
@@ -78,7 +107,7 @@ const MobileBottomHeader: React.FC<HeaderProps> = ({ reactory }) => {
                return (
                  <BottomNavigationAction 
                     key={item.id || index} 
-                    label={item.title} 
+                    label={menuLabels[index]} 
                     icon={item.icon ? <Icon>{item.icon}</Icon> : undefined} 
                  />
                );

@@ -42,6 +42,7 @@ import {
 } from '../../../app/router/inspectorPreference';
 import { WorkflowCommander } from '../WorkflowDesigner/WorkflowCommander';
 import { LanguageSelector } from '../LanguageSelector';
+import { translateMenuTitle } from './menuTitle';
 
 // Configure localForage
 localForage.config({
@@ -266,7 +267,7 @@ const Logged = ({ id, apiStatus, reactory, open, anchorEl }) => {
                 <ListItemIcon>
                   <Icon color="inherit" {...menuItem.iconProps}>{menuItem.icon}</Icon>
                 </ListItemIcon>
-                {menuItem.title}
+                {translateMenuTitle(reactory, menuItem.title)}
               </MenuItem>
             ));
           }
@@ -392,39 +393,10 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     const apiStatus = reactory.$user;
     const { server } = apiStatus;
 
-    const getMenuTitle = (rawTitle: string): string => {
-      if (!rawTitle) return '';
-      if (reactory.i18n && typeof reactory.i18n.t === 'function') {
-        const translated = reactory.i18n.t(rawTitle);
-        if (translated && translated !== rawTitle && !translated.startsWith('reactory.menu.')) {
-          return translated;
-        }
-        const stripped = rawTitle.replace(/^[^:]+:/, '');
-        const strippedTranslated = reactory.i18n.t(stripped);
-        if (strippedTranslated && strippedTranslated !== stripped && !strippedTranslated.startsWith('reactory.menu.')) {
-          return strippedTranslated;
-        }
-      }
-      const fallbacks: Record<string, string> = {
-        'reactory.menu.my-owned-courses': 'Courses Owned',
-        'reactory.menu.classes': 'Classes & Cohorts',
-        'reactory.menu.create-course': 'Create Course',
-        'reactory.menu.create-assignment': 'Create Assignment',
-        'reactory.menu.course-enroll': 'Course Enrollment',
-        'reactory.menu.my-schedule': 'Schedule',
-        'reactory.menu.my-courses': 'My Courses',
-        'reactory.menu.my-tutors': 'My Tutors',
-        'reactory.menu.my-students': 'My Students',
-        'reactory.menu.assignments': 'Assignments',
-        'reactory.menu.home': 'Home',
-        'reactory.menu.library': 'Library',
-        'reactory.menu.courses': 'Courses',
-        'reactory.menu.my-profile': 'Profile',
-        'reactory.menu.markbook': 'Classroom Markbook',
-      };
-      const key = rawTitle.replace(/^[^:]+:/, '');
-      return fallbacks[key] || rawTitle;
-    };
+    // Menu titles are stored as translation keys — optionally namespaced, e.g.
+    // `booktutor:reactory.menu.home` — or as literal text. Resolution is shared
+    // with the top-right menu and the mobile header; see `menuTitle`.
+    const getMenuTitle = (rawTitle: string): string => translateMenuTitle(reactory, rawTitle);
 
     if (apiStatus?.menus?.length) {
       apiStatus.menus.forEach((menu) => {
