@@ -457,6 +457,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   supportedLanguages: Array<{ code: string; label: string }> = SUPPORTED_LANGUAGES.map((language) => ({ code: language.code, label: language.label }));
   /** Locales whose translation bundles are present in the i18n instance. */
   private loadedLanguages: Set<string> = new Set<string>();
+  /** Guards against out-of-order completions when switching language rapidly. */
+  private languageChangeToken: number = 0;
   navigation: NavigateFunction;
   location: any;
   constructor(props) {
@@ -803,12 +805,22 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       ...loadedNamespaces,
     ]));
 
+    // Never advertise a language that could not actually be loaded: when the
+    // preferred bundle is missing, start in the first language that resolved.
+    const activeLanguage = $resources[preferredLanguage]
+      ? preferredLanguage
+      : (languagesToLoad.find((language) => $resources[language]) || DEFAULT_LANGUAGE);
+
+    if (activeLanguage !== preferredLanguage) {
+      this.warning(`No translation bundle for "${preferredLanguage}"; starting in "${activeLanguage}"`);
+    }
+
     await i18next
       .use(LanguageDetector)
       .use(initReactI18next)
       .init({
         debug: this.isDevelopmentMode(),
-        lng: preferredLanguage,
+        lng: activeLanguage,
         fallbackLng: ['en-US', 'en'],
         supportedLngs: Array.from(new Set([...SUPPORTED_LANGUAGE_CODES, 'en-US', 'en'])),
         // Treat a regional tag (af-ZA) as supported when its base language (af) is.
@@ -851,7 +863,23 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       const payload: any = data ? (data as any).ReactoryTranslation : null;
       if (!payload) return null;
 
-      const locale = normaliseLanguage(payload.id || language) || language;
+      const requested = normaliseLanguage(language);
+      const locale = normaliseLanguage(payload.id || '');
+
+      // The server keys bundles by the locale it actually resolved. If it
+      // answers with a different language than requested — for example because
+      // the locale folder is missing — accepting the payload would make the app
+      // claim a language it cannot render. Reject it and let the caller fall
+      // back instead.
+      if (!locale) {
+        this.warning(`Translation bundle for "${language}" carried no locale id`);
+        return null;
+      }
+      if (locale !== requested) {
+        this.warning(`Translation bundle locale mismatch: requested "${requested}" but server returned "${locale}"`);
+        return null;
+      }
+
       const resources: { [ns: string]: any } = {};
 
       if (lodash.isArray(payload.i18n) === true) {
@@ -901,8 +929,14 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       await this.initi18n();
     }
 
+    // Rapid switches must not land out of order: a slow load for an earlier
+    // request would otherwise overwrite a newer choice.
+    const token = this.languageChangeToken + 1;
+    this.languageChangeToken = token;
+
     if (this.loadedLanguages.has(target) === false) {
       const bundle = await this.fetchTranslationBundle(target);
+      if (token !== this.languageChangeToken) return this.getLanguage();
       if (!bundle) {
         this.error(`Could not switch to "${target}": its translation bundle is unavailable`);
         return this.getLanguage();
@@ -914,7 +948,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       this.loadedLanguages.add(bundle.locale);
     }
 
+    if (token !== this.languageChangeToken) return this.getLanguage();
+
     await this.i18n.changeLanguage(target);
+
+    if (token !== this.languageChangeToken) return this.getLanguage();
+
     setStoredLanguage(target);
     this.emit(ReactoryApiEventNames.onLanguageChanged, target);
 

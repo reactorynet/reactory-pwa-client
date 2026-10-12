@@ -8,7 +8,6 @@ import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
   SUPPORTED_LANGUAGES,
-  clearStoredLanguage,
   getBrowserLanguages,
   getStoredLanguage,
   isSupportedLanguage,
@@ -41,6 +40,10 @@ describe('language helpers', () => {
       expect(normaliseLanguage('af-ZA')).toBe('af');
       expect(normaliseLanguage('EN_us')).toBe('en');
       expect(normaliseLanguage('af')).toBe('af');
+    });
+
+    it('tolerates surrounding whitespace', () => {
+      expect(normaliseLanguage('  af-ZA  ')).toBe('af');
     });
 
     it('returns an empty string for missing input', () => {
@@ -79,10 +82,9 @@ describe('language helpers', () => {
       expect(getStoredLanguage()).toBeNull();
     });
 
-    it('clears the stored choice', () => {
-      setStoredLanguage('af');
-      clearStoredLanguage();
-      expect(getStoredLanguage()).toBeNull();
+    it('normalises and trims a stored value', () => {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, '  af-ZA  ');
+      expect(getStoredLanguage()).toBe('af');
     });
   });
 

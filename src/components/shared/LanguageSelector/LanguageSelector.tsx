@@ -11,7 +11,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import CheckIcon from '@mui/icons-material/Check';
 import { useReactory } from '@reactory/client-core/api';
 import { ReactoryApiEventNames } from '@reactory/client-core/api/ApiEventNames';
-import { normaliseLanguage } from '@reactory/client-core/api/language';
+import { languageLabel, normaliseLanguage } from '@reactory/client-core/api/language';
 
 /**
  * The subset of the Reactory API the selector depends on.
@@ -75,7 +75,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
   return (
     <>
-      <Tooltip title="Language">
+      <Tooltip title={`Language: ${languageLabel(active)}`}>
         <IconButton
           color="inherit"
           aria-label="Change language"
@@ -104,7 +104,11 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               selected={selected}
               onClick={() => {
                 setAnchorEl(null);
-                if (reactory?.setLanguage) void reactory.setLanguage(language.code);
+                if (reactory?.setLanguage) {
+                  // Switching can fail (e.g. the bundle is unavailable); keep a
+                  // rejection from surfacing as an unhandled promise.
+                  reactory.setLanguage(language.code).catch(() => undefined);
+                }
               }}
               data-testid={`language-option-${language.code}`}
             >

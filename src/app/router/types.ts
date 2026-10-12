@@ -28,6 +28,12 @@ export interface RouteComponentWrapperProps {
   componentArgs: Record<string, unknown>;
   defaultHeader?: React.ReactNode;
   defaultFooter?: React.ReactNode;
+  /**
+   * Increments when the active language changes. The wrapper is memoised on its
+   * props, so translated route content only re-renders when a render input that
+   * changes with the language is part of the comparison.
+   */
+  languageVersion?: number;
 }
 
 export interface RouteGuardProps {

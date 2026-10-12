@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { LanguageSelector } from '../LanguageSelector';
+import { ReactoryApiEventNames } from '@reactory/client-core/api/ApiEventNames';
 
 type Listener = (...args: any[]) => void;
 
@@ -71,10 +72,25 @@ describe('LanguageSelector', () => {
     const reactory = createReactory();
     const { unmount } = render(<LanguageSelector reactory={reactory} />);
 
-    expect(reactory.on).toHaveBeenCalledWith('onLanguageChanged', expect.any(Function));
+    expect(reactory.on).toHaveBeenCalledWith(ReactoryApiEventNames.onLanguageChanged, expect.any(Function));
 
     unmount();
 
-    expect(reactory.removeListener).toHaveBeenCalledWith('onLanguageChanged', expect.any(Function));
+    expect(reactory.removeListener).toHaveBeenCalledWith(ReactoryApiEventNames.onLanguageChanged, expect.any(Function));
+  });
+
+  it('moves the active tick when the language changes', () => {
+    const reactory = createReactory();
+    render(<LanguageSelector reactory={reactory} />);
+
+    fireEvent.click(screen.getByTestId('language-selector-button'));
+    expect(screen.getByTestId('language-option-en')).toHaveClass('Mui-selected');
+
+    act(() => {
+      reactory.emit(ReactoryApiEventNames.onLanguageChanged, 'af');
+    });
+
+    expect(screen.getByTestId('language-option-af')).toHaveClass('Mui-selected');
+    expect(screen.getByTestId('language-option-en')).not.toHaveClass('Mui-selected');
   });
 });

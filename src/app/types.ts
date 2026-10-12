@@ -31,4 +31,10 @@ export interface ReactoryRouterProps {
   authenticating: boolean,
   header: React.ReactElement | null
   footer: React.ReactElement | null
+  /**
+   * Increments when the active language changes. The router is memoised on its
+   * props, so a language change only reaches translated route content when this
+   * is part of the comparison.
+   */
+  languageVersion?: number
 }

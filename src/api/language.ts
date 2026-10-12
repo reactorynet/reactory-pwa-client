@@ -47,7 +47,7 @@ export const LANGUAGE_STORAGE_KEY = '$reactory$language';
  * matching how the server keys content translations and locale folders.
  */
 export const normaliseLanguage = (language?: string): string =>
-  (language || '').toLowerCase().split(/[-_]/)[0];
+  (language || '').trim().toLowerCase().split(/[-_]/)[0];
 
 export const isSupportedLanguage = (language?: string): boolean =>
   SUPPORTED_LANGUAGE_CODES.indexOf(normaliseLanguage(language)) >= 0;
@@ -92,17 +92,6 @@ export const setStoredLanguage = (language?: string): void => {
   }
 };
 
-/** Removes the persisted choice, reverting to browser detection. */
-export const clearStoredLanguage = (): void => {
-  const store = safeLocalStorage();
-  if (!store) return;
-  try {
-    store.removeItem(LANGUAGE_STORAGE_KEY);
-  } catch (error) {
-    // Nothing actionable; ignore.
-  }
-};
-
 /** `navigator.languages`, falling back to `navigator.language`. */
 export const getBrowserLanguages = (): string[] => {
   if (typeof navigator === 'undefined') return [];
@@ -140,7 +129,9 @@ export const resolvePreferredLanguage = (
  * remaining supported languages, then the default. De-duplicated and ordered.
  */
 export const languageCandidates = (primary: string): string[] => {
-  const ordered = [normaliseLanguage(primary), ...SUPPORTED_LANGUAGE_CODES, DEFAULT_LANGUAGE];
+  // SUPPORTED_LANGUAGE_CODES already contains DEFAULT_LANGUAGE; the primary
+  // language is listed first so it wins the de-duplication.
+  const ordered = [normaliseLanguage(primary), ...SUPPORTED_LANGUAGE_CODES];
   const seen: { [code: string]: boolean } = {};
   const candidates: string[] = [];
   ordered.forEach((code) => {

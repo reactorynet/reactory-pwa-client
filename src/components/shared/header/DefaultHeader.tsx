@@ -332,18 +332,21 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     const { path } = routeProps;
     navigateTo(path);
   };
-  const onLoginEvent = () => setVersion(version + 1);
+  const onLoginEvent = () => setVersion((currentVersion) => currentVersion + 1);
   const onApiStatusTotalsChanged = (totals) => setApiStatus(totals);
 
   // Development mode changes visibility of other drawer entries (the route
   // inspector toggle) and therefore needs a header re-render. The toggle itself
   // emits this event; RouteInspectorPreferenceButton already listens on it.
-  const onDevelopmentModeChanged = () => setVersion(version + 1);
+  // Use the functional updater: these handlers are registered once at mount, so
+  // a captured `version` would pin the value and the second invocation onwards
+  // would not change state (and therefore not re-render).
+  const onDevelopmentModeChanged = () => setVersion((currentVersion) => currentVersion + 1);
 
   // The header renders translated strings through `reactory.i18n.t` directly
   // (title, menu titles), which i18next cannot re-render on its own. Bump the
   // version so the header re-reads the active language after a switch.
-  const onLanguageChanged = () => setVersion(version + 1);
+  const onLanguageChanged = () => setVersion((currentVersion) => currentVersion + 1);
 
   const navigateTo = (where = '/', toggleDrawer = false) => {
     const nav = () => {
@@ -538,7 +541,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     menuItems.push(
       <ListItem 
         key="reactory.status" 
-        onClick={() => setVersion(version + 1)}
+        onClick={() => setVersion((currentVersion) => currentVersion + 1)}
         sx={{          
           color: theme.palette.text.primary,          
           '&:hover': {

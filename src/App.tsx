@@ -170,6 +170,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   //  const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
+  // Bumped whenever the active language changes. The router and route wrapper
+  // are memoised on their props, so a plain parent re-render does not reach
+  // translated route content; this value is the render input that does.
+  const [languageVersion, setLanguageVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
   // Add flag to prevent re-rendering loops during auth transitions
   const [isAuthTransitioning, setIsAuthTransitioning] = React.useState<boolean>(false);
@@ -408,9 +412,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   // Language changes must re-render the routed tree: components that read
   // `reactory.i18n.t` (and StaticContent, which refetches for the active
-  // locale) are not subscribed to i18next directly.
+  // locale) are not subscribed to i18next directly. `languageVersion` is passed
+  // to the router, whose memo comparison honours it.
   const onLanguageChanged = () => {
-    setVersion((currentVersion) => currentVersion + 1);
+    setLanguageVersion((currentVersion) => currentVersion + 1);
   };
 
   const onApiStatusUpdate = (status) => {
@@ -691,6 +696,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                           auth_validated={auth_validated}
                           authenticating={isAuthenticating}
                           footer={footer}
+                          languageVersion={languageVersion}
                         />
                       </React.Fragment>}
                     <Offline onOfflineChanged={onOfflineChanged} />
