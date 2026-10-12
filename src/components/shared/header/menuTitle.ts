@@ -164,8 +164,9 @@ export const translateMenuTitle = (
     parsed.namespace !== null && isLoadedNamespace(i18n, parsed.namespace) === false;
 
   if (literalWithColon) {
-    // No key probe at all: the suffix is not a key.
-    return FALLBACK_TITLES[raw] || raw;
+    // No key probe at all: the suffix is not a key. The fallback map cannot
+    // apply either — its keys carry no colon, and this title does.
+    return raw;
   }
 
   if (typeof translate === 'function') {
