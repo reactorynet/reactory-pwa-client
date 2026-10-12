@@ -19,6 +19,8 @@ export interface MenuTitleReactory {
     t?: (key: string, options?: { ns?: string; [key: string]: unknown }) => string;
     /** Namespace-strict lookup, used to detect namespace fallthrough. */
     getResource?: (lng: string, ns: string, key: string) => unknown;
+    /** Loaded namespaces, used to tell a real prefix from a literal colon. */
+    options?: { ns?: string[] };
   };
   warning?: (message: string, params?: unknown) => void;
 }
@@ -57,10 +59,10 @@ const FALLBACK_TITLES: Record<string, string> = {
  * Splits an optional `namespace:` prefix off a stored menu title.
  * Returns `null` for empty input so callers can render nothing.
  *
- * Note this is permissive: any `prefix:suffix` splits. A literal title that
- * happens to contain a colon (`Support: FAQ`, a URL) therefore parses as a key,
- * which is why {@link translateMenuTitle} falls back to the *whole* title rather
- * than the parsed key when nothing resolves.
+ * Deliberately permissive: any `prefix:suffix` splits, so a literal title that
+ * happens to contain a colon (`Support: FAQ`, a URL) also parses as a key. The
+ * caller decides whether the prefix is actually a namespace; see
+ * {@link isLoadedNamespace}.
  */
 export const parseMenuTitle = (rawTitle?: string): ParsedMenuTitle | null => {
   if (typeof rawTitle !== 'string') return null;
@@ -78,6 +80,22 @@ export const parseMenuTitle = (rawTitle?: string): ParsedMenuTitle | null => {
   }
 
   return { namespace: null, key: trimmed };
+};
+
+/**
+ * Whether `namespace` is one the app actually loaded.
+ *
+ * Returns `null` when the loaded set cannot be determined, which callers treat
+ * as "assume yes" so a missing `options.ns` degrades to the permissive
+ * behaviour rather than breaking key resolution.
+ */
+export const isLoadedNamespace = (
+  i18n: MenuTitleReactory['i18n'],
+  namespace: string
+): boolean | null => {
+  const loaded = i18n?.options?.ns;
+  if (!Array.isArray(loaded) || loaded.length === 0) return null;
+  return loaded.indexOf(namespace) >= 0;
 };
 
 /**
@@ -120,9 +138,15 @@ const reportNamespaceFallthrough = (
  * Plain text passes through unchanged: i18next returns the key itself when no
  * translation exists, which is how a literal is distinguished from a key.
  *
+ * A colon-bearing literal is treated as plain text, not as namespace + key. The
+ * prefix only counts as a namespace when the app loaded it; otherwise the whole
+ * title is returned untouched. Probing an unknown prefix would be worse than
+ * useless — `fallbackNS` would let the *suffix* resolve against some other
+ * bundle (`Support: FAQ` rendering a translation for `FAQ`), and it would emit a
+ * misleading "incomplete namespace" diagnostic.
+ *
  * When nothing resolves, the readable fallback map is consulted and then the
- * **whole** stored title is returned — not the parsed key — so a colon-bearing
- * literal is never truncated.
+ * **whole** stored title is returned — never the parsed remainder.
  */
 export const translateMenuTitle = (
   reactory: MenuTitleReactory | null | undefined,
@@ -132,7 +156,17 @@ export const translateMenuTitle = (
   if (!parsed) return '';
 
   const raw = rawTitle.trim();
-  const translate = reactory?.i18n?.t;
+  const i18n = reactory?.i18n;
+  const translate = i18n?.t;
+
+  // A prefix that is known *not* to be a namespace means the title is a literal.
+  const literalWithColon =
+    parsed.namespace !== null && isLoadedNamespace(i18n, parsed.namespace) === false;
+
+  if (literalWithColon) {
+    // No key probe at all: the suffix is not a key.
+    return FALLBACK_TITLES[raw] || raw;
+  }
 
   if (typeof translate === 'function') {
     try {

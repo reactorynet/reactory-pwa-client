@@ -197,3 +197,76 @@ describe('translateMenuTitle namespace fallthrough', () => {
     expect(warning).not.toHaveBeenCalled();
   });
 });
+describe('translateMenuTitle with a namespace whitelist', () => {
+  /**
+   * `fallbackNS` means a probe against a *wrong* namespace can still resolve —
+   * it searches every loaded namespace. So a colon-bearing literal must never be
+   * probed at all when its prefix is not a real namespace.
+   */
+  const createI18n = () => {
+    const translate = jest.fn((key: string, options?: { ns?: string }) => {
+      // A key that exists somewhere, so fallbackNS would find it.
+      if (key === 'FAQ') return 'FREQUENTLY ASKED QUESTIONS';
+      if (key === 'reactory.menu.home') return 'Home';
+      return key;
+    });
+
+    return {
+      translate,
+      i18n: {
+        language: 'en',
+        options: { ns: ['reactory', 'booktutor'] },
+        t: translate,
+        getResource: () => undefined,
+      },
+    };
+  };
+
+  it('treats a colon literal as plain text and never probes the suffix', () => {
+    const { translate, i18n } = createI18n();
+    const reactory: any = { i18n, warning: jest.fn() };
+
+    expect(translateMenuTitle(reactory, 'Support: FAQ')).toBe('Support: FAQ');
+    // The suffix must not be looked up as a key.
+    expect(translate).not.toHaveBeenCalledWith('FAQ', expect.anything());
+    expect(translate).not.toHaveBeenCalledWith('FAQ');
+  });
+
+  it('does not warn about an unknown prefix', () => {
+    const { i18n } = createI18n();
+    const warning = jest.fn();
+
+    translateMenuTitle({ i18n, warning } as any, 'Support: FAQ');
+
+    expect(warning).not.toHaveBeenCalled();
+  });
+
+  it('leaves a URL intact and unprobed', () => {
+    const { translate, i18n } = createI18n();
+
+    expect(translateMenuTitle({ i18n } as any, 'https://example.com')).toBe('https://example.com');
+    expect(translate).not.toHaveBeenCalled();
+  });
+
+  it('still resolves a genuine namespaced key', () => {
+    const { i18n } = createI18n();
+
+    expect(translateMenuTitle({ i18n } as any, 'booktutor:reactory.menu.home')).toBe('Home');
+  });
+
+  it('still translates an unprefixed key', () => {
+    const { i18n } = createI18n();
+
+    expect(translateMenuTitle({ i18n } as any, 'reactory.menu.home')).toBe('Home');
+  });
+
+  it('falls back to probing when the loaded namespaces are unknown', () => {
+    // No `options.ns` — cannot tell a literal from a key, so preserve the
+    // permissive behaviour rather than dropping translation.
+    const translate = jest.fn((key: string) => (key === 'reactory.menu.home' ? 'Home' : key));
+    const reactory: any = { i18n: { t: translate }, warning: jest.fn() };
+
+    expect(translateMenuTitle(reactory, 'booktutor:reactory.menu.home')).toBe('Home');
+    expect(translateMenuTitle(reactory, 'reactory.menu.home')).toBe('Home');
+  });
+});
