@@ -113,3 +113,87 @@ describe('translateMenuTitle', () => {
     expect(translateMenuTitle({ i18n }, 'reactory.menu.myapplications')).toBe('My Toepe');
   });
 });
+
+describe('translateMenuTitle with literals that contain a colon', () => {
+  const i18n = createI18n(EN);
+
+  it('returns the whole URL, not the truncated remainder', () => {
+    // `https://example.com` parses as namespace `https`, key `//example.com`;
+    // nothing resolves, so the whole title must come back.
+    expect(translateMenuTitle({ i18n }, 'https://example.com')).toBe('https://example.com');
+  });
+
+  it('returns a colon-bearing label in full', () => {
+    expect(translateMenuTitle({ i18n }, 'Support: FAQ')).toBe('Support: FAQ');
+  });
+
+  it('still strips nothing from a real namespaced key that resolves', () => {
+    expect(translateMenuTitle({ i18n }, 'booktutor:reactory.menu.home')).toBe('Book Tutor');
+  });
+
+  it('returns the full stored title when a key does not resolve', () => {
+    expect(translateMenuTitle({ i18n }, 'booktutor:reactory.menu.missing')).toBe(
+      'booktutor:reactory.menu.missing'
+    );
+  });
+});
+
+describe('translateMenuTitle namespace fallthrough', () => {
+  /** Models i18next's `fallbackNS`: t() resolves across namespaces, getResource does not. */
+  const createFallbackI18n = () => ({
+    language: 'af',
+    t: (key: string, options?: { ns?: string }) => {
+      const namespace = options?.ns || 'reactory';
+      const bundles: { [ns: string]: { [key: string]: string } } = {
+        reactory: { 'reactory.menu.home': 'Tuis' },
+        // `booktutor` deliberately lacks the key, so with `fallbackNS`
+        // configured i18next resolves it from `reactory` rather than returning
+        // the key. That borrowed result is the behaviour under test.
+        booktutor: {},
+      };
+      const own = bundles[namespace] || {};
+      const fallback = bundles.reactory;
+      if (own[key] !== undefined) return own[key];
+      if (fallback[key] !== undefined) return fallback[key];
+      return key;
+    },
+    getResource: (lng: string, ns: string, key: string) => {
+      // `booktutor` genuinely lacks the key in this scenario.
+      if (ns === 'booktutor') return undefined;
+      return key === 'reactory.menu.home' ? 'Tuis' : undefined;
+    },
+  });
+
+  it('still renders the borrowed value so the menu degrades gracefully', () => {
+    const reactory: any = { i18n: createFallbackI18n(), warning: jest.fn() };
+
+    expect(translateMenuTitle(reactory, 'booktutor:reactory.menu.home')).toBe('Tuis');
+  });
+
+  it('reports the incomplete namespace instead of hiding it', () => {
+    const warning = jest.fn();
+    const reactory: any = { i18n: createFallbackI18n(), warning };
+
+    translateMenuTitle(reactory, 'booktutor:reactory.menu.home');
+
+    expect(warning).toHaveBeenCalledTimes(1);
+    expect(warning.mock.calls[0][0]).toContain('booktutor');
+    expect(warning.mock.calls[0][0]).toContain('reactory.menu.home');
+  });
+
+  it('does not report when the key is present in the requested namespace', () => {
+    const warning = jest.fn();
+    const reactory: any = {
+      i18n: {
+        language: 'af',
+        t: () => 'Tuis',
+        getResource: () => 'Tuis',
+      },
+      warning,
+    };
+
+    translateMenuTitle(reactory, 'booktutor:reactory.menu.home');
+
+    expect(warning).not.toHaveBeenCalled();
+  });
+});

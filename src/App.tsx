@@ -445,21 +445,23 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.$windowSize = _size_spec;
     reactory.log('ReactoryHOC Resize', _size_spec);
     reactory.emit('onWindowResize', _size_spec);
-    setVersion(version + 1)
+    // Functional updater: this listener is registered once, so a captured
+    // `version` would pin the value and only the first resize would re-render.
+    setVersion((currentVersion) => currentVersion + 1);
+  };
+
+  // Hoisted so the same reference can be added and removed. Registering an
+  // inline arrow meant removal never matched, leaking the listener across
+  // mounts.
+  const onSystemThemeChanged = (evt: { matches: boolean }) => {
+    localStorage.setItem('$reactory$theme_mode', evt.matches === true ? 'dark' : 'light');
+    setVersion((currentVersion) => currentVersion + 1);
   };
 
 
   const willUnmount = () => {
     window.removeEventListener('resize', onWindowResize);
-    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', (evt) => {
-      if (evt.matches === true) {
-        localStorage.setItem('$reactory$theme_mode', 'dark');
-        setVersion(version + 1);
-      } else {
-        localStorage.setItem('$reactory$theme_mode', 'light');
-        setVersion(version + 1);
-      }
-    });
+    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', onSystemThemeChanged);
     reactory.off(ReactoryApiEventNames.onLogout, onLogout)
     reactory.off(ReactoryApiEventNames.onLogin, onLogin)
     reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
@@ -507,15 +509,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.reduxStore = store;
 
         window.addEventListener('resize', onWindowResize);
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', (evt) => {
-          if (evt.matches === true) {
-            localStorage.setItem('$reactory$theme_mode', 'dark');
-            setVersion(version + 1);
-          } else {
-            localStorage.setItem('$reactory$theme_mode', 'light');
-            setVersion(version + 1);
-          }
-        });
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', onSystemThemeChanged);
 
         if (localStorage) {
           let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');

@@ -15,8 +15,12 @@
 
 export interface MenuTitleReactory {
   i18n?: {
+    language?: string;
     t?: (key: string, options?: { ns?: string; [key: string]: unknown }) => string;
+    /** Namespace-strict lookup, used to detect namespace fallthrough. */
+    getResource?: (lng: string, ns: string, key: string) => unknown;
   };
+  warning?: (message: string, params?: unknown) => void;
 }
 
 export interface ParsedMenuTitle {
@@ -52,6 +56,11 @@ const FALLBACK_TITLES: Record<string, string> = {
 /**
  * Splits an optional `namespace:` prefix off a stored menu title.
  * Returns `null` for empty input so callers can render nothing.
+ *
+ * Note this is permissive: any `prefix:suffix` splits. A literal title that
+ * happens to contain a colon (`Support: FAQ`, a URL) therefore parses as a key,
+ * which is why {@link translateMenuTitle} falls back to the *whole* title rather
+ * than the parsed key when nothing resolves.
  */
 export const parseMenuTitle = (rawTitle?: string): ParsedMenuTitle | null => {
   if (typeof rawTitle !== 'string') return null;
@@ -72,10 +81,48 @@ export const parseMenuTitle = (rawTitle?: string): ParsedMenuTitle | null => {
 };
 
 /**
+ * A namespaced lookup can still resolve when the key is absent from the
+ * requested namespace, because `fallbackNS` is configured to all loaded
+ * namespaces. The value shown is then correct-but-borrowed, and the real
+ * problem — an incomplete locale file — stays invisible. Report it once per
+ * key so the gap is discoverable without being noisy.
+ *
+ * Only fires when the i18n instance exposes a namespace-strict lookup.
+ */
+const reportNamespaceFallthrough = (
+  reactory: MenuTitleReactory | null | undefined,
+  parsed: ParsedMenuTitle
+): void => {
+  const i18n = reactory?.i18n;
+  if (!parsed.namespace || !i18n || typeof i18n.getResource !== 'function') return;
+
+  try {
+    const language = i18n.language || 'en';
+    // Namespace-strict: unlike `t`, this does not consult fallback namespaces.
+    if (i18n.getResource(language, parsed.namespace, parsed.key) !== undefined) return;
+
+    const message =
+      `Menu title "${parsed.key}" is missing from the "${parsed.namespace}" bundle for ` +
+      `"${language}"; it resolved from a fallback namespace. The translation data for ` +
+      `that namespace is incomplete.`;
+
+    if (typeof reactory?.warning === 'function') {
+      reactory.warning(message, { namespace: parsed.namespace, key: parsed.key, language });
+    }
+  } catch (diagnosticError) {
+    // Diagnostics must never affect rendering.
+  }
+};
+
+/**
  * Resolves a stored menu title into display text for the active language.
  *
  * Plain text passes through unchanged: i18next returns the key itself when no
  * translation exists, which is how a literal is distinguished from a key.
+ *
+ * When nothing resolves, the readable fallback map is consulted and then the
+ * **whole** stored title is returned — not the parsed key — so a colon-bearing
+ * literal is never truncated.
  */
 export const translateMenuTitle = (
   reactory: MenuTitleReactory | null | undefined,
@@ -84,12 +131,17 @@ export const translateMenuTitle = (
   const parsed = parseMenuTitle(rawTitle);
   if (!parsed) return '';
 
+  const raw = rawTitle.trim();
   const translate = reactory?.i18n?.t;
+
   if (typeof translate === 'function') {
     try {
       if (parsed.namespace) {
         const namespaced = translate(parsed.key, { ns: parsed.namespace });
-        if (namespaced && namespaced !== parsed.key) return namespaced;
+        if (namespaced && namespaced !== parsed.key) {
+          reportNamespaceFallthrough(reactory, parsed);
+          return namespaced;
+        }
       }
 
       const translated = translate(parsed.key);
@@ -99,7 +151,7 @@ export const translateMenuTitle = (
     }
   }
 
-  return FALLBACK_TITLES[parsed.key] || parsed.key;
+  return FALLBACK_TITLES[parsed.key] || raw;
 };
 
 export default translateMenuTitle;
