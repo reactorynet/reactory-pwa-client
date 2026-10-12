@@ -39,6 +39,34 @@ const DefaultObjectField = getDefaultRegistry().fields.ObjectField as React.Comp
 /** One adapted wrapper per raw component, so React sees a stable type. */
 const adaptedCache = new WeakMap<object, React.ComponentType<WidgetProps>>();
 
+/**
+ * Successfully resolved FQN widgets, keyed by name.
+ *
+ * `reactory.getComponent` may hand back a fresh wrapper on every call (it can
+ * wrap with `useReactory` / an error boundary), which would give `adapt()` a new
+ * input each render and produce a new component type — remounting the widget on
+ * every keystroke. Caching the *adapted* result keeps props identity stable.
+ * Only successes are cached: a miss must stay retryable, otherwise an FQN
+ * widget that loads late could never bind (the original defect here).
+ */
+const resolvedFqnCache = new Map<string, React.ComponentType<WidgetProps>>();
+
+/**
+ * Names that may resolve later: an FQN (dotted) widget can be delivered as a
+ * form MODULE / plugin, so its registration can race the form's first render.
+ * Plain catalogue names (`LabelWidget`) are resolved from the static map and
+ * never need retrying.
+ */
+const isLateBindableWidget = (widget: unknown): widget is string =>
+  typeof widget === 'string' && widget !== 'hidden' && widget.indexOf('.') > 0;
+
+/** The SDK's component-registration events; see ReactoryApiEventNames. */
+const COMPONENT_REGISTERED_EVENTS = ['onComponentRegistered', 'componentRegistered'];
+
+/** Poll cadence / give-up window for late component binding. */
+const BIND_RETRY_INTERVAL_MS = 150;
+const BIND_RETRY_TIMEOUT_MS = 10000;
+
 const adapt = (component: React.ComponentType<any>): React.ComponentType<WidgetProps> => {
   const cached = adaptedCache.get(component as object);
   if (cached) return cached;
@@ -63,8 +91,14 @@ export function resolveObjectWidget(
   if (registered) return registered as React.ComponentType<WidgetProps>;
 
   if (reactory && typeof reactory.getComponent === 'function') {
+    const cachedFqn = resolvedFqnCache.get(widget);
+    if (cachedFqn) return cachedFqn;
     const resolved = resolveFqn({ reactory }, widget, 'widget');
-    if (resolved) return adapt(resolved);
+    if (resolved) {
+      const adapted = adapt(resolved);
+      resolvedFqnCache.set(widget, adapted);
+      return adapted;
+    }
   }
   return null;
 }
@@ -92,6 +126,55 @@ export function ReactoryObjectField(props: FieldProps): React.ReactElement {
   const widget = uiOptions.widget;
 
   const reactory = (formContext as { reactory?: unknown } | undefined)?.reactory;
+
+  // Late binding for FQN object widgets.
+  //
+  // `ui:widget: 'core.ApplicationCard@1.0.0'` names a component that may be
+  // delivered as a form MODULE (plugin script) and therefore register *after*
+  // this field first renders. Resolution is synchronous at render time, so
+  // without a retry the field falls back to plain object rendering forever and
+  // only an unrelated re-render (a window resize) made it bind. Subscribe to
+  // the registration event and poll as a fallback (the same wait-for-component
+  // pattern as `ReactoryMaterialTableWaitForRenderer`), forcing a re-render when
+  // the component finally appears.
+  const [, setBindTick] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!isLateBindableWidget(widget)) return undefined;
+    // Already available — nothing to wait for.
+    if (resolveObjectWidget(widget, registry, reactory)) return undefined;
+
+    let cancelled = false;
+    const bump = (): void => {
+      if (!cancelled) setBindTick((tick) => tick + 1);
+    };
+
+    const unsubscribes = COMPONENT_REGISTERED_EVENTS.map((eventName) => {
+      const off = (reactory as { on?: (event: string, listener: () => void) => unknown } | undefined)?.on?.(
+        eventName,
+        bump,
+      );
+      return typeof off === 'function' ? (off as () => void) : undefined;
+    }).filter((off): off is () => void => typeof off === 'function');
+
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      if (resolveObjectWidget(widget, registry, reactory)) {
+        clearInterval(interval);
+        bump();
+      }
+    }, BIND_RETRY_INTERVAL_MS);
+
+    const giveUp = setTimeout(() => clearInterval(interval), BIND_RETRY_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      unsubscribes.forEach((off) => off());
+      clearInterval(interval);
+      clearTimeout(giveUp);
+    };
+  }, [widget, registry, reactory]);
+
   const Widget = widget && widget !== 'hidden'
     ? resolveObjectWidget(widget, registry, reactory)
     : null;

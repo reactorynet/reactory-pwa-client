@@ -28,6 +28,7 @@
 import * as React from 'react';
 import { Box, Icon, Typography } from '@mui/material';
 import type { ObjectFieldTemplateProps } from '@rjsf/utils';
+import { toRenderableTitle } from '../utils/renderableTitle';
 
 type BreakpointSizes = Partial<Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', number>>;
 type GridLayoutRow = Record<string, BreakpointSizes | number>;
@@ -102,7 +103,12 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
   const titleId = `${idSchema.$id}__title`;
   const descId = `${idSchema.$id}__description`;
   const labelOverride = (uiSchema as Record<string, unknown> | undefined)?.['ui:label'];
-  const showTitle = labelOverride !== false && Boolean(title);
+  // `title` arrives from rjsf as the raw `uiOptions.title`, which for a legacy
+  // `'ui:title': { jss: {...} }` is an object and would throw when rendered.
+  // Coerce it and fall back to the schema title. See renderableTitle.
+  const renderableTitle =
+    toRenderableTitle(title) ?? toRenderableTitle((schema as { title?: unknown } | undefined)?.title);
+  const showTitle = labelOverride !== false && Boolean(renderableTitle);
 
   const visible = properties.filter((p) => !p.hidden);
 
@@ -177,7 +183,7 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
             color: 'text.primary',
           }}
         >
-          {title}
+          {renderableTitle}
           {required ? (
             <Box component="span" className="required-indicator" aria-hidden="true" sx={{ color: 'error.main' }}>
               {' *'}

@@ -37,6 +37,7 @@ import SelectWidgetOriginal from '../../ux/mui/widgets/Select';
 import SelectWithDataWidgetOriginal from '../../ux/mui/widgets/SelectWithData';
 import SliderWidgetOriginal from '../../ux/mui/widgets/SliderWidget';
 import { StaticContentWidget as StaticContentWidgetOriginal } from '../../ux/mui/widgets/StaticContentWidget';
+import JsonEditorWidgetOriginal from '../../ux/mui/widgets/JsonEditorWidget';
 import StepperWidgetOriginal from '../../ux/mui/widgets/StepperWidget';
 import ToolbarWidgetOriginal from '../../ux/mui/widgets/ToolbarWidget';
 import ReactorChatButtonWidgetOriginal from '../../ux/mui/widgets/ReactorChatButtonWidget';
@@ -95,6 +96,7 @@ const AdaptedSelectWithDataWidget = adaptWidget(SelectWithDataWidgetOriginal as 
 const AdaptedSliderWidget = adaptWidget(SliderWidgetOriginal as React.ComponentType<any>, 'SliderWidget');
 const AdaptedStaticContentWidget = adaptWidget(StaticContentWidgetOriginal as React.ComponentType<any>, 'StaticContentWidget');
 const AdaptedStepperWidget = adaptWidget(StepperWidgetOriginal as React.ComponentType<any>, 'StepperWidget');
+const AdaptedJsonEditorWidget = adaptWidget(JsonEditorWidgetOriginal as React.ComponentType<any>, 'JsonEditorWidget');
 const AdaptedToolbarWidget = adaptWidget(ToolbarWidgetOriginal as React.ComponentType<any>, 'ToolbarWidget');
 const AdaptedReactorChatButtonWidget = adaptWidget(ReactorChatButtonWidgetOriginal as unknown as React.ComponentType<any>, 'ReactorChatButtonWidget');
 const AdaptedUserSelectorWidget = adaptWidget(UserSelectorWidgetOriginal as React.ComponentType<any>, 'UserSelectorWidget');
@@ -157,6 +159,8 @@ export function reactoryWidgets(): Record<string, React.ComponentType<WidgetProp
     SliderWidget: AdaptedSliderWidget,
     StaticContentWidget: AdaptedStaticContentWidget,
     StepperWidget: AdaptedStepperWidget,
+    JsonEditorWidget: AdaptedJsonEditorWidget,
+    JSONEditorWidget: AdaptedJsonEditorWidget,
     ToolbarWidget: AdaptedToolbarWidget,
     ReactorChatButtonWidget: AdaptedReactorChatButtonWidget,
     UserSelectorWidget: AdaptedUserSelectorWidget,

@@ -120,6 +120,9 @@ import { useContentRender } from './shared/hooks/useContentRender';
 import { ContentRenderer } from './shared/ContentRenderer';
 import { Comments } from './shared/Comments/Comments';
 import { MyComments } from './shared/Comments/MyComments';
+import { MyCommentContextBadge } from './shared/Comments/MyCommentContextBadge';
+import { MyCommentDetailPanel } from './shared/Comments/MyCommentDetailPanel';
+import { MyCommentsToolbar } from './shared/Comments/MyCommentsToolbar';
 import { MermaidDiagram } from './shared/MermaidDiagram';
 import { CommentAnnotation } from './shared/Comments/CommentAnnotation';
 import { 
@@ -1186,6 +1189,30 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: MyComments,
     description: 'A user-scoped lookup surface listing every comment the signed-in user has authored, with back-links to the originating content, chat session or support ticket.',
     tags: ['comments', 'activity', 'my-comments', 'lookup', 'review'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'MyCommentContextBadge',
+    version: '1.0.0',
+    component: MyCommentContextBadge,
+    description: 'Color-coded chip rendering a comment context (content, knowledge base, chat, support ticket) as a friendly label.',
+    tags: ['comments', 'my-comments', 'badge', 'context'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'MyCommentDetailPanel',
+    version: '1.0.0',
+    component: MyCommentDetailPanel,
+    description: 'Expanding detail panel for a My Comments grid row, showing the full comment body and a link back to the originating resource.',
+    tags: ['comments', 'my-comments', 'detail', 'panel'],
+  },
+  {
+    nameSpace: 'core',
+    name: 'MyCommentsToolbar',
+    version: '1.0.0',
+    component: MyCommentsToolbar,
+    description: 'Toolbar for the My Comments grid with debounced search, context filter facets and refresh.',
+    tags: ['comments', 'my-comments', 'toolbar', 'filter', 'search'],
   },
   {
     nameSpace: 'core',

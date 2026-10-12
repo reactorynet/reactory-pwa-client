@@ -187,4 +187,18 @@ describe('ReactoryTitleFieldTemplate', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it('ignores a legacy { jss } ui:title object and falls back to the schema title', () => {
+    render(
+      <ReactoryTitleFieldTemplate
+        {...baseProps({
+          // rjsf copies `ui:title` onto the `title` prop, so both are objects.
+          title: { jss: { paddingLeft: '24px' } } as unknown as string,
+          schema: { type: 'object', title: 'Workflow Registry' },
+          uiSchema: { 'ui:title': { jss: { paddingLeft: '24px' } } },
+        })}
+      />,
+    );
+    expect(screen.getByRole('heading')).toHaveTextContent('Workflow Registry');
+  });
 });

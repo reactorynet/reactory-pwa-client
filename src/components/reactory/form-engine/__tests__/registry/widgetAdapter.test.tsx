@@ -110,6 +110,64 @@ describe('adaptProps', () => {
   });
 });
 
+/** Minimal dot-path mapper standing in for `reactory.utils.objectMapper.merge`. */
+const mergeMap = (
+  src: Record<string, unknown>,
+  dest: Record<string, unknown>,
+  map: Record<string, string>,
+): Record<string, unknown> => {
+  const out = { ...dest };
+  for (const sourceKey of Object.keys(map)) {
+    const data = sourceKey
+      .split('.')
+      .reduce<unknown>((acc, key) => (acc == null ? undefined : (acc as Record<string, unknown>)[key]), src);
+    if (data !== undefined) out[map[sourceKey]] = data;
+  }
+  return out;
+};
+
+describe('adaptProps — ui:props / ui:props-map (v5 parity with the legacy fork)', () => {
+  it('maps ui:props-map source paths from formContext onto the widget props', () => {
+    const formContext = {
+      reactory: { utils: { objectMapper: { merge: mergeMap } } },
+      props: { applicationId: 'app-123', mode: 'edit' },
+    };
+    const out = adaptProps(
+      baseRjsfProps({
+        formContext,
+        uiSchema: {
+          'ui:props-map': {
+            'formContext.props.applicationId': 'applicationId',
+            'formContext.props.mode': 'mode',
+          },
+        },
+      }),
+    ) as unknown as Record<string, unknown>;
+    expect(out.applicationId).toBe('app-123');
+    expect(out.mode).toBe('edit');
+  });
+
+  it('forwards static ui:props', () => {
+    const out = adaptProps(
+      baseRjsfProps({ uiSchema: { 'ui:props': { variant: 'outlined' } } }),
+    ) as unknown as Record<string, unknown>;
+    expect(out.variant).toBe('outlined');
+  });
+
+  it('does not throw when a props-map is present but no objectMapper exists', () => {
+    const out = adaptProps(
+      baseRjsfProps({ formContext: {}, uiSchema: { 'ui:props-map': { 'formContext.x': 'x' } } }),
+    ) as unknown as Record<string, unknown>;
+    expect(out.x).toBeUndefined();
+  });
+
+  it('keeps the standard props when no directives are present', () => {
+    const out = adaptProps(baseRjsfProps({ value: 'hello' }));
+    expect(out.formData).toBe('hello');
+    expect(out.value).toBe('hello');
+  });
+});
+
 describe('adaptWidget', () => {
   it('renders the wrapped widget with translated props', () => {
     const Widget: React.FC<ReactoryWidgetLikeProps> = (p) => (

@@ -91,6 +91,21 @@ describe('ReactoryFieldTemplate', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
+  it('ignores a legacy { jss } label object and falls back to the schema title', () => {
+    render(
+      <ReactoryFieldTemplate
+        {...baseProps({
+          // rjsf computes `label` from `uiOptions.title`, so a legacy
+          // `'ui:title': { jss: {...} }` arrives here as an object and used to
+          // be rendered as a React child (the Workflow Registry crash).
+          label: { jss: { paddingLeft: '24px' } } as unknown as string,
+          schema: { type: 'object', title: 'Workflow Registry' },
+        })}
+      />,
+    );
+    expect(screen.getByText('Workflow Registry')).toBeInTheDocument();
+  });
+
   it('renders nothing when hidden is true', () => {
     const { container } = render(<ReactoryFieldTemplate {...baseProps({ hidden: true })} />);
     expect(container.firstChild).toBeNull();

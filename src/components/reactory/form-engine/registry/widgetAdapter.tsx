@@ -111,6 +111,55 @@ export function adaptWidget<TProps extends ReactoryWidgetLikeProps>(
 }
 
 /**
+ * Resolve `ui:props` (static literals) and `ui:props-map` (a declarative
+ * source-path -> prop-name map) into the extra props a widget should receive.
+ *
+ * This is the same contract the legacy fork honours in `MaterialObjectField` /
+ * `MaterialObjectTemplate`. The v5 adapter previously ignored both directives,
+ * so any widget that relied on a props-map silently received no mapped props —
+ * for example the application dashboard panels read `applicationId` from
+ * `formContext.props.applicationId`; without it their mutation handlers
+ * early-return and edits appear to do nothing.
+ *
+ * The map source deliberately mirrors the legacy `{ ...props }` shape: paths are
+ * resolved against the full rjsf widget props (so `formContext.*` works) plus
+ * `formData`/`value` aliases so a map can also target the field value.
+ */
+export function resolveMappedProps(rjsfProps: WidgetProps): Record<string, unknown> {
+  const uiSchema = (rjsfProps.uiSchema ?? {}) as Record<string, unknown>;
+  const fc = (rjsfProps.formContext ?? {}) as Record<string, unknown>;
+  const reactory = (fc as {
+    reactory?: { utils?: { objectMapper?: { merge?: (...args: unknown[]) => unknown } } };
+  }).reactory;
+
+  let mapped: Record<string, unknown> = {};
+
+  const staticProps = uiSchema['ui:props'];
+  if (staticProps && typeof staticProps === 'object') {
+    mapped = { ...(staticProps as Record<string, unknown>) };
+  }
+
+  const propMap = uiSchema['ui:props-map'];
+  const merge = reactory?.utils?.objectMapper?.merge;
+  if (propMap && typeof propMap === 'object' && typeof merge === 'function') {
+    const source = {
+      ...(rjsfProps as unknown as Record<string, unknown>),
+      formContext: fc,
+      formData: (rjsfProps as { value?: unknown }).value,
+      value: (rjsfProps as { value?: unknown }).value,
+      reactory,
+    };
+    try {
+      mapped = merge(source, mapped, propMap, mapped) as Record<string, unknown>;
+    } catch {
+      // A malformed map must never take the form down; fall back to static props.
+    }
+  }
+
+  return mapped;
+}
+
+/**
  * Pure prop translator. Exposed for tests and for advanced consumers that
  * want to call the original widget directly without the React wrapping.
  */
@@ -137,13 +186,27 @@ export function adaptProps(rjsfProps: WidgetProps): ReactoryWidgetLikeProps {
   } = rjsfProps;
 
   const fc = (formContext ?? {}) as Record<string, unknown>;
-  const reactory = (fc as { reactory?: unknown }).reactory;
+  const incoming = rjsfProps as unknown as Record<string, unknown>;
+  // `reactory` normally rides on formContext, but a non-rjsf caller (the
+  // MaterialTableWidget column renderer) passes it directly.
+  const reactory = (fc as { reactory?: unknown }).reactory ?? incoming.reactory;
+
+  // Reactory catalogue widgets are not only rjsf field widgets: the
+  // MaterialTableWidget renders them as column/action renderers and hands them
+  // `rowData`, `cellData`, `formData` (the cell value), `cellIndex`, `api` and
+  // friends — not rjsf's `value`. The adapter used to drop everything it did
+  // not explicitly model, so a column's `ui:options.format` template that
+  // references `${rowData.nameSpace}` threw `ReferenceError: rowData is not
+  // defined` and took the form down. Forward the caller's props verbatim; the
+  // explicit translations below still win.
+  const resolvedValue = value !== undefined ? value : incoming.formData;
 
   return {
+    ...incoming,
     id,
     name,
-    formData: value,
-    value,
+    formData: resolvedValue,
+    value: resolvedValue,
     schema,
     uiSchema,
     idSchema: { $id: id },
@@ -161,5 +224,8 @@ export function adaptProps(rjsfProps: WidgetProps): ReactoryWidgetLikeProps {
     onChange,
     onBlur,
     onFocus,
-  };
+    // Mapped props win, matching the legacy `{ ...templateProps, ...$props }`
+    // merge order so a props-map can override a default.
+    ...resolveMappedProps(rjsfProps),
+  } as ReactoryWidgetLikeProps;
 }

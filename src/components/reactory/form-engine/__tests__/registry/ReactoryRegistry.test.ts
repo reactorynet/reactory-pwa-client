@@ -234,4 +234,50 @@ describe('createReactoryRegistry', () => {
       expect(reactory.getComponentCalls).toEqual(['plugin.X', 'plugin.X']);
     });
   });
+
+  describe('registration notifications', () => {
+    /**
+     * `ReactoryApiEventNames.onComponentRegistered` is the string
+     * `'onComponentRegistered'`; the registry used to listen for
+     * `'componentRegistered'` and therefore never fired. Clearing caches alone
+     * is also not enough — render-time FQN lookups need a re-render — so the
+     * registry must notify subscribers.
+     */
+    it('notifies subscribers when a component registers under the real event name', () => {
+      const reactory = createMockReactorySDK();
+      const reg = createReactoryRegistry({ reactory });
+      const listener = jest.fn();
+      reg.subscribe(listener);
+
+      reactory.emit('onComponentRegistered', { fqn: 'plugin.Widget@1.0.0' });
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears a cached miss so a late component resolves after registration', () => {
+      const reactory = createMockReactorySDK();
+      const reg = createReactoryRegistry({ reactory });
+
+      // Miss first — the component is not registered yet.
+      expect(reg.widgets['plugin.Late@1.0.0']).toBeUndefined();
+
+      // Register it and announce it the way ReactoryApi.registerComponent does.
+      reactory.registerComponent('plugin.Late@1.0.0', PluginWidget);
+      reactory.emit('onComponentRegistered', { fqn: 'plugin.Late@1.0.0' });
+
+      expect(reg.widgets['plugin.Late@1.0.0']).toBe(PluginWidget);
+    });
+
+    it('stops notifying after unsubscribe', () => {
+      const reactory = createMockReactorySDK();
+      const reg = createReactoryRegistry({ reactory });
+      const listener = jest.fn();
+      const unsubscribe = reg.subscribe(listener);
+
+      unsubscribe();
+      reactory.emit('onComponentRegistered', { fqn: 'plugin.Widget@1.0.0' });
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -179,8 +179,22 @@ export function useReactoryForm<TData = unknown>(
     [reactory, args.staticFields, args.staticWidgets, telemetry.emitFqnMiss],
   );
 
+  // Re-render the whole form when a component registers.
+  //
+  // FQN `ui:field` / `ui:widget` lookups run during render, so a component that
+  // arrives late — a server-compiled form MODULE loaded as a plugin — cannot
+  // bind on its own. The registry notifies on registration; this version bump
+  // invalidates the memoised `form` element below so rjsf re-renders and the
+  // now-available component is picked up, without any unrelated re-render (the
+  // previous requirement was a window resize).
+  const [registryVersion, setRegistryVersion] = React.useState(0);
+
   React.useEffect(() => {
+    const unsubscribe = registry.subscribe(() => {
+      setRegistryVersion((version) => version + 1);
+    });
     return () => {
+      unsubscribe();
       registry.dispose();
     };
   }, [registry]);
@@ -319,6 +333,8 @@ export function useReactoryForm<TData = unknown>(
     templates,
     asyncValidation.extraErrors,
     reactory,
+    // Bumped when a component registers, so a late-loaded FQN widget re-resolves.
+    registryVersion,
   ]);
 
   const submit = React.useCallback((): boolean => {

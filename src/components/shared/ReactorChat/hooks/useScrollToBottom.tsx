@@ -5,6 +5,7 @@ import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMe
 import useContentRender from '../../hooks/useContentRender';
 import { jsonToYaml, getChatMessageCommentContextId, applyDomHighlights } from '../utils';
 import { Comments, ReactoryCommentItem } from '@reactory/client-core/components/shared/Comments/Comments';
+import { useLazyFetchOnVisible } from './useLazyFetchOnVisible';
 import TextToSpeechButton from '../components/TextToSpeechButton';
 
 const isProcessingMessage = (message: UXChatMessage) =>
@@ -482,21 +483,38 @@ const ChatList = (props: {
     }
   }, [chatState?.id, reactory]);
 
-  React.useEffect(() => {
+  // Comments are fetched lazily — only when a message's block actually scrolls into view
+  // (see the `useLazyFetchOnVisible` call below). They used to be requested for EVERY
+  // assistant message as soon as the conversation rendered, one query each, and again on
+  // every `messages` change: a burst of N comment requests before the user had read anything,
+  // which overloaded the server.
+  //
+  // This eager helper is retained for two cases only: the no-visibility-API fallback, and as
+  // the shared "fetch everything still missing" routine.
+  const fetchCommentsForUnfetchedMessages = React.useCallback(() => {
     if (!enableComments || !chatState?.id) return;
-    const assistantMsgIds = messages
+    messages
       .filter((m) => m.role === 'assistant' && m.id)
-      .map((m) => m.id as string);
-
-    // Only fetch for message IDs that haven't been fetched yet
-    const unfetchedIds = assistantMsgIds.filter((id) => !fetchedMessageIdsRef.current.has(id));
-    if (unfetchedIds.length === 0) return;
-
-    unfetchedIds.forEach((id) => {
-      fetchedMessageIdsRef.current.add(id);
-      fetchCommentsForMessage(id);
-    });
+      .map((m) => m.id as string)
+      .filter((id) => !fetchedMessageIdsRef.current.has(id))
+      .forEach((id) => {
+        fetchedMessageIdsRef.current.add(id);
+        void fetchCommentsForMessage(id);
+      });
   }, [enableComments, chatState?.id, messages, fetchCommentsForMessage]);
+
+  const handleCommentBlockVisible = React.useCallback(
+    (messageId: string) => {
+      if (!enableComments || !chatState?.id) return;
+      if (!messageId) return;
+      // The ref is the single de-duplication authority across every path (visible, on-open,
+      // AMQ refresh), so a block that was already loaded is never requested twice.
+      if (fetchedMessageIdsRef.current.has(messageId)) return;
+      fetchedMessageIdsRef.current.add(messageId);
+      void fetchCommentsForMessage(messageId);
+    },
+    [enableComments, chatState?.id, fetchCommentsForMessage]
+  );
 
   React.useEffect(() => {
     if (!enableComments || !reactory?.on || !chatState?.id) return;
@@ -1107,6 +1125,22 @@ const ChatList = (props: {
       ? displayItems.slice(displayItems.length - renderedCount)
       : displayItems;
 
+  // Observe the rendered message blocks and load each one's comments the first time it scrolls
+  // into view. A single observer serves the whole list, rooted at the chat scroll container.
+  // `rescanKey` picks up blocks added later (streaming appends, "show earlier", a widened
+  // render window) so they are observed too.
+  useLazyFetchOnVisible({
+    enabled: enableComments,
+    rootRef: listRef,
+    selector: '[data-comment-message-id]',
+    idAttribute: 'data-comment-message-id',
+    onVisible: handleCommentBlockVisible,
+    // No visibility API (jest/jsdom, very old engines): the hook cannot know what is on
+    // screen, so fall back to the previous eager load rather than showing no counts at all.
+    onUnsupported: fetchCommentsForUnfetchedMessages,
+    rescanKey: `${renderedCount}:${displayItems.length}`,
+  });
+
   return (
     <div
       ref={listRef}
@@ -1686,6 +1720,10 @@ const ChatList = (props: {
             return (
               <ListItem
                 key={item.key}
+                // Marks this block as one whose comments load lazily when it scrolls into view
+                // (observed by `useLazyFetchOnVisible`). Only blocks carrying this attribute
+                // are ever requested.
+                data-comment-message-id={message.id ? String(message.id) : undefined}
                 alignItems="flex-start"
                 sx={{
                   justifyContent: 'flex-start',

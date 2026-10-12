@@ -24,6 +24,7 @@ import WidgetsIcon from '@mui/icons-material/Widgets';
 import { useReactory } from '@reactory/client-core/api';
 import { gql } from '@apollo/client';
 import { ReactoryForm } from '@reactory/client-core/components/reactory/ReactoryForm/ReactoryForm';
+import { inferInputSchema } from '@reactory/client-core/components/reactory/form-engine/utils/inputFormInference';
 
 const GET_WORKFLOWS = gql`
   query GetAccessibleWorkflows {
@@ -247,48 +248,8 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
 
         const yamlDef = defRes?.data?.workflowYamlDefinition;
         if (yamlDef?.inputs) {
-          const rawInputs = yamlDef.inputs;
-          let schema: any = { type: 'object', properties: {} };
-          const initialData: Record<string, any> = {};
-
-          if (rawInputs.type === 'object' && rawInputs.properties) {
-            schema = rawInputs;
-            Object.keys(rawInputs.properties).forEach((k) => {
-              if (rawInputs.properties[k]?.default !== undefined) {
-                initialData[k] = rawInputs.properties[k].default;
-              }
-            });
-          } else if (typeof rawInputs === 'object' && rawInputs !== null) {
-            const props: Record<string, any> = {};
-            const requiredFields: string[] = [];
-
-            Object.entries(rawInputs).forEach(([key, val]: [string, any]) => {
-              if (typeof val === 'object' && val !== null) {
-                props[key] = {
-                  title: val.title || key,
-                  type: val.type || (typeof val.default === 'number' ? 'number' : typeof val.default === 'boolean' ? 'boolean' : 'string'),
-                  description: val.description,
-                  default: val.default,
-                  ...(val.enum ? { enum: val.enum } : {}),
-                };
-                if (val.default !== undefined) initialData[key] = val.default;
-                if (val.required) requiredFields.push(key);
-              } else {
-                props[key] = {
-                  title: key,
-                  type: typeof val === 'number' ? 'number' : typeof val === 'boolean' ? 'boolean' : 'string',
-                  default: val,
-                };
-                initialData[key] = val;
-              }
-            });
-
-            schema = {
-              type: 'object',
-              properties: props,
-              ...(requiredFields.length > 0 ? { required: requiredFields } : {}),
-            };
-          }
+          // Single source of truth for inference — shared with the route editor.
+          const { schema, initialData } = inferInputSchema(yamlDef.inputs);
 
           const inferredDef: Reactory.Forms.IReactoryForm = {
             id: `quickLaunch.inferred.${nameSpace}.${name}@${version}`,

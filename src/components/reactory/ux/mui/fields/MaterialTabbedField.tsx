@@ -118,16 +118,40 @@ const MaterialTabbedField = (props) => {
   const [value, setValue] = React.useState(getActiveTabIndex());
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+    // Update local state first so the tab indicator/body track the click even
+    // when the route navigation is asynchronous (or, in a non-router host,
+    // never happens). Previously the router branch only called navigate(), so
+    // the selected tab stayed on the previous tab until a remount.
+    setValue(newValue);
     if (uiOptions.useRouter === true) {
-      const templateProps = { ...props, tab_id: getTabKey(newValue) }
-      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')(templateProps);
-      navigate(new_path);
-    } else {
-      setValue(newValue);
+      try {
+        const templateProps = { ...props, tab_id: getTabKey(newValue) }
+        const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')(templateProps);
+        navigate(new_path);
+      } catch (err) {
+        // Keep the local tab change even if path interpolation fails.
+        if (reactory.log) reactory.log('Tabbed layout navigation failed', err, 'warning');
+      }
     }
-
-
   };
+
+  // Re-sync the selected tab if the query string changes underneath us
+  // (browser back/forward, or an external link into a specific tab).
+  React.useEffect(() => {
+    const activeTabSource = uiSchema['ui:options'];
+    if (!activeTabSource || activeTabSource.activeTab !== 'query' || !activeTabSource.activeTabKey) {
+      return undefined;
+    }
+    const syncFromUrl = () => {
+      const current = new URLSearchParams(window.location.search).get(activeTabSource.activeTabKey);
+      if (current) {
+        const index = getTabIndex(current);
+        setValue((prev: number) => (prev === index ? prev : index));
+      }
+    };
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, [uiSchema]);
 
   const handleChangeIndex = (index: number) => {
     setValue(index);

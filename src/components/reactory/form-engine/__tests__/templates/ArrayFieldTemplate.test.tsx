@@ -125,4 +125,64 @@ describe('ReactoryArrayFieldTemplate', () => {
     const { container } = render(<ReactoryArrayFieldTemplate {...baseProps()} />);
     expect(container.querySelector('section')).toHaveAttribute('data-array-id', 'root_tags');
   });
+
+  /**
+   * The legacy fork honoured `ui:options.container` / `itemsContainer` (MUI Grid
+   * wrappers). The v5 template ignored them, so an array authored as a
+   * responsive card grid (e.g. `core.MyApplications`'s `applications` with
+   * `itemsContainerProps.size = { md: 6, lg: 4, xl: 4 }`) rendered each item
+   * full-width and stacked. These lock in the mapping.
+   */
+  describe('legacy container / itemsContainer contract', () => {
+    const gridUiSchema = {
+      'ui:options': {
+        container: 'Grid',
+        containerProps: { container: true, spacing: 2 },
+        itemsContainer: 'Grid',
+        itemsContainerProps: { item: true, size: { xs: 12, md: 6, lg: 4, xl: 4 } },
+      },
+    };
+
+    it('wraps each item in the configured items container', () => {
+      const { container } = render(
+        <ReactoryArrayFieldTemplate {...baseProps({ uiSchema: gridUiSchema })} />,
+      );
+
+      // One Grid item per array entry, carrying the responsive size classes.
+      const items = container.querySelectorAll('.array-field-item');
+      expect(items.length).toBe(2);
+      items.forEach((item) => {
+        expect(item.className).toContain('MuiGrid2-grid-md-6');
+        expect(item.className).toContain('MuiGrid2-grid-lg-4');
+      });
+    });
+
+    it('wraps the array in the configured container', () => {
+      const { container } = render(
+        <ReactoryArrayFieldTemplate {...baseProps({ uiSchema: gridUiSchema })} />,
+      );
+
+      // The Grid *container* is what makes the per-item `size` props lay out as a row.
+      const gridContainer = container.querySelector('.MuiGrid2-container');
+      expect(gridContainer).not.toBeNull();
+      expect(gridContainer).toHaveAttribute('data-array-id', 'root_tags');
+    });
+
+    it('falls back to the ordered list when no itemsContainer is configured', () => {
+      const { container } = render(<ReactoryArrayFieldTemplate {...baseProps()} />);
+
+      expect(container.querySelector('ol.array-field-items')).not.toBeNull();
+      expect(container.querySelector('.MuiGrid2-container')).toBeNull();
+    });
+
+    it('suppresses the title when ui:options.showTitle is false', () => {
+      render(
+        <ReactoryArrayFieldTemplate
+          {...baseProps({ uiSchema: { 'ui:options': { showTitle: false } } })}
+        />,
+      );
+
+      expect(screen.queryByText('Tags')).toBeNull();
+    });
+  });
 });

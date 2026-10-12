@@ -42,11 +42,29 @@ export interface ReactoryRegistry {
   registerWidget(name: string, component: React.ComponentType<any>): void;
   resolveFqn(name: string, kind: FqnKind): React.ComponentType<any> | null;
   clearCache(): void;
+  /**
+   * Subscribe to "a component registered" notifications. Returns an unsubscribe.
+   *
+   * Clearing the resolution caches is not enough on its own: the FQN lookups
+   * happen during render, so a consumer must re-render for a newly registered
+   * component to take effect. `useReactoryForm` subscribes and bumps a version
+   * so the form re-resolves.
+   */
+  subscribe(listener: () => void): () => void;
   /** Detach the SDK event listener. Call in cleanup paths. */
   dispose(): void;
 }
 
-const DEFAULT_REGISTERED_EVENT = 'componentRegistered';
+/**
+ * The SDK fires `ReactoryApiEventNames.onComponentRegistered` (whose value is the
+ * string `'onComponentRegistered'`) from `ReactoryApi.registerComponent`. The
+ * plain `'componentRegistered'` name assumed here originally therefore never
+ * fired — the cache was never invalidated and no re-render was ever triggered,
+ * so an FQN widget delivered asynchronously (a form MODULE / plugin) could stay
+ * unbound until an unrelated re-render. Listen to both names so an explicit
+ * `registeredEvent` override and older emitters keep working.
+ */
+const DEFAULT_REGISTERED_EVENTS = ['onComponentRegistered', 'componentRegistered'];
 
 const MEMO_TYPE = Symbol.for('react.memo');
 const FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
@@ -101,12 +119,29 @@ export function createReactoryRegistry(options: ReactoryRegistryOptions): Reacto
   const fieldCache = new Map<string, React.ComponentType<any> | null>();
   const widgetCache = new Map<string, React.ComponentType<any> | null>();
 
-  const eventName = options.registeredEvent ?? DEFAULT_REGISTERED_EVENT;
+  const eventNames = options.registeredEvent
+    ? [options.registeredEvent]
+    : DEFAULT_REGISTERED_EVENTS;
+
+  const listeners = new Set<() => void>();
+  const notifySubscribers = (): void => {
+    listeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (listenerError) {
+        options.reactory.error?.('[form-engine] registry subscriber threw', listenerError);
+      }
+    });
+  };
+
   const onRegistered = () => {
     fieldCache.clear();
     widgetCache.clear();
+    // Clearing caches alone changes nothing visible: the form must re-render for
+    // the now-registered component to be picked up.
+    notifySubscribers();
   };
-  options.reactory.on?.(eventName, onRegistered);
+  eventNames.forEach((eventName) => options.reactory.on?.(eventName, onRegistered));
 
   const lookup = (
     target: Record<string, React.ComponentType<any>>,
@@ -197,8 +232,15 @@ export function createReactoryRegistry(options: ReactoryRegistryOptions): Reacto
       fieldCache.clear();
       widgetCache.clear();
     },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     dispose() {
-      options.reactory.off?.(eventName, onRegistered);
+      eventNames.forEach((eventName) => options.reactory.off?.(eventName, onRegistered));
+      listeners.clear();
     },
   };
 }

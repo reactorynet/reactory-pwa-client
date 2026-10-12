@@ -34,6 +34,11 @@ export { default as ImageWidget } from './ImageWidget';
 export { default as RecordLookupWidget } from './RecordLookup';
 export { default as RichEditorWidget } from './RichEditor';
 export { default as FroalaWidget } from './RichEditor';
+// JSON editor for object / Any fields (route componentProps, header/footer slot
+// props, etc.). Exported under both the canonical name and the older
+// `JSONEditorWidget` spelling some forms referenced.
+export { default as JsonEditorWidget } from './JsonEditorWidget';
+export { default as JSONEditorWidget } from './JsonEditorWidget';
 export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
 export { default as SearchWidget } from './SearchWidget';
 export { default as SelectWidget } from './Select';

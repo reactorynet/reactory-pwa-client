@@ -10,6 +10,7 @@
 import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import type { FieldProps } from '@rjsf/utils';
 import {
   ReactoryTabbedLayoutField,
@@ -145,5 +146,97 @@ describe('ReactoryTabbedLayoutField', () => {
       />,
     );
     expect(container.querySelector('[data-tabbed-layout]')).toBeNull();
+  });
+});
+
+/** Minimal `${path.to.value}` interpolation, mirroring reactory.utils.template. */
+const templateFn = (str: string) => (ctx: Record<string, unknown>): string =>
+  str.replace(/\$\{([^}]+)\}/g, (_match, path: string) => {
+    const value = path
+      .split('.')
+      .reduce<unknown>(
+        (acc, key) => (acc == null ? undefined : (acc as Record<string, unknown>)[key]),
+        ctx,
+      );
+    return value == null ? '' : String(value);
+  });
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+};
+
+describe('ReactoryTabbedLayoutField router integration', () => {
+  const routerProps = (overrides: Partial<FieldProps> = {}): FieldProps =>
+    baseProps({
+      schema: {
+        type: 'object',
+        title: 'Application',
+        properties: {
+          overview: { type: 'object', title: 'Overview' },
+          featureFlags: { type: 'object', title: 'Feature Flags' },
+        },
+      },
+      uiSchema: {
+        'ui:field': 'TabbedLayout',
+        'ui:tab-layout': [
+          { field: 'overview', title: 'Overview', icon: 'dashboard' },
+          { field: 'featureFlags', title: 'Feature Flags', icon: 'flag' },
+        ],
+        'ui:tab-options': {
+          useRouter: true,
+          path: '/applications/${formContext.props.applicationId}?tab=${tab_id}',
+        },
+        'ui:options': { activeTab: 'query', activeTabKey: 'tab' },
+      },
+      formData: { overview: {}, featureFlags: {} },
+      formContext: {
+        props: { applicationId: 'app-77' },
+        reactory: { utils: { template: templateFn } },
+      },
+      ...overrides,
+    } as never);
+
+  it('navigates to the configured path when a tab is selected', () => {
+    render(
+      <MemoryRouter initialEntries={['/applications/app-77?tab=overview']}>
+        <Routes>
+          <Route
+            path="/applications/:applicationId"
+            element={
+              <>
+                <LocationProbe />
+                <ReactoryTabbedLayoutField {...routerProps()} />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/applications/app-77?tab=overview');
+
+    fireEvent.click(screen.getByRole('tab', { name: /Feature Flags/i }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/applications/app-77?tab=featureFlags');
+    // The tab body follows the selection too.
+    expect(screen.getByTestId('field-featureFlags')).toBeInTheDocument();
+    expect(screen.queryByTestId('field-overview')).toBeNull();
+  });
+
+  it('honours the ?tab= query on first paint', () => {
+    render(
+      <MemoryRouter initialEntries={['/applications/app-77?tab=featureFlags']}>
+        <Routes>
+          <Route
+            path="/applications/:applicationId"
+            element={<ReactoryTabbedLayoutField {...routerProps()} />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('field-featureFlags')).toBeInTheDocument();
+    expect(screen.queryByTestId('field-overview')).toBeNull();
   });
 });

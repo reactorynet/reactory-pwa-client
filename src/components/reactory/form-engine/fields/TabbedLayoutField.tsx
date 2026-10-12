@@ -16,6 +16,14 @@
  * this lets a form adopt tabs without restructuring its schema (and therefore
  * without changing its formData shape / GraphQL mapping).
  *
+ * Router integration (`ui:tab-options.useRouter === true`): selecting a tab
+ * updates the URL via `ui:tab-options.path` (an interpolated path template,
+ * e.g. `/applications/${formContext.props.applicationId}?tab=${tab_id}`) and
+ * the selected tab is kept in step with the `?tab=` query — including browser
+ * back/forward. Router hooks are only read when the field is actually rendered
+ * inside a `<Router>` (guarded by `useInRouterContext`), so tabbed forms that
+ * are shown in modals or other non-routed hosts keep working unchanged.
+ *
  * When the object also declares `ui:grid-layout`, the active tab's fields are
  * laid out on the same 12-column grid, so tabs and grids compose.
  *
@@ -27,6 +35,7 @@
  */
 
 import * as React from 'react';
+import { useInRouterContext, useLocation, useNavigate } from 'react-router';
 import AppBar from '@mui/material/AppBar';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
@@ -72,6 +81,54 @@ export function tabLabel(
   return `${title ?? first ?? ''}`;
 }
 
+interface RouterTabsBridgeProps {
+  keyForIndex: (index: number) => string | undefined;
+  resolveIndexFromSearch: (search: string) => number;
+  buildPath: (key: string) => string | null;
+  onIndexChange: (index: number) => void;
+  navigateRef: React.MutableRefObject<((index: number) => void) | null>;
+}
+
+/**
+ * Isolates the react-router hooks so the tab field itself can render outside a
+ * `<Router>` (the field must not call `useNavigate`/`useLocation` unless a
+ * router ancestor is guaranteed). This component is only mounted when the field
+ * detects router context and `useRouter` is enabled.
+ */
+const RouterTabsBridge: React.FC<RouterTabsBridgeProps> = ({
+  keyForIndex,
+  resolveIndexFromSearch,
+  buildPath,
+  onIndexChange,
+  navigateRef,
+}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Hand the parent a "navigate to tab index" function without the parent
+  // having to consume router hooks.
+  React.useEffect(() => {
+    navigateRef.current = (index: number) => {
+      const key = keyForIndex(index);
+      if (!key) return;
+      const to = buildPath(key);
+      if (to) navigate(to);
+    };
+    return () => {
+      navigateRef.current = null;
+    };
+  }, [navigate, keyForIndex, buildPath, navigateRef]);
+
+  // Keep the selected tab in step with the URL (?tab=...), including browser
+  // back/forward and any external navigation that changes the query string.
+  React.useEffect(() => {
+    const index = resolveIndexFromSearch(location.search);
+    if (index >= 0) onIndexChange(index);
+  }, [location.search, resolveIndexFromSearch, onIndexChange]);
+
+  return null;
+};
+
 export function ReactoryTabbedLayoutField(props: FieldProps): React.ReactElement | null {
   const {
     schema,
@@ -92,6 +149,10 @@ export function ReactoryTabbedLayoutField(props: FieldProps): React.ReactElement
   const layout = (uiSchema?.['ui:tab-layout'] as TabLayoutEntry[] | undefined) ?? [];
   const tabOptions = (uiSchema?.['ui:tab-options'] as TabOptions | undefined) ?? {};
   const uiOptions = (uiSchema?.['ui:options'] as Record<string, unknown> | undefined) ?? {};
+
+  const reactory = (formContext as { reactory?: unknown } | undefined)?.reactory as
+    | { utils?: { template?: (...args: unknown[]) => (...args: unknown[]) => string } }
+    | undefined;
 
   // Only tabs whose properties actually exist in the schema are rendered.
   const tabs = React.useMemo(
@@ -122,7 +183,53 @@ export function ReactoryTabbedLayoutField(props: FieldProps): React.ReactElement
     (registry?.fields as Record<string, React.ComponentType<any>> | undefined)?.SchemaField ??
     (getDefaultRegistry().fields.SchemaField as React.ComponentType<any>);
 
-  const handleChange = (_event: React.SyntheticEvent, nextValue: number) => setValue(nextValue);
+  // Router wiring — resolved lazily so non-routed hosts are unaffected.
+  const inRouter = useInRouterContext();
+  const useRouter = tabOptions.useRouter === true;
+  const navigateRef = React.useRef<((index: number) => void) | null>(null);
+
+  const keyForIndex = React.useCallback(
+    (index: number): string | undefined => tabFields(tabs[index] ?? {})[0],
+    [tabs],
+  );
+
+  const resolveIndexFromSearch = React.useCallback(
+    (search: string): number => {
+      const key = uiOptions.activeTabKey as string | undefined;
+      if (!key || uiOptions.activeTab !== 'query' || typeof search !== 'string') return -1;
+      const queryValue = new URLSearchParams(search).get(key);
+      if (!queryValue) return -1;
+      const index = tabs.findIndex((entry) => tabFields(entry).includes(queryValue));
+      return index < 0 ? -1 : index;
+    },
+    [tabs, uiOptions.activeTab, uiOptions.activeTabKey],
+  );
+
+  const buildPath = React.useCallback(
+    (key: string): string | null => {
+      const template = reactory?.utils?.template;
+      if (typeof template !== 'function' || !tabOptions.path) return null;
+      try {
+        return template(tabOptions.path)({ ...(props as unknown as Record<string, unknown>), tab_id: key });
+      } catch {
+        return null;
+      }
+    },
+    [reactory, tabOptions.path, props],
+  );
+
+  const applyIndex = React.useCallback((index: number) => {
+    setValue((current) => (current === index ? current : index));
+  }, []);
+
+  const handleChange = (_event: React.SyntheticEvent, nextValue: number) => {
+    // Update immediately so the tab body/indicator never lag behind the click,
+    // then (optionally) push the change into the URL.
+    setValue(nextValue);
+    if (useRouter && navigateRef.current) {
+      navigateRef.current(nextValue);
+    }
+  };
 
   // Merge a single property update back into the object value.
   const onPropertyChange = (field: string) => (fieldValue: unknown, fieldErrorSchema?: unknown) => {
@@ -182,6 +289,15 @@ export function ReactoryTabbedLayoutField(props: FieldProps): React.ReactElement
 
   return (
     <Box data-tabbed-layout={name} sx={{ width: '100%' }}>
+      {inRouter && useRouter ? (
+        <RouterTabsBridge
+          keyForIndex={keyForIndex}
+          resolveIndexFromSearch={resolveIndexFromSearch}
+          buildPath={buildPath}
+          onIndexChange={applyIndex}
+          navigateRef={navigateRef}
+        />
+      ) : null}
       <AppBar {...appBarProps}>
         <Tabs {...tabsProps}>
           {tabs.map((entry, index) => (

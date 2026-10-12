@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Typography } from '@mui/material';
 import type { TitleFieldProps } from '@rjsf/utils';
+import { toRenderableTitle } from '../utils/renderableTitle';
 
 interface UITitleFieldOptions {
   title?: string;
@@ -47,16 +48,20 @@ function DefaultTitle({
 }
 
 export function ReactoryTitleFieldTemplate(props: TitleFieldProps): React.ReactElement | null {
-  const { id, title, required, uiSchema, registry } = props;
+  const { id, title, required, uiSchema, schema, registry } = props;
   const depth = React.useContext(TitleDepthContext);
 
   const rawUiTitle = (uiSchema as Record<string, unknown> | undefined)?.['ui:title'];
 
   if (rawUiTitle === false) return null;
 
+  // When `ui:title` is an object rjsf sets the `title` prop to that same
+  // object, so it must never be used as a fallback without coercion.
+  const schemaTitle = toRenderableTitle((schema as { title?: unknown } | undefined)?.title);
+
   if (rawUiTitle !== null && rawUiTitle !== undefined && typeof rawUiTitle === 'object') {
     const opts = rawUiTitle as UITitleFieldOptions;
-    const effectiveTitle = opts.title ?? title;
+    const effectiveTitle = toRenderableTitle(opts.title) ?? toRenderableTitle(title) ?? schemaTitle;
 
     if (opts.field && depth < 3) {
       const resolveFqn = (registry as unknown as RegistryWithResolveFqn).resolveFqn;
@@ -86,11 +91,15 @@ export function ReactoryTitleFieldTemplate(props: TitleFieldProps): React.ReactE
       );
     }
 
-    return <DefaultTitle id={id} title={effectiveTitle} required={required} />;
+    return effectiveTitle === undefined ? null : (
+      <DefaultTitle id={id} title={effectiveTitle} required={required} />
+    );
   }
 
-  const displayTitle = typeof rawUiTitle === 'string' ? rawUiTitle : title;
-  return <DefaultTitle id={id} title={displayTitle} required={required} />;
+  const displayTitle = toRenderableTitle(rawUiTitle) ?? toRenderableTitle(title) ?? schemaTitle;
+  return displayTitle === undefined ? null : (
+    <DefaultTitle id={id} title={displayTitle} required={required} />
+  );
 }
 
 export default ReactoryTitleFieldTemplate;

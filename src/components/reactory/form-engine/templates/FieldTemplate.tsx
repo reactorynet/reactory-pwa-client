@@ -35,6 +35,7 @@ import * as React from 'react';
 import { useTheme } from '@mui/material/styles';
 import type { FieldTemplateProps } from '@rjsf/utils';
 import { checkFieldPermission, type PermissionResolveDeps } from '../permissions/checkPermission';
+import { toRenderableTitle } from '../utils/renderableTitle';
 
 export type UiHiddenCallback = (args: {
   formData: unknown;
@@ -123,7 +124,12 @@ export function ReactoryFieldTemplate(props: FieldTemplateProps): React.ReactEle
   const schemaType = (schema as { type?: string | string[] })?.type;
   const isBoolean = (Array.isArray(schemaType) ? schemaType[0] : schemaType) === 'boolean';
   const hasErrors = Array.isArray(rawErrors) && rawErrors.length > 0;
-  const showLabel = displayLabel !== false && Boolean(label);
+  // rjsf copies `ui:title` verbatim onto `label`, so a legacy
+  // `'ui:title': { jss: {...} }` arrives here as an object. Rendering it throws;
+  // coerce to a string and fall back to the schema title. See renderableTitle.
+  const renderableLabel =
+    toRenderableTitle(label) ?? toRenderableTitle((schema as { title?: unknown } | undefined)?.title);
+  const showLabel = displayLabel !== false && Boolean(renderableLabel);
 
   const labelStyle: React.CSSProperties = {
     display: isBoolean ? 'inline-block' : 'block',
@@ -143,7 +149,7 @@ export function ReactoryFieldTemplate(props: FieldTemplateProps): React.ReactEle
 
   const labelNode = showLabel ? (
     <label className="control-label" htmlFor={id} style={labelStyle}>
-      {label}
+      {renderableLabel}
       {required ? (
         <span className="required-indicator" aria-hidden="true">
           {' *'}
