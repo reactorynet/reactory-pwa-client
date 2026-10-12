@@ -41,6 +41,7 @@ import {
   toggleRouteInspectorEnabled,
 } from '../../../app/router/inspectorPreference';
 import { WorkflowCommander } from '../WorkflowDesigner/WorkflowCommander';
+import { LanguageSelector } from '../LanguageSelector';
 
 // Configure localForage
 localForage.config({
@@ -339,6 +340,11 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
   // emits this event; RouteInspectorPreferenceButton already listens on it.
   const onDevelopmentModeChanged = () => setVersion(version + 1);
 
+  // The header renders translated strings through `reactory.i18n.t` directly
+  // (title, menu titles), which i18next cannot re-render on its own. Bump the
+  // version so the header re-reads the active language after a switch.
+  const onLanguageChanged = () => setVersion(version + 1);
+
   const navigateTo = (where = '/', toggleDrawer = false) => {
     const nav = () => {
       if (where.trim().indexOf('http') === 0) {
@@ -578,6 +584,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.on('onApiStatusTotalsChange', onApiStatusTotalsChanged);
     reactory.on('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
+    reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
 
     return () => {
       reactory.removeListener(ReactoryApiEventNames.onHideMenu, onHideMenu);
@@ -586,6 +593,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
       reactory.removeListener(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
       reactory.removeListener('onApiStatusTotalsChange', onApiStatusTotalsChanged);
       reactory.removeListener('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
+      reactory.removeListener(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
     };
   }, []);
 
@@ -657,6 +665,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           {reactory.hasRole(['USER']) === true && (
              <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
           )}
+
+          <LanguageSelector reactory={reactory} />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>

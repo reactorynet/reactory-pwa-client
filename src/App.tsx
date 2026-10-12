@@ -406,6 +406,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     });
   };
 
+  // Language changes must re-render the routed tree: components that read
+  // `reactory.i18n.t` (and StaticContent, which refetches for the active
+  // locale) are not subscribed to i18next directly.
+  const onLanguageChanged = () => {
+    setVersion((currentVersion) => currentVersion + 1);
+  };
+
   const onApiStatusUpdate = (status) => {
 
     if (!(status === null || status === undefined)) {
@@ -462,6 +469,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+    reactory.off(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
     if (initProgressRef.current) {
       reactory.off(ReactoryApiEventNames.onInitProgress, initProgressRef.current);
     }
@@ -531,6 +539,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.on(ReactoryApiEventNames.onLogin, onLogin)
         reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
         reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+        reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
         reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);        
         const query = queryString.parse(window.location.search);
         reactory.queryObject = query;

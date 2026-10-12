@@ -59,6 +59,17 @@ import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
 import { ReactoryPluginLoader } from './ReactoryPluginLoader';
 import { resolveComponentKey } from './componentResolution';
+import {
+  DEFAULT_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  SUPPORTED_LANGUAGE_CODES,
+  getStoredLanguage,
+  isSupportedLanguage,
+  languageCandidates,
+  normaliseLanguage,
+  resolvePreferredLanguage,
+  setStoredLanguage,
+} from './language';
 
 // The anonymous account the PWA signs in as before a user logs in. Only
 // REACT_APP_* variables reach the bundle, so these are public by design; the
@@ -442,6 +453,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   __uuid: string;
   React: typeof React;
   i18n: i18n = i18next;
+  /** Languages the application ships translations for. */
+  supportedLanguages: Array<{ code: string; label: string }> = SUPPORTED_LANGUAGES.map((language) => ({ code: language.code, label: language.label }));
+  /** Locales whose translation bundles are present in the i18n instance. */
+  private loadedLanguages: Set<string> = new Set<string>();
   navigation: NavigateFunction;
   location: any;
   constructor(props) {
@@ -657,6 +672,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.setDevelopmentMode = this.setDevelopmentMode.bind(this);
     this.hydrate = this.hydrate.bind(this);
     this.getApiStatus = this.getApiStatus.bind(this);
+    this.getLanguage = this.getLanguage.bind(this);
+    this.setLanguage = this.setLanguage.bind(this);
+    this.getSupportedLanguages = this.getSupportedLanguages.bind(this);
+    this.fetchTranslationBundle = this.fetchTranslationBundle.bind(this);
     this.__uuid = localStorage.getItem("$reactory_instance_id$");
     if (this.__uuid === null) {
       this.__uuid = uuid();
@@ -737,61 +756,63 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   /**
-   * Initializes the i18n instance for the application
+   * Initializes the i18n instance for the application.
+   *
+   * The active language is resolved in this order: the user's persisted choice,
+   * then the browser's preferred languages, then the application default. That
+   * order is owned by `resolvePreferredLanguage` — i18next's own detector cannot
+   * honour an in-app override, so the resolved value is handed to `init`
+   * explicitly.
+   *
+   * Bundles for every supported language are loaded up front so switching
+   * languages needs no round trip and a browser that asks for Afrikaans renders
+   * Afrikaans on first paint.
    */
   async initi18n() {
-    const TRANSLATIONS = `
-       query ReactoryTranslation($lang: String) {
-        ReactoryTranslation(lang: $lang) {
-          id
-          i18n {
-            id
-            ns
-            translations
-          }          
-        }
-      }
-    `;
+    const preferredLanguage = resolvePreferredLanguage();
+    const languagesToLoad = languageCandidates(preferredLanguage);
 
-    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, {}).then();
+    const $resources: any = {};
+    const loadedNamespaces: string[] = [];
 
-    let $resources: any = {};
-    let languageId = 'en';
+    const bundles = await Promise.all(
+      languagesToLoad.map((language) => this.fetchTranslationBundle(language)),
+    );
 
-    if (data && data.ReactoryTranslation) {
-      const { i18n, id } = data.ReactoryTranslation;
-      languageId = id || 'en';
-      if (i18n && lodash.isArray(i18n) === true) {
-        $resources[languageId] = {};
-        i18n.forEach((e) => {
-          if (e && e.translations && e.ns) {
-            if (!$resources[languageId][e.ns] && e.translations) {
-              $resources[languageId][e.ns] = { ...e.translations };
-            }
-          }
-        });
-      }
+    bundles.forEach((bundle) => {
+      if (!bundle) return;
+      $resources[bundle.locale] = { ...(bundle.resources || {}) };
+      this.loadedLanguages.add(bundle.locale);
+      Object.keys(bundle.resources || {}).forEach((ns) => {
+        if (loadedNamespaces.indexOf(ns) < 0) loadedNamespaces.push(ns);
+      });
+    });
 
-      // Alias en <-> en-US so browser language detection resolves seamlessly
-      if ($resources[languageId]) {
-        if (languageId === 'en' && !$resources['en-US']) {
-          $resources['en-US'] = { ...$resources['en'] };
-        } else if (languageId === 'en-US' && !$resources['en']) {
-          $resources['en'] = { ...$resources['en-US'] };
-        }
-      }
+    // Alias en <-> en-US so a browser asking for en-US resolves against the en
+    // bundle and a stored en-US preference still finds resources.
+    if ($resources['en'] && !$resources['en-US']) {
+      $resources['en-US'] = { ...$resources['en'] };
+      this.loadedLanguages.add('en-US');
+    } else if ($resources['en-US'] && !$resources['en']) {
+      $resources['en'] = { ...$resources['en-US'] };
+      this.loadedLanguages.add('en');
     }
 
-    const loadedNamespaces = Object.keys($resources[languageId] || {});
-    const allNamespaces = Array.from(new Set(['reactory', 'booktutor', 'forms', 'common', 'reactor', ...loadedNamespaces]));
+    const allNamespaces = Array.from(new Set([
+      'reactory', 'booktutor', 'forms', 'common', 'reactor',
+      ...loadedNamespaces,
+    ]));
 
     await i18next
       .use(LanguageDetector)
       .use(initReactI18next)
       .init({
         debug: this.isDevelopmentMode(),
-        lng: languageId,
+        lng: preferredLanguage,
         fallbackLng: ['en-US', 'en'],
+        supportedLngs: Array.from(new Set([...SUPPORTED_LANGUAGE_CODES, 'en-US', 'en'])),
+        // Treat a regional tag (af-ZA) as supported when its base language (af) is.
+        nonExplicitSupportedLngs: true,
         ns: allNamespaces,
         defaultNS: allNamespaces.includes('reactory') ? 'reactory' : allNamespaces[0] || 'common',
         fallbackNS: allNamespaces,
@@ -802,6 +823,102 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }).then();
 
     this.i18n = i18next;
+  }
+
+  /**
+   * Fetches one locale's translation bundles.
+   *
+   * The server returns one entry per namespace; they are merged into a single
+   * `{ [ns]: translations }` map. A failure resolves to `null` rather than
+   * throwing so a single unavailable locale never aborts application start-up.
+   */
+  async fetchTranslationBundle(language: string): Promise<{ locale: string, resources: { [ns: string]: any } } | null> {
+    const TRANSLATIONS = `
+       query ReactoryTranslation($lang: String) {
+        ReactoryTranslation(lang: $lang) {
+          id
+          i18n {
+            id
+            ns
+            translations
+          }
+        }
+      }
+    `;
+
+    try {
+      const { data }: QueryResult = await this.graphqlQuery(TRANSLATIONS, { lang: language }).then();
+      const payload: any = data ? (data as any).ReactoryTranslation : null;
+      if (!payload) return null;
+
+      const locale = normaliseLanguage(payload.id || language) || language;
+      const resources: { [ns: string]: any } = {};
+
+      if (lodash.isArray(payload.i18n) === true) {
+        payload.i18n.forEach((entry: any) => {
+          if (entry && entry.ns && entry.translations) {
+            resources[entry.ns] = { ...(resources[entry.ns] || {}), ...entry.translations };
+          }
+        });
+      }
+
+      return { locale, resources };
+    } catch (error) {
+      this.warning(`Could not load the "${language}" translation bundle`, { error });
+      return null;
+    }
+  }
+
+  /**
+   * The language currently active in the i18n instance.
+   */
+  getLanguage(): string {
+    if (this.i18n && this.i18n.language) return this.i18n.language;
+    return getStoredLanguage() || DEFAULT_LANGUAGE;
+  }
+
+  /**
+   * The languages the application can be switched into.
+   */
+  getSupportedLanguages(): Array<{ code: string, label: string }> {
+    return (this.supportedLanguages || []).map((language) => ({ ...language }));
+  }
+
+  /**
+   * Switches the active language: loads its bundle on demand when it was not
+   * part of the start-up payload, persists the choice so it survives reloads
+   * and outranks browser detection, then notifies listeners to re-render.
+   */
+  async setLanguage(language: string): Promise<string> {
+    const target = normaliseLanguage(language);
+
+    if (isSupportedLanguage(target) === false) {
+      this.warning(`Ignoring unsupported language "${language}"`);
+      return this.getLanguage();
+    }
+
+    if (this.i18n && this.i18n.isInitialized === false) {
+      await this.initi18n();
+    }
+
+    if (this.loadedLanguages.has(target) === false) {
+      const bundle = await this.fetchTranslationBundle(target);
+      if (!bundle) {
+        this.error(`Could not switch to "${target}": its translation bundle is unavailable`);
+        return this.getLanguage();
+      }
+
+      Object.keys(bundle.resources || {}).forEach((ns) => {
+        this.i18n.addResourceBundle(bundle.locale, ns, bundle.resources[ns], true, true);
+      });
+      this.loadedLanguages.add(bundle.locale);
+    }
+
+    await this.i18n.changeLanguage(target);
+    setStoredLanguage(target);
+    this.emit(ReactoryApiEventNames.onLanguageChanged, target);
+
+    return target;
   }
 
   clearStoreAndCache() {
