@@ -8,6 +8,7 @@ import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
   SUPPORTED_LANGUAGES,
+  buildSupportedLanguages,
   getBrowserLanguages,
   getStoredLanguage,
   isSupportedLanguage,
@@ -135,12 +136,35 @@ describe('language helpers', () => {
   });
 
   describe('languageCandidates', () => {
-    it('puts the active language first and de-duplicates', () => {
+    it('loads the active language plus the default fallback', () => {
       expect(languageCandidates('af')).toEqual(['af', 'en']);
     });
 
-    it('keeps every supported language when the active one is the default', () => {
-      expect(languageCandidates('en')).toEqual(['en', 'af']);
+    it('loads a single language when the active one is already the default', () => {
+      // Preloading every supported locale added a request per language to first
+      // paint; the rest load on demand.
+      expect(languageCandidates('en')).toEqual(['en']);
+    });
+  });
+
+  describe('buildSupportedLanguages', () => {
+    it('builds the selectable list from the languages the server reports', () => {
+      expect(buildSupportedLanguages(['en', 'af'])).toEqual([
+        { code: 'en', label: 'English' },
+        { code: 'af', label: 'Afrikaans' },
+      ]);
+    });
+
+    it('makes an unknown locale selectable with its code as the label', () => {
+      expect(buildSupportedLanguages(['fr'])).toEqual([{ code: 'fr', label: 'fr' }]);
+    });
+
+    it('collapses regional duplicates onto the primary subtag', () => {
+      expect(buildSupportedLanguages(['en-US', 'en'])).toEqual([{ code: 'en', label: 'English' }]);
+    });
+
+    it('falls back to the built-in list when the server reports nothing', () => {
+      expect(buildSupportedLanguages([])).toEqual(SUPPORTED_LANGUAGES);
     });
   });
 });
