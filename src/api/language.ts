@@ -57,8 +57,40 @@ export const LANGUAGE_HEADER = 'x-reactory-language';
 export const normaliseLanguage = (language?: string): string =>
   (language || '').trim().toLowerCase().split(/[-_]/)[0];
 
-export const isSupportedLanguage = (language?: string): boolean =>
-  SUPPORTED_LANGUAGE_CODES.indexOf(normaliseLanguage(language)) >= 0;
+/**
+ * Codes selectable right now: the built-in defaults plus every language the
+ * server has reported.
+ *
+ * This has to be mutable. The server derives its list from the configured
+ * locale folders, so a locale the client does not hardcode (say `fr`) would
+ * otherwise be offered by the selector and then refused by setLanguage, and
+ * never persisted — the opposite of "adding a locale folder is enough".
+ */
+let registeredLanguageCodes: string[] = [...SUPPORTED_LANGUAGE_CODES];
+
+export const isSupportedLanguage = (language?: string): boolean => {
+  const normalised = normaliseLanguage(language);
+  return normalised.length > 0 && registeredLanguageCodes.indexOf(normalised) >= 0;
+};
+
+/**
+ * Records languages the server reports so they become selectable, persistable
+ * and eligible for browser-preference matching.
+ */
+export const registerSupportedLanguages = (codes: string[] = []): string[] => {
+  const merged = [...SUPPORTED_LANGUAGE_CODES];
+  codes.forEach((code) => {
+    const normalised = normaliseLanguage(code);
+    if (normalised && merged.indexOf(normalised) < 0) merged.push(normalised);
+  });
+  registeredLanguageCodes = merged;
+  return registeredLanguageCodes;
+};
+
+/** Restores the built-in list. Intended for tests. */
+export const resetRegisteredLanguages = (): void => {
+  registeredLanguageCodes = [...SUPPORTED_LANGUAGE_CODES];
+};
 
 /**
  * Display labels for languages we know about. Anything the server reports that
@@ -97,7 +129,13 @@ export const buildSupportedLanguages = (codes: string[] = []): SupportedLanguage
     languages.push({ code: normalised, label: languageLabel(normalised) });
   });
 
-  return languages.length > 0 ? languages : [...SUPPORTED_LANGUAGES];
+  if (languages.length === 0) return [...SUPPORTED_LANGUAGES];
+
+  // Register before returning so the same codes are accepted by
+  // setLanguage, persisted, and honoured by browser-preference matching.
+  registerSupportedLanguages(languages.map((language) => language.code));
+
+  return languages;
 };
 
 const safeLocalStorage = (): Storage | null => {

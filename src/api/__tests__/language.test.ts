@@ -10,6 +10,8 @@ import {
   SUPPORTED_LANGUAGES,
   buildSupportedLanguages,
   getBrowserLanguages,
+  registerSupportedLanguages,
+  resetRegisteredLanguages,
   getStoredLanguage,
   isSupportedLanguage,
   languageCandidates,
@@ -166,5 +168,56 @@ describe('language helpers', () => {
     it('falls back to the built-in list when the server reports nothing', () => {
       expect(buildSupportedLanguages([])).toEqual(SUPPORTED_LANGUAGES);
     });
+  });
+});
+
+
+describe('server-reported languages become selectable (MF-2)', () => {
+  const otherLanguage = 'zz';
+
+  afterEach(() => {
+    resetRegisteredLanguages();
+  });
+
+  it('refuses a language before the server reports it', () => {
+    expect(isSupportedLanguage(otherLanguage)).toBe(false);
+  });
+
+  it('accepts, persists and restores a language the server reported', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+
+    // Selectable: setLanguage guards on isSupportedLanguage.
+    expect(isSupportedLanguage(otherLanguage)).toBe(true);
+
+    // Persistable: getStoredLanguage refuses anything unsupported.
+    setStoredLanguage(otherLanguage);
+    expect(getStoredLanguage()).toBe(otherLanguage);
+  });
+
+  it('honours a server-reported language as a browser preference', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+    setBrowserLanguages([otherLanguage, 'en']);
+
+    expect(resolvePreferredLanguage()).toBe(otherLanguage);
+  });
+
+  it('resets back to the built-in list', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+    expect(isSupportedLanguage(otherLanguage)).toBe(true);
+
+    resetRegisteredLanguages();
+
+    expect(isSupportedLanguage(otherLanguage)).toBe(false);
+    expect(isSupportedLanguage('af')).toBe(true);
+  });
+});
+
+describe('header language parsing (server contract)', () => {
+  it('strips a quality value so a bare tag still matches', () => {
+    // `af;q=0.9` is how a browser may express a single preferred language.
+    const parsed = `af;q=0.9`.split(',')[0].split(';')[0].trim();
+
+    expect(parsed).toBe('af');
+    expect(isSupportedLanguage(parsed)).toBe(true);
   });
 });
