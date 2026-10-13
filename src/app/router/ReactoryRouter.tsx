@@ -59,7 +59,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const location = useLocation();
   const reactory = useReactory();
   const { debug, isDevelopmentMode } = reactory;
-  const { auth_validated, authenticating = false, header, footer, user } = props;
+  const { auth_validated, authenticating = false, header, footer, user, languageVersion = 0 } = props;
 
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>(
     () => [...(reactory.getRoutes() || [])],
@@ -254,6 +254,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                   componentArgs={componentArgs}
                   defaultHeader={header}
                   defaultFooter={footer}
+                  languageVersion={languageVersion}
                 />
               </RouteGuard>
             }
@@ -265,8 +266,9 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   );
 };
 
-function arePropsEqual(prev: ReactoryRouterProps, next: ReactoryRouterProps): boolean {
+export function areReactoryRouterPropsEqual(prev: ReactoryRouterProps, next: ReactoryRouterProps): boolean {
   return (
+    prev.languageVersion === next.languageVersion &&
     prev.auth_validated === next.auth_validated &&
     prev.authenticating === next.authenticating &&
     areUserPropsEqual(prev.user, next.user) &&
@@ -275,4 +277,4 @@ function arePropsEqual(prev: ReactoryRouterProps, next: ReactoryRouterProps): bo
   );
 }
 
-export default React.memo(ReactoryRouter, arePropsEqual);
+export default React.memo(ReactoryRouter, areReactoryRouterPropsEqual);

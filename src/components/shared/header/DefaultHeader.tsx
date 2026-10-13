@@ -41,6 +41,8 @@ import {
   toggleRouteInspectorEnabled,
 } from '../../../app/router/inspectorPreference';
 import { WorkflowCommander } from '../WorkflowDesigner/WorkflowCommander';
+import { LanguageSelector } from '../LanguageSelector';
+import { translateMenuTitle } from './menuTitle';
 
 // Configure localForage
 localForage.config({
@@ -265,7 +267,7 @@ const Logged = ({ id, apiStatus, reactory, open, anchorEl }) => {
                 <ListItemIcon>
                   <Icon color="inherit" {...menuItem.iconProps}>{menuItem.icon}</Icon>
                 </ListItemIcon>
-                {menuItem.title}
+                {translateMenuTitle(reactory, menuItem.title)}
               </MenuItem>
             ));
           }
@@ -331,13 +333,21 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     const { path } = routeProps;
     navigateTo(path);
   };
-  const onLoginEvent = () => setVersion(version + 1);
+  const onLoginEvent = () => setVersion((currentVersion) => currentVersion + 1);
   const onApiStatusTotalsChanged = (totals) => setApiStatus(totals);
 
   // Development mode changes visibility of other drawer entries (the route
   // inspector toggle) and therefore needs a header re-render. The toggle itself
   // emits this event; RouteInspectorPreferenceButton already listens on it.
-  const onDevelopmentModeChanged = () => setVersion(version + 1);
+  // Use the functional updater: these handlers are registered once at mount, so
+  // a captured `version` would pin the value and the second invocation onwards
+  // would not change state (and therefore not re-render).
+  const onDevelopmentModeChanged = () => setVersion((currentVersion) => currentVersion + 1);
+
+  // The header renders translated strings through `reactory.i18n.t` directly
+  // (title, menu titles), which i18next cannot re-render on its own. Bump the
+  // version so the header re-reads the active language after a switch.
+  const onLanguageChanged = () => setVersion((currentVersion) => currentVersion + 1);
 
   const navigateTo = (where = '/', toggleDrawer = false) => {
     const nav = () => {
@@ -383,39 +393,10 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     const apiStatus = reactory.$user;
     const { server } = apiStatus;
 
-    const getMenuTitle = (rawTitle: string): string => {
-      if (!rawTitle) return '';
-      if (reactory.i18n && typeof reactory.i18n.t === 'function') {
-        const translated = reactory.i18n.t(rawTitle);
-        if (translated && translated !== rawTitle && !translated.startsWith('reactory.menu.')) {
-          return translated;
-        }
-        const stripped = rawTitle.replace(/^[^:]+:/, '');
-        const strippedTranslated = reactory.i18n.t(stripped);
-        if (strippedTranslated && strippedTranslated !== stripped && !strippedTranslated.startsWith('reactory.menu.')) {
-          return strippedTranslated;
-        }
-      }
-      const fallbacks: Record<string, string> = {
-        'reactory.menu.my-owned-courses': 'Courses Owned',
-        'reactory.menu.classes': 'Classes & Cohorts',
-        'reactory.menu.create-course': 'Create Course',
-        'reactory.menu.create-assignment': 'Create Assignment',
-        'reactory.menu.course-enroll': 'Course Enrollment',
-        'reactory.menu.my-schedule': 'Schedule',
-        'reactory.menu.my-courses': 'My Courses',
-        'reactory.menu.my-tutors': 'My Tutors',
-        'reactory.menu.my-students': 'My Students',
-        'reactory.menu.assignments': 'Assignments',
-        'reactory.menu.home': 'Home',
-        'reactory.menu.library': 'Library',
-        'reactory.menu.courses': 'Courses',
-        'reactory.menu.my-profile': 'Profile',
-        'reactory.menu.markbook': 'Classroom Markbook',
-      };
-      const key = rawTitle.replace(/^[^:]+:/, '');
-      return fallbacks[key] || rawTitle;
-    };
+    // Menu titles are stored as translation keys — optionally namespaced, e.g.
+    // `booktutor:reactory.menu.home` — or as literal text. Resolution is shared
+    // with the top-right menu and the mobile header; see `menuTitle`.
+    const getMenuTitle = (rawTitle: string): string => translateMenuTitle(reactory, rawTitle);
 
     if (apiStatus?.menus?.length) {
       apiStatus.menus.forEach((menu) => {
@@ -532,7 +513,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     menuItems.push(
       <ListItem 
         key="reactory.status" 
-        onClick={() => setVersion(version + 1)}
+        onClick={() => setVersion((currentVersion) => currentVersion + 1)}
         sx={{          
           color: theme.palette.text.primary,          
           '&:hover': {
@@ -578,6 +559,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
     reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.on('onApiStatusTotalsChange', onApiStatusTotalsChanged);
     reactory.on('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
+    reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
 
     return () => {
       reactory.removeListener(ReactoryApiEventNames.onHideMenu, onHideMenu);
@@ -586,6 +568,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
       reactory.removeListener(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
       reactory.removeListener('onApiStatusTotalsChange', onApiStatusTotalsChanged);
       reactory.removeListener('onReactoryDevelopmentModeChanged', onDevelopmentModeChanged);
+      reactory.removeListener(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
     };
   }, []);
 
@@ -657,6 +640,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           {reactory.hasRole(['USER']) === true && (
              <WorkflowCommander variant="toolbar" mode={theme.palette.mode} />
           )}
+
+          <LanguageSelector reactory={reactory} />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>

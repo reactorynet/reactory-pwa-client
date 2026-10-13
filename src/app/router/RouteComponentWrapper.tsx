@@ -134,6 +134,7 @@ export const areRouteComponentWrapperPropsEqual = (
   next: RouteComponentWrapperProps,
 ): boolean => {
   return (
+    prev.languageVersion === next.languageVersion &&
     areRouteConfigsEqual(prev.routeDef, next.routeDef) &&
     isEqual(prev.componentArgs, next.componentArgs) &&
     areReactElementsEqual(prev.defaultHeader, next.defaultHeader) &&

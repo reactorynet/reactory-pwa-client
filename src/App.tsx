@@ -127,15 +127,6 @@ interface ReactoryHOCProps {
   [key: string]: any,
 }
 
-interface ReactoryRouterProps {
-  reactory: Reactory.Client.ReactorySDK,
-  auth_validated: boolean,
-  user: Reactory.Models.IUser,
-  authenticating: boolean,
-  header: React.ReactElement
-  footer: React.ReactElement
-}
-
 export interface LoadingStepState {
   id: string;
   label: string;
@@ -170,6 +161,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   //  const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
+  // Bumped whenever the active language changes. The router and route wrapper
+  // are memoised on their props, so a plain parent re-render does not reach
+  // translated route content; this value is the render input that does.
+  const [languageVersion, setLanguageVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
   // Add flag to prevent re-rendering loops during auth transitions
   const [isAuthTransitioning, setIsAuthTransitioning] = React.useState<boolean>(false);
@@ -406,6 +401,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     });
   };
 
+  // Language changes must re-render the routed tree: components that read
+  // `reactory.i18n.t` (and StaticContent, which refetches for the active
+  // locale) are not subscribed to i18next directly. `languageVersion` is passed
+  // to the router, whose memo comparison honours it.
+  const onLanguageChanged = () => {
+    setLanguageVersion((currentVersion) => currentVersion + 1);
+  };
+
   const onApiStatusUpdate = (status) => {
 
     if (!(status === null || status === undefined)) {
@@ -442,26 +445,29 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.$windowSize = _size_spec;
     reactory.log('ReactoryHOC Resize', _size_spec);
     reactory.emit('onWindowResize', _size_spec);
-    setVersion(version + 1)
+    // Functional updater: this listener is registered once, so a captured
+    // `version` would pin the value and only the first resize would re-render.
+    setVersion((currentVersion) => currentVersion + 1);
+  };
+
+  // Hoisted so the same reference can be added and removed. Registering an
+  // inline arrow meant removal never matched, leaking the listener across
+  // mounts.
+  const onSystemThemeChanged = (evt: { matches: boolean }) => {
+    localStorage.setItem('$reactory$theme_mode', evt.matches === true ? 'dark' : 'light');
+    setVersion((currentVersion) => currentVersion + 1);
   };
 
 
   const willUnmount = () => {
     window.removeEventListener('resize', onWindowResize);
-    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', (evt) => {
-      if (evt.matches === true) {
-        localStorage.setItem('$reactory$theme_mode', 'dark');
-        setVersion(version + 1);
-      } else {
-        localStorage.setItem('$reactory$theme_mode', 'light');
-        setVersion(version + 1);
-      }
-    });
+    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', onSystemThemeChanged);
     reactory.off(ReactoryApiEventNames.onLogout, onLogout)
     reactory.off(ReactoryApiEventNames.onLogin, onLogin)
     reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+    reactory.off(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
     if (initProgressRef.current) {
       reactory.off(ReactoryApiEventNames.onInitProgress, initProgressRef.current);
     }
@@ -503,15 +509,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.reduxStore = store;
 
         window.addEventListener('resize', onWindowResize);
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', (evt) => {
-          if (evt.matches === true) {
-            localStorage.setItem('$reactory$theme_mode', 'dark');
-            setVersion(version + 1);
-          } else {
-            localStorage.setItem('$reactory$theme_mode', 'light');
-            setVersion(version + 1);
-          }
-        });
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', onSystemThemeChanged);
 
         if (localStorage) {
           let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
@@ -531,6 +529,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.on(ReactoryApiEventNames.onLogin, onLogin)
         reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
         reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+        reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
         reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);        
         const query = queryString.parse(window.location.search);
         reactory.queryObject = query;
@@ -682,6 +681,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                           auth_validated={auth_validated}
                           authenticating={isAuthenticating}
                           footer={footer}
+                          languageVersion={languageVersion}
                         />
                       </React.Fragment>}
                     <Offline onOfflineChanged={onOfflineChanged} />

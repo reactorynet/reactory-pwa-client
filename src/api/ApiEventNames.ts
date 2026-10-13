@@ -47,6 +47,7 @@ export const ReactoryApiEventNames = {
   onRouteChanged: 'onRouteChanged',
   onShowNotification: 'onShowNotification',
   onThemeChanged: 'onThemeChanged',
+  onLanguageChanged: 'onLanguageChanged',
   onHideMenu: 'onHideMenu',
   onShowMenu: 'onShowMenu',
   onComponentRegistered: 'onComponentRegistered',
