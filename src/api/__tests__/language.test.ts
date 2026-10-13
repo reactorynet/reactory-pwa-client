@@ -8,7 +8,10 @@ import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
   SUPPORTED_LANGUAGES,
+  buildSupportedLanguages,
   getBrowserLanguages,
+  registerSupportedLanguages,
+  resetRegisteredLanguages,
   getStoredLanguage,
   isSupportedLanguage,
   languageCandidates,
@@ -135,12 +138,86 @@ describe('language helpers', () => {
   });
 
   describe('languageCandidates', () => {
-    it('puts the active language first and de-duplicates', () => {
+    it('loads the active language plus the default fallback', () => {
       expect(languageCandidates('af')).toEqual(['af', 'en']);
     });
 
-    it('keeps every supported language when the active one is the default', () => {
-      expect(languageCandidates('en')).toEqual(['en', 'af']);
+    it('loads a single language when the active one is already the default', () => {
+      // Preloading every supported locale added a request per language to first
+      // paint; the rest load on demand.
+      expect(languageCandidates('en')).toEqual(['en']);
     });
+  });
+
+  describe('buildSupportedLanguages', () => {
+    it('builds the selectable list from the languages the server reports', () => {
+      expect(buildSupportedLanguages(['en', 'af'])).toEqual([
+        { code: 'en', label: 'English' },
+        { code: 'af', label: 'Afrikaans' },
+      ]);
+    });
+
+    it('makes an unknown locale selectable with its code as the label', () => {
+      expect(buildSupportedLanguages(['fr'])).toEqual([{ code: 'fr', label: 'fr' }]);
+    });
+
+    it('collapses regional duplicates onto the primary subtag', () => {
+      expect(buildSupportedLanguages(['en-US', 'en'])).toEqual([{ code: 'en', label: 'English' }]);
+    });
+
+    it('falls back to the built-in list when the server reports nothing', () => {
+      expect(buildSupportedLanguages([])).toEqual(SUPPORTED_LANGUAGES);
+    });
+  });
+});
+
+
+describe('server-reported languages become selectable (MF-2)', () => {
+  const otherLanguage = 'zz';
+
+  afterEach(() => {
+    resetRegisteredLanguages();
+  });
+
+  it('refuses a language before the server reports it', () => {
+    expect(isSupportedLanguage(otherLanguage)).toBe(false);
+  });
+
+  it('accepts, persists and restores a language the server reported', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+
+    // Selectable: setLanguage guards on isSupportedLanguage.
+    expect(isSupportedLanguage(otherLanguage)).toBe(true);
+
+    // Persistable: getStoredLanguage refuses anything unsupported.
+    setStoredLanguage(otherLanguage);
+    expect(getStoredLanguage()).toBe(otherLanguage);
+  });
+
+  it('honours a server-reported language as a browser preference', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+    setBrowserLanguages([otherLanguage, 'en']);
+
+    expect(resolvePreferredLanguage()).toBe(otherLanguage);
+  });
+
+  it('resets back to the built-in list', () => {
+    buildSupportedLanguages(['en', otherLanguage]);
+    expect(isSupportedLanguage(otherLanguage)).toBe(true);
+
+    resetRegisteredLanguages();
+
+    expect(isSupportedLanguage(otherLanguage)).toBe(false);
+    expect(isSupportedLanguage('af')).toBe(true);
+  });
+});
+
+describe('header language parsing (server contract)', () => {
+  it('strips a quality value so a bare tag still matches', () => {
+    // `af;q=0.9` is how a browser may express a single preferred language.
+    const parsed = `af;q=0.9`.split(',')[0].split(';')[0].trim();
+
+    expect(parsed).toBe('af');
+    expect(isSupportedLanguage(parsed)).toBe(true);
   });
 });

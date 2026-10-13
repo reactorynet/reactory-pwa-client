@@ -63,6 +63,7 @@ import {
   DEFAULT_LANGUAGE,
   SUPPORTED_LANGUAGES,
   SUPPORTED_LANGUAGE_CODES,
+  buildSupportedLanguages,
   getStoredLanguage,
   isSupportedLanguage,
   languageCandidates,
@@ -781,6 +782,17 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       languagesToLoad.map((language) => this.fetchTranslationBundle(language)),
     );
 
+    // Adopt the server's language list when it provides one. Adding a locale
+    // folder is then enough to make a language selectable.
+    const serverLanguages = bundles.reduce<string[]>((all, bundle) => {
+      if (bundle && bundle.languages && bundle.languages.length > 0) return bundle.languages;
+      return all;
+    }, []);
+
+    if (serverLanguages.length > 0) {
+      this.supportedLanguages = buildSupportedLanguages(serverLanguages);
+    }
+
     bundles.forEach((bundle) => {
       if (!bundle) return;
       $resources[bundle.locale] = { ...(bundle.resources || {}) };
@@ -822,7 +834,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         debug: this.isDevelopmentMode(),
         lng: activeLanguage,
         fallbackLng: ['en-US', 'en'],
-        supportedLngs: Array.from(new Set([...SUPPORTED_LANGUAGE_CODES, 'en-US', 'en'])),
+        supportedLngs: Array.from(new Set([
+          ...this.supportedLanguages.map((language) => language.code),
+          ...SUPPORTED_LANGUAGE_CODES,
+          'en-US',
+          'en',
+        ])),
         // Treat a regional tag (af-ZA) as supported when its base language (af) is.
         nonExplicitSupportedLngs: true,
         ns: allNamespaces,
@@ -844,11 +861,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * `{ [ns]: translations }` map. A failure resolves to `null` rather than
    * throwing so a single unavailable locale never aborts application start-up.
    */
-  async fetchTranslationBundle(language: string): Promise<{ locale: string, resources: { [ns: string]: any } } | null> {
+  async fetchTranslationBundle(language: string): Promise<{ locale: string, resources: { [ns: string]: any }, languages: string[] } | null> {
     const TRANSLATIONS = `
        query ReactoryTranslation($lang: String) {
         ReactoryTranslation(lang: $lang) {
           id
+          locale
+          languages
           i18n {
             id
             ns
@@ -890,7 +909,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         });
       }
 
-      return { locale, resources };
+      // The server derives these from the configured locale folders, so the
+      // client does not need its own list.
+      const languages = lodash.isArray(payload.languages)
+        ? payload.languages.filter((entry: unknown): entry is string => typeof entry === 'string')
+        : [];
+
+      return { locale, resources, languages };
     } catch (error) {
       this.warning(`Could not load the "${language}" translation bundle`, { error });
       return null;

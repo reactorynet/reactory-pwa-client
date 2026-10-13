@@ -43,20 +43,99 @@ export const SUPPORTED_LANGUAGE_CODES: string[] = SUPPORTED_LANGUAGES.map(
 export const LANGUAGE_STORAGE_KEY = '$reactory$language';
 
 /**
+ * Header carrying the user's language choice to the server.
+ *
+ * Server-authored strings (form titles, schemas, default data) are rendered with
+ * the request's language, so the choice has to travel with every request.
+ */
+export const LANGUAGE_HEADER = 'x-reactory-language';
+
+/**
  * Reduces a BCP-47 tag to its lowercase primary subtag (`af-ZA` -> `af`),
  * matching how the server keys content translations and locale folders.
  */
 export const normaliseLanguage = (language?: string): string =>
   (language || '').trim().toLowerCase().split(/[-_]/)[0];
 
-export const isSupportedLanguage = (language?: string): boolean =>
-  SUPPORTED_LANGUAGE_CODES.indexOf(normaliseLanguage(language)) >= 0;
+/**
+ * Codes selectable right now: the built-in defaults plus every language the
+ * server has reported.
+ *
+ * This has to be mutable. The server derives its list from the configured
+ * locale folders, so a locale the client does not hardcode (say `fr`) would
+ * otherwise be offered by the selector and then refused by setLanguage, and
+ * never persisted — the opposite of "adding a locale folder is enough".
+ */
+let registeredLanguageCodes: string[] = [...SUPPORTED_LANGUAGE_CODES];
+
+export const isSupportedLanguage = (language?: string): boolean => {
+  const normalised = normaliseLanguage(language);
+  return normalised.length > 0 && registeredLanguageCodes.indexOf(normalised) >= 0;
+};
+
+/**
+ * Records languages the server reports so they become selectable, persistable
+ * and eligible for browser-preference matching.
+ */
+export const registerSupportedLanguages = (codes: string[] = []): string[] => {
+  const merged = [...SUPPORTED_LANGUAGE_CODES];
+  codes.forEach((code) => {
+    const normalised = normaliseLanguage(code);
+    if (normalised && merged.indexOf(normalised) < 0) merged.push(normalised);
+  });
+  registeredLanguageCodes = merged;
+  return registeredLanguageCodes;
+};
+
+/** Restores the built-in list. Intended for tests. */
+export const resetRegisteredLanguages = (): void => {
+  registeredLanguageCodes = [...SUPPORTED_LANGUAGE_CODES];
+};
+
+/**
+ * Display labels for languages we know about. Anything the server reports that
+ * is absent here still becomes selectable; it just shows its code.
+ */
+const KNOWN_LABELS: { [code: string]: string } = {
+  en: 'English',
+  'en-US': 'English (US)',
+  af: 'Afrikaans',
+};
 
 /** Human-readable label for a language code, falling back to the code itself. */
 export const languageLabel = (language?: string): string => {
+  if (!language) return '';
   const normalised = normaliseLanguage(language);
   const found = SUPPORTED_LANGUAGES.find((candidate) => candidate.code === normalised);
-  return found ? found.label : language || '';
+  if (found) return found.label;
+  return KNOWN_LABELS[language] || KNOWN_LABELS[normalised] || language;
+};
+
+/**
+ * Builds the selectable list from the languages the server reports.
+ *
+ * The server derives these from the configured locale folders, so adding a
+ * locale no longer requires editing anything on the client. Codes that differ
+ * only by region are collapsed onto their primary subtag.
+ */
+export const buildSupportedLanguages = (codes: string[] = []): SupportedLanguage[] => {
+  const seen: { [code: string]: boolean } = {};
+  const languages: SupportedLanguage[] = [];
+
+  codes.forEach((code) => {
+    const normalised = normaliseLanguage(code);
+    if (!normalised || seen[normalised]) return;
+    seen[normalised] = true;
+    languages.push({ code: normalised, label: languageLabel(normalised) });
+  });
+
+  if (languages.length === 0) return [...SUPPORTED_LANGUAGES];
+
+  // Register before returning so the same codes are accepted by
+  // setLanguage, persisted, and honoured by browser-preference matching.
+  registerSupportedLanguages(languages.map((language) => language.code));
+
+  return languages;
 };
 
 const safeLocalStorage = (): Storage | null => {
@@ -125,13 +204,15 @@ export const resolvePreferredLanguage = (
 };
 
 /**
- * Languages to preload at start-up: the active language first, then the
- * remaining supported languages, then the default. De-duplicated and ordered.
+ * Languages to load at start-up: the active one, then the default so a missing
+ * key still falls back to readable English.
+ *
+ * Deliberately not every supported language: preloading them all added a
+ * request per locale to first paint for translations most users never see. The
+ * rest load on demand from setLanguage.
  */
 export const languageCandidates = (primary: string): string[] => {
-  // SUPPORTED_LANGUAGE_CODES already contains DEFAULT_LANGUAGE; the primary
-  // language is listed first so it wins the de-duplication.
-  const ordered = [normaliseLanguage(primary), ...SUPPORTED_LANGUAGE_CODES];
+  const ordered = [normaliseLanguage(primary), DEFAULT_LANGUAGE];
   const seen: { [code: string]: boolean } = {};
   const candidates: string[] = [];
   ordered.forEach((code) => {

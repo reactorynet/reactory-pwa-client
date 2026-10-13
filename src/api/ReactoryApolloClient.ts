@@ -12,6 +12,7 @@ import { createClient } from 'graphql-ws'
 import createUploadLink from 'apollo-upload-client/createUploadLink.mjs';
 import { fetch } from "whatwg-fetch";
 import { getCache } from './ReactoryApolloCache';
+import { LANGUAGE_HEADER, LANGUAGE_STORAGE_KEY } from './language';
 
 const packageInfo: any = require('../../package.json');
 
@@ -31,6 +32,26 @@ if (localStorage) {
 }
 
 
+
+/**
+ * The language to send with a request: the user's explicit choice when there is
+ * one, otherwise the browser's preference.
+ *
+ * Server-authored strings (form titles, schemas, default data) are rendered in
+ * the request's language, so the choice has to travel with every request — the
+ * server cannot infer it from a shared translation instance.
+ */
+export const requestLanguage = (): string | undefined => {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored) return stored;
+  } catch (storageError) {
+    // Storage can be blocked; fall through to the browser preference.
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.language) return navigator.language;
+  return undefined;
+};
 
 export default async () => {
   let persistedCache: any = null;
@@ -54,9 +75,11 @@ export default async () => {
     // Read the token fresh from localStorage on every request
     // so that token updates (e.g. after logout/login) are picked up immediately
     const currentToken = localStorage.getItem('auth_token');
+    const language = requestLanguage();
     return {
       headers: {
         ...headers,
+        ...(language ? { [LANGUAGE_HEADER]: language } : {}),
         authorization: currentToken ? `Bearer ${currentToken}` : "",
         'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
         'x-client-public-key': `${process.env.REACT_APP_CLIENT_PUBLIC_KEY}`,

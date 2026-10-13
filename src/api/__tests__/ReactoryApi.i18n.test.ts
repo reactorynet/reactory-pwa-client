@@ -103,6 +103,7 @@ const setBrowserLanguages = (languages: string[]) => {
 const BUNDLES: any = {
   af: {
     id: 'af',
+    languages: ['en', 'af'],
     i18n: [
       { id: 'af.reactory', ns: 'reactory', translations: { 'reactory.about.title': 'Oor Reactory' } },
       { id: 'af.common', ns: 'common', translations: { 'common.search': 'Soek' } },
@@ -110,6 +111,7 @@ const BUNDLES: any = {
   },
   en: {
     id: 'en',
+    languages: ['en', 'af'],
     i18n: [
       {
         id: 'en.reactory',
@@ -200,6 +202,19 @@ describe('ReactoryApi language handling', () => {
     expect(api.i18n.t('reactory.about.title')).toBe('About Reactory');
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');
     expect(events).toEqual(['en']);
+  });
+
+  it('adopts the language list the server reports', async () => {
+    const api = makeApi();
+
+    await api.initi18n();
+
+    // The server derives these from the configured locale folders, so the client
+    // no longer carries its own hardcoded list.
+    expect(api.getSupportedLanguages()).toEqual([
+      { code: 'en', label: 'English' },
+      { code: 'af', label: 'Afrikaans' },
+    ]);
   });
 
   it('ignores an unsupported language', async () => {
