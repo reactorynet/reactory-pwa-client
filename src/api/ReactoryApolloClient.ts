@@ -1,5 +1,7 @@
 import {
   ApolloClient,
+  ApolloLink,
+  DocumentNode,
   Resolvers,
   split,
   NormalizedCacheObject
@@ -39,7 +41,9 @@ if (localStorage) {
  *
  * Server-authored strings (form titles, schemas, default data) are rendered in
  * the request's language, so the choice has to travel with every request — the
- * server cannot infer it from a shared translation instance.
+ * server cannot infer it from a shared translation instance. It rides the
+ * `LANGUAGE_HEADER` on HTTP operations and the websocket connection params on
+ * subscriptions.
  */
 export const requestLanguage = (): string | undefined => {
   try {
@@ -87,6 +91,50 @@ export const createAuthLink = () => setContext((_, { headers }) => ({
   headers: buildRequestHeaders(headers),
 }));
 
+/**
+ * True when the operation travels over the websocket (a subscription).
+ *
+ * Takes the Apollo `Operation` that `split` hands its predicate, not a bare
+ * document.
+ */
+export const isSubscriptionOperation = (operation: { query: DocumentNode }): boolean => {
+  const definition = getMainDefinition(operation.query);
+  return definition.kind === 'OperationDefinition' && definition.operation === 'subscription';
+};
+
+/**
+ * The link composition the client actually uses: subscriptions over the
+ * websocket, everything else through the auth chain and then the upload link.
+ *
+ * Exported so a test can drive the **real assembly** rather than the pieces:
+ * dropping `authLink` from this composition, or reordering it, is exactly the
+ * failure mode the language-header test exists to catch, and a test of
+ * `createAuthLink()` in isolation would not notice.
+ */
+export const createSplitLink = (params: {
+  wsLink: ApolloLink;
+  authLink: ApolloLink;
+  uploadLink: ApolloLink;
+}): ApolloLink =>
+  split(isSubscriptionOperation, params.wsLink, params.authLink.concat(params.uploadLink));
+
+/**
+ * Params a subscription connection is opened with.
+ *
+ * A subscription carries no HTTP headers, so the connection params are the only
+ * channel for the language — without it the choice silently does not travel on
+ * that path. Read fresh so token and language changes apply on reconnect.
+ */
+export const buildConnectionParams = (): Record<string, any> => {
+  const currentToken = localStorage.getItem('auth_token');
+  const language = requestLanguage();
+  return {
+    Authorization: `Bearer ${currentToken}`,
+    authToken: currentToken,
+    ...(language ? { [LANGUAGE_HEADER]: language } : {})
+  };
+};
+
 export default async () => {
   let persistedCache: any = null;
   let cache: any = null;
@@ -120,43 +168,15 @@ export default async () => {
   let clientTypeDefs: string[] = [];
   let resolvers: Resolvers[] = [];
 
-  createClient({  
-    url: safeUrl('graph').replace('http', 'ws'),    
-    retryAttempts: 5,
-    connectionParams: () => {
-      const currentToken = localStorage.getItem('auth_token');
-      return {
-        Authorization: `Bearer ${currentToken}`,
-        authToken: currentToken
-      };
-    }    
-  })
-
   const ws_client = createClient({
     url: safeUrl('graph').replace('http', 'ws'),
     retryAttempts: 5,
-    connectionParams: () => {
-      const currentToken = localStorage.getItem('auth_token');
-      return {
-        Authorization: `Bearer ${currentToken}`,
-        authToken: currentToken
-      };
-    }
+    connectionParams: buildConnectionParams,
   })
 
   const ws_link = new GraphQLWsLink(ws_client);
 
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === 'OperationDefinition' &&
-        definition.operation === 'subscription'
-      );
-    },
-    ws_link,
-    authLink.concat(uploadLink),
-  );
+  const splitLink = createSplitLink({ wsLink: ws_link, authLink, uploadLink });
 
   const client: ApolloClient<NormalizedCacheObject> = new ApolloClient<NormalizedCacheObject>({
     link: splitLink,//authLink.concat(uploadLink),

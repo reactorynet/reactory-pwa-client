@@ -42,7 +42,7 @@
     {
       "path": "src/components/shared/UserList/hooks/__tests__/useUserQuery.test.tsx",
       "reason": "Suite exhausts the JavaScript heap even when run alone (FATAL ERROR: heap out of memory), which kills the Jest worker. Likely an unbounded re-render or retry loop in the hook under test.",
-      "issue": "REACTORY-302016408/20261014/1212256892"
+      "issue": "REACTORY-302016408/20261014/812123517"
     }
   ]
 }
