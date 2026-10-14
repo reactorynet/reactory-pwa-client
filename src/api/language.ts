@@ -13,6 +13,8 @@
  * i18next at start-up and again on every change.
  */
 
+import Reactory from '@reactorynet/reactory-core';
+
 export interface SupportedLanguage {
   /** ISO 639-1 primary subtag, e.g. `en`. */
   code: string;
@@ -47,8 +49,12 @@ export const LANGUAGE_STORAGE_KEY = '$reactory$language';
  *
  * Server-authored strings (form titles, schemas, default data) are rendered with
  * the request's language, so the choice has to travel with every request.
+ *
+ * Taken from `@reactorynet/reactory-core` so it cannot drift from the server's
+ * CORS allowlist: when the two names diverged, the header fell out of the
+ * allowlist and every GraphQL request failed its preflight.
  */
-export const LANGUAGE_HEADER = 'x-reactory-language';
+export const LANGUAGE_HEADER = Reactory.LANGUAGE_HEADER;
 
 /**
  * Reduces a BCP-47 tag to its lowercase primary subtag (`af-ZA` -> `af`),

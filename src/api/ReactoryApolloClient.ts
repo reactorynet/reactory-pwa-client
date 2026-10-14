@@ -53,6 +53,40 @@ export const requestLanguage = (): string | undefined => {
   return undefined;
 };
 
+/**
+ * The headers every GraphQL request carries.
+ *
+ * Read fresh on each call so token changes (login/logout) and language changes
+ * take effect immediately. Exported so the language-header coupling can be
+ * asserted directly — a dropped header only surfaces at runtime as a CORS
+ * preflight failure, which presents as "all GraphQL is broken".
+ */
+export const buildRequestHeaders = (headers: Record<string, any> = {}): Record<string, any> => {
+  const currentToken = localStorage.getItem('auth_token');
+  const language = requestLanguage();
+  return {
+    ...headers,
+    ...(language ? { [LANGUAGE_HEADER]: language } : {}),
+    authorization: currentToken ? `Bearer ${currentToken}` : "",
+    'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
+    'x-client-public-key': `${process.env.REACT_APP_CLIENT_PUBLIC_KEY}`,
+    'x-client-version': `${packageInfo.version}`,
+    'x-client-name': REACT_APP_APP_TITLE,
+    'apollo-require-preflight': 'true'
+  };
+};
+
+/**
+ * The link that attaches `buildRequestHeaders` to every request.
+ *
+ * Exported so a test can drive a request through the real link and assert the
+ * language header is attached — `requestLanguage()` returning the right value is
+ * not enough, since the client is the side that silently drops the header.
+ */
+export const createAuthLink = () => setContext((_, { headers }) => ({
+  headers: buildRequestHeaders(headers),
+}));
+
 export default async () => {
   let persistedCache: any = null;
   let cache: any = null;
@@ -71,24 +105,7 @@ export default async () => {
     persistor.purge();
   }
 
-  const authLink = setContext((_, { headers }) => {
-    // Read the token fresh from localStorage on every request
-    // so that token updates (e.g. after logout/login) are picked up immediately
-    const currentToken = localStorage.getItem('auth_token');
-    const language = requestLanguage();
-    return {
-      headers: {
-        ...headers,
-        ...(language ? { [LANGUAGE_HEADER]: language } : {}),
-        authorization: currentToken ? `Bearer ${currentToken}` : "",
-        'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
-        'x-client-public-key': `${process.env.REACT_APP_CLIENT_PUBLIC_KEY}`,
-        'x-client-version': `${packageInfo.version}`,
-        'x-client-name': REACT_APP_APP_TITLE,
-        'apollo-require-preflight': 'true'
-      }
-    }
-  });
+  const authLink = createAuthLink();
 
   const safeUrl = (route: string) => {
     const baseUrl = localStorage.getItem('REACT_APP_API_ENDPOINT') || '';
