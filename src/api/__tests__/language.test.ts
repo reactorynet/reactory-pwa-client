@@ -68,6 +68,16 @@ describe('language helpers', () => {
     });
   });
 
+  it('labels every locale the server can report', () => {
+    // The server derives the selectable set from the locale folders on disk, so
+    // a folder added there has to render a name here, not a bare code.
+    expect(languageLabel('nl')).toBe('Nederlands');
+    expect(languageLabel('de')).toBe('Deutsch');
+    expect(languageLabel('es')).toBe('Español');
+    expect(languageLabel('it')).toBe('Italiano');
+    expect(languageLabel('fr')).toBe('Français');
+  });
+
   it('exposes a label for supported languages', () => {
     expect(SUPPORTED_LANGUAGES.map((language) => language.code)).toContain('af');
     expect(languageLabel('af-ZA')).toBe('Afrikaans');
@@ -158,7 +168,9 @@ describe('language helpers', () => {
     });
 
     it('makes an unknown locale selectable with its code as the label', () => {
-      expect(buildSupportedLanguages(['fr'])).toEqual([{ code: 'fr', label: 'fr' }]);
+      // `zz` is deliberately a code we never label; using a shipped locale here
+      // left the test stale the moment that locale gained a label.
+      expect(buildSupportedLanguages(['zz'])).toEqual([{ code: 'zz', label: 'zz' }]);
     });
 
     it('collapses regional duplicates onto the primary subtag', () => {

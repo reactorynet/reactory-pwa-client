@@ -99,13 +99,24 @@ export const resetRegisteredLanguages = (): void => {
 };
 
 /**
- * Display labels for languages we know about. Anything the server reports that
- * is absent here still becomes selectable; it just shows its code.
+ * Display labels for languages we know about, written as the language names
+ * itself (endonym) so a speaker can recognise their own language in the
+ * selector.
+ *
+ * Anything the server reports that is absent here still becomes selectable; it
+ * just shows its code. The codes are listed explicitly rather than derived from
+ * `Intl.DisplayNames`, which returns inconsistent casing ("Nederlands" but
+ * "español") and renders `en-US` as "American English".
  */
 const KNOWN_LABELS: { [code: string]: string } = {
   en: 'English',
   'en-US': 'English (US)',
   af: 'Afrikaans',
+  nl: 'Nederlands',
+  de: 'Deutsch',
+  es: 'Español',
+  it: 'Italiano',
+  fr: 'Français',
 };
 
 /** Human-readable label for a language code, falling back to the code itself. */
