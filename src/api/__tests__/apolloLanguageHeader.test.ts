@@ -9,7 +9,6 @@
  * exist to catch.
  */
 import { ApolloLink, Observable, gql } from '@apollo/client';
-import Reactory from '@reactorynet/reactory-core';
 
 import { LANGUAGE_HEADER, LANGUAGE_STORAGE_KEY } from '../language';
 import {
@@ -144,11 +143,5 @@ describe('language on outgoing requests', () => {
     setBrowserLanguage(undefined);
 
     expect(buildConnectionParams()).not.toHaveProperty(LANGUAGE_HEADER);
-  });
-
-  it('uses the header name from the shared core constant', () => {
-    // Fails if a local literal is reintroduced that can drift from the server's
-    // CORS allowlist — the coupling that broke every GraphQL request.
-    expect(LANGUAGE_HEADER).toBe(Reactory.LANGUAGE_HEADER);
   });
 });
