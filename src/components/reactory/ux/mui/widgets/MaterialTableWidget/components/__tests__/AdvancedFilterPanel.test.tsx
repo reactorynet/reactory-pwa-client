@@ -20,8 +20,11 @@ const mockSavePreset = jest.fn();
 const mockLoadPreset = jest.fn();
 const mockDeletePreset = jest.fn();
 
+// The component intentionally does NOT forward onFilterChange into the hook: filters are
+// staged locally and pushed up to the query only when the user clicks Apply / Clear All.
+// The mocked callback is therefore optional and must be invoked defensively.
 jest.mock('../../hooks/useAdvancedFilters', () => ({
-  useAdvancedFilters: ({ onFilterChange }: { onFilterChange: (filters: any[]) => void }) => {
+  useAdvancedFilters: ({ onFilterChange }: { onFilterChange?: (filters: any[]) => void }) => {
     return {
       filters: mockFilters,
       setFilter: (field: string, value: any, operator: string) => {
@@ -32,17 +35,17 @@ jest.mock('../../hooks/useAdvancedFilters', () => ({
         } else {
           mockFilters.push({ field, value, operator });
         }
-        onFilterChange(mockFilters);
+        onFilterChange?.(mockFilters);
       },
       removeFilter: (field: string) => {
         mockRemoveFilter(field);
         mockFilters = mockFilters.filter(f => f.field !== field);
-        onFilterChange(mockFilters);
+        onFilterChange?.(mockFilters);
       },
       clearFilters: () => {
         mockClearFilters();
         mockFilters = [];
-        onFilterChange([]);
+        onFilterChange?.([]);
       },
       activeFilterCount: mockFilters.length,
       presets: mockPresets,

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export interface QuickFilterDefinition {
   id: string;
@@ -63,17 +63,25 @@ export const useQuickFilters = ({
   const isControlled = controlledActiveFilters !== undefined;
   const activeFilters = isControlled ? controlledActiveFilters : internalActiveFilters;
 
+  // Mirror the latest selection in a ref and compute the next selection from that ref
+  // rather than from the render-time `activeFilters` closure.
+  //
+  // `toggleFilter` must not call onFilterChange from inside a setState updater: that makes
+  // the updater impure, and React may invoke it more than once (and against evolving state),
+  // which previously emitted BOTH the newly selected filter and an immediate "cleared"
+  // selection. Computing outside the updater, however, meant that two toggles dispatched in
+  // the same batch each read the same stale closure value and the second overwrote the
+  // first (so toggling two filters in one batch kept only the last one). Reading the latest
+  // value from a ref lets consecutive synchronous toggles compose while still keeping the
+  // callback side effect outside the updater.
+  const latestActiveFiltersRef = useRef<string[]>(activeFilters);
+  useEffect(() => {
+    latestActiveFiltersRef.current = activeFilters;
+  }, [activeFilters]);
+
   const toggleFilter = useCallback(
     (filterId: string) => {
-      // Compute the next selection OUTSIDE the state updater.
-      //
-      // Calling onFilterChange from within a setState updater is a side effect inside an
-      // impure function. React may invoke an updater more than once (and against evolving
-      // state), which emitted BOTH the newly selected filter and an immediate "cleared"
-      // selection. The cleared emission produced a second, unfiltered query that landed
-      // after the filtered one, so the grid always reverted to the full list and every
-      // quick filter appeared to do nothing.
-      const prev = activeFilters;
+      const prev = latestActiveFiltersRef.current;
       let newFilters: string[];
 
       if (multiSelect) {
@@ -86,16 +94,23 @@ export const useQuickFilters = ({
         newFilters = prev.includes(filterId) ? [] : [filterId];
       }
 
-      setActiveFilters(newFilters);
+      if (!isControlled) {
+        // Advance the ref synchronously so another toggle in the same batch sees this value.
+        latestActiveFiltersRef.current = newFilters;
+        setActiveFilters(newFilters);
+      }
       onFilterChange?.(newFilters);
     },
-    [activeFilters, multiSelect, onFilterChange]
+    [isControlled, multiSelect, onFilterChange]
   );
 
   const clearFilters = useCallback(() => {
-    setActiveFilters([]);
+    if (!isControlled) {
+      latestActiveFiltersRef.current = [];
+      setActiveFilters([]);
+    }
     onFilterChange?.([]);
-  }, [onFilterChange]);
+  }, [isControlled, onFilterChange]);
 
   const isActive = useCallback(
     (filterId: string) => activeFilters.includes(filterId),

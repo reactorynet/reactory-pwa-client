@@ -231,7 +231,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   return (
     <>
-      <Drawer anchor="right" open={open} onClose={onClose} keepMounted>
+      <Drawer anchor="right" open={open} onClose={onClose}>
         <Box sx={{ width: 400, p: 3 }}>
           {/* Header */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
