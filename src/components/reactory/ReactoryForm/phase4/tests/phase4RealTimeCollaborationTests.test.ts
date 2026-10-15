@@ -24,8 +24,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     // rewritten to something meaningless.
 
     test('should have proper configuration interface', () => {
-      const { CollaborationConfig } = require('../collaboration/useRealTimeCollaboration');
-      
       const validConfig = {
         enabled: true,
         wsUrl: 'ws://localhost:8080/collaboration',
@@ -55,8 +53,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support collaboration user interface', () => {
-      const { CollaborationUser } = require('../collaboration/useRealTimeCollaboration');
-      
       const validUser = {
         id: 'user-1',
         name: 'Test User',
@@ -90,8 +86,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support collaboration change interface', () => {
-      const { CollaborationChange } = require('../collaboration/useRealTimeCollaboration');
-      
       const validChange = {
         id: 'change-1',
         userId: 'user-1',
@@ -116,8 +110,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support conflict resolution interface', () => {
-      const { ConflictResolution } = require('../collaboration/useRealTimeCollaboration');
-      
       const validConflict = {
         id: 'conflict-1',
         changeId: 'change-1',
@@ -188,8 +180,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support cursor position interface', () => {
-      const { CursorPosition } = require('../collaboration/useRealTimeCollaboration');
-      
       const validCursor = {
         x: 100,
         y: 200,
@@ -205,8 +195,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support selection interface', () => {
-      const { Selection } = require('../collaboration/useRealTimeCollaboration');
-      
       const validSelection = {
         start: 0,
         end: 10,
@@ -237,8 +225,6 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     // test above.
 
     test('should support collaboration state interface', () => {
-      const { CollaborationState } = require('../collaboration/useRealTimeCollaboration');
-      
       const validState = {
         users: [{
           id: 'user-1',
