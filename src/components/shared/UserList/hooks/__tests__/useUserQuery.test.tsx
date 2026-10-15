@@ -289,4 +289,37 @@ describe('useUserQuery', () => {
       expect(mockReactory.graphqlQuery).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('should refetch when a non-JSON-safe value inside filters changes content', async () => {
+    // Regression guard: the hook keys its memos on the *content* of `filters`.
+    // `JSON.stringify` alone is blind to Set/Map (they serialise to `{}`), which
+    // would make a content change invisible and silently reuse the old value.
+    const mockGraphqlQuery = {
+      name: 'ReactoryUsers',
+      text: 'query ReactoryUsers { users { id email } }',
+    };
+
+    mockReactory.graphqlQuery.mockResolvedValue({
+      data: { ReactoryUsers: { users: [], paging: { total: 0 } } },
+    });
+
+    const { rerender } = renderHook(
+      ({ filters }: { filters: any }) =>
+        useUserQuery({ graphqlQuery: mockGraphqlQuery, filters }),
+      { initialProps: { filters: { customFilters: { tags: new Set(['a']) } } } }
+    );
+
+    await waitFor(() => {
+      expect(mockReactory.graphqlQuery).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ filters: { customFilters: { tags: new Set(['b']) } } });
+
+    await waitFor(() => {
+      expect(mockReactory.graphqlQuery).toHaveBeenCalledTimes(2);
+    });
+
+    const lastFilter = mockReactory.graphqlQuery.mock.calls[1][1].filter;
+    expect(Array.from(lastFilter.customFilters.tags)).toEqual(['b']);
+  });
 });

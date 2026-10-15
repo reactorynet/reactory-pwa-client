@@ -30,7 +30,12 @@ const loadStoredPresets = (): FilterPreset[] => {
   try {
     const stored = localStorage.getItem(FILTER_PRESETS_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Guard against a corrupted/legacy non-array payload rather than letting
+      // it propagate into state and crash `.map`/`.find` consumers.
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
     }
   } catch (error) {
     console.error('Failed to load filter presets:', error);

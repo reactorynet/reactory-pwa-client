@@ -170,6 +170,7 @@ export interface UserListProps {
   // Selection Configuration
   selectionMode?: SelectionMode;
   initialSelected?: Reactory.Models.IUser[];
+  /** Max selected users in `multiple` mode; selections beyond it are rejected. */
   maxSelection?: number;
   onSelectionChange?: (selected: Reactory.Models.IUser[]) => void;
   onUserSelect?: (user: Reactory.Models.IUser) => void;
@@ -235,6 +236,12 @@ export interface UserListProps {
 export interface UseUserSelectionOptions {
   mode: SelectionMode;
   initialSelected?: Reactory.Models.IUser[];
+  /**
+   * Upper bound on the number of selected users in `multiple` mode. Selections
+   * beyond the limit are rejected (not evicted), i.e. the existing selection is
+   * preserved and the extra user is ignored. `selectAll` takes the first N.
+   * Ignored in `single`/`none` mode.
+   */
   maxSelection?: number;
   onSelectionChange?: (selected: Reactory.Models.IUser[]) => void;
 }

@@ -18,6 +18,35 @@ import type {
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 /**
+ * Content key for a hook option: stable across renders and independent of key
+ * order. It lets the memos/effects below depend on the *content* of an option
+ * object instead of its (unstable) identity.
+ *
+ * IMPORTANT: `JSON.stringify` alone cannot see `Set`/`Map`/`Date` (they
+ * serialise to `{}`), which would make an in-place content change invisible to
+ * the memo and send the previous value. Those types are handled explicitly. If
+ * another non-JSON-safe value is added to `filters`/`advancedFilters`, extend
+ * this helper or the change will be silently ignored.
+ */
+const contentKey = (value: unknown): string =>
+  JSON.stringify(value, (_key, val) => {
+    if (val instanceof Date) return `__date:${val.toISOString()}`;
+    if (val instanceof Set) return `__set:${JSON.stringify(Array.from(val).sort())}`;
+    if (val instanceof Map) {
+      return `__map:${JSON.stringify(Array.from(val.entries()).sort())}`;
+    }
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      return Object.keys(val)
+        .sort()
+        .reduce((acc: Record<string, unknown>, k) => {
+          acc[k] = (val as Record<string, unknown>)[k];
+          return acc;
+        }, {});
+    }
+    return val;
+  });
+
+/**
  * Hook for querying users with filtering, pagination, and search
  *
  * @param options - Configuration options
@@ -75,12 +104,12 @@ export const useUserQuery = ({
   // serialised *content* of those options, so the derived values keep a stable
   // identity until the content genuinely changes.
   const quickFiltersKey = quickFilters
-    ? Array.from(quickFilters).sort().join('|')
+    ? JSON.stringify(Array.from(quickFilters).sort())
     : '';
   const advancedFiltersKey = advancedFilters
-    ? JSON.stringify(advancedFilters)
+    ? contentKey(advancedFilters)
     : '';
-  const filtersKey = filters ? JSON.stringify(filters) : '';
+  const filtersKey = filters ? contentKey(filters) : '';
   const graphqlQueryKey = graphqlQuery
     ? `${graphqlQuery.name ?? ''}::${graphqlQuery.text ?? ''}`
     : '';
@@ -172,14 +201,18 @@ export const useUserQuery = ({
 
         if (!graphqlQuery?.text || !graphqlQuery.text.trim()) {
           // No query configured (or blank query text). This is a normal "nothing to
-          // fetch" state, not an error — surface it as empty/loaded and move on.
+          // fetch" state, not an error. Clear any previously-loaded results too, so
+          // that removing/changing the query never leaves the last user's list on
+          // screen (consistent with the `skip` branch above).
           reactory?.log(
             '[useUserQuery] No GraphQL query text provided; skipping fetch',
             { graphqlQuery },
             'debug'
           );
-          setError(null);
+          setUsers([]);
+          setTotalCount(0);
           setLoading(false);
+          setError(null);
           return;
         }
 
