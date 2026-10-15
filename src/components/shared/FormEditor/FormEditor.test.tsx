@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import FormEditor from './FormEditor';
 
@@ -29,9 +29,20 @@ jest.mock('../../reactory', () => {
 
 const { __renderCounts: renderCounts } = jest.requireMock('../../reactory');
 
-// Mock the JsonSchemaEditor component
+// The Schema and UI-Schema panels open in the visual editor (a deliberate
+// default); the assertions below cover the JSON editor surface, so switch the
+// panel's "Visual Editor" toggle off before querying it.
+const showJsonEditor = (panel: HTMLElement) => {
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /visual editor/i }));
+};
+
+// Mock the JsonSchemaEditor component. The real module is a *default* export
+// (../JsonSchemaEditor/index.ts re-exports JsonSchemaEditorComponent as the
+// default), so the mock must expose it on `default` with __esModule for the
+// editor's `import JsonSchemaEditor from '../JsonSchemaEditor'` to resolve.
 jest.mock('../JsonSchemaEditor', () => ({
-  JsonSchemaEditor: ({ value, onChange, label }: any) => (
+  __esModule: true,
+  default: ({ value, onChange, label }: any) => (
     <div data-testid="json-schema-editor">
       <label>{label}</label>
       <textarea
@@ -55,10 +66,12 @@ describe('FormEditor', () => {
     test('renders all tabs correctly', () => {
       render(<FormEditor />);
 
-      expect(screen.getByRole('tab', { name: /general/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /schema/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /ui schema/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /preview/i })).toBeInTheDocument();
+      // Anchored names: the editor has both a "Schema" and a "UI Schema" tab,
+      // so an unanchored /schema/i matcher is ambiguous and matches two tabs.
+      expect(screen.getByRole('tab', { name: /^general$/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /^schema$/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /^ui schema$/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /^preview$/i })).toBeInTheDocument();
     });
 
     test('renders general tab content by default', () => {
@@ -120,32 +133,40 @@ describe('FormEditor', () => {
     test('switches to schema tab when clicked', () => {
       render(<FormEditor />);
 
-      const schemaTab = screen.getByRole('tab', { name: /schema/i });
+      const schemaTab = screen.getByRole('tab', { name: /^schema$/i });
       fireEvent.click(schemaTab);
 
-      expect(screen.getByText('Data Schema Validation')).toBeInTheDocument();
-      expect(screen.getByTestId('json-schema-editor')).toBeInTheDocument();
-      expect(screen.getByText('Form Data Schema')).toBeInTheDocument();
+      // Scope to the active panel - only the selected tabpanel is visible.
+      const panel = screen.getByRole('tabpanel');
+      expect(within(panel).getByRole('alert')).toHaveTextContent('Data Schema Validation');
+
+      showJsonEditor(panel);
+      expect(within(panel).getByTestId('json-schema-editor')).toBeInTheDocument();
+      expect(within(panel).getByText('Form Data Schema')).toBeInTheDocument();
     });
 
     test('switches to UI schema tab when clicked', () => {
       render(<FormEditor />);
 
-      const uiSchemaTab = screen.getByRole('tab', { name: /ui schema/i });
+      const uiSchemaTab = screen.getByRole('tab', { name: /^ui schema$/i });
       fireEvent.click(uiSchemaTab);
 
-      expect(screen.getByText('UI Schema Validation')).toBeInTheDocument();
-      expect(screen.getByText('Form UI Schema')).toBeInTheDocument();
+      const panel = screen.getByRole('tabpanel');
+      expect(within(panel).getByRole('alert')).toHaveTextContent('UI Schema Validation');
+
+      showJsonEditor(panel);
+      expect(within(panel).getByText('Form UI Schema')).toBeInTheDocument();
     });
 
     test('switches to preview tab when clicked', () => {
       render(<FormEditor />);
 
-      const previewTab = screen.getByRole('tab', { name: /preview/i });
+      const previewTab = screen.getByRole('tab', { name: /^preview$/i });
       fireEvent.click(previewTab);
 
-      expect(screen.getByText('Form Preview')).toBeInTheDocument();
-      expect(screen.getByText('Form Preview Status')).toBeInTheDocument();
+      const panel = screen.getByRole('tabpanel');
+      expect(within(panel).getByText('Form Preview')).toBeInTheDocument();
+      expect(within(panel).getByRole('alert')).toHaveTextContent('Form Preview Status');
     });
   });
 
@@ -153,34 +174,36 @@ describe('FormEditor', () => {
     test('shows validation success for valid schema', async () => {
       render(<FormEditor />);
 
-      const schemaTab = screen.getByRole('tab', { name: /schema/i });
+      const schemaTab = screen.getByRole('tab', { name: /^schema$/i });
       fireEvent.click(schemaTab);
 
       // Enter valid JSON schema
+      showJsonEditor(screen.getByRole('tabpanel'));
       const textarea = screen.getByTestId('schema-textarea');
       const validSchema = '{"type": "object", "properties": {"name": {"type": "string"}}}';
 
       fireEvent.change(textarea, { target: { value: validSchema } });
 
       await waitFor(() => {
-        expect(screen.getByText('Data Schema Validation: Valid')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Data Schema Validation: Valid');
       });
     });
 
     test('shows validation errors for invalid schema', async () => {
       render(<FormEditor />);
 
-      const schemaTab = screen.getByRole('tab', { name: /schema/i });
+      const schemaTab = screen.getByRole('tab', { name: /^schema$/i });
       fireEvent.click(schemaTab);
 
       // Enter invalid JSON
+      showJsonEditor(screen.getByRole('tabpanel'));
       const textarea = screen.getByTestId('schema-textarea');
       const invalidSchema = '{"type": "object", "properties": {"name": {"type": "invalid_type"}}}';
 
       fireEvent.change(textarea, { target: { value: invalidSchema } });
 
       await waitFor(() => {
-        expect(screen.getByText('Data Schema Validation')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Data Schema Validation');
       });
     });
   });
@@ -232,15 +255,21 @@ describe('FormEditor', () => {
     test('updates internal state when schema changes', () => {
       render(<FormEditor />);
 
-      const schemaTab = screen.getByRole('tab', { name: /schema/i });
+      const schemaTab = screen.getByRole('tab', { name: /^schema$/i });
       fireEvent.click(schemaTab);
 
+      showJsonEditor(screen.getByRole('tabpanel'));
       const textarea = screen.getByTestId('schema-textarea');
       const newSchema = '{"type": "object", "properties": {"test": {"type": "string"}}}';
 
       fireEvent.change(textarea, { target: { value: newSchema } });
 
-      expect(textarea).toHaveValue(newSchema);
+      // The editor is a controlled JSON view: it renders the parsed schema
+      // re-serialised, not the raw keystrokes, so compare the parsed value.
+      expect(JSON.parse((textarea as HTMLTextAreaElement).value)).toEqual({
+        type: 'object',
+        properties: { test: { type: 'string' } },
+      });
     });
   });
 
@@ -259,10 +288,10 @@ describe('FormEditor', () => {
       // For now, we test the basic preview structure
       render(<FormEditor />);
 
-      const previewTab = screen.getByRole('tab', { name: /preview/i });
+      const previewTab = screen.getByRole('tab', { name: /^preview$/i });
       fireEvent.click(previewTab);
 
-      expect(screen.getByText('Form Preview Status')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Form Preview Status');
     });
   });
 

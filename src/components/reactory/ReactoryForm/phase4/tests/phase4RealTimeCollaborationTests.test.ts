@@ -11,25 +11,17 @@ describe('Phase 4.1: Real-time Collaboration', () => {
       expect(typeof useRealTimeCollaboration).toBe('function');
     });
 
-    test('should export collaboration types', () => {
-      const {
-        CollaborationUser,
-        CursorPosition,
-        Selection,
-        CollaborationChange,
-        ConflictResolution,
-        CollaborationState,
-        CollaborationConfig,
-      } = require('../collaboration/useRealTimeCollaboration');
-
-      expect(CollaborationUser).toBeDefined();
-      expect(CursorPosition).toBeDefined();
-      expect(Selection).toBeDefined();
-      expect(CollaborationChange).toBeDefined();
-      expect(ConflictResolution).toBeDefined();
-      expect(CollaborationState).toBeDefined();
-      expect(CollaborationConfig).toBeDefined();
-    });
+    // Removed: "should export collaboration types".
+    //
+    // That test destructured CollaborationUser, CursorPosition, Selection,
+    // CollaborationChange, ConflictResolution, CollaborationState and
+    // CollaborationConfig from the module and asserted each was defined at
+    // runtime. All seven are TypeScript `interface` declarations, which are
+    // erased at compile time and therefore can never be values returned by
+    // require(). The interfaces are still declared and exported (see
+    // collaboration/useRealTimeCollaboration.ts) and are enforced by the
+    // compiler, so the assertion was never valid and is deleted rather than
+    // rewritten to something meaningless.
 
     test('should have proper configuration interface', () => {
       const { CollaborationConfig } = require('../collaboration/useRealTimeCollaboration');
@@ -151,10 +143,10 @@ describe('Phase 4.1: Real-time Collaboration', () => {
       expect(typeof PresenceIndicators).toBe('function');
     });
 
-    test('should export presence indicators props interface', () => {
-      const { PresenceIndicatorsProps } = require('../collaboration/PresenceIndicators');
-      expect(PresenceIndicatorsProps).toBeDefined();
-    });
+    // Removed: "should export presence indicators props interface".
+    // PresenceIndicatorsProps is a type-only export (an interface), erased at
+    // runtime; the PresenceIndicators component itself is covered by the test
+    // above.
 
     test('should support presence indicators configuration', () => {
       const validProps = {
@@ -239,10 +231,10 @@ describe('Phase 4.1: Real-time Collaboration', () => {
       expect(typeof CollaborationToolbar).toBe('function');
     });
 
-    test('should export collaboration toolbar props interface', () => {
-      const { CollaborationToolbarProps } = require('../collaboration/CollaborationToolbar');
-      expect(CollaborationToolbarProps).toBeDefined();
-    });
+    // Removed: "should export collaboration toolbar props interface".
+    // CollaborationToolbarProps is a type-only export (an interface), erased at
+    // runtime; the CollaborationToolbar component itself is covered by the
+    // test above.
 
     test('should support collaboration state interface', () => {
       const { CollaborationState } = require('../collaboration/useRealTimeCollaboration');

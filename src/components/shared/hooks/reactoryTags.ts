@@ -124,9 +124,12 @@ export const parseReactoryTag = (raw: string): ReactoryTag | null => {
 
     if (name.startsWith('reactory-props-')) {
       const propName = name.slice('reactory-props-'.length);
-      let propValue = value;
-      propValue = propValue.replace(/^(&quot;|["'])+/, '').replace(/(&quot;|["'])+$/, '');
-      const coerced = coerceTagValue(propValue);
+      // Deliberately do not strip surrounding quotes here. `decodeEntities`
+      // above has already turned `&quot;quoted&quot;` into the literal value
+      // `"quoted"`, and those quotes are part of the prop. The wrapper-quote
+      // decontamination that 5ef0542b introduced belongs on the component FQN
+      // only (below), where a surrounding quote can never be legitimate.
+      const coerced = coerceTagValue(value);
       if (coerced !== undefined) props[propName] = coerced;
     }
   }
