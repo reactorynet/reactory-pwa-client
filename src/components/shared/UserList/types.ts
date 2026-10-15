@@ -97,6 +97,8 @@ export interface FilterPreset {
   id: string;
   name: string;
   filters: AdvancedFilter[];
+  /** Active quick-filter ids captured with the preset (optional for legacy presets). */
+  quickFilters?: string[];
   createdAt: Date;
   isDefault?: boolean;
 }
