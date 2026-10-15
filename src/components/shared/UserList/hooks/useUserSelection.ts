@@ -94,7 +94,8 @@ export const useUserSelection = ({
 
   /**
    * Select a user
-   * In single mode, clears existing selection first
+   * In single mode, clears existing selection first.
+   * In multiple mode, never exceeds `maxSelection` (when provided).
    */
   const selectUser = useCallback(
     (userId: string, user: Reactory.Models.IUser): void => {
@@ -102,19 +103,41 @@ export const useUserSelection = ({
         return;
       }
 
+      // `selectedIds` and `selectedUsers` are kept in lock-step; the same rule is
+      // applied to each updater so they stay consistent.
       setSelectedIds((prev) => {
-        const newSet = mode === 'single' ? new Set<string>() : new Set(prev);
+        if (prev.has(userId)) {
+          return prev;
+        }
+        if (mode === 'single') {
+          return new Set<string>([userId]);
+        }
+        if (typeof maxSelection === 'number' && prev.size >= maxSelection) {
+          return prev;
+        }
+        const newSet = new Set(prev);
         newSet.add(userId);
         return newSet;
       });
 
       setSelectedUsers((prev) => {
-        const newMap = mode === 'single' ? new Map() : new Map(prev);
+        if (prev.has(userId)) {
+          return prev;
+        }
+        if (mode === 'single') {
+          const newMap = new Map<string, Reactory.Models.IUser>();
+          newMap.set(userId, user);
+          return newMap;
+        }
+        if (typeof maxSelection === 'number' && prev.size >= maxSelection) {
+          return prev;
+        }
+        const newMap = new Map(prev);
         newMap.set(userId, user);
         return newMap;
       });
     },
-    [mode, canSelect]
+    [mode, canSelect, maxSelection]
   );
 
   /**
@@ -151,7 +174,7 @@ export const useUserSelection = ({
   /**
    * Select all users from the provided list
    * Only works in multiple selection mode
-   * Skips excluded users
+   * Skips excluded users and respects `maxSelection` (when provided)
    */
   const selectAll = useCallback(
     (users: Reactory.Models.IUser[]): void => {
@@ -163,16 +186,20 @@ export const useUserSelection = ({
       const newSelectedUsers = new Map<string, Reactory.Models.IUser>();
 
       users.forEach((user) => {
-        if (!excludedIds.has(user.id)) {
-          newSelectedIds.add(user.id);
-          newSelectedUsers.set(user.id, user);
+        if (excludedIds.has(user.id)) {
+          return;
         }
+        if (typeof maxSelection === 'number' && newSelectedIds.size >= maxSelection) {
+          return;
+        }
+        newSelectedIds.add(user.id);
+        newSelectedUsers.set(user.id, user);
       });
 
       setSelectedIds(newSelectedIds);
       setSelectedUsers(newSelectedUsers);
     },
-    [mode, excludedIds]
+    [mode, excludedIds, maxSelection]
   );
 
   /**
