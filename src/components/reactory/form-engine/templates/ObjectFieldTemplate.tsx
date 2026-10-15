@@ -4,6 +4,14 @@
  * before reaching us (so `p.content` carries correct ids and registry wiring),
  * and here we lay them out with the object's title and description.
  *
+ * **The layout is the render list.** With a `ui:grid-layout` present, only the
+ * properties it names are rendered — matching the legacy `MaterialGridField`
+ * (`ux/mui/fields/MaterialGridField.tsx`), which iterates the layout rows and
+ * looks each name up in `schema.properties`; it never enumerates
+ * `schema.properties` itself. Rendering the whole schema instead leaked
+ * data-only properties (GraphQL result/error carriers such as `message`) into
+ * forms as empty inputs. See REACTORY-302016408/20261014/2327145804.
+ *
  * Layout resolution, in priority order:
  *   1. `ui:grid-layout` — Reactory's responsive 12-column grid. An array of
  *      row objects, each mapping a property path to MUI breakpoint sizes:
@@ -18,6 +26,7 @@
  *      property, so a row can describe the widths of fields owned by a nested
  *      object without that object being rendered at this level.
  *   2. `ui:options.layout === 'grid'` — grid with every property full width.
+ *      No declaration list exists here, so every property still renders.
  *   3. Default — a single-column vertical stack.
  *
  * The fieldset/legend structure is preserved from the previous implementation
@@ -27,7 +36,7 @@
 
 import * as React from 'react';
 import { Box, Icon, Typography } from '@mui/material';
-import type { ObjectFieldTemplateProps } from '@rjsf/utils';
+import type { ObjectFieldTemplateProps, ObjectFieldTemplatePropertyType } from '@rjsf/utils';
 import { toRenderableTitle } from '../utils/renderableTitle';
 
 type BreakpointSizes = Partial<Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', number>>;
@@ -74,6 +83,84 @@ export function buildGridSpans(gridLayout: unknown): Record<string, unknown> {
   return spans;
 }
 
+/**
+ * Does the field opt out of rendering through a Reactory-specific mechanism?
+ *
+ * rjsf only sets its own `hidden` flag for `ui:widget: 'hidden'` (lowercase;
+ * see `@rjsf/core` `ObjectField.js`). Reactory adds two mechanisms rjsf knows
+ * nothing about:
+ *   - `ui:widget: 'HiddenWidget'` — the legacy alias, used by many migrated
+ *     forms (Organization, UserPeers, classroom forms, ...).
+ *   - `ui:hidden` — boolean or predicate callback (see `FieldTemplate`).
+ *
+ * Both must be honoured here as well as in the field template: otherwise the
+ * property still contributes a wrapper element and therefore an *empty grid
+ * cell*, which reads as a gap in the layout.
+ */
+export function isHiddenByReactoryUi(
+  name: string,
+  uiSchema: Record<string, unknown> | undefined,
+  callbackArgs: {
+    formData: unknown;
+    formContext: unknown;
+    idSchema: unknown;
+    schema: unknown;
+  },
+): boolean {
+  const fieldUiSchema = uiSchema?.[name];
+  if (!fieldUiSchema || typeof fieldUiSchema !== 'object') return false;
+  const fieldUi = fieldUiSchema as Record<string, unknown>;
+
+  const widget = fieldUi['ui:widget'];
+  if (widget === 'hidden' || widget === 'HiddenWidget') return true;
+
+  const hidden = fieldUi['ui:hidden'];
+  if (hidden === true) return true;
+  if (typeof hidden === 'function') {
+    try {
+      return (hidden as (args: unknown) => unknown)({ ...callbackArgs, uiSchema: fieldUi }) === true;
+    } catch {
+      // A throwing predicate must not take the form down; default to visible,
+      // matching `FieldTemplate.isFieldHidden`.
+      return false;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Resolve the properties an object template should render.
+ *
+ * Legacy parity rule (see the module header): when the form declares a
+ * `ui:grid-layout`, that layout is the render list — a schema property it does
+ * not name is not rendered. When no layout is present the previous behaviour is
+ * kept and every non-hidden property renders.
+ *
+ * `hasDeclaredLayout` is gated on a *derivable* span map (rather than merely on
+ * `ui:grid-layout` being a non-empty array) so a malformed layout cannot blank
+ * an entire form.
+ */
+export function selectVisibleProperties(
+  properties: ObjectFieldTemplatePropertyType[],
+  gridSpans: Record<string, unknown>,
+  hasDeclaredLayout: boolean,
+  uiSchema: Record<string, unknown> | undefined,
+  callbackArgs: {
+    formData: unknown;
+    formContext: unknown;
+    idSchema: unknown;
+    schema: unknown;
+  },
+): ObjectFieldTemplatePropertyType[] {
+  return properties.filter((property) => {
+    if (property.hidden) return false;
+    if (isHiddenByReactoryUi(property.name, uiSchema, callbackArgs)) return false;
+    if (hasDeclaredLayout && gridSpans[property.name] === undefined) return false;
+    return true;
+  });
+}
+
 export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): React.ReactElement {
   const {
     title,
@@ -86,6 +173,8 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
     onAddClick,
     disabled,
     readonly,
+    formData,
+    formContext,
   } = props;
 
   const uiOptions = ((uiSchema as Record<string, unknown> | undefined)?.['ui:options'] ?? {}) as Record<string, unknown>;
@@ -110,7 +199,16 @@ export function ReactoryObjectFieldTemplate(props: ObjectFieldTemplateProps): Re
     toRenderableTitle(title) ?? toRenderableTitle((schema as { title?: unknown } | undefined)?.title);
   const showTitle = labelOverride !== false && Boolean(renderableTitle);
 
-  const visible = properties.filter((p) => !p.hidden);
+  // Only restrict to the layout when spans were actually derivable from it, so a
+  // malformed `ui:grid-layout` degrades to the previous render-all behaviour
+  // instead of blanking the form.
+  const visible = selectVisibleProperties(
+    properties,
+    gridSpans,
+    hasGridLayout,
+    uiSchema as Record<string, unknown> | undefined,
+    { formData, formContext, idSchema, schema },
+  );
 
   const rendered = useGrid ? (
     <Box

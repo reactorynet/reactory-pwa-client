@@ -5,7 +5,12 @@ import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { ObjectFieldTemplateProps } from '@rjsf/utils';
-import { ReactoryObjectFieldTemplate } from '../../templates/ObjectFieldTemplate';
+import {
+  ReactoryObjectFieldTemplate,
+  buildGridSpans,
+  isHiddenByReactoryUi,
+  selectVisibleProperties,
+} from '../../templates/ObjectFieldTemplate';
 
 const property = (name: string, content: React.ReactElement, hidden = false) => ({
   content,
@@ -236,5 +241,184 @@ describe('ReactoryObjectFieldTemplate — section variant', () => {
     expect(legend).toBeTruthy();
     expect(legend?.textContent).toContain('Person');
     expect(container.querySelector('fieldset')?.getAttribute('aria-labelledby')).toBe('root__title');
+  });
+});
+
+/**
+ * REACTORY-302016408/20261014/2327145804.
+ *
+ * The v5 object template used to render every `schema.properties` entry and only
+ * *lay out* those named in `ui:grid-layout`, so a data-only property (e.g. the
+ * `message` result/error carrier on `core.SupportTickets`) leaked into the form
+ * as an empty input. The legacy `MaterialGridField` renders the layout, and only
+ * the layout. These tests pin that contract.
+ */
+describe('ReactoryObjectFieldTemplate — the layout is the render list', () => {
+  const layoutProps = (overrides: Partial<ObjectFieldTemplateProps> = {}) =>
+    baseProps({
+      uiSchema: { 'ui:field': 'GridLayout', 'ui:grid-layout': [{ tickets: { xs: 12 } }] },
+      properties: [
+        property('message', <input data-testid="message" />),
+        property('tickets', <input data-testid="tickets" />),
+      ],
+      ...overrides,
+    });
+
+  it('renders declared properties and suppresses undeclared ones', () => {
+    render(<ReactoryObjectFieldTemplate {...layoutProps()} />);
+
+    expect(screen.getByTestId('tickets')).toBeInTheDocument();
+    expect(screen.queryByTestId('message')).toBeNull();
+  });
+
+  it('emits no grid cell for a suppressed property', () => {
+    const { container } = render(<ReactoryObjectFieldTemplate {...layoutProps()} />);
+
+    const cells = container.querySelectorAll('[data-property-name]');
+    expect(cells).toHaveLength(1);
+    expect(cells[0].getAttribute('data-property-name')).toBe('tickets');
+  });
+
+  it('renders every property when no grid layout is declared', () => {
+    render(<ReactoryObjectFieldTemplate {...baseProps({ uiSchema: {} })} />);
+
+    expect(screen.getByTestId('name')).toBeInTheDocument();
+    expect(screen.getByTestId('email')).toBeInTheDocument();
+  });
+
+  it('attributes a nested layout path to its top-level property', () => {
+    render(
+      <ReactoryObjectFieldTemplate
+        {...baseProps({
+          uiSchema: { 'ui:grid-layout': [{ 'paging.pageSize': { xs: 12 } }] },
+          properties: [
+            property('paging', <input data-testid="paging" />),
+            property('other', <input data-testid="other" />),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId('paging')).toBeInTheDocument();
+    expect(screen.queryByTestId('other')).toBeNull();
+  });
+
+  it('degrades to rendering everything when the layout declares no usable span', () => {
+    const { container } = render(
+      <ReactoryObjectFieldTemplate
+        {...baseProps({
+          // A row whose value is not a size yields no span; restricting on this
+          // would blank the form, so the previous behaviour is kept.
+          uiSchema: { 'ui:grid-layout': [{ name: null }] },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId('name')).toBeInTheDocument();
+    expect(screen.getByTestId('email')).toBeInTheDocument();
+    expect(container.querySelector('[data-grid-layout="ui:grid-layout"]')).toBeNull();
+  });
+
+  it.each([
+    ['HiddenWidget (Reactory legacy alias)', { 'ui:widget': 'HiddenWidget' }],
+    ['ui:hidden boolean', { 'ui:hidden': true }],
+  ])('suppresses a declared field hidden via %s without leaving a cell', (_label, fieldUi) => {
+    const { container } = render(
+      <ReactoryObjectFieldTemplate
+        {...baseProps({
+          uiSchema: {
+            'ui:grid-layout': [{ message: { xs: 12 } }, { tickets: { xs: 12 } }],
+            message: fieldUi,
+          },
+          properties: [
+            property('message', <input data-testid="message" />),
+            property('tickets', <input data-testid="tickets" />),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.queryByTestId('message')).toBeNull();
+    expect(screen.getByTestId('tickets')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-property-name]')).toHaveLength(1);
+  });
+
+  it('honours a ui:hidden predicate', () => {
+    const uiSchema = {
+      'ui:grid-layout': [{ name: { xs: 12 } }, { email: { xs: 12 } }],
+      email: {
+        'ui:hidden': (args: { formData: unknown }) =>
+          (args.formData as { hideEmail?: boolean })?.hideEmail === true,
+      },
+    };
+
+    const { unmount } = render(
+      <ReactoryObjectFieldTemplate {...baseProps({ uiSchema, formData: { hideEmail: true } })} />,
+    );
+    expect(screen.queryByTestId('email')).toBeNull();
+    unmount();
+
+    render(
+      <ReactoryObjectFieldTemplate {...baseProps({ uiSchema, formData: { hideEmail: false } })} />,
+    );
+    expect(screen.getByTestId('email')).toBeInTheDocument();
+  });
+});
+
+describe('isHiddenByReactoryUi', () => {
+  const args = { formData: {}, formContext: {}, idSchema: {}, schema: {} };
+
+  it('recognises both hidden widget spellings', () => {
+    expect(isHiddenByReactoryUi('id', { id: { 'ui:widget': 'hidden' } }, args)).toBe(true);
+    expect(isHiddenByReactoryUi('id', { id: { 'ui:widget': 'HiddenWidget' } }, args)).toBe(true);
+  });
+
+  it('ignores ui:hidden: false and unknown widgets', () => {
+    expect(isHiddenByReactoryUi('id', { id: { 'ui:hidden': false } }, args)).toBe(false);
+    expect(isHiddenByReactoryUi('id', { id: { 'ui:widget': 'textarea' } }, args)).toBe(false);
+    expect(isHiddenByReactoryUi('id', {}, args)).toBe(false);
+    expect(isHiddenByReactoryUi('id', undefined, args)).toBe(false);
+  });
+
+  it('treats a throwing predicate as visible rather than crashing the form', () => {
+    const uiSchema = {
+      id: {
+        'ui:hidden': () => {
+          throw new Error('boom');
+        },
+      },
+    };
+    expect(isHiddenByReactoryUi('id', uiSchema, args)).toBe(false);
+  });
+});
+
+describe('selectVisibleProperties', () => {
+  const props = [
+    property('message', <input />),
+    property('tickets', <input />),
+    property('flag', <input />, true),
+  ];
+
+  it('keeps only layout-declared, non-hidden properties', () => {
+    const spans = buildGridSpans([{ tickets: { xs: 12 } }]);
+    const visible = selectVisibleProperties(props, spans, true, undefined, {
+      formData: {},
+      formContext: {},
+      idSchema: {},
+      schema: {},
+    });
+
+    expect(visible.map((p) => p.name)).toEqual(['tickets']);
+  });
+
+  it('renders all non-hidden properties when no layout is present', () => {
+    const visible = selectVisibleProperties(props, {}, false, undefined, {
+      formData: {},
+      formContext: {},
+      idSchema: {},
+      schema: {},
+    });
+
+    expect(visible.map((p) => p.name)).toEqual(['message', 'tickets']);
   });
 });

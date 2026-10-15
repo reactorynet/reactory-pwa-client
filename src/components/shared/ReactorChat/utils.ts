@@ -73,6 +73,7 @@ export const getUiSchemaFromSchema = (argsShape: any) => {
       showSubmit: true,
       submitIcon: 'run_circle',
       submitIconProps: {
+        icon: 'disk',
         fontSize: 'small',        
         color: 'primary',
       }
