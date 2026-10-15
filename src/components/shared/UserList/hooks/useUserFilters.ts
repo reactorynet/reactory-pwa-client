@@ -1,9 +1,9 @@
 /**
  * useUserFilters Hook
- * 
+ *
  * Manages filter state and application for the UserList component.
  * Handles quick filters, advanced filters, and filter presets.
- * 
+ *
  * @module UserList/hooks/useUserFilters
  */
 
@@ -12,7 +12,6 @@ import type {
   QuickFilterDefinition,
   AdvancedFilter,
   FilterPreset,
-  UserFilterInput,
   UseUserFiltersOptions,
   UseUserFiltersResult,
   FilterOperator,
@@ -21,21 +20,43 @@ import { combineFilters } from '../utils/filterUtils';
 
 const FILTER_PRESETS_STORAGE_KEY = 'userlist_filter_presets';
 
+interface UserFiltersState {
+  quick: string[];
+  advanced: AdvancedFilter[];
+  presets: FilterPreset[];
+}
+
+const loadStoredPresets = (): FilterPreset[] => {
+  try {
+    const stored = localStorage.getItem(FILTER_PRESETS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Guard against a corrupted/legacy non-array payload rather than letting
+      // it propagate into state and crash `.map`/`.find` consumers.
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load filter presets:', error);
+  }
+  return [];
+};
+
 /**
  * Hook for managing filters in the UserList component
- * 
+ *
  * @param options - Configuration options
  * @returns Filter state and methods
- * 
+ *
  * @example
  * ```tsx
  * const {
- *   activeQuickFilters,
+ *   quickFilters,
  *   toggleQuickFilter,
  *   advancedFilters,
  *   setAdvancedFilter,
- *   combinedFilters,
- *   clearAllFilters
+ *   clearFilters
  * } = useUserFilters({
  *   quickFilters: quickFilterDefs,
  *   onFilterChange: (filters) => refetch(filters)
@@ -49,24 +70,18 @@ export const useUserFilters = ({
   initialAdvancedFilters = [],
   onFilterChange,
 }: UseUserFiltersOptions): UseUserFiltersResult => {
-  // State: Active quick filter IDs
-  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
+  // Single source of truth: quick filter ids, advanced filters and presets.
+  // Every mutation below uses a functional update so that several calls batched
+  // into one `act()`/event handler always observe the latest state. (With the
+  // previous separate `useState` cells, `savePreset` captured a stale closure and
+  // persisted empty filters.)
+  const [state, setState] = useState<UserFiltersState>(() => ({
+    quick: [...initialQuickFilters],
+    advanced: [...initialAdvancedFilters],
+    presets: loadStoredPresets(),
+  }));
 
-  // State: Advanced filters
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilter[]>([]);
-
-  // State: Filter presets
-  const [presets, setPresets] = useState<FilterPreset[]>(() => {
-    try {
-      const stored = localStorage.getItem(FILTER_PRESETS_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      console.error('Failed to load filter presets:', error);
-    }
-    return [];
-  });
+  const { quick: activeQuickFilters, advanced: advancedFilters, presets } = state;
 
   // Get active quick filter definitions
   const activeQuickFilterDefs = useMemo(() => {
@@ -84,9 +99,7 @@ export const useUserFilters = ({
   }, [activeQuickFilterDefs, advancedFilters]);
 
   // Count active filters
-  const activeFilterCount = useMemo(() => {
-    return activeQuickFilters.length + advancedFilters.length;
-  }, [activeQuickFilters, advancedFilters]);
+  const activeFilterCount = activeQuickFilters.length + advancedFilters.length;
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -108,20 +121,12 @@ export const useUserFilters = ({
    * Toggle a quick filter on/off
    */
   const toggleQuickFilter = useCallback((filterId: string): void => {
-    setActiveQuickFilters((prev) => {
-      if (prev.includes(filterId)) {
-        return prev.filter((id) => id !== filterId);
-      } else {
-        return [...prev, filterId];
-      }
-    });
-  }, []);
-
-  /**
-   * Clear all quick filters
-   */
-  const clearQuickFilters = useCallback((): void => {
-    setActiveQuickFilters([]);
+    setState((prev) => ({
+      ...prev,
+      quick: prev.quick.includes(filterId)
+        ? prev.quick.filter((id) => id !== filterId)
+        : [...prev.quick, filterId],
+    }));
   }, []);
 
   /**
@@ -129,8 +134,8 @@ export const useUserFilters = ({
    */
   const setAdvancedFilter = useCallback(
     (field: string, value: any, operator: FilterOperator): void => {
-      setAdvancedFilters((prev) => {
-        const existingIndex = prev.findIndex((f) => f.field === field);
+      setState((prev) => {
+        const existingIndex = prev.advanced.findIndex((f) => f.field === field);
 
         // If value is empty/null, remove the filter
         if (
@@ -140,15 +145,12 @@ export const useUserFilters = ({
           (Array.isArray(value) && value.length === 0)
         ) {
           if (existingIndex >= 0) {
-            const newFilters = [...prev];
-            newFilters.splice(existingIndex, 1);
-            return newFilters;
+            const nextAdvanced = [...prev.advanced];
+            nextAdvanced.splice(existingIndex, 1);
+            return { ...prev, advanced: nextAdvanced };
           }
           return prev;
         }
-
-        // Find the field definition for the label
-        const fieldDef = advancedFilterFields.find((f) => f.field === field);
 
         const newFilter: AdvancedFilter = {
           id: `filter-${field}-${Date.now()}`,
@@ -159,78 +161,81 @@ export const useUserFilters = ({
 
         if (existingIndex >= 0) {
           // Update existing filter
-          const newFilters = [...prev];
-          newFilters[existingIndex] = newFilter;
-          return newFilters;
-        } else {
-          // Add new filter
-          return [...prev, newFilter];
+          const nextAdvanced = [...prev.advanced];
+          nextAdvanced[existingIndex] = newFilter;
+          return { ...prev, advanced: nextAdvanced };
         }
+
+        // Add new filter
+        return { ...prev, advanced: [...prev.advanced, newFilter] };
       });
     },
-    [advancedFilterFields]
+    []
   );
 
   /**
    * Remove an advanced filter by field
    */
   const removeAdvancedFilter = useCallback((field: string): void => {
-    setAdvancedFilters((prev) => prev.filter((f) => f.field !== field));
-  }, []);
-
-  /**
-   * Clear all advanced filters
-   */
-  const clearAdvancedFilters = useCallback((): void => {
-    setAdvancedFilters([]);
+    setState((prev) => ({
+      ...prev,
+      advanced: prev.advanced.filter((f) => f.field !== field),
+    }));
   }, []);
 
   /**
    * Clear all filters (quick and advanced)
    */
   const clearAllFilters = useCallback((): void => {
-    clearQuickFilters();
-    clearAdvancedFilters();
-  }, [clearQuickFilters, clearAdvancedFilters]);
+    setState((prev) => ({ ...prev, quick: [], advanced: [] }));
+  }, []);
 
   /**
    * Save current filters as a preset
+   * Captures both quick and advanced filters so a preset can be fully restored.
    */
-  const savePreset = useCallback(
-    (name: string): void => {
-      if (!name || !name.trim()) {
-        return;
-      }
+  const savePreset = useCallback((name: string): void => {
+    if (!name || !name.trim()) {
+      return;
+    }
 
+    setState((prev) => {
       const newPreset: FilterPreset = {
         id: `preset_${Date.now()}`,
         name: name.trim(),
-        filters: advancedFilters,
+        filters: prev.advanced,
+        quickFilters: prev.quick,
         createdAt: new Date(),
       };
-
-      setPresets((prev) => [...prev, newPreset]);
-    },
-    [advancedFilters]
-  );
+      return { ...prev, presets: [...prev.presets, newPreset] };
+    });
+  }, []);
 
   /**
    * Load a filter preset
    */
   const loadPreset = useCallback((presetId: string): void => {
-    const preset = presets.find((p) => p.id === presetId);
-    if (preset) {
-      setAdvancedFilters(preset.filters);
-      // Clear quick filters when loading a preset
-      clearQuickFilters();
-    }
-  }, [presets, clearQuickFilters]);
+    setState((prev) => {
+      const preset = prev.presets.find((p) => p.id === presetId);
+      if (!preset) {
+        return prev;
+      }
+      return {
+        ...prev,
+        advanced: preset.filters,
+        quick: preset.quickFilters ? [...preset.quickFilters] : [],
+      };
+    });
+  }, []);
 
   /**
    * Delete a filter preset
    */
   const deletePreset = useCallback((presetId: string): void => {
-    setPresets((prev) => prev.filter((p) => p.id !== presetId));
+    setState((prev) => ({
+      ...prev,
+      presets: prev.presets.filter((p) => p.id !== presetId),
+    }));
   }, []);
 
   // Memoize the returned values to prevent unnecessary re-renders
@@ -251,4 +256,3 @@ export const useUserFilters = ({
 };
 
 export default useUserFilters;
-
