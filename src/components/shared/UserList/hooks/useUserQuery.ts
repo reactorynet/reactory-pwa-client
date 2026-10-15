@@ -7,7 +7,7 @@
  * @module UserList/hooks/useUserQuery
  */
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { debounce } from 'lodash';
 import type Reactory from '@reactorynet/reactory-core';
 import type {
@@ -55,21 +55,6 @@ export const useUserQuery = ({
   skip = false,
   context,
 }: UseUserQueryOptions): UseUserQueryResult => {
-  console.log('[useUserQuery] Hook called with:', {
-    hasQuery: !!graphqlQuery,
-    queryName: graphqlQuery?.name,
-    organizationId,
-    businessUnitId,
-    filters,
-    initialPage,
-    initialPageSize,
-    initialSearchString,
-    quickFilters: quickFilters?.size || 0,
-    advancedFilters: advancedFilters?.length || 0,
-    skip,
-    callTime: Date.now()
-  });
-
   // Internal state
   const [page, setPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -81,17 +66,31 @@ export const useUserQuery = ({
 
   const reactory = useReactory();
 
-  // Build filter object combining all filters
-  const combinedFilters = useMemo((): UserFilterInput => {
-    console.log('[useUserQuery] Computing combinedFilters:', {
-      organizationId,
-      businessUnitId,
-      searchString,
-      quickFiltersSize: quickFilters?.size,
-      advancedFiltersLength: advancedFilters?.length,
-      filtersKeys: Object.keys(filters || {})
-    });
+  // Callers routinely pass object/array/Set literals inline (for example
+  // `filters={{ roles: ['USER'] }}` or `graphqlQuery={{ name, text }}`). Those
+  // get a brand-new identity on every render. Using the raw identities directly as
+  // hook dependencies makes the fetch effect re-run on *every* render, which
+  // re-enters `setState` and renders again — an unbounded render loop that grows
+  // the heap until the process dies. We therefore key the memos below on the
+  // serialised *content* of those options, so the derived values keep a stable
+  // identity until the content genuinely changes.
+  const quickFiltersKey = quickFilters
+    ? Array.from(quickFilters).sort().join('|')
+    : '';
+  const advancedFiltersKey = advancedFilters
+    ? JSON.stringify(advancedFilters)
+    : '';
+  const filtersKey = filters ? JSON.stringify(filters) : '';
+  const graphqlQueryKey = graphqlQuery
+    ? `${graphqlQuery.name ?? ''}::${graphqlQuery.text ?? ''}`
+    : '';
 
+  // Build filter object combining all filters.
+  // NOTE: the content-keyed dependencies below intentionally replace the object
+  // identities (`filters`, `quickFilters`, `advancedFilters`). The values are read
+  // from this render's closure; the memo only recomputes when their content changes,
+  // so the returned object is referentially stable across renders with equal content.
+  const combinedFilters = useMemo((): UserFilterInput => {
     const filterInput: UserFilterInput = {};
 
     // Add organization and business unit filters
@@ -146,161 +145,117 @@ export const useUserQuery = ({
 
     // Merge with provided filters
     return { ...filterInput, ...filters };
-  }, [organizationId, businessUnitId, searchString, quickFilters, advancedFilters, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    organizationId,
+    businessUnitId,
+    searchString,
+    quickFiltersKey,
+    advancedFiltersKey,
+    filtersKey,
+  ]);
 
-  // Debounced fetch function to prevent multiple API calls
-  const fetchUsers = useCallback(
-    debounce(async (currentPage: number, currentPageSize: number, currentFilters: UserFilterInput) => {
-      console.log('[useUserQuery] fetchUsers called:', {
-        currentPage,
-        currentPageSize,
-        currentFilters,
-        skip,
-        queryTextLength: graphqlQuery?.text?.length,
-        queryName: graphqlQuery?.name
-      });
-
-      if (skip) {
-        console.log('[useUserQuery] Skipping fetch due to skip=true');
-        setUsers([]);
-        setTotalCount(0);
-        setLoading(false);
-        setError(null);
-        return;
-      }
-
-      if (!graphqlQuery?.text) {
-        console.log('[useUserQuery] ERROR: No GraphQL query text provided');
-        setError(new Error('No GraphQL query text provided'));
-        setUsers([]);
-        setTotalCount(0);
-        setLoading(false);
-        reactory?.log('[useUserQuery] ERROR: No GraphQL query text provided', { graphqlQuery }, 'error');
-        return;
-      }
-
-      if (!graphqlQuery?.text.trim()) {
-        console.log('[useUserQuery] ERROR: GraphQL query text is empty');
-        setError(new Error('GraphQL query text is empty'));
-        setUsers([]);
-        setTotalCount(0);
-        setLoading(false);
-        reactory?.log('[useUserQuery] ERROR: GraphQL query text is empty', { graphqlQuery }, 'error');
-        return;
-      }
-
-      try {
-        console.log('[useUserQuery] Starting GraphQL call');
-        setLoading(true);
-        setError(null);
-
-        const variables = {
-          paging: {
-            page: currentPage,
-            pageSize: currentPageSize,
-          },
-          filter: currentFilters,
-        };
-
-        console.log('[useUserQuery] GraphQL variables:', variables);
-        reactory?.log(`[useUserQuery] Fetching users: page=${currentPage}, pageSize=${currentPageSize}`, { variables }, 'debug');
-
-        const result: any = await reactory.graphqlQuery(graphqlQuery.text, variables);
-        console.log('[useUserQuery] GraphQL response received:', {
-          hasData: !!result.data,
-          hasErrors: !!(result.errors && result.errors.length > 0),
-          dataKeys: result.data ? Object.keys(result.data) : []
-        });
-
-        if (result.errors && result.errors.length > 0) {
-          console.log('[useUserQuery] GraphQL errors:', result.errors);
-          throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(', ')}`);
+  // Debounced fetch function to prevent multiple API calls.
+  // Created once per *content* change (see graphqlQueryKey above) rather than once
+  // per render, so its identity — and therefore the fetch effect's dependency — is
+  // stable across renders.
+  const fetchUsers = useMemo(
+    () =>
+      debounce(async (currentPage: number, currentPageSize: number, currentFilters: UserFilterInput) => {
+        if (skip) {
+          setUsers([]);
+          setTotalCount(0);
+          setLoading(false);
+          setError(null);
+          return;
         }
 
-        // Handle the expected response structure for ReactoryUsers query
-        console.log('[useUserQuery] Processing response data');
-        let usersData: Reactory.Models.IUser[] = [];
-        let totalCountData = 0;
+        if (!graphqlQuery?.text || !graphqlQuery.text.trim()) {
+          // No query configured (or blank query text). This is a normal "nothing to
+          // fetch" state, not an error — surface it as empty/loaded and move on.
+          reactory?.log(
+            '[useUserQuery] No GraphQL query text provided; skipping fetch',
+            { graphqlQuery },
+            'debug'
+          );
+          setError(null);
+          setLoading(false);
+          return;
+        }
 
-        // Expected structure: { ReactoryUsers: { users: [...], paging: {...} } }
-        const queryResult = result.data?.[graphqlQuery.name];
-        console.log('[useUserQuery] Query result:', {
-          queryName: graphqlQuery.name,
-          hasQueryResult: !!queryResult,
-          queryResultKeys: queryResult ? Object.keys(queryResult) : []
-        });
+        try {
+          setLoading(true);
+          setError(null);
 
-        if (queryResult) {
-          usersData = queryResult.users || [];
-          totalCountData = queryResult.paging?.total || 0;
-          console.log('[useUserQuery] Extracted data from query result:', {
-            usersCount: usersData.length,
-            totalCount: totalCountData
-          });
-        } else {
-          // Fallback: try to find any field containing users
-          const dataKeys = Object.keys(result.data || {});
-          const usersKey = dataKeys.find(key => key.toLowerCase().includes('users'));
-          console.log('[useUserQuery] Using fallback extraction:', {
-            dataKeys,
-            usersKey,
-            hasUsersKey: !!(usersKey && result.data[usersKey])
-          });
+          const variables = {
+            paging: {
+              page: currentPage,
+              pageSize: currentPageSize,
+            },
+            filter: currentFilters,
+          };
 
-          if (usersKey && result.data[usersKey]) {
-            const usersResult = result.data[usersKey];
-            if (Array.isArray(usersResult)) {
-              usersData = usersResult;
-            } else if (usersResult.users) {
-              usersData = usersResult.users;
-              totalCountData = usersResult.paging?.total || 0;
+          reactory?.log(
+            `[useUserQuery] Fetching users: page=${currentPage}, pageSize=${currentPageSize}`,
+            { variables },
+            'debug'
+          );
+
+          const result: any = await reactory.graphqlQuery(graphqlQuery.text, variables);
+
+          if (result.errors && result.errors.length > 0) {
+            throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(', ')}`);
+          }
+
+          // Handle the expected response structure for ReactoryUsers query
+          let usersData: Reactory.Models.IUser[] = [];
+          let totalCountData = 0;
+
+          // Expected structure: { ReactoryUsers: { users: [...], paging: {...} } }
+          const queryResult = result.data?.[graphqlQuery.name];
+
+          if (queryResult) {
+            usersData = queryResult.users || [];
+            totalCountData = queryResult.paging?.total || 0;
+          } else {
+            // Fallback: try to find any field containing users
+            const dataKeys = Object.keys(result.data || {});
+            const usersKey = dataKeys.find(key => key.toLowerCase().includes('users'));
+
+            if (usersKey && result.data[usersKey]) {
+              const usersResult = result.data[usersKey];
+              if (Array.isArray(usersResult)) {
+                usersData = usersResult;
+              } else if (usersResult.users) {
+                usersData = usersResult.users;
+                totalCountData = usersResult.paging?.total || 0;
+              }
             }
           }
+
+          setUsers(usersData);
+          setTotalCount(totalCountData);
+          setError(null);
+
+          reactory?.log(`[useUserQuery] Fetched ${usersData.length} users (total: ${totalCountData})`, {}, 'debug');
+
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+          setError(new Error(errorMessage));
+          setUsers([]);
+          setTotalCount(0);
+
+          reactory?.log(`[useUserQuery] Error fetching users: ${errorMessage}`, { error: err }, 'error');
+        } finally {
+          setLoading(false);
         }
-
-        console.log('[useUserQuery] Final data:', {
-          usersCount: usersData.length,
-          totalCount: totalCountData,
-          hasError: false
-        });
-
-        setUsers(usersData);
-        setTotalCount(totalCountData);
-        setError(null);
-
-        reactory?.log(`[useUserQuery] Fetched ${usersData.length} users (total: ${totalCountData})`, {}, 'debug');
-
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-        console.log('[useUserQuery] Error occurred:', {
-          errorMessage,
-          errorType: err?.constructor?.name,
-          stack: err instanceof Error ? err.stack : undefined
-        });
-        setError(new Error(errorMessage));
-        setUsers([]);
-        setTotalCount(0);
-
-        reactory?.log(`[useUserQuery] Error fetching users: ${errorMessage}`, { error: err }, 'error');
-      } finally {
-        console.log('[useUserQuery] Setting loading to false');
-        setLoading(false);
-      }
-    }, 300), // 300ms debounce delay
-    [graphqlQuery, skip, reactory]
+      }, 300), // 300ms debounce delay
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [graphqlQueryKey, skip, reactory]
   );
 
   // Effect to trigger fetch when dependencies change
   useEffect(() => {
-    console.log('[useUserQuery] useEffect triggered', {
-      page,
-      pageSize,
-      combinedFiltersKeys: Object.keys(combinedFilters),
-      graphqlQueryName: graphqlQuery?.name,
-      graphqlQueryTextLength: graphqlQuery?.text?.length,
-      fetchUsersRef: fetchUsers.toString().slice(0, 50) + '...',
-      effectTime: Date.now()
-    });
     reactory?.log('[useUserQuery] useEffect triggered', {
       page,
       pageSize,
@@ -310,15 +265,16 @@ export const useUserQuery = ({
     }, 'debug');
     fetchUsers(page, pageSize, combinedFilters);
     return () => {
-      console.log('[useUserQuery] Cleaning up useEffect');
       fetchUsers.cancel?.();
     };
   }, [fetchUsers, page, pageSize, combinedFilters]);
 
   // Manual refetch function
-  const refetch = useCallback(() => {
-    fetchUsers.cancel?.(); // Cancel any pending request
-    return fetchUsers(page, pageSize, combinedFilters);
+  const refetch = useMemo(() => {
+    return () => {
+      fetchUsers.cancel?.(); // Cancel any pending request
+      return fetchUsers(page, pageSize, combinedFilters);
+    };
   }, [fetchUsers, page, pageSize, combinedFilters]);
 
   // Reset to first page when search changes
