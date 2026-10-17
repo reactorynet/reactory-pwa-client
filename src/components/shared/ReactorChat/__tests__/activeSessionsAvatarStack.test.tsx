@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ActiveSessionsAvatarStack from '../components/ActiveSessionsAvatarStack';
 import { TrackedSession } from '../hooks/useSessionStreamHub';
+import { ACTIVITY_DETAIL_MAX_LENGTH } from '../utils';
 
 /**
  * The active-agent stack renders its detail in a MUI Tooltip, which mounts into
@@ -135,5 +136,83 @@ describe('ActiveSessionsAvatarStack hover card', () => {
     );
 
     expect(container.firstChild).toBeNull();
+  });
+
+  /**
+   * Regression: a shell activity detail is the agent's *entire* command line.
+   * Rendered verbatim it overflowed the hover card and, because the MUI tooltip
+   * popper accepts pointer events, the spilled text covered the avatar buttons
+   * and made them unclickable.
+   */
+  it('bounds an over-long activity detail instead of rendering it verbatim', async () => {
+    const longCommand = [
+      'sleep 560; WT=/Users/wernerw/Projects/reactory/reactory-worktrees/ai-6ad0c1e141038a04addba8be;',
+      'cd "$WT"; echo "=== $(date +%H:%M:%S) ==="; echo "--- git ---"; git status --short;',
+      'echo "--- review verdict ---"; if [ -f .ai-agent/review.json ]; then cat .ai-agent/review.json;',
+      'else echo "not yet"; fi',
+    ].join('\n');
+
+    expect(longCommand.length).toBeGreaterThan(ACTIVITY_DETAIL_MAX_LENGTH);
+
+    renderStack([makeSession({ status: 'executing_tools', lastToolName: longCommand })]);
+
+    await hover('Reactor');
+
+    const text = screen.getByTestId('active-session-hover-card').textContent || '';
+    expect(text).toContain('Running: sleep 560;');
+    // The tail sits beyond the activity budget, so it is dropped rather than
+    // allowed to stretch the card across the avatar buttons.
+    expect(text).not.toContain('not yet');
+    expect(text.length).toBeLessThan(ACTIVITY_DETAIL_MAX_LENGTH + 100);
+  });
+
+  /**
+   * jsdom performs no hit-testing, so a click assertion alone cannot prove the
+   * card stopped intercepting pointer events. Asserting the computed contract
+   * on the card does.
+   */
+  it('takes the hover card out of hit-testing so it cannot cover the avatars', async () => {
+    renderStack([makeSession({ status: 'executing_tools', lastToolName: 'sleep 560' })]);
+
+    await hover('Reactor');
+
+    const card = screen.getByTestId('active-session-hover-card');
+    expect(card).toHaveStyle('pointer-events: none');
+    expect(card).toHaveStyle('overflow: hidden');
+  });
+
+  it('keeps the avatar switchable while its own hover card is open', async () => {
+    const { onSelectSession } = renderStack([
+      makeSession({ status: 'executing_tools', lastToolName: 'sleep 560' }),
+    ]);
+
+    await hover('Reactor');
+    fireEvent.click(screen.getByLabelText('Reactor'));
+
+    expect(onSelectSession).toHaveBeenCalledWith('session-1', 'ReactorAIPersona');
+  });
+
+  it('keeps sibling avatars switchable while a busy agent shows a long command', async () => {
+    const { onSelectSession } = renderStack([
+      makeSession({
+        sessionId: 'session-busy',
+        personaId: 'BusyPersona',
+        persona: { id: 'BusyPersona', name: 'Busy', avatar: '' } as any,
+        status: 'executing_tools',
+        lastToolName: 'sleep 560; '.repeat(40),
+      }),
+      makeSession({
+        sessionId: 'session-idle',
+        personaId: 'IdlePersona',
+        persona: { id: 'IdlePersona', name: 'Idle', avatar: '' } as any,
+        title: 'Idle chat',
+        status: 'completed',
+      }),
+    ]);
+
+    await hover('Busy');
+    fireEvent.click(screen.getByLabelText('Idle'));
+
+    expect(onSelectSession).toHaveBeenCalledWith('session-idle', 'IdlePersona');
   });
 });

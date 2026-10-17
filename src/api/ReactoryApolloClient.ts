@@ -15,6 +15,7 @@ import createUploadLink from 'apollo-upload-client/createUploadLink.mjs';
 import { fetch } from "whatwg-fetch";
 import { getCache } from './ReactoryApolloCache';
 import { LANGUAGE_HEADER, LANGUAGE_STORAGE_KEY } from './language';
+import { readAuthToken } from './local';
 
 const packageInfo: any = require('../../package.json');
 
@@ -66,7 +67,7 @@ export const requestLanguage = (): string | undefined => {
  * preflight failure, which presents as "all GraphQL is broken".
  */
 export const buildRequestHeaders = (headers: Record<string, any> = {}): Record<string, any> => {
-  const currentToken = localStorage.getItem('auth_token');
+  const currentToken = readAuthToken();
   const language = requestLanguage();
   return {
     ...headers,
@@ -126,7 +127,7 @@ export const createSplitLink = (params: {
  * that path. Read fresh so token and language changes apply on reconnect.
  */
 export const buildConnectionParams = (): Record<string, any> => {
-  const currentToken = localStorage.getItem('auth_token');
+  const currentToken = readAuthToken();
   const language = requestLanguage();
   return {
     Authorization: `Bearer ${currentToken}`,

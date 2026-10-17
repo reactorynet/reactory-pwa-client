@@ -8,6 +8,40 @@ export const DefaultLoadingSchema = {
   required: ["loading"]
 };
 
+/**
+ * Detects whether a resolved schema is still the placeholder used while a real
+ * form definition / schema has not arrived yet.
+ *
+ * When `useSchema` cannot resolve a schema it falls back to
+ * {@link DefaultLoadingSchema} — a schema with no properties. Historically the
+ * form engine then rendered that placeholder as if it were a real form, which
+ * produced the bare "Loading Form" surface (title, description, a stray
+ * required field and Submit/refresh chrome). Callers use this guard to render a
+ * {@link FormSkeleton} instead.
+ *
+ * The check is intentionally narrow (identity, or the exact placeholder title
+ * with no properties) so genuine schema-less/minimal forms are not mistaken for
+ * a loading state. A `null`/`undefined` schema returns `false` ("unknown", not
+ * "placeholder") to avoid false positives when a caller simply has not supplied
+ * a schema at all.
+ */
+export const isDefaultLoadingSchema = (schema?: unknown): boolean => {
+  if (schema === undefined || schema === null) return false;
+  if (schema === DefaultLoadingSchema) return true;
+  if (typeof schema !== 'object') return false;
+
+  const candidate = schema as { title?: unknown; properties?: unknown };
+  if (candidate.title !== DefaultLoadingSchema.title) return false;
+
+  const properties = candidate.properties;
+  const hasProperties =
+    !!properties &&
+    typeof properties === 'object' &&
+    Object.keys(properties as Record<string, unknown>).length > 0;
+
+  return !hasProperties;
+};
+
 export const DefaultUiSchema: Reactory.Schema.IUISchema = {
   "ui:form": {
     toolbarStyle: {

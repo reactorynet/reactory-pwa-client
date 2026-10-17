@@ -214,6 +214,36 @@ export const formatCount = (value: number): string => {
   return `${(value / 1_000_000).toFixed(2)}M`;
 };
 
+/**
+ * Default character budget for a single line of live-activity detail.
+ *
+ * Background-session activity is derived from raw stream payloads. The `shell`
+ * stream event carries the *entire* command line, which routinely runs to
+ * several hundred characters. That text is only ever used as a one-line preview
+ * in the agent hover card, so it is capped rather than rendered verbatim.
+ */
+export const ACTIVITY_DETAIL_MAX_LENGTH = 180;
+
+/**
+ * Normalise a live-activity detail string (e.g. the tool/command a background
+ * agent is currently running) into a bounded single-line preview.
+ *
+ * Whitespace — including the newlines in a multi-line shell command — is
+ * collapsed to single spaces and the result is truncated with an ellipsis.
+ * This keeps UI that renders the detail at a predictable size: an unbounded
+ * command string overflows its container and, when that container accepts
+ * pointer events, ends up covering neighbouring controls.
+ */
+export const summariseActivityDetail = (
+  value?: string | null,
+  maxLength: number = ACTIVITY_DETAIL_MAX_LENGTH,
+): string => {
+  const normalised = (value || '').replace(/\s+/g, ' ').trim();
+  if (maxLength <= 0) return '';
+  if (normalised.length <= maxLength) return normalised;
+  return `${normalised.slice(0, maxLength).trimEnd()}…`;
+};
+
 /** A single tool invocation with its request/response weight. */
 export interface ToolCallCost {
   /** The tool call id (correlates the call with its result). */

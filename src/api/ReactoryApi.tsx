@@ -50,7 +50,15 @@ import * as queryString from '@reactory/client-core/components/utility/query-str
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import { withReactory, ReactoryProvider } from './ApiProvider';
-import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
+import {
+  ReactoryLoggedInUser,
+  anonUser,
+  storageKeys,
+  readAuthToken,
+  writeAuthToken,
+  clearAuthToken,
+  writeLoggedInUser,
+} from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 import Reactory from '@reactorynet/reactory-core';
 import { compose } from "redux";
@@ -1539,12 +1547,37 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   /**
+   * Drops every cached form definition and the fetch watermark.
+   *
+   * The server returns a *role filtered* form list, so a list fetched before a
+   * session was established (anonymous, or mid auth-handshake) is not valid for
+   * the authenticated user. Callers clear the cache on an auth transition so
+   * such a list can never leak into — or outlive — a login state.
+   */
+  clearFormCache(): void {
+    this.formSchemas = [];
+    this.formSchemaMap = {};
+    this.formSchemaLastFetch = null;
+  }
+
+  /**
    * Returns a form with the specific id.
-   * 
-   * Before calling this function ensure that the forms function has been called. Otherwise 
+   *
+   * Before calling this function ensure that the forms function has been called. Otherwise
    * the function will throw and error.
+   *
+   * A form that is not yet in the cached list is fetched by id rather than
+   * giving up: the list is role filtered on the server and held for a window, so
+   * a form the caller may legitimately open can be missing from it. Returning
+   * `null` in that case used to be permanent — the caller had no way to recover
+   * without reloading the page.
+   *
    * @param id - string id.
-   * @returns 
+   * @param onFormUpdated - invoked with the resolved form, or with an error when
+   *   the form cannot be resolved (so callers can surface a real state instead of
+   *   waiting forever).
+   * @returns the cached definition when present (possibly still incomplete),
+   *   otherwise `undefined` while the by-id fetch is in flight.
    */
   form(id: string, 
     onFormUpdated: (formDef: Reactory.Forms.IReactoryForm, error?: Error) => void = null,
@@ -1557,10 +1590,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       that.error('No forms have been loaded. Ensure the forms function is called before calling form(id)');
       throw new Error('No forms have been loaded. Ensure the forms function has been called before calling form(id)');
     }
-      
-    let $formDef = lodash.find(formSchemas, { id });
 
-    if (!$formDef) return null;
+    const $formDef = lodash.find(formSchemas, { id });
 
     const FORM_QUERY = `
     query ReactoryFormGetById($id: String!, $options: Any) {
@@ -1571,19 +1602,45 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     }`;
 
-    if (!$formDef.__complete__) {
+    // Fetch by id when the form is absent from the list *or* present but still
+    // incomplete. Absence is a normal condition (role filtering / pre-auth
+    // fetch), not a reason to fail permanently.
+    if (!$formDef || !$formDef.__complete__) {
       that.graphqlQuery<any, any>(FORM_QUERY, { id, options }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
-        if (data?.ReactoryFormGetById) {
-          let index = lodash.findIndex(this.formSchemas, { id });
+        const resolved = data?.ReactoryFormGetById;
 
-          that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };
-
-          if (onFormUpdated) {
-            onFormUpdated(that.formSchemas[index], null);
+        if (!resolved) {
+          // The server answered but had nothing for this id — an unknown form, or
+          // one whose roles the caller does not satisfy. Report it so the caller
+          // can render an error/retry state rather than loading indefinitely.
+          if (errors && errors.length > 0) {
+            that.error(`Could not get the form component data for ${id}`, { errors });
           }
-
-          that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
+          if (onFormUpdated) onFormUpdated(null, new Error(`Form "${id}" could not be resolved`));
+          return;
         }
+
+        const completed = { ...resolved, __complete__: true } as Reactory.Forms.IReactoryForm;
+        const index = lodash.findIndex(that.formSchemas, { id });
+
+        if (index < 0) {
+          // Adopt the fetched form so subsequent lookups are served locally.
+          that.formSchemas = [...that.formSchemas, completed];
+          that.formSchemaMap[id] = {
+            form: completed,
+            lastFetch: new Date(),
+            hash: that.utils.hashCode(JSON.stringify(completed)),
+            index: that.formSchemas.length - 1,
+          };
+        } else {
+          that.formSchemas[index] = completed;
+        }
+
+        if (onFormUpdated) {
+          onFormUpdated(completed, null);
+        }
+
+        that.emit(`onReactoryFormDefinitionUpdate::${id}`, completed);
       }).catch((err) => {
         if (onFormUpdated) onFormUpdated(null, err);
         that.error('Could not get the form component data', { err })
@@ -1791,15 +1848,19 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   setUser(user) {
     this.$user = user;
-    localStorage.setItem(storageKeys.LoggedInUser, JSON.stringify(user));
+    // Persist under this application's own key so a second client app sharing
+    // the origin cannot read (or overwrite) our login snapshot.
+    writeLoggedInUser(user, this.CLIENT_KEY);
   }
 
   setAuthToken(token) {
-    localStorage.setItem(storageKeys.AuthToken, token);
+    // Store under this application's own key so a second client app can never
+    // read, overwrite or clear it — see the note in `./local`.
+    writeAuthToken(token, this.CLIENT_KEY);
   }
 
   getAuthToken() {
-    return localStorage.getItem(storageKeys.AuthToken);
+    return readAuthToken(this.CLIENT_KEY);
   }
 
   setLastUserEmail(email) {
@@ -2033,7 +2094,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (this.isLoggingOut === true) return;
     this.isLoggingOut = true;
     try {
-      localStorage.removeItem(storageKeys.AuthToken);
+      // Clear only this application's token; other client apps keep theirs.
+      clearAuthToken(this.CLIENT_KEY);
       this.clearStoreAndCache();
       await this.getAnonToken();
       const { client } = await ReactoryApolloClient();
@@ -2116,7 +2178,27 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     try {
       const result = await that.graphqlQuery<Partial<{ apiStatus: Reactory.Models.IApiStatus }>, {}>(query, variables, { fetchPolicy: 'network-only' });
       that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false, scope });
-      return result.data.apiStatus;
+
+      // The server reports *why* a session-backed token was refused, instead of
+      // silently answering as an anonymous request. Surface it distinctly so a
+      // token presented to the wrong application is not mistaken for a sign-out.
+      const apiStatus = result?.data?.apiStatus;
+      const authReason = (apiStatus as any)?.authReason;
+      if (authReason) {
+        that.log(`Auth token refused by the server: ${authReason}`, { authReason, level: 'warn' });
+        if (authReason === 'session_client_mismatch') {
+          // A token minted for a different application is not this app's to keep.
+          clearAuthToken(that.CLIENT_KEY);
+          that.createNotification('Active session belongs to another application', {
+            type: 'warning',
+            canDismiss: true,
+            timeout: 6000,
+            showInAppNotification: true,
+          });
+        }
+      }
+
+      return apiStatus;
     } catch (apiStatusError) {
       //check if the error is a network error    
       if (apiStatusError.name && apiStatusError.name === 'ApolloError') {
@@ -2258,7 +2340,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           input: {
             password,
             confirmPassword,
-            authToken: localStorage.getItem('auth_token')
+            authToken: that.getAuthToken()
           }
         }
       }).then((result) => {

@@ -12,6 +12,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { TrackedSession } from '../hooks/useSessionStreamHub';
+import { summariseActivityDetail } from '../utils';
 
 export interface ActiveSessionsAvatarStackProps {
   sessions: TrackedSession[];
@@ -59,7 +60,12 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
       case 'streaming':
         return 'Generating response...';
       case 'executing_tools':
-        return session.lastToolName ? `Running: ${session.lastToolName}` : 'Executing actions...';
+        // `lastToolName` holds a tool name for tool calls, but for shell
+        // activity the stream carries the agent's entire command line. Bound it
+        // so the hover card cannot grow to an arbitrary width.
+        return session.lastToolName
+          ? `Running: ${summariseActivityDetail(session.lastToolName)}`
+          : 'Executing actions...';
       case 'waiting_focus':
         return 'Waiting for chat focus...';
       case 'waiting_approval':
@@ -167,11 +173,23 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
             title={
               <Paper
                 elevation={0}
+                data-testid="active-session-hover-card"
                 sx={{
                   p: 0.75,
+                  minWidth: 0,
                   bgcolor: 'transparent',
                   color: 'inherit',
                   maxWidth: 240,
+                  // The card is purely informational — the real click target is
+                  // the FAB behind it. MUI's tooltip popper opts into pointer
+                  // events so that hovering the card keeps it open, which means
+                  // any child that paints outside the card bounds would swallow
+                  // clicks aimed at the avatar buttons. Taking the content out of
+                  // hit-testing makes that impossible while the popper itself
+                  // stays hoverable, so the card still keeps the tooltip open.
+                  pointerEvents: 'none',
+                  // Final backstop: clip rather than bleed.
+                  overflow: 'hidden',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
@@ -217,13 +235,22 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
 
                 {/* Status row: the conversation's own status icon/colour (set via
                     updateChatData) followed by the live streaming status. */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 0.5,
+                    mb: 0.25,
+                    minWidth: 0,
+                  }}
+                >
                   {session.icon && (
                     <Icon
                       component="span"                      
                       sx={{
                         fontSize: 14,
                         lineHeight: 1,
+                        mt: '2px',
                         color: session.color || statusColor,
                         flexShrink: 0,
                       }}
@@ -236,6 +263,18 @@ export const ActiveSessionsAvatarStack: React.FC<ActiveSessionsAvatarStackProps>
                     sx={{
                       color: statusColor,
                       fontWeight: 600,
+                      minWidth: 0,
+                      flex: 1,
+                      // A shell activity detail can be a single unbroken path or
+                      // command fragment with nothing to wrap on, so allow
+                      // breaking inside words and then clamp: the card keeps a
+                      // predictable height no matter how long the command is.
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
                     }}
                   >
                     ● {getStatusText(session)}

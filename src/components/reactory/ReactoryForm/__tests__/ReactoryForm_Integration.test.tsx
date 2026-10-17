@@ -3,6 +3,7 @@ import { render, screen, cleanup, act } from '@testing-library/react';
 // @ts-ignore
 import { ReactoryForm } from '../ReactoryForm';
 import { createMockReactorySDK } from './mockReactory';
+import { DefaultLoadingSchema } from '../constants';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 // Define mocks BEFORE importing the component to prevent cascade
@@ -41,7 +42,8 @@ jest.mock('@reactory/client-core/api', () => ({
 }));
 
 jest.mock('../components', () => ({
-  FormLoadingIndicator: () => <div role="status">Loading...</div>
+  FormLoadingIndicator: () => <div role="status">Loading...</div>,
+  FormSkeleton: () => <div role="status" data-testid="form-skeleton">Skeleton</div>,
 }));
 
 // Mock the legacy modules and widgets that cause issues
@@ -115,6 +117,46 @@ describe('ReactoryForm Integration', () => {
     render(<ReactoryForm formId="test.form" />);
     // Testing Library would find multiple with role "status", so we check for one or use getAll
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('renders the form skeleton (not the placeholder form) when the resolved schema is still the placeholder', () => {
+    (useFormDefinition as jest.Mock).mockReturnValue({
+      form: { name: 'TestForm', nameSpace: 'test', version: '1.0.0', __complete__: true },
+      loadingState: { isLoading: false, stages: [], progress: 100, activeStageLabel: 'Ready', hasError: false },
+      schema: DefaultLoadingSchema,
+      uiSchema: {},
+      uiOptions: { componentType: 'form' },
+      formContext: {},
+    });
+
+    render(<ReactoryForm formId="test.form" />);
+
+    // The placeholder schema must never be rendered through the engine.
+    expect(screen.getByTestId('form-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('engine-dispatched-form')).not.toBeInTheDocument();
+  });
+
+  it('does not mask an unresolved form with a skeleton once loading has errored', () => {
+    (useFormDefinition as jest.Mock).mockReturnValue({
+      form: { name: 'TestForm', __complete__: false },
+      loadingState: {
+        isLoading: false,
+        hasError: true,
+        stages: [],
+        progress: 0,
+        activeStageLabel: 'Form could not be resolved',
+      },
+      schema: DefaultLoadingSchema,
+      uiSchema: {},
+      uiOptions: { componentType: 'form' },
+      formContext: {},
+    });
+
+    render(<ReactoryForm formId="test.form" />);
+
+    // An explicit failure must be visible: the skeleton would hide it indefinitely.
+    expect(screen.queryByTestId('form-skeleton')).not.toBeInTheDocument();
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
