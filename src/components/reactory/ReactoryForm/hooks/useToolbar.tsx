@@ -100,8 +100,13 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
         default: {
           //@ts-ignore
           submitButton = (
+            // `submitProps` is authored in a form definition, so its values are
+            // untyped strings (e.g. `color: 'primary'`). Casting the spread makes
+            // the Button overloads check the props set below instead of the
+            // arbitrary author-supplied ones — the same intent as the @ts-ignore
+            // above, but scoped to the spread and robust across MUI typings.
             <Button
-              {..._props}
+              {...(_props as any)}
               variant={
                 ["text", "contained", "outlined"].includes(
                   _props.variant as string
