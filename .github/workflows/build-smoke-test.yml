@@ -51,9 +51,10 @@ jobs:
       - name: Enable Corepack for the selected Node
         run: corepack enable
 
-      # yarn.lock is not tracked in this repo, so there is no lockfile to hold the install to.
+      # yarn.lock IS tracked, so an immutable install fails loudly if package.json
+      # and the lockfile ever disagree.
       - name: Install dependencies
-        run: yarn install --no-immutable
+        run: yarn install --immutable
 
       # config/env/ is gitignored, so CI writes a throwaway podman environment.
       # Every value is public by design (REACT_APP_* ship in the bundle).
