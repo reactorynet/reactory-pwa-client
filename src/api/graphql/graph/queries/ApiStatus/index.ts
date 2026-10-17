@@ -8,6 +8,7 @@ const FRAGMENTS = {
     applicationRoles
     when
     status
+    authReason
   `,
   loggedIn: `
     loggedIn {

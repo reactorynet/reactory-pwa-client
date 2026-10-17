@@ -4,7 +4,6 @@ import {
   LinearProgress,
   Typography,
   Fade,
-  Skeleton,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -15,6 +14,7 @@ import {
   MoreHoriz as ActiveIcon,
 } from '@mui/icons-material';
 import { FormLoadingStage } from '../hooks/useFormLoadingState';
+import { FormSkeleton } from './FormSkeleton';
 
 export interface FormLoadingIndicatorProps {
   /** All loading stages to display */
@@ -38,53 +38,6 @@ const stageIconMap: Record<FormLoadingStage['status'], React.ReactNode> = {
   active: <ActiveIcon sx={{ fontSize: 16, color: 'primary.main', animation: 'pulse 1.4s ease-in-out infinite' }} />,
   complete: <CompleteIcon sx={{ fontSize: 16, color: 'success.main' }} />,
   error: <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />,
-};
-
-/**
- * Renders skeleton placeholders that hint at the shape of a form.
- */
-const FormSkeleton: React.FC = () => {
-  const theme = useTheme();
-  return (
-    <Box sx={{ mt: 2, px: 1 }}>
-      {/* Title skeleton */}
-      <Skeleton
-        variant="text"
-        width="40%"
-        height={32}
-        sx={{ mb: 1, borderRadius: 1 }}
-      />
-      {/* Field skeletons */}
-      {[1, 2, 3].map(i => (
-        <Box key={i} sx={{ mb: 2 }}>
-          <Skeleton
-            variant="text"
-            width={`${20 + i * 8}%`}
-            height={18}
-            sx={{ mb: 0.5, borderRadius: 0.5 }}
-          />
-          <Skeleton
-            variant="rectangular"
-            width="100%"
-            height={40}
-            sx={{
-              borderRadius: 1,
-              bgcolor: alpha(theme.palette.action.hover, 0.06),
-            }}
-          />
-        </Box>
-      ))}
-      {/* Button skeleton */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-        <Skeleton
-          variant="rectangular"
-          width={100}
-          height={36}
-          sx={{ borderRadius: 1 }}
-        />
-      </Box>
-    </Box>
-  );
 };
 
 /**
@@ -206,7 +159,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
         )}
 
         {/* Form skeleton preview — only in full variant */}
-        {variant === 'full' && !hasError && <FormSkeleton />}
+        {variant === 'full' && !hasError && <FormSkeleton rows={3} sx={{ px: 0, mt: 1 }} />}
 
         {/* Pulse animation keyframes */}
         <style>{`

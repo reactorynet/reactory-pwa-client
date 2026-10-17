@@ -42,7 +42,8 @@ import {
   useToolbar,
  } from './hooks';
 import { ReactoryApiEventNames } from '@reactory/client-core/api';
-import { FormLoadingIndicator } from './components';
+import { FormLoadingIndicator, FormSkeleton } from './components';
+import { isDefaultLoadingSchema } from './constants';
 
 type ScreenSizeKey = Breakpoint | number;
 
@@ -356,7 +357,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         ...{ ...formProps, toolbarPosition }
       };
 
-      if (form.__complete__ === true && !loadingState.isLoading) {
+      // The form definition can resolve before its real schema does. In that
+      // window `useSchema` falls back to the placeholder "Loading Form" schema;
+      // rendering it through the engine produced a broken-looking surface, so we
+      // detect it and show a form-shaped skeleton instead (below).
+      const schemaIsPlaceholder = isDefaultLoadingSchema(schema);
+
+      if (form.__complete__ === true && !loadingState.isLoading && !schemaIsPlaceholder) {
         const formChildren: any[] = [];
         if ((toolbarPosition?.indexOf("top") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
         if (isFormBusy() === true) formChildren.push(<LinearProgress aria-label="Form loading" />);
@@ -433,6 +440,16 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             debug(`${SIGN}:render - form`);
           }
         }
+      } else if (!loadingState.isLoading && !loadingState.hasError && schemaIsPlaceholder) {
+        // Form definition resolved but its schema is still the placeholder (or
+        // genuinely missing) — render a skeleton rather than the raw
+        // "Loading Form" placeholder schema.
+        renderedComponent = (
+          <div aria-live="polite" aria-busy="true" role="status">
+            <FormSkeleton rows={4} showHeader showToolbar />
+          </div>
+        );
+        debug(`${SIGN}:render - skeleton`);
       } else {
         const loadingVariant = uiOptions?.loadingVariant || 'full';
         renderedComponent = (

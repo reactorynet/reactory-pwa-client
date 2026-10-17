@@ -8,6 +8,8 @@ import {
   getSystemPromptInfo,
   formatCount,
   arePanelPropsEqual,
+  summariseActivityDetail,
+  ACTIVITY_DETAIL_MAX_LENGTH,
 } from '../utils';
 
 describe('toCamelCaseLabel', () => {
@@ -368,5 +370,48 @@ describe('arePanelPropsEqual', () => {
 
   it('treats an absent open prop as closed', () => {
     expect(arePanelPropsEqual({ chats: [1] } as any, { chats: [2] } as any)).toBe(true);
+  });
+});
+
+describe('summariseActivityDetail', () => {
+  it('returns a short detail unchanged', () => {
+    expect(summariseActivityDetail('updateChatData')).toBe('updateChatData');
+  });
+
+  it('collapses a multi-line shell command onto one line', () => {
+    expect(summariseActivityDetail('echo one\necho two\t\t echo three')).toBe(
+      'echo one echo two echo three',
+    );
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(summariseActivityDetail('   ls -la   ')).toBe('ls -la');
+  });
+
+  it('truncates a detail longer than the budget and marks it as truncated', () => {
+    const detail = 'a'.repeat(ACTIVITY_DETAIL_MAX_LENGTH + 50);
+    const result = summariseActivityDetail(detail);
+
+    expect(result).toHaveLength(ACTIVITY_DETAIL_MAX_LENGTH + 1);
+    expect(result.endsWith('…')).toBe(true);
+    expect(result.slice(0, -1)).toBe('a'.repeat(ACTIVITY_DETAIL_MAX_LENGTH));
+  });
+
+  it('honours an explicit budget', () => {
+    expect(summariseActivityDetail('abcdefghij', 4)).toBe('abcd…');
+  });
+
+  it('does not leave a dangling space before the ellipsis', () => {
+    expect(summariseActivityDetail('echo alpha beta', 11)).toBe('echo alpha…');
+  });
+
+  it('returns an empty string for absent or blank detail', () => {
+    expect(summariseActivityDetail(undefined)).toBe('');
+    expect(summariseActivityDetail(null)).toBe('');
+    expect(summariseActivityDetail('   ')).toBe('');
+  });
+
+  it('returns an empty string for a non-positive budget', () => {
+    expect(summariseActivityDetail('echo alpha', 0)).toBe('');
   });
 });

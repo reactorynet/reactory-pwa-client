@@ -1470,3 +1470,128 @@ describe('initi18n', () => {
     expect(api.i18n).toBeDefined();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Form definition resolution — cached list must not be a hard gate
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Regression cover for `reactory.MyApplications@1.0.0` not loading its content.
+// The server's form *list* is role filtered and cached, so a form the caller may
+// legitimately open can be missing from it (anonymous / pre-auth fetch). Previously
+// `form(id)` returned null and never fell back to `ReactoryFormGetById`, so the form
+// could never render and its content was never requested.
+describe('form(id) resolution', () => {
+  const FORM_ID = 'reactory.MyApplications@1.0.0';
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('throws when no forms have been loaded yet', async () => {
+    const api = await createApi();
+    api.formSchemas = [];
+
+    expect(() => api.form(FORM_ID)).toThrow(/No forms have been loaded/);
+  });
+
+  it('resolves a form missing from the cached list by fetching it by id', async () => {
+    const api = await createApi();
+    // A role-filtered cache that does not include the requested form.
+    api.formSchemas = [{ id: 'core.SomeOtherForm@1.0.0', __complete__: true } as any];
+    api.formSchemaMap = {};
+
+    api.graphqlQuery = jest.fn().mockResolvedValue(
+      makeQueryResult({
+        ReactoryFormGetById: {
+          id: FORM_ID,
+          name: 'MyApplications',
+          nameSpace: 'reactory',
+          version: '1.0.0',
+          __complete__: false,
+        },
+      })
+    );
+
+    const onFormUpdated = jest.fn();
+    const returned = api.form(FORM_ID, onFormUpdated);
+
+    // Nothing cached to return synchronously, but a fetch must be in flight.
+    expect(returned).toBeUndefined();
+    expect(api.graphqlQuery).toHaveBeenCalledTimes(1);
+
+    await settle();
+
+    expect(onFormUpdated).toHaveBeenCalledTimes(1);
+    const [resolved, error] = onFormUpdated.mock.calls[0];
+    expect(error).toBeNull();
+    expect(resolved.id).toBe(FORM_ID);
+    expect(resolved.__complete__).toBe(true);
+
+    // The resolved definition is adopted so later lookups are served locally.
+    expect(api.formSchemas.some((form) => form.id === FORM_ID)).toBe(true);
+    expect(api.formSchemaMap[FORM_ID]).toBeDefined();
+  });
+
+  it('reports an error when the server has no definition for the id', async () => {
+    const api = await createApi();
+    api.formSchemas = [{ id: 'core.SomeOtherForm@1.0.0', __complete__: true } as any];
+
+    api.graphqlQuery = jest.fn().mockResolvedValue(makeQueryResult({ ReactoryFormGetById: null }));
+
+    const onFormUpdated = jest.fn();
+    api.form(FORM_ID, onFormUpdated);
+
+    await settle();
+
+    expect(onFormUpdated).toHaveBeenCalledTimes(1);
+    const [resolved, error] = onFormUpdated.mock.calls[0];
+    expect(resolved).toBeNull();
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it('reports an error when the by-id fetch rejects', async () => {
+    const api = await createApi();
+    api.formSchemas = [{ id: 'core.SomeOtherForm@1.0.0', __complete__: true } as any];
+
+    api.graphqlQuery = jest.fn().mockRejectedValue(new Error('network down'));
+
+    const onFormUpdated = jest.fn();
+    api.form(FORM_ID, onFormUpdated);
+
+    await settle();
+
+    expect(onFormUpdated).toHaveBeenCalledTimes(1);
+    const [resolved, error] = onFormUpdated.mock.calls[0];
+    expect(resolved).toBeNull();
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it('returns a complete cached definition without refetching', async () => {
+    const api = await createApi();
+    const cached = {
+      id: FORM_ID,
+      name: 'MyApplications',
+      nameSpace: 'reactory',
+      version: '1.0.0',
+      __complete__: true,
+    } as any;
+    api.formSchemas = [cached];
+    api.graphqlQuery = jest.fn();
+
+    const returned = api.form(FORM_ID);
+
+    expect(returned).toBe(cached);
+    expect(api.graphqlQuery).not.toHaveBeenCalled();
+  });
+
+  it('clearFormCache drops the cached definitions and the fetch watermark', async () => {
+    const api = await createApi();
+    api.formSchemas = [{ id: 'x', __complete__: true } as any];
+    api.formSchemaMap = { x: {} as any };
+    api.formSchemaLastFetch = new Date();
+
+    api.clearFormCache();
+
+    expect(api.formSchemas).toEqual([]);
+    expect(api.formSchemaMap).toEqual({});
+    expect(api.formSchemaLastFetch).toBeNull();
+  });
+});

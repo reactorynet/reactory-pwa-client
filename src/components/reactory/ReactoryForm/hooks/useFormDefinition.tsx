@@ -222,7 +222,18 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
           loadingState.setStageComplete('form-definition');
           setFormWithTracking(nextForm);
         } else if (formError) {
-          loadingState.setStageError('form-definition', 'Failed to load form definition');
+          // Surface a terminal error rather than leaving the form-definition
+          // stage active forever: `form(id)` reports here when the server has
+          // nothing for the id (unknown form, or missing roles), and an endless
+          // loader is far worse than an explicit failure.
+          loadingState.setStageError(
+            'form-definition',
+            formError.message || 'Failed to load form definition'
+          );
+          warning(`Could not resolve form "${formId}": ${formError.message}`);
+        } else {
+          loadingState.setStageError('form-definition', `Form "${formId}" could not be resolved`);
+          warning(`Could not resolve form "${formId}"`);
         }
       }, props.loadOptions || {});
       if (nil(_form)) {

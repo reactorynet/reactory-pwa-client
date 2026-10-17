@@ -40,6 +40,7 @@ import ReactoryApi, { ReactoryApiEventNames } from './api'
 import { INIT_STEPS, InitProgressEvent, InitProgressStatus } from './api/ApiEventNames';
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
+import { writeAuthToken, isTokenUsable, isTokenForClient } from './api/local';
 import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
@@ -240,6 +241,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     // Ensure forms are refreshed when login state changes
     const refreshFormsAndComponents = async () => {
       try {
+        // The form list is role filtered on the server, so a list fetched before
+        // the session was established (anonymous, or mid auth-handshake) is not
+        // valid for the logged-in user. Drop it before refetching so a stale,
+        // anon-filtered list can never survive into the authenticated session.
+        if (typeof (reactory as any).clearFormCache === 'function') {
+          (reactory as any).clearFormCache();
+        }
         // Force refresh forms cache to get forms for the logged-in user
         await (reactory as any).forms(true);
 
@@ -302,9 +310,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     const cleanupFormsAndComponents = async () => {
       try {
         // Clear form schemas cache
-        reactory.formSchemas = [];
-        reactory.formSchemaMap = {};
-        reactory.formSchemaLastFetch = null;
+        if (typeof (reactory as any).clearFormCache === 'function') {
+          (reactory as any).clearFormCache();
+        } else {
+          reactory.formSchemas = [];
+          reactory.formSchemaMap = {};
+          reactory.formSchemaLastFetch = null;
+        }
 
         // Clear the component registry for forms that may no longer be accessible
         // This helps prevent components from being rendered with stale permissions
@@ -540,7 +552,19 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
         if (query.auth_token) {
-          localStorage.setItem('auth_token', query.auth_token);
+          // Adopt the handoff token only when it is well-formed and unexpired, and
+          // store it under *this* application's own key. A stale or malformed
+          // token must not overwrite a working session, and a token minted for
+          // another client must never be adopted here.
+          if (isTokenUsable(query.auth_token) && isTokenForClient(query.auth_token, REACT_APP_CLIENT_KEY)) {
+            writeAuthToken(query.auth_token, REACT_APP_CLIENT_KEY);
+          } else {
+            reactory.log(
+              'Ignoring auth_token handoff that is expired or was minted for another application',
+              { clientKey: REACT_APP_CLIENT_KEY },
+              'warn'
+            );
+          }
           ReactoryApolloClient().then((cli) => {
             //@ts-ignore
             reactory.client = cli.client;
