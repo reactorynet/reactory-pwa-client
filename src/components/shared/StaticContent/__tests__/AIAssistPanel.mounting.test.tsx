@@ -95,7 +95,10 @@ describe('AIAssistPanel mounting cost', () => {
 
     const chat = screen.getByTestId('reactor-chat');
     expect(chat.textContent).toContain('Hello world');
-    expect(chat.textContent).toContain('French');
+    // `Français`, not `French`: language display names now come from one
+    // helper (`api/language.ts`, endonyms) instead of the panels carrying a
+    // second English-name implementation that disagreed with the selector.
+    expect(chat.textContent).toContain('Français');
     // Component tags must survive the assistant's rewrite, so the prompt has to
     // say so explicitly.
     expect(chat.textContent).toContain('<reactory');

@@ -2318,18 +2318,29 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   let confirmDialog = null;
   if (activeAction.show === true) {
+    // `count` drives i18next plural selection (`_one`/`_other`), while
+    // `selected` is what the `${selected.length}` template form uses. Both are
+    // passed so a translated plural string and a raw template agree on the
+    // number — without `count`, a plural key always renders its `_other` form
+    // and English said "Delete the 1 selected tickets".
+    const confirmationVars = {
+      reactory,
+      data,
+      selected: activeAction.rowsSelected,
+      count: Array.isArray(activeAction.rowsSelected) ? activeAction.rowsSelected.length : 0,
+    };
 
     confirmDialog = (
       <AlertDialog
         open={true}
         title={
           activeAction.action.confirmation?.title.indexOf("${") > -1 ?
-            reactory.utils.template(activeAction.action.confirmation.title)({ reactory, data, selected: activeAction.rowsSelected }) :
-            reactory.i18n.t(activeAction.action.confirmation.title, { reactory, data, selected: activeAction.rowsSelected })
+            reactory.utils.template(activeAction.action.confirmation.title)(confirmationVars) :
+            reactory.i18n.t(activeAction.action.confirmation.title, confirmationVars)
         }
         content={activeAction.action.confirmation?.content.indexOf("${") > -1 ?
-          reactory.utils.template(activeAction.action.confirmation.content)({ reactory, data, selected: activeAction.rowsSelected }) :
-          reactory.i18n.t(activeAction.action.confirmation.content, { reactory, data, selected: activeAction.rowsSelected })
+          reactory.utils.template(activeAction.action.confirmation.content)(confirmationVars) :
+          reactory.i18n.t(activeAction.action.confirmation.content, confirmationVars)
         }
         onAccept={async () => {
           await processAction();
@@ -2339,12 +2350,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }}
         cancelTitle={
           activeAction.action.confirmation?.cancelTitle.indexOf("${") > -1 ?
-            reactory.utils.template(activeAction.action.confirmation.cancelTitle)({ reactory, data, selected: activeAction.rowsSelected }) :
-            reactory.i18n.t(activeAction.action.confirmation.cancelTitle, { reactory, data, selected: activeAction.rowsSelected })}
+            reactory.utils.template(activeAction.action.confirmation.cancelTitle)(confirmationVars) :
+            reactory.i18n.t(activeAction.action.confirmation.cancelTitle, confirmationVars)}
         acceptTitle={
           activeAction.action.confirmation?.acceptTitle.indexOf("${") > -1 ?
-            reactory.utils.template(activeAction.action.confirmation.acceptTitle)({ reactory, data, selected: activeAction.rowsSelected }) :
-            reactory.i18n.t(activeAction.action.confirmation.acceptTitle, { reactory, data, selected: activeAction.rowsSelected })}
+            reactory.utils.template(activeAction.action.confirmation.acceptTitle)(confirmationVars) :
+            reactory.i18n.t(activeAction.action.confirmation.acceptTitle, confirmationVars)}
         titleProps={activeAction.action.confirmation.titleProps}
         contentProps={activeAction.action.confirmation.contentProps}
         cancelProps={activeAction.action.confirmation.cancelProps}

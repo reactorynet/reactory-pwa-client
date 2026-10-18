@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { ALL_LINK_TYPES, ALL_NODE_TYPES, GraphFilters, GraphLinkType, GraphNodeType } from '../../types';
 
@@ -17,6 +18,7 @@ export interface FilterPanelProps {
  */
 export default function FilterPanel(props: FilterPanelProps) {
   const { filters, presentNodeTypes, presentLinkTypes, onChange } = props;
+  const { t } = useTranslation();
 
   const toggle = <T,>(current: Set<T> | null, value: T, all: T[]): Set<T> | null => {
     const active = current ?? new Set(all);
@@ -61,10 +63,12 @@ export default function FilterPanel(props: FilterPanelProps) {
   return (
     <Box sx={{ px: 2, py: 1 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="overline">Node types</Typography>
+        <Typography variant="overline">
+          {t('reactor.client.graphExplorer.filter.nodeTypes', { defaultValue: 'Node types' })}
+        </Typography>
         {filtering && (
           <Button size="small" onClick={() => onChange({ nodeTypes: null, linkTypes: null })}>
-            Clear
+            {t('reactor.client.graphExplorer.filter.clear', { defaultValue: 'Clear' })}
           </Button>
         )}
       </Stack>

@@ -15,6 +15,7 @@ import {
   Grid,
   Avatar,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -54,6 +55,7 @@ export interface WorkflowTaskApprovalProps {
 }
 
 export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props) => {
+  const { t } = useTranslation();
   const {
     task,
     componentProps,
@@ -438,11 +440,13 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
 
       {/* Reject Reason Dialog */}
       <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Reason for Rejection</DialogTitle>
+        <DialogTitle>
+          {t('reactor.client.workflow.approval.rejectionReason', { defaultValue: 'Reason for Rejection' })}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
-            label="Rejection Comments"
+            label={t('reactor.client.workflow.approval.rejectionComments', { defaultValue: 'Rejection Comments' })}
             fullWidth
             multiline
             rows={3}
