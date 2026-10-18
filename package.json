@@ -130,6 +130,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint -c eslint.ci.config.mjs --no-inline-config src",
+    "lint:i18n": "node scripts/i18n/check-jsx-literals.mjs",
     "analyze": "source-map-explorer 'build/reactory/static/js/*.js'",
     "analyze:lasec-crm": "source-map-explorer 'build/lasec-crm/static/js/*.js'",
     "test": "jest",

@@ -1,0 +1,2780 @@
+{
+  "App.tsx": [
+    "text=Retry Connection",
+    "text=System Unavailable",
+    "text=We are unable to connect to the service at this time. This may be due to a poor internet connection, the server being down, or your device being offline.",
+    "text=We will automatically retry the connection. You can also click the button below to retry now.",
+    "text=cloud_off"
+  ],
+  "api/ApiProvider.tsx": [
+    "text=Something went wrong:"
+  ],
+  "api/ReactoryApi.tsx": [
+    "text=Access Denied",
+    "text=Component Find Failure, please check component registry and component name requested",
+    "text=No Component For Fqn:",
+    "text=No Component Specified",
+    "text=returned an error",
+    "text=returned empty"
+  ],
+  "app/router/ReactoryRouter.tsx": [
+    "attr:title=Loading routes"
+  ],
+  "app/router/RouteResolving.tsx": [
+    "text=Loading route component",
+    "text=Stop waiting",
+    "text=Waiting for"
+  ],
+  "app/router/widgets/RouteFailure.tsx": [
+    "text=Component:",
+    "text=Dismiss",
+    "text=Path:",
+    "text=Retry",
+    "text=Waited:"
+  ],
+  "app/router/widgets/RouteForbidden.tsx": [
+    "text=Required roles:"
+  ],
+  "app/router/widgets/RouteInspector.tsx": [
+    "attr:aria-label=Close inspector",
+    "attr:aria-label=Open route inspector",
+    "attr:title=Route inspector",
+    "text=Copy FQN",
+    "text=Copy config",
+    "text=Error",
+    "text=FQN:",
+    "text=Hide inspector",
+    "text=Last plugin event",
+    "text=Nearby registry keys",
+    "text=Public:",
+    "text=Re-resolve",
+    "text=Route Inspector",
+    "text=Route definition",
+    "text=· Roles:"
+  ],
+  "app/widgets/AppLoading.tsx": [
+    "text=Elapsed:"
+  ],
+  "app/widgets/Offline.tsx": [
+    "text=This message will disappear as soon as we are able to establish a connection. If you accessed the system with an email link, please retry using this link in a few moments.",
+    "text=We are unable to connect you to our service at this time. This may be due to a poor internet connection or your device is currently offline.",
+    "text=cloud_off"
+  ],
+  "components/dates/DateTimePicker.tsx": [
+    "text=DatePicker Deprecated"
+  ],
+  "components/index.tsx": [
+    "text=Complete Migration to reactory-user plugin",
+    "text=Component Not Found",
+    "text=Invalid Application Path",
+    "text=core.DataTable deprecated use MuiDataTables instead."
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationFeatureFlagsPanel.tsx": [
+    "attr:helperText=2-digit ISO country codes (press Enter or comma to add)",
+    "attr:helperText=Apply to specific business unit only",
+    "attr:helperText=Apply to specific organization only",
+    "attr:helperText=Apply to specific partner only",
+    "attr:helperText=Feature key cannot be changed after creation",
+    "attr:helperText=Roles that can access this feature (press Enter or comma to add)",
+    "attr:helperText=Select from the catalogue or enter an FQN manually",
+    "attr:helperText=Timezones (press Enter or comma to add)",
+    "attr:label=Business Unit",
+    "attr:label=Enabled",
+    "attr:label=Feature Flag",
+    "attr:label=Feature Key (FQN)",
+    "attr:label=Organization",
+    "attr:label=Partner",
+    "attr:label=Regions",
+    "attr:label=Roles",
+    "attr:label=Timezones",
+    "attr:placeholder=Type a role and press Enter",
+    "attr:placeholder=e.g. Africa/Johannesburg",
+    "attr:placeholder=e.g. ZA, US",
+    "attr:title=Delete flag",
+    "attr:title=Edit flag targeting",
+    "attr:title=Feature Flags",
+    "text=? This action cannot be undone.",
+    "text=Add Flag",
+    "text=Are you sure you want to remove the feature flag",
+    "text=Cancel",
+    "text=Confirm Delete",
+    "text=Delete",
+    "text=No feature flags configured. Feature flags allow you to toggle functionality and control feature rollouts for your application.",
+    "text=Only administrators can manage feature flags.",
+    "text=Organization:",
+    "text=Partner:",
+    "text=Regions:",
+    "text=Roles:",
+    "text=Targeting (Optional)",
+    "text=Timezones:"
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationMenusPanel.tsx": [
+    "attr:helperText=Comma-separated list of required roles",
+    "attr:helperText=Comma-separated list of roles allowed to view this menu",
+    "attr:helperText=Display name for the menu",
+    "attr:helperText=Material icon name (e.g., dashboard, settings, people)",
+    "attr:helperText=Route path or external URL (e.g., /dashboard, /users)",
+    "attr:helperText=Select feature flags required for this menu",
+    "attr:helperText=Select feature flags required for this menu item",
+    "attr:helperText=Target location in layout (e.g., left-nav, top-nav, header, footer)",
+    "attr:helperText=Unique identifier for the menu (e.g., main, left-nav, profile)",
+    "attr:label=Enabled",
+    "attr:label=Feature Flags",
+    "attr:label=Icon",
+    "attr:label=Label / Title",
+    "attr:label=Menu Key",
+    "attr:label=Menu Name",
+    "attr:label=Roles",
+    "attr:label=Route / Link",
+    "attr:label=Target",
+    "attr:title=Application Menus",
+    "attr:title=Delete item",
+    "attr:title=Delete menu",
+    "attr:title=Drag to reorder",
+    "attr:title=Edit item",
+    "attr:title=Edit menu",
+    "attr:title=Move down",
+    "attr:title=Move up",
+    "text=&bull;",
+    "text=Add Item",
+    "text=Add Menu",
+    "text=Cancel",
+    "text=Menu Items",
+    "text=Menu Items (",
+    "text=No items added yet. Click &quot;Add Item&quot; to define entries for this menu.",
+    "text=No menu items configured in this menu",
+    "text=No menus configured. Click",
+    "text=No roles specified (available to all permitted users)",
+    "text=Only administrators can edit menus, reorder navigation, and manage feature flags.",
+    "text=Roles:",
+    "text=Target:",
+    "text=item",
+    "text=to create your first navigation menu."
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationOrganizationsPanel.tsx": [
+    "text=ApplicationOrganizations component (core.ApplicationOrganizations@1.0.0) is not loaded.",
+    "text=No Reactory instance available. Please provide a reactory prop to view organizations."
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationOverviewPanel.tsx": [
+    "attr:label=Application ID",
+    "attr:label=Created At",
+    "attr:label=Email",
+    "attr:label=Site URL",
+    "attr:label=Updated At",
+    "attr:label=Username",
+    "attr:title=Application Details",
+    "attr:title=Email & Authentication",
+    "text=Active Theme",
+    "text=Visit Application"
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationRolesPanel.tsx": [
+    "attr:title=Application Roles",
+    "text=No roles found. Role data will be populated here when available."
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationRoutesPanel.tsx": [
+    "attr:helperText=Component to mount in this slot",
+    "attr:helperText=Fully qualified component or form to bind (e.g. core.UserProfile@1.0.0). Leave empty to infer properties.",
+    "attr:helperText=Human-readable title for page and breadcrumb navigation",
+    "attr:helperText=Optional redirect target URL path if route redirects elsewhere",
+    "attr:helperText=Roles allowed to access this route (leave empty for all roles)",
+    "attr:helperText=URL route path pattern (e.g., /dashboard or /users/:id)",
+    "attr:helperText=Unique identifier for the route (e.g., dashboard, user-profile)",
+    "attr:label=Component FQN",
+    "attr:label=Component Props (JSON)",
+    "attr:label=Exact Match",
+    "attr:label=Footer Slot",
+    "attr:label=Header Slot",
+    "attr:label=Inferred schema",
+    "attr:label=Path",
+    "attr:label=Public Route (No login required)",
+    "attr:label=Redirect Path (Optional)",
+    "attr:label=Roles",
+    "attr:label=Route Key",
+    "attr:label=Title",
+    "attr:label=exact",
+    "attr:placeholder=Add a role...",
+    "attr:placeholder=Search routes...",
+    "attr:title=Application Routes",
+    "attr:title=Click to toggle access",
+    "attr:title=Delete route",
+    "attr:title=Edit route",
+    "attr:title=Move down",
+    "attr:title=Move up",
+    "text=Access",
+    "text=Actions",
+    "text=Add Route",
+    "text=All roles",
+    "text=Cancel",
+    "text=Component FQN",
+    "text=Extended Properties",
+    "text=Only administrators can manage and reorder routes.",
+    "text=Optional component mounted above (header) or below (footer) the route body.",
+    "text=Order",
+    "text=Path",
+    "text=Raw JSON",
+    "text=Roles",
+    "text=Route Slots (Optional)",
+    "text=Show",
+    "text=Slots:",
+    "text=Title"
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationSettingsPanel.tsx": [
+    "attr:title=Application Settings",
+    "text=No settings configured for this application."
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationStatisticsPanel.tsx": [
+    "attr:title=Active Users",
+    "attr:title=Avg Session Duration",
+    "attr:title=Last Activity",
+    "attr:title=Total Sessions",
+    "attr:title=Usage Trends",
+    "text=Application Statistics",
+    "text=Last activity:",
+    "text=Overview of application usage and activity metrics"
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationThemesPanel.tsx": [
+    "attr:helperText=Unique lowercase identifier e.g. 'reactory', 'dark-ocean'",
+    "attr:label=Active",
+    "attr:label=Active Feature",
+    "attr:label=Application Title",
+    "attr:label=Assets",
+    "attr:label=Checkbox",
+    "attr:label=Component Overrides",
+    "attr:label=Contrast Text",
+    "attr:label=Custom Font Family String",
+    "attr:label=Dark",
+    "attr:label=Default Background",
+    "attr:label=Default Mode",
+    "attr:label=Default Size",
+    "attr:label=Default Variant",
+    "attr:label=Description",
+    "attr:label=Font Family Presets",
+    "attr:label=General",
+    "attr:label=Input Variant",
+    "attr:label=Light",
+    "attr:label=Live Preview",
+    "attr:label=Login Welcome Message",
+    "attr:label=MUI Palettes",
+    "attr:label=Main",
+    "attr:label=Namespace",
+    "attr:label=Paper Surface",
+    "attr:label=Primary Badge",
+    "attr:label=Primary Text",
+    "attr:label=Raw ThemeOptions (JSON)",
+    "attr:label=Secondary Badge",
+    "attr:label=Secondary Text",
+    "attr:label=Select Option",
+    "attr:label=Text Input Preview",
+    "attr:label=Theme Engine Type",
+    "attr:label=Theme Name (Key / Slug)",
+    "attr:label=Typography & Shape",
+    "attr:label=Version",
+    "attr:placeholder=Search themes...",
+    "attr:title=Duplicate Theme",
+    "attr:title=Edit Theme",
+    "attr:title=Publish CSS",
+    "attr:title=Refresh Themes",
+    "text=(Served via CDN)",
+    "text=/styles.css",
+    "text=? This action cannot be undone.",
+    "text=Actions",
+    "text=Add Asset",
+    "text=Add Theme",
+    "text=Application Themes",
+    "text=Are you sure you want to delete the theme",
+    "text=Asset Key",
+    "text=Base Font Size:",
+    "text=Border Radius:",
+    "text=Branding & Content",
+    "text=Buttons:",
+    "text=CSS",
+    "text=CSS Studio:",
+    "text=Cancel",
+    "text=Close",
+    "text=Contained (Solid Fill)",
+    "text=Corner Radius Sample",
+    "text=Create Theme",
+    "text=Create a new theme to customize colors, typography, component styling, and CSS.",
+    "text=Dark Mode",
+    "text=Dark Mode Palette",
+    "text=Default Mode",
+    "text=Default Size",
+    "text=Default Variant",
+    "text=Delete",
+    "text=Delete Theme",
+    "text=Edit the raw MUI",
+    "text=File / URL",
+    "text=Filled",
+    "text=Font Family Presets",
+    "text=Form Controls & Inputs:",
+    "text=Image",
+    "text=Input Variant",
+    "text=Insert Starter Snippet",
+    "text=Inter (Clean SaaS)",
+    "text=JSON",
+    "text=Large",
+    "text=Light Mode",
+    "text=Light Mode Palette",
+    "text=Live MUI Component & Palette Preview",
+    "text=Material Native (Mobile / Universal)",
+    "text=Material UI (Web)",
+    "text=Medium",
+    "text=MuiButton Defaults",
+    "text=MuiTextField & Select Inputs",
+    "text=Native System UI",
+    "text=No themes found",
+    "text=OS Preference",
+    "text=Open Sans",
+    "text=Option One",
+    "text=Option Two",
+    "text=Outlined",
+    "text=Outlined (Border Only)",
+    "text=Palette Swatches:",
+    "text=Primary Color",
+    "text=Primary Contained",
+    "text=Primary Outlined",
+    "text=Published directly to:",
+    "text=Resource",
+    "text=Roboto (Material Default)",
+    "text=Script",
+    "text=Secondary Color",
+    "text=Secondary Contained",
+    "text=Secondary Outlined",
+    "text=Segoe UI / Modern",
+    "text=Select Option",
+    "text=Set Active",
+    "text=Small",
+    "text=Spacing Unit Factor:",
+    "text=Standard (Underline)",
+    "text=Surfaces & Background",
+    "text=Switches, Checkboxes & Chips:",
+    "text=Text (Subtle)",
+    "text=Text Colors",
+    "text=Theme Engine Type",
+    "text=Theme Media & Static Assets",
+    "text=ThemeOptions",
+    "text=Type",
+    "text=object directly. Supports custom variables, transitions, zIndex, and breakpoints.",
+    "text=px",
+    "text=themes/"
+  ],
+  "components/plugins/reactory-core/application-management/ApplicationUsersPanel.tsx": [
+    "text=ApplicationUsers component (core.ApplicationUsers@1.0.0) is not loaded.",
+    "text=No application ID provided. Please provide an applicationId to view users."
+  ],
+  "components/plugins/reactory-core/content-management/components/ContentDetailPanel.tsx": [
+    "attr:label=AI Translated",
+    "attr:label=JSON Source",
+    "attr:label=Live Preview",
+    "attr:label=Overview & Properties",
+    "attr:label=Stale",
+    "text=Back to Details",
+    "text=Created At",
+    "text=Description",
+    "text=Edit Content",
+    "text=Editing:",
+    "text=Format",
+    "text=No content body entered yet.",
+    "text=No content record available.",
+    "text=No translations recorded for this content item.",
+    "text=Roles",
+    "text=Slug",
+    "text=Source Locale",
+    "text=Template",
+    "text=Title",
+    "text=Topics",
+    "text=Updated At",
+    "text=Version",
+    "text=slug:"
+  ],
+  "components/plugins/reactory-core/content-management/components/ContentEditorDrawer.tsx": [
+    "text=slug:"
+  ],
+  "components/plugins/reactory-core/content-management/components/ContentManagementToolbar.tsx": [
+    "attr:label=All",
+    "attr:label=Drafts",
+    "attr:label=HTML",
+    "attr:label=Markdown",
+    "attr:label=Published",
+    "attr:placeholder=Search content by title, slug or topic...",
+    "attr:title=Grid View",
+    "attr:title=List View",
+    "attr:title=Refresh Content",
+    "text=Content Management",
+    "text=FORMAT:",
+    "text=New Content",
+    "text=Reset all",
+    "text=STATUS:"
+  ],
+  "components/plugins/reactory-core/content-management/components/NewContentDialog.tsx": [
+    "attr:helperText=Separate multiple tags with commas",
+    "attr:helperText=Unique identifier used in routes and static content lookups",
+    "attr:label=Content Title",
+    "attr:label=Default Locale",
+    "attr:label=Description",
+    "attr:label=Format",
+    "attr:label=Slug (URL identifier)",
+    "attr:label=Topics / Tags",
+    "attr:placeholder=Brief summary of this content item",
+    "attr:placeholder=Comma-separated (e.g. docs, legal, footer)",
+    "attr:placeholder=e.g. Terms of Service, Getting Started",
+    "attr:placeholder=en",
+    "text=Cancel",
+    "text=Create & Open Editor",
+    "text=Create New Content Item",
+    "text=HTML / Rich Text",
+    "text=Markdown",
+    "text=Plain Text"
+  ],
+  "components/plugins/reactory-core/content-management/components/widgets/ContentFormatBadge.tsx": [
+    "attr:label=HTML",
+    "attr:label=Markdown",
+    "attr:label=Plain Text",
+    "attr:title=Format: HTML / Rich Text",
+    "attr:title=Format: Markdown",
+    "attr:title=Format: Plain text"
+  ],
+  "components/plugins/reactory-core/content-management/components/widgets/ContentStatusBadge.tsx": [
+    "attr:label=Draft",
+    "attr:label=Published",
+    "attr:title=Draft - not published",
+    "attr:title=Published content available to users"
+  ],
+  "components/plugins/reactory-core/graphql-editor/GraphQLEditor.tsx": [
+    "attr:helperText=Optional, when the document declares more than one operation",
+    "attr:label=GraphQL Document",
+    "attr:label=Operation Name",
+    "attr:label=Variables (JSON)",
+    "attr:placeholder=Optional",
+    "text=). The grid and raw views still work; the component view will not.",
+    "text=/Ctrl + Enter to run.",
+    "text=Enter a query or mutation.",
+    "text=Execute GraphQL queries and mutations against the Reactory API",
+    "text=GraphQL Editor",
+    "text=Loading the schema for the component view",
+    "text=Run a query or mutation to see results.",
+    "text=Schema unavailable ("
+  ],
+  "components/plugins/reactory-core/graphql-editor/components/DynamicResultView.tsx": [
+    "text=Generated from",
+    "text=Schema introspection reported:",
+    "text=The component view is unavailable.",
+    "text=The generated form could not be rendered.",
+    "text=The grid and raw views still show this result."
+  ],
+  "components/plugins/reactory-core/graphql-editor/components/RawResultView.tsx": [
+    "attr:aria-label=JSON",
+    "attr:aria-label=Raw output format",
+    "attr:aria-label=YAML",
+    "text=JSON",
+    "text=YAML"
+  ],
+  "components/plugins/reactory-core/graphql-editor/components/ResultDataGrid.tsx": [
+    "attr:aria-label=GraphQL results table",
+    "attr:helperText=Filters the result",
+    "attr:placeholder=Search",
+    "attr:title=Download the result as CSV",
+    "text=&rdquo;.",
+    "text=CSV",
+    "text=No rows match &ldquo;",
+    "text=The query returned no rows to display."
+  ],
+  "components/plugins/reactory-core/graphql-editor/components/ResultsViewer.tsx": [
+    "attr:aria-label=Result view",
+    "attr:label=Component",
+    "attr:label=Grid",
+    "attr:label=Raw",
+    "text=GraphQL returned",
+    "text=Result",
+    "text=error"
+  ],
+  "components/plugins/reactory-core/sql-editor/SqlQueryEditor.tsx": [
+    "attr:aria-label=Execute Query",
+    "text=Execute Query",
+    "text=Execute read-only SQL against connected relational databases",
+    "text=SQL Query Editor"
+  ],
+  "components/plugins/reactory-core/sql-editor/components/ConnectionSelect.tsx": [
+    "attr:label=Database Connection",
+    "text=Database Connection",
+    "text=Select a connection"
+  ],
+  "components/plugins/reactory-core/sql-editor/components/ResultsGrid.tsx": [
+    "attr:aria-label=Query results table",
+    "attr:helperText=Filters the current page",
+    "attr:placeholder=Search",
+    "attr:title=Download the current page as CSV",
+    "text=&rdquo;.",
+    "text=CSV",
+    "text=No rows on this page match &ldquo;",
+    "text=Query Results",
+    "text=Query returned no rows.",
+    "text=Run a query to see results."
+  ],
+  "components/plugins/reactory-core/sql-editor/components/SqlEditorPane.tsx": [
+    "text=/Ctrl + Enter to run.",
+    "text=Enter a single read-only SELECT statement."
+  ],
+  "components/reactory/ReactoryForm/ErrorBoundary.tsx": [
+    "text=Attempt",
+    "text=Component Stack:",
+    "text=Error Context:",
+    "text=Error Details",
+    "text=Form Error",
+    "text=Technical Details",
+    "text=Technical Error:",
+    "text=of"
+  ],
+  "components/reactory/ReactoryForm/ReactoryForm.tsx": [
+    "attr:aria-label=Form loading",
+    "text=No form definition available"
+  ],
+  "components/reactory/ReactoryForm/hooks/useExports.tsx": [
+    "text=Export",
+    "text=Export / Data extract window goes here",
+    "text=file"
+  ],
+  "components/reactory/ReactoryForm/hooks/useHelp.tsx": [
+    "text=AI Assistant",
+    "text=Get instant help from our AI assistant for this form.",
+    "text=Help",
+    "text=Help & Documentation",
+    "text=Help documentation has not been configured for this form.",
+    "text=No help topics available",
+    "text=Request Support",
+    "text=Still need help?",
+    "text=help_outline",
+    "text=support_agent"
+  ],
+  "components/reactory/ReactoryForm/hooks/useReports.tsx": [
+    "text=Report",
+    "text=Report content goes here"
+  ],
+  "components/reactory/ReactoryForm/hooks/useToolbar.tsx": [
+    "text=BACK",
+    "text=help",
+    "text=keyboard_arrow_left",
+    "text=refresh"
+  ],
+  "components/reactory/ReactoryForm/phase3/components/AnimatedReactoryForm.tsx": [
+    "text=Enhanced Form",
+    "text=Loading form..."
+  ],
+  "components/reactory/ReactoryForm/phase3/components/LoadingSkeleton.tsx": [
+    "attr:label=Retry"
+  ],
+  "components/reactory/ReactoryForm/phase4/builder/FormBuilderCanvas.tsx": [
+    "attr:label=Required",
+    "attr:title=Export",
+    "attr:title=Fit to Screen",
+    "attr:title=Help",
+    "attr:title=Import",
+    "attr:title=Redo",
+    "attr:title=Save",
+    "attr:title=Settings",
+    "attr:title=Undo",
+    "attr:title=Zoom In",
+    "attr:title=Zoom Out",
+    "text=Drop Zone",
+    "text=Drop items here to add them to the form",
+    "text=Field Types",
+    "text=Form Builder Canvas",
+    "text=Height",
+    "text=px"
+  ],
+  "components/reactory/ReactoryForm/phase4/collaboration/CollaborationToolbar.tsx": [
+    "attr:title=Accept",
+    "attr:title=Collaboration settings",
+    "attr:title=Merge",
+    "attr:title=Redo",
+    "attr:title=Reject",
+    "attr:title=Show history",
+    "attr:title=Undo",
+    "text=Change ID:",
+    "text=Close",
+    "text=Collaboration History",
+    "text=Comment:",
+    "text=Conflict Resolution (",
+    "text=No conflicts to resolve",
+    "text=Recent Changes (",
+    "text=Resolved by:",
+    "text=Time:",
+    "text=User:",
+    "text=Version:"
+  ],
+  "components/reactory/ReactoryForm/phase4/collaboration/PresenceIndicators.tsx": [
+    "text=Collaboration Users",
+    "text=Offline (",
+    "text=Online ("
+  ],
+  "components/reactory/ReactoryForm/phase4/validation/ValidationDisplay.tsx": [
+    "attr:title=Clear this error",
+    "attr:title=Refresh validation",
+    "text=Performance Metrics",
+    "text=Slowest Validations",
+    "text=Validating...",
+    "text=Validation Error",
+    "text=pending...",
+    "text=validation"
+  ],
+  "components/reactory/ReactoryFormRouter.tsx": [
+    "text=Path:",
+    "text=Relative Path:",
+    "text=Unmatched Route"
+  ],
+  "components/reactory/form/components/ErrorList.tsx": [
+    "text=Errors"
+  ],
+  "components/reactory/form/components/FormClass.tsx": [
+    "text=Field Error:"
+  ],
+  "components/reactory/form/components/SchemaForm.tsx": [
+    "text=Field Error:",
+    "text=SchemaField not found in registry"
+  ],
+  "components/reactory/form/components/fields/ObjectField.tsx": [
+    "text=Invalid",
+    "text=object field configuration:"
+  ],
+  "components/reactory/form/components/fields/UnsupportedField.tsx": [
+    "text=Unsupported field schema",
+    "text=field"
+  ],
+  "components/reactory/form-engine/fields/GridLayoutField.tsx": [
+    "text=GridLayout field could not resolve an ObjectField renderer for"
+  ],
+  "components/reactory/form-engine/fields/ReactoryConditionalField.tsx": [
+    "text=Check your schema for cycles in if/then/else nesting.",
+    "text=Conditional schema recursion exceeded depth",
+    "text=SchemaField not in registry."
+  ],
+  "components/reactory/form-engine/templates/ArrayFieldTemplate.tsx": [
+    "attr:aria-label=Add new item",
+    "text=Add item",
+    "text=add"
+  ],
+  "components/reactory/form-engine/templates/ErrorListTemplate.tsx": [
+    "text=Validation Errors"
+  ],
+  "components/reactory/form-engine/templates/ObjectFieldTemplate.tsx": [
+    "attr:aria-label=Add new property",
+    "text=Add property",
+    "text=add"
+  ],
+  "components/reactory/form-engine/templates/UnsupportedFieldTemplate.tsx": [
+    "text=Unsupported field"
+  ],
+  "components/reactory/form-engine/templates/WrapIfAdditionalTemplate.tsx": [
+    "attr:aria-label=Remove",
+    "text=close"
+  ],
+  "components/reactory/ux/mui/fields/MaterialArrayField/MaterialArrayField.tsx": [
+    "text=Invalid Array Schema"
+  ],
+  "components/reactory/ux/mui/fields/MaterialArrayField/MaterialDefaultArrayField.tsx": [
+    "attr:title=Move down",
+    "attr:title=Move up",
+    "text=add",
+    "text=delete_outline",
+    "text=keyboard_arrow_down",
+    "text=keyboard_arrow_up"
+  ],
+  "components/reactory/ux/mui/fields/MaterialArrayField/MaterialDefaultFixedArrayField.tsx": [
+    "text=add"
+  ],
+  "components/reactory/ux/mui/fields/MaterialGridField.tsx": [
+    "text=Grid Layout not available for array types. Arrays are by default wrapped in a grid container."
+  ],
+  "components/reactory/ux/mui/fields/MaterialObjectField.tsx": [
+    "text=Check that the registry has ObjectFieldTemplate",
+    "text=Invalid",
+    "text=add",
+    "text=object field configuration:"
+  ],
+  "components/reactory/ux/mui/fields/MaterialSchemaField.tsx": [
+    "text=Error Message:",
+    "text=Field ID / Path:",
+    "text=Field Resolution Warning:",
+    "text=Property Name:",
+    "text=Requested ui:field:",
+    "text=Requested ui:widget:",
+    "text=Schema Type:",
+    "text=warning"
+  ],
+  "components/reactory/ux/mui/fields/MaterialStringField.tsx": [
+    "text=search",
+    "text=💥 Could not render field"
+  ],
+  "components/reactory/ux/mui/fields/MaterialUnsupportedField.tsx": [
+    "text=\" not supported by the Material UI Package",
+    "text=Field",
+    "text=type \""
+  ],
+  "components/reactory/ux/mui/templates/MaterialArrayField.tsx": [
+    "text=add",
+    "text=delete_outline",
+    "text=keyboard_arrow_down",
+    "text=keyboard_arrow_up"
+  ],
+  "components/reactory/ux/mui/templates/MaterialArrayTemplate.tsx": [
+    "text=Create a new item by clicking the",
+    "text=add",
+    "text=delete_outline",
+    "text=icon",
+    "text=keyboard_arrow_down",
+    "text=keyboard_arrow_up"
+  ],
+  "components/reactory/ux/mui/templates/MaterialFormErrorList.tsx": [
+    "text=Form Errors",
+    "text=close",
+    "text=error"
+  ],
+  "components/reactory/ux/mui/widgets/ChipArray/ChipArray.tsx": [
+    "attr:title=Add argument",
+    "attr:title=Remove all",
+    "text=(None)",
+    "text=add",
+    "text=delete_outline"
+  ],
+  "components/reactory/ux/mui/widgets/ColumnFilterWidget/ColumnFilterWidget.tsx": [
+    "attr:title=Column Filter",
+    "attr:title=Column Selection",
+    "text=Column Filter",
+    "text=add_circle",
+    "text=cancel",
+    "text=check_circle_outline",
+    "text=filter_list"
+  ],
+  "components/reactory/ux/mui/widgets/ColumnSelectorWidget/ColumnSelectorWidget.tsx": [
+    "attr:title=Column Selection",
+    "text=Column Selection",
+    "text=cancel",
+    "text=check_circle_outline",
+    "text=view_column"
+  ],
+  "components/reactory/ux/mui/widgets/CompanyLogo/CompanyLogo.tsx": [
+    "text=Error Loading logo",
+    "text=For an optimal experience please use a 16:9 wide logo with at least 512 pixels (px) in width.",
+    "text=Loading logo",
+    "text=Upload / Drop a new logo",
+    "text=You can drag and drop a new image on the surface or click / touch to select a new logo from your device."
+  ],
+  "components/reactory/ux/mui/widgets/DataPageWidget/DataPageWidget.tsx": [
+    "attr:label=Data Page",
+    "text=chevron_left",
+    "text=chevron_right",
+    "text=of"
+  ],
+  "components/reactory/ux/mui/widgets/DynamicWidget/DynamicWidget.tsx": [
+    "text=No component specified",
+    "text=Retry"
+  ],
+  "components/reactory/ux/mui/widgets/JsonEditorWidget/JsonEditorWidget.tsx": [
+    "attr:aria-label=Format JSON",
+    "attr:title=Format JSON"
+  ],
+  "components/reactory/ux/mui/widgets/LabelWidget/LabelWidget.tsx": [
+    "attr:title=Copy to clipboard",
+    "text=assignment"
+  ],
+  "components/reactory/ux/mui/widgets/LabelWidget/components.tsx": [
+    "attr:aria-label=Loading"
+  ],
+  "components/reactory/ux/mui/widgets/MaterialListWidget/MaterialListWidget.tsx": [
+    "text=add"
+  ],
+  "components/reactory/ux/mui/widgets/MaterialTableWidget/MaterialTableWidget.tsx": [
+    "text=Loading data…",
+    "text=Not Found",
+    "text=Notice:",
+    "text=Renderer",
+    "text=Retry",
+    "text=Something went wrong during the render of the data table, please",
+    "text=This table is currently using client-side pagination (",
+    "text=Total records:",
+    "text=Totals",
+    "text=selected",
+    "text=total records). Consider updating the GraphQL query and resolver to support server-side pagination for optimal performance.",
+    "text=warning_amber"
+  ],
+  "components/reactory/ux/mui/widgets/MaterialTableWidget/components/AdvancedFilterPanel.tsx": [
+    "attr:label=Preset Name",
+    "text=Advanced Filters",
+    "text=Apply",
+    "text=Cancel",
+    "text=Clear",
+    "text=Clear All",
+    "text=Filter Presets",
+    "text=None",
+    "text=Save",
+    "text=Save Current Filters",
+    "text=Save Filter Preset",
+    "text=clear",
+    "text=clear_all",
+    "text=close",
+    "text=delete",
+    "text=download",
+    "text=filter",
+    "text=save"
+  ],
+  "components/reactory/ux/mui/widgets/MaterialTableWidget/components/QuickFilters.tsx": [
+    "attr:label=Clear Filters",
+    "text=Clear Filters",
+    "text=clear"
+  ],
+  "components/reactory/ux/mui/widgets/MaterialTableWidget/components/SearchBar.tsx": [
+    "text=clear",
+    "text=help_outline",
+    "text=search"
+  ],
+  "components/reactory/ux/mui/widgets/ReactoryColorPicker/ReactoryColorPicker.tsx": [
+    "text=palette"
+  ],
+  "components/reactory/ux/mui/widgets/ReactoryDropZone/ReactoryDropZone.tsx": [
+    "text=% complete",
+    "text=Failed (",
+    "text=Uploaded (",
+    "text=Uploading files...",
+    "text=check",
+    "text=check_circle",
+    "text=close",
+    "text=cloud_upload",
+    "text=error",
+    "text=file(s) rejected"
+  ],
+  "components/reactory/ux/mui/widgets/RecordLookup/RecordLookup.tsx": [
+    "text=Lookup",
+    "text=search"
+  ],
+  "components/reactory/ux/mui/widgets/SchemaSelectorWidget/SchemaSelectorWidget.tsx": [
+    "text=No Selector"
+  ],
+  "components/reactory/ux/mui/widgets/SearchWidget/SearchWidget.tsx": [
+    "attr:aria-label=Search for user",
+    "text=search"
+  ],
+  "components/reactory/ux/mui/widgets/Select/Select.tsx": [
+    "text=None"
+  ],
+  "components/reactory/ux/mui/widgets/SelectWithData/SelectWithData.tsx": [
+    "text=Error Loading Data",
+    "text=Error rendering select:",
+    "text=Loading",
+    "text=No Query For Select Defined",
+    "text=None",
+    "text=check_circle"
+  ],
+  "components/reactory/ux/mui/widgets/UserAvatar/UserAvatar.tsx": [
+    "attr:aria-label=close",
+    "text=Cancel",
+    "text=close"
+  ],
+  "components/reactory/ux/mui/widgets/UserPeersWidget/UserPeersWidget.tsx": [
+    "text=UserPeers Widget"
+  ],
+  "components/reactory/ux/mui/widgets/UserSelectorWidget/UserSelectorWidget.tsx": [
+    "attr:title=Employees",
+    "attr:title=New User"
+  ],
+  "components/reactory/ux/mui/widgets/UserWidgetWithSearch/UserWidgetWithSearch.tsx": [
+    "attr:title=Employees",
+    "attr:title=New User"
+  ],
+  "components/reactory/ux/mui/widgets/WidgetNotAvailable/WidgetNotAvailable.tsx": [
+    "text=hourglass_empty"
+  ],
+  "components/reactory/ux/mui/widgets/index.tsx": [
+    "text=Complete Import from reactory-user pluging"
+  ],
+  "components/reactory/ux/mui/widgets/mapping/GoogleMapWidget.tsx": [
+    "attr:aria-label=Search for an address",
+    "text=search"
+  ],
+  "components/shared/AccordionComponent/AccordionComponent.tsx": [
+    "text=BACK",
+    "text=NEXT"
+  ],
+  "components/shared/Comments/CommentAnnotation.tsx": [
+    "text=Click to view discussion →",
+    "text=Thread ("
+  ],
+  "components/shared/Comments/Comments.tsx": [
+    "attr:label=Editing comment",
+    "attr:label=Remove highlight",
+    "attr:label=Replying to thread",
+    "attr:title=Delete comment",
+    "attr:title=Edit comment",
+    "text=Annotated text:",
+    "text=Are you sure you want to remove this comment? This action cannot be undone.",
+    "text=Cancel",
+    "text=Commenting on highlighted text:",
+    "text=Delete",
+    "text=Delete Comment",
+    "text=No comments yet. Be the first to start the conversation!",
+    "text=Reply",
+    "text=[This comment has been removed]"
+  ],
+  "components/shared/Comments/MyCommentDetailPanel.tsx": [
+    "attr:label=Removed",
+    "attr:label=Reply",
+    "text=Annotated text",
+    "text=No comment data available.",
+    "text=Resource link unavailable",
+    "text=View resource",
+    "text=favorite",
+    "text=upvote"
+  ],
+  "components/shared/Comments/MyCommentsToolbar.tsx": [
+    "attr:aria-label=Refresh",
+    "attr:label=Context",
+    "attr:label=Search my comments",
+    "attr:title=Refresh",
+    "text=All contexts",
+    "text=Refresh",
+    "text=comment"
+  ],
+  "components/shared/ConditionalIconComponent/ConditionalIconComponent.tsx": [
+    "text=Error in ConditionalIconComponent:"
+  ],
+  "components/shared/ContentRenderer/ContentRenderer.tsx": [
+    "text=Comment on selection",
+    "text=Content Discussion",
+    "text=Open Comments ("
+  ],
+  "components/shared/DocumentListComponent/DocumentListComponent.tsx": [
+    "text=Remove",
+    "text=description"
+  ],
+  "components/shared/DocumentUploadComponents/DocumentUploadComponents.tsx": [
+    "text=StaticContent component not available."
+  ],
+  "components/shared/File/File.tsx": [
+    "attr:aria-label=Preview",
+    "attr:aria-label=Raw",
+    "attr:aria-label=file view mode",
+    "attr:aria-label=unsaved changes",
+    "text=File changed externally while you have unsaved edits.",
+    "text=File is empty",
+    "text=Keep mine",
+    "text=Preview",
+    "text=Raw",
+    "text=Take theirs"
+  ],
+  "components/shared/Footer/Footer.tsx": [
+    "attr:alt=Reactory",
+    "text=Powered by Reactory"
+  ],
+  "components/shared/FormEditor/FormEditor.tsx": [
+    "attr:aria-label=form editor tabs",
+    "attr:label=Data",
+    "attr:label=Data Schema Validation",
+    "attr:label=Form Data Schema",
+    "attr:label=Form Preview Status",
+    "attr:label=Form UI Schema",
+    "attr:label=General",
+    "attr:label=GraphQL Data Provider Config",
+    "attr:label=Preview",
+    "attr:label=UI Schema Validation",
+    "attr:label=Unsaved changes",
+    "attr:label=Visual Editor",
+    "attr:placeholder=Enter GraphQL queries and mutations...",
+    "attr:placeholder=Enter JSON schema definition for form data validation...",
+    "attr:placeholder=Enter UI schema definition for form presentation...",
+    "text=...and",
+    "text=Data Configuration (GraphQL)",
+    "text=Fix schema validation errors to see form preview",
+    "text=Form Preview",
+    "text=Form configuration",
+    "text=Live Form Preview:",
+    "text=Loading form definition…",
+    "text=Reload",
+    "text=Schema",
+    "text=The base definition of the form. Identity fields are required before the form can be saved.",
+    "text=UI Schema",
+    "text=more"
+  ],
+  "components/shared/FormEditor/VisualEditor/FieldPalette.tsx": [
+    "text=Drag fields to the canvas",
+    "text=Field Types"
+  ],
+  "components/shared/FormEditor/VisualEditor/FieldSettingsDialog.tsx": [
+    "text=Cancel",
+    "text=Edit Field:"
+  ],
+  "components/shared/FormEditor/VisualEditor/GraphElementDialog.tsx": [
+    "text=Cancel",
+    "text=Save"
+  ],
+  "components/shared/FormEditor/VisualEditor/GraphElementEditor.tsx": [
+    "attr:helperText=Extract a single value from the result",
+    "attr:helperText=Shown in a minimal modal while the mutation runs",
+    "attr:helperText=Shown while the query is running",
+    "attr:helperText=The graph operation name (matches the server query/mutation)",
+    "attr:label=Auto query delay (ms)",
+    "attr:label=Auto query on mount",
+    "attr:label=Component ref (FQN)",
+    "attr:label=Data map",
+    "attr:label=Event name",
+    "attr:label=Fetch policy",
+    "attr:label=GraphQL text",
+    "attr:label=Handled by",
+    "attr:label=In-app notification",
+    "attr:label=Merge function (FQN)",
+    "attr:label=Merge strategy",
+    "attr:label=Message",
+    "attr:label=Method name",
+    "attr:label=Name",
+    "attr:label=Object map",
+    "attr:label=On error method",
+    "attr:label=On success method",
+    "attr:label=Poll interval (ms)",
+    "attr:label=Query message",
+    "attr:label=Redirect URL",
+    "attr:label=Redirect timeout (ms)",
+    "attr:label=Refresh events",
+    "attr:label=Refresh on each event",
+    "attr:label=Response __typename",
+    "attr:label=Result key",
+    "attr:label=Result map",
+    "attr:label=Result type",
+    "attr:label=Spread props",
+    "attr:label=Success redirect URL",
+    "attr:label=Throttle (ms)",
+    "attr:label=Title",
+    "attr:label=Type",
+    "attr:label=Update message",
+    "attr:label=Use websocket",
+    "attr:label=Variable mapping",
+    "attr:title=Basics",
+    "attr:title=Mutation behaviour",
+    "attr:title=Query behaviour",
+    "attr:title=Response handlers (union types)",
+    "attr:title=Result binding",
+    "attr:title=Variables",
+    "text=(auto)",
+    "text=(default)",
+    "text=Add event",
+    "text=Add handler",
+    "text=Add mapping",
+    "text=Add refetch query",
+    "text=Error event",
+    "text=Error handling",
+    "text=Error notification",
+    "text=Event",
+    "text=Handle union-type results: add a handler keyed by the response __typename.",
+    "text=No mappings.",
+    "text=Refetch queries",
+    "text=Rows",
+    "text=Success event",
+    "text=Success notification"
+  ],
+  "components/shared/FormEditor/VisualEditor/LayoutDesignerDialog.tsx": [
+    "attr:helperText=The component used to lay out this node's child fields",
+    "attr:label=Active tab key",
+    "attr:label=Active tab source",
+    "attr:label=Container",
+    "attr:label=Elevation",
+    "attr:label=Grid options",
+    "attr:label=Icon",
+    "attr:label=Layout (ui:field)",
+    "attr:label=Router path template",
+    "attr:label=Rows",
+    "attr:label=Spacing",
+    "attr:label=Tab options",
+    "attr:label=Tabs",
+    "attr:label=Title",
+    "attr:label=Use router (change URL on tab change)",
+    "attr:placeholder=/thing/${formContext.props.id}?tab=${tab_id}",
+    "attr:placeholder=tab",
+    "attr:title=Move down",
+    "attr:title=Move up",
+    "attr:title=Remove field",
+    "attr:title=Remove row",
+    "attr:title=Remove tab",
+    "text=(custom)",
+    "text=(not in schema)",
+    "text=Add field to row",
+    "text=Add row",
+    "text=Add tab",
+    "text=Cancel",
+    "text=Component state",
+    "text=Configure Layout —",
+    "text=No properties defined",
+    "text=No rows yet. Add one below.",
+    "text=No tabs yet. Add one below.",
+    "text=Paper",
+    "text=Route params",
+    "text=Row",
+    "text=Save Layout",
+    "text=This node uses the default object layout — fields render in schema order. Choose a Tabbed or Grid layout above to configure a custom arrangement.",
+    "text=URL query",
+    "text=Unassigned fields:",
+    "text=div"
+  ],
+  "components/shared/FormEditor/VisualEditor/ProviderSettingsDialog.tsx": [
+    "text=Cancel",
+    "text=Save"
+  ],
+  "components/shared/FormEditor/VisualEditor/RESTCallDialog.tsx": [
+    "text=Cancel",
+    "text=Save"
+  ],
+  "components/shared/FormEditor/VisualEditor/RESTCallEditor.tsx": [
+    "attr:helperText=A registered function that supplies request options",
+    "attr:helperText=Supports lodash template syntax against formData / formContext",
+    "attr:helperText=Valid JSON is stored as an object; anything else is stored as a template string",
+    "attr:label=HTTP client",
+    "attr:label=Headers",
+    "attr:label=Method",
+    "attr:label=Options provider (FQN)",
+    "attr:label=Request body (JSON or template)",
+    "attr:label=Run at",
+    "attr:label=URL (template)",
+    "attr:placeholder=${process.env.API_URL}/v1/customer/${formContext.queryObject.id}",
+    "attr:title=Advanced",
+    "attr:title=Body",
+    "attr:title=Headers",
+    "attr:title=Request",
+    "text=(default)",
+    "text=(default: server)",
+    "text=Other request options (JSON)"
+  ],
+  "components/shared/FormEditor/VisualEditor/SchemaCanvas.tsx": [
+    "attr:label=Required",
+    "attr:label=items",
+    "text=Drag fields here to start building",
+    "text=Form Schema Canvas",
+    "text=Key:",
+    "text=— drop a field here to nest"
+  ],
+  "components/shared/FormEditor/VisualEditor/UIFieldSettingsDialog.tsx": [
+    "text=Cancel",
+    "text=Save Changes",
+    "text=UI Settings:"
+  ],
+  "components/shared/FormEditor/VisualEditor/VisualDataEditor.tsx": [
+    "attr:label=Legacy GraphQL",
+    "text=Add Provider",
+    "text=Select a provider or add a new one.",
+    "text=Visual editor for",
+    "text=is not yet implemented. You can configure options via the Edit button above."
+  ],
+  "components/shared/FormEditor/VisualEditor/VisualGraphQLDataEditor.tsx": [
+    "attr:label=Custom mutation key",
+    "attr:label=New query key",
+    "attr:label=auto",
+    "attr:label=result map",
+    "attr:title=Edit",
+    "attr:title=Remove",
+    "text=Add",
+    "text=Add primary query",
+    "text=Mutations",
+    "text=Named queries",
+    "text=No mutations configured.",
+    "text=No primary query. The primary query loads the form's data.",
+    "text=Primary query"
+  ],
+  "components/shared/FormEditor/VisualEditor/VisualRESTDataEditor.tsx": [
+    "attr:label=New mutation key",
+    "attr:label=New query key",
+    "attr:label=default",
+    "attr:title=Edit",
+    "attr:title=Remove",
+    "attr:title=Set as default query",
+    "text=Add",
+    "text=Default",
+    "text=No REST mutations configured.",
+    "text=No REST queries configured.",
+    "text=REST mutations (write)",
+    "text=REST queries (read)"
+  ],
+  "components/shared/FormEditor/VisualEditor/VisualUISchemaEditor.tsx": [
+    "attr:label=Hidden",
+    "attr:title=Configure Form Layout",
+    "attr:title=Configure Layout",
+    "attr:title=Edit Form Root Settings",
+    "attr:title=Edit UI Settings",
+    "text=Form Root Settings",
+    "text=No schema properties defined. Define your data schema first."
+  ],
+  "components/shared/FormList/FormList.tsx": [
+    "attr:placeholder=Search forms... (press Enter to search)",
+    "text=Create New Form",
+    "text=Data",
+    "text=Develop",
+    "text=Edit",
+    "text=Explore Submissions",
+    "text=Import Form Definition",
+    "text=Modified",
+    "text=Name",
+    "text=Sort by:",
+    "text=Usage",
+    "text=View",
+    "text=active users"
+  ],
+  "components/shared/FormSubmissions/SubmissionDetail.tsx": [
+    "attr:label=Fields",
+    "attr:label=Raw JSON",
+    "text=This submission has no data.",
+    "text=delete"
+  ],
+  "components/shared/FormSubmissions/SubmissionQueryBuilder.tsx": [
+    "attr:label=Clear",
+    "attr:placeholder={ \"and\": [ { \"path\": \"country\", \"op\": \"eq\", \"value\": \"ZA\" } ] }",
+    "text=. Group predicates with",
+    "text=. Paths address the submitted document, e.g.",
+    "text=A predicate is",
+    "text=Operators:",
+    "text=address.country",
+    "text=and",
+    "text=help_outline",
+    "text=lines[0].sku",
+    "text=not",
+    "text=or",
+    "text=string (default), number, boolean, date. Numeric and date comparisons need the matching valueType - dates compare as ISO-8601 strings.",
+    "text=valueType:"
+  ],
+  "components/shared/FormSubmissions/SubmissionSummary.tsx": [
+    "text=No data"
+  ],
+  "components/shared/FramedWindow/FramedWindow.tsx": [
+    "text=The report has been emailed",
+    "text=Waiting for url result",
+    "text=Your download will being shortly. If the download does not automatically start after a few seconds please click",
+    "text=here",
+    "text=refresh"
+  ],
+  "components/shared/GraphExplorer/GraphExplorer.tsx": [
+    "attr:aria-label=Cancel",
+    "text=close"
+  ],
+  "components/shared/GraphExplorer/components/Panels/CatalogPicker.tsx": [
+    "attr:title=Add to current view (build a combined perspective)",
+    "attr:title=Replace the view with this project",
+    "text=No cataloged projects.",
+    "text=Projects",
+    "text=add",
+    "text=autorenew",
+    "text=hub"
+  ],
+  "components/shared/GraphExplorer/components/Panels/EdgeEditorDialog.tsx": [
+    "attr:label=Description (optional)",
+    "attr:label=Title (optional)",
+    "attr:label=Types",
+    "text=Cancel"
+  ],
+  "components/shared/GraphExplorer/components/Panels/FilterPanel.tsx": [
+    "text=Click toggles a type; double-click shows only that type.",
+    "text=Edge types"
+  ],
+  "components/shared/GraphExplorer/components/Panels/GraphContextMenu.tsx": [
+    "text=Create edge to…",
+    "text=Edit data",
+    "text=Focus",
+    "text=Hide (restorable)",
+    "text=Path to…",
+    "text=Remove from perspective (Del)",
+    "text=Show dependencies",
+    "text=Show dependents",
+    "text=add_link",
+    "text=call_made",
+    "text=call_received",
+    "text=center_focus_strong",
+    "text=data_object",
+    "text=delete",
+    "text=route",
+    "text=visibility_off"
+  ],
+  "components/shared/GraphExplorer/components/Panels/GraphToolbar.tsx": [
+    "attr:label=truncated",
+    "attr:title=2D board",
+    "attr:title=3D orbit",
+    "attr:title=Fit to content",
+    "attr:title=Layout",
+    "attr:title=Perspectives",
+    "attr:title=Save as new perspective",
+    "attr:title=The server limited this neighbourhood — expand nodes to load more.",
+    "attr:title=Tidy (force relax unpinned nodes)",
+    "attr:title=Toggle panel",
+    "text=auto_fix_high",
+    "text=bookmarks",
+    "text=fit_screen",
+    "text=menu",
+    "text=route",
+    "text=save_as",
+    "text=visibility",
+    "text=warning"
+  ],
+  "components/shared/GraphExplorer/components/Panels/InspectorPanel.tsx": [
+    "attr:label=agent",
+    "attr:label=derived",
+    "attr:label=symlink",
+    "attr:title=Create edge from this node: click a target node",
+    "attr:title=Edit node data",
+    "attr:title=Find a path from this node: click a target node",
+    "attr:title=Focus camera on this node",
+    "attr:title=Hide (restorable via Unhide)",
+    "attr:title=Remove from view / perspective (Delete)",
+    "attr:title=View file",
+    "text=Attributes",
+    "text=Delete",
+    "text=Dependents",
+    "text=Deps",
+    "text=Edge",
+    "text=Edges (",
+    "text=Edit",
+    "text=Hide",
+    "text=Remove",
+    "text=Select a node to inspect it.",
+    "text=add_link",
+    "text=center_focus_strong",
+    "text=data_object",
+    "text=delete",
+    "text=edit",
+    "text=link_off",
+    "text=nodes",
+    "text=route",
+    "text=visibility",
+    "text=visibility_off"
+  ],
+  "components/shared/GraphExplorer/components/Panels/NodeDataDialog.tsx": [
+    "text=Cancel",
+    "text=Edit node data —",
+    "text=Free-form JSON stored on the node (`data`). Paths and repo locations are managed by the indexer and are redacted here.",
+    "text=Save"
+  ],
+  "components/shared/GraphExplorer/components/Panels/PerspectiveDialog.tsx": [
+    "attr:aria-label=Perspective actions",
+    "attr:label=Name",
+    "attr:label=Open this perspective by default for this project",
+    "attr:label=Share with other users",
+    "attr:label=default",
+    "attr:title=Perspectives store node positions, expansion, hidden nodes, filters, layout, view mode and camera.",
+    "text=\" will be removed for everyone it is shared with. This cannot be undone.",
+    "text=Cancel",
+    "text=Close",
+    "text=Delete",
+    "text=Delete perspective?",
+    "text=Duplicate",
+    "text=Load",
+    "text=No saved perspectives yet. Arrange the graph and use Save.",
+    "text=Perspectives",
+    "text=Rename",
+    "text=content_copy",
+    "text=delete",
+    "text=edit",
+    "text=hub",
+    "text=info",
+    "text=more_vert",
+    "text=open_in_new"
+  ],
+  "components/shared/GraphExplorer/components/Panels/SearchPanel.tsx": [
+    "attr:placeholder=Search graph…",
+    "text=Searching…",
+    "text=search"
+  ],
+  "components/shared/GridLayoutComponent/GridLayoutComponent.tsx": [
+    "text=Load More",
+    "text=Loading more &nbsp;",
+    "text=autorenew"
+  ],
+  "components/shared/HelpMe/HelpMe.tsx": [
+    "text=Request support"
+  ],
+  "components/shared/IconButtonDropDown/IconButtonDropDown.tsx": [
+    "attr:aria-label=More"
+  ],
+  "components/shared/IconPicker/IconPicker.tsx": [
+    "attr:placeholder=Search icons...",
+    "text=Cancel",
+    "text=Select Icon"
+  ],
+  "components/shared/ImageComponent/ImageComponent.tsx": [
+    "attr:title=Clear Image",
+    "attr:title=Close Preview",
+    "attr:title=Download / Save Image",
+    "attr:title=Download Image",
+    "attr:title=Preview / Zoom",
+    "attr:title=Select Image",
+    "attr:title=Upload Image",
+    "text=Save Image",
+    "text=Unavailable"
+  ],
+  "components/shared/JsonSchemaEditor/JsonSchemaEditor.tsx": [
+    "attr:title=Format JSON",
+    "attr:title=Validate Schema",
+    "text=JSON Schema Editor",
+    "text=Valid JSON Schema"
+  ],
+  "components/shared/JsonSchemaEditor/JsonSchemaEditorComponent.tsx": [
+    "attr:title=Format JSON",
+    "attr:title=Validate Schema",
+    "text=JSON Schema Editor",
+    "text=Valid JSON Schema"
+  ],
+  "components/shared/JsonSchemaEditorTest/JsonSchemaEditorTest.tsx": [
+    "attr:label=JSON Schema",
+    "attr:label=UI Schema",
+    "attr:placeholder=Enter your JSON schema here...",
+    "attr:placeholder=Enter your UI schema here...",
+    "text=JSON Schema Editor Test",
+    "text=Load Complex Sample",
+    "text=Raw Values (for debugging):",
+    "text=Schema JSON:",
+    "text=Schema Valid:",
+    "text=Test the JsonSchemaEditor component with real-time validation and formatting.",
+    "text=UI Schema JSON:",
+    "text=| UI Schema Valid:"
+  ],
+  "components/shared/LanguageSelector/LanguageSelector.tsx": [
+    "attr:aria-label=Change language"
+  ],
+  "components/shared/Layout.tsx": [
+    "text=Empty Component",
+    "text=No component"
+  ],
+  "components/shared/Loading/Loading.tsx": [
+    "text=&nbsp;"
+  ],
+  "components/shared/LookupComponent/LookupComponent.tsx": [
+    "text=search"
+  ],
+  "components/shared/MermaidDiagram/MermaidDiagram.tsx": [
+    "attr:aria-label=Auto-fix syntax",
+    "attr:aria-label=Close fullscreen",
+    "attr:aria-label=Copy Mermaid code",
+    "attr:aria-label=Copy code (fullscreen)",
+    "attr:aria-label=Copy image",
+    "attr:aria-label=Copy image (fullscreen)",
+    "attr:aria-label=Diagram display mode",
+    "attr:aria-label=Reset code",
+    "attr:aria-label=Reset zoom and pan",
+    "attr:aria-label=Reset zoom and pan (fullscreen)",
+    "attr:aria-label=Save image",
+    "attr:aria-label=Save image (fullscreen)",
+    "attr:aria-label=Zoom in",
+    "attr:aria-label=Zoom in (fullscreen)",
+    "attr:aria-label=Zoom out",
+    "attr:aria-label=Zoom out (fullscreen)",
+    "attr:label=Auto-Repaired",
+    "attr:label=Syntax Error",
+    "attr:placeholder=Enter Mermaid diagram syntax (e.g. flowchart TD\\n A --> B)",
+    "attr:title=Auto-fix common syntax issues (quote parentheses and special characters in node labels)",
+    "attr:title=Click to reset zoom",
+    "attr:title=Diagram syntax was automatically repaired (e.g. unquoted round braces in node labels were quoted)",
+    "attr:title=Exit Fullscreen (Esc)",
+    "attr:title=Reset to original code",
+    "attr:title=Reset zoom and pan",
+    "attr:title=Save image",
+    "attr:title=Zoom in",
+    "attr:title=Zoom out",
+    "text=(Modified)",
+    "text=Auto-Fix",
+    "text=Auto-Fix Labels",
+    "text=Code",
+    "text=Diagram Syntax Error",
+    "text=Diagram syntax valid",
+    "text=Edit Code",
+    "text=Mermaid Diagram (Fullscreen)",
+    "text=Mermaid could not render this diagram due to a syntax error.",
+    "text=No diagram content to render.",
+    "text=Rendering diagram...",
+    "text=Syntax auto-repaired for visual display",
+    "text=View Diagram",
+    "text=Visual"
+  ],
+  "components/shared/NotFoundComponent/NotFoundComponent.tsx": [
+    "text=Component not found (",
+    "text=Create component"
+  ],
+  "components/shared/Organization/components/OrganizationSelector.tsx": [
+    "attr:aria-label=contacts",
+    "text=add",
+    "text=cancel",
+    "text=more_vert",
+    "text=verified"
+  ],
+  "components/shared/RadioGroupComponent/RadioGroupComponent.tsx": [
+    "attr:aria-label=gender"
+  ],
+  "components/shared/ReactorChat/ReactorChat.tsx": [
+    "attr:aria-label=Back to parent session",
+    "attr:title=Stop execution",
+    "text=dashboard_customize",
+    "text=stop_circle"
+  ],
+  "components/shared/ReactorChat/ReactorChatButton.tsx": [
+    "attr:aria-label=Close chat"
+  ],
+  "components/shared/ReactorChat/ReactorChatButtonExample.tsx": [
+    "text=Basic Usage:",
+    "text=Configurable slide-out position (left or right)",
+    "text=Custom Styling",
+    "text=Customizable styling and theming",
+    "text=Default FAB:",
+    "text=Different configurations of the ReactorChatButton component",
+    "text=Floating Action Buttons",
+    "text=Key Features:",
+    "text=Large FAB:",
+    "text=Pass-through props to the underlying ReactorChat component",
+    "text=ReactorChatButton Examples",
+    "text=Responsive design - full width on mobile",
+    "text=Small FAB:",
+    "text=Standard Buttons",
+    "text=Supports both standard buttons and Floating Action Buttons (FAB)",
+    "text=The ReactorChatButton component provides a convenient way to integrate the ReactorChat functionality into your application with a slide-out panel interface.",
+    "text=Usage Instructions"
+  ],
+  "components/shared/ReactorChat/components/ActiveSessionsAvatarStack.tsx": [
+    "text=Click to switch to this chat",
+    "text=Sub-agent"
+  ],
+  "components/shared/ReactorChat/components/AgentToolWindowBar.tsx": [
+    "attr:aria-label=Next page",
+    "attr:aria-label=Previous page"
+  ],
+  "components/shared/ReactorChat/components/ChatDataEditorDialog.tsx": [
+    "attr:aria-label=Status colour",
+    "attr:helperText=Comma separated. Saved as lower-case kebab-case tags.",
+    "attr:helperText=Overrides the auto-generated title.",
+    "attr:label=Colour",
+    "attr:label=Status icon",
+    "attr:label=Summary",
+    "attr:label=Tags",
+    "attr:label=Title",
+    "attr:placeholder=A sentence or two describing the conversation",
+    "attr:placeholder=Short, specific title",
+    "attr:placeholder=comma, separated, tags",
+    "attr:placeholder=e.g. check_circle",
+    "text=Cancel",
+    "text=Save",
+    "text=Status"
+  ],
+  "components/shared/ReactorChat/components/ChatHistoryItem.tsx": [
+    "attr:aria-label=delete",
+    "attr:title=Delete chat"
+  ],
+  "components/shared/ReactorChat/components/ChatHistoryPanel.tsx": [
+    "attr:aria-label=Close chat history",
+    "attr:aria-label=Delete chat",
+    "attr:aria-label=Edit conversation details",
+    "attr:label=Active Persona",
+    "attr:title=Active session",
+    "attr:title=Conversation status",
+    "attr:title=Edit conversation details"
+  ],
+  "components/shared/ReactorChat/components/ChatInput.tsx": [
+    "attr:aria-label=Record audio",
+    "attr:aria-label=Remove image",
+    "attr:title=Click or edit text to cancel timer",
+    "text=close",
+    "text=timer"
+  ],
+  "components/shared/ReactorChat/components/ChatTransferDialog.tsx": [
+    "text=Cancel",
+    "text=Transfer"
+  ],
+  "components/shared/ReactorChat/components/DebugPanel.tsx": [
+    "attr:aria-label=Close debug panel",
+    "attr:label=Argument Tokens",
+    "attr:label=Awaiting Result",
+    "attr:label=Buffered",
+    "attr:label=Characters",
+    "attr:label=Created",
+    "attr:label=Est. Tokens",
+    "attr:label=Failed Calls",
+    "attr:label=Max Tokens",
+    "attr:label=Model ID",
+    "attr:label=Pressure",
+    "attr:label=Provider ID",
+    "attr:label=Result Tokens",
+    "attr:label=Session ID",
+    "attr:label=Share of Context",
+    "attr:label=Source",
+    "attr:label=Status",
+    "attr:label=Streaming",
+    "attr:label=Token Count",
+    "attr:label=Tool Approval",
+    "attr:label=Total Calls",
+    "attr:label=Total Messages",
+    "attr:label=Total Sent",
+    "attr:label=Updated",
+    "attr:title=Client Logging",
+    "attr:title=History Stats",
+    "attr:title=SSE Session",
+    "attr:title=Session Info",
+    "attr:title=Todos Summary",
+    "attr:title=Token Stats",
+    "attr:title=Vars Inspector",
+    "text=(orphan result)",
+    "text=/ out",
+    "text=By tool (calls · avg result · max result · total)",
+    "text=Cancel",
+    "text=Compact Conversation",
+    "text=Disconnect SSE",
+    "text=Estimated context breakdown (",
+    "text=Flush Now",
+    "text=Flush error:",
+    "text=Heaviest individual calls",
+    "text=No macros registered",
+    "text=No tool calls in this conversation yet.",
+    "text=No tools registered",
+    "text=Send client logs to session log",
+    "text=Start a chat session before editing the prompt.",
+    "text=Start a chat session to enable logging",
+    "text=Summarizes older messages and archives them to free context window space.",
+    "text=Token figures are estimates using the same chars/4 heuristic the server uses for tokenCount.",
+    "text=error",
+    "text=failed)",
+    "text=in",
+    "text=tok)"
+  ],
+  "components/shared/ReactorChat/components/FileExplorerSidebar/FileExplorerSidebar.tsx": [
+    "attr:aria-label=close preview",
+    "text=Empty folder"
+  ],
+  "components/shared/ReactorChat/components/FilesPanel/FilesPanel.tsx": [
+    "attr:aria-label=Back to file list",
+    "attr:aria-label=Close files panel",
+    "attr:aria-label=Upload file",
+    "attr:label=File Name",
+    "attr:title=Add selected files to chat context",
+    "attr:title=Delete file",
+    "attr:title=Refresh file list",
+    "attr:title=Rename file",
+    "attr:title=Unlink from chat",
+    "text=\"? This action cannot be undone.",
+    "text=Add to Chat",
+    "text=Are you sure you want to delete \"",
+    "text=Chat session will be created automatically",
+    "text=Click to upload files",
+    "text=Creating chat session...",
+    "text=Delete",
+    "text=Download",
+    "text=My Files",
+    "text=PDF preview not available. Click download to view the file.",
+    "text=Preview not available for this file type.",
+    "text=Rename",
+    "text=View",
+    "text=or drag and drop"
+  ],
+  "components/shared/ReactorChat/components/ModelSelector.tsx": [
+    "attr:label=image",
+    "attr:label=stream",
+    "attr:label=thinking",
+    "attr:title=Change AI model",
+    "text=No providers available"
+  ],
+  "components/shared/ReactorChat/components/NetworkStatusIndicator.tsx": [
+    "text=check_circle",
+    "text=close",
+    "text=error_outline"
+  ],
+  "components/shared/ReactorChat/components/PendingToolCallsBanner.tsx": [
+    "text=history"
+  ],
+  "components/shared/ReactorChat/components/PersonaAvatarRenderer.tsx": [
+    "attr:aria-label=Reset view",
+    "attr:title=Reset view",
+    "text=Aa"
+  ],
+  "components/shared/ReactorChat/components/PersonaCard.tsx": [
+    "text=Available Tools:",
+    "text=Chat",
+    "text=Details"
+  ],
+  "components/shared/ReactorChat/components/PersonaDetailsDialog.tsx": [
+    "text=Available Tools",
+    "text=Close",
+    "text=Default Greeting:"
+  ],
+  "components/shared/ReactorChat/components/PersonaSelectionPanel.tsx": [
+    "attr:aria-label=Clear search",
+    "attr:aria-label=Close persona selection"
+  ],
+  "components/shared/ReactorChat/components/RecordingAudioBar.tsx": [
+    "attr:aria-label=Close recording",
+    "attr:aria-label=Stop playback",
+    "text=close",
+    "text=edit",
+    "text=volume_off"
+  ],
+  "components/shared/ReactorChat/components/Shell/ChatShellConsole.tsx": [
+    "text=Shell command output will appear here."
+  ],
+  "components/shared/ReactorChat/components/Shell/ShellWidget.tsx": [
+    "text=Shell error:",
+    "text=· pid"
+  ],
+  "components/shared/ReactorChat/components/Shell/WorkflowShellConsole.tsx": [
+    "text=Waiting for shell steps to run…",
+    "text=exit"
+  ],
+  "components/shared/ReactorChat/components/SidePanel.tsx": [
+    "attr:title=Close side panel",
+    "text=Component",
+    "text=No components mounted. The AI assistant can add components and forms here.",
+    "text=close",
+    "text=dashboard_customize",
+    "text=not found."
+  ],
+  "components/shared/ReactorChat/components/SubAgentsPanel.tsx": [
+    "attr:aria-label=Close sub-agents panel",
+    "attr:aria-label=Open sub-agent conversation"
+  ],
+  "components/shared/ReactorChat/components/TextToSpeechButton.tsx": [
+    "attr:title=Stop playback",
+    "text=Speech Speed",
+    "text=graphic_eq",
+    "text=pause",
+    "text=play_arrow",
+    "text=stop",
+    "text=volume_up"
+  ],
+  "components/shared/ReactorChat/components/TodosPanel.tsx": [
+    "attr:aria-label=Close todos panel",
+    "text=No items in this list."
+  ],
+  "components/shared/ReactorChat/components/ToolIterationLimitBanner.tsx": [
+    "text=pause_circle",
+    "text=play_arrow",
+    "text=stop"
+  ],
+  "components/shared/ReactorChat/components/ToolsPanel.tsx": [
+    "attr:aria-label=Close tools panel",
+    "attr:label=API Key",
+    "attr:label=API Version",
+    "attr:label=App Default",
+    "attr:label=Configured",
+    "attr:label=Deployment Name",
+    "attr:label=Endpoint URL",
+    "attr:label=Not Configured",
+    "attr:label=Organization",
+    "attr:label=Requires Parameters",
+    "attr:label=Server",
+    "attr:label=Set as application default (ADMIN)",
+    "attr:placeholder=2024-02-15-preview",
+    "attr:placeholder=https://api.example.com",
+    "attr:placeholder=my-gpt4-deployment",
+    "attr:placeholder=org-xxx (optional)",
+    "text=Disable All",
+    "text=Enable All",
+    "text=architecture",
+    "text=bolt",
+    "text=front_hand",
+    "text=home_repair_service",
+    "text=verified_user"
+  ],
+  "components/shared/ReactorChat/hooks/ToolPrompt.tsx": [
+    "attr:aria-label=Approve",
+    "attr:aria-label=Decline",
+    "attr:aria-label=Instruct",
+    "attr:aria-label=Send instruction",
+    "attr:aria-label=toggle arguments",
+    "attr:placeholder=Tell the agent what to do instead...",
+    "attr:title=Approve — execute this tool",
+    "attr:title=Decline — skip this tool",
+    "attr:title=Instruct — provide alternative guidance instead of running this tool",
+    "text=Approved",
+    "text=Declined",
+    "text=Instructed:",
+    "text=awaiting approval"
+  ],
+  "components/shared/ReactorChat/hooks/useScrollToBottom.tsx": [
+    "attr:aria-label=Show earlier messages",
+    "attr:aria-label=Show earlier, compacted messages",
+    "attr:aria-label=activity",
+    "attr:aria-label=assistant",
+    "attr:aria-label=error",
+    "attr:aria-label=thought",
+    "attr:aria-label=tools",
+    "attr:title=Close",
+    "attr:title=Collapse",
+    "attr:title=Comments",
+    "attr:title=Copy message to clipboard",
+    "attr:title=Copy result",
+    "attr:title=Copy thought",
+    "attr:title=Copy to clipboard",
+    "attr:title=Delete tool call & result",
+    "attr:title=Dismiss",
+    "attr:title=Maximize to full view",
+    "attr:title=Rate this response negatively",
+    "attr:title=Rate this response positively",
+    "attr:title=Retry this message",
+    "text=Are you sure you want to delete the tool call",
+    "text=Cancel",
+    "text=Close",
+    "text=Comment on selection",
+    "text=Component",
+    "text=Copy",
+    "text=Delete",
+    "text=Delete Tool Call",
+    "text=Error",
+    "text=Message Comments",
+    "text=Result:",
+    "text=Tool Result:",
+    "text=add_comment",
+    "text=and its result from this conversation?",
+    "text=close",
+    "text=content_copy",
+    "text=delete_outline",
+    "text=error",
+    "text=error_outline",
+    "text=expand_less",
+    "text=fullscreen",
+    "text=history_toggle_off",
+    "text=is thinking...",
+    "text=keyboard_double_arrow_up",
+    "text=not found",
+    "text=psychology",
+    "text=refresh",
+    "text=smart_toy",
+    "text=thumb_down",
+    "text=thumb_up",
+    "text=tune"
+  ],
+  "components/shared/ReactoryCalendar/AgendaView/AgendaView.tsx": [
+    "attr:aria-label=Agenda view"
+  ],
+  "components/shared/ReactoryCalendar/AllDayRow/AllDayRow.tsx": [
+    "attr:aria-label=All-day events"
+  ],
+  "components/shared/ReactoryCalendar/CalendarSidebar/CalendarSidebar.tsx": [
+    "attr:aria-label=Calendar sidebar",
+    "text=Create",
+    "text=My calendars"
+  ],
+  "components/shared/ReactoryCalendar/CalendarToolbar/CalendarToolbar.tsx": [
+    "attr:aria-label=Calendar toolbar",
+    "attr:aria-label=Calendar view",
+    "attr:aria-label=Next",
+    "attr:aria-label=Previous",
+    "text=Today"
+  ],
+  "components/shared/ReactoryCalendar/DayCell/DayCell.tsx": [
+    "text=more"
+  ],
+  "components/shared/ReactoryCalendar/DayView/DayView.tsx": [
+    "attr:aria-label=Day view"
+  ],
+  "components/shared/ReactoryCalendar/EventEditor/EventEditor.tsx": [
+    "attr:label=All day",
+    "attr:label=Calendar",
+    "attr:label=Description",
+    "attr:label=End",
+    "attr:label=Location",
+    "attr:label=Start",
+    "attr:label=Title",
+    "text=Cancel",
+    "text=Delete",
+    "text=Save"
+  ],
+  "components/shared/ReactoryCalendar/EventPopover/EventPopover.tsx": [
+    "attr:aria-label=Close",
+    "attr:aria-label=Delete event",
+    "attr:aria-label=Duplicate event",
+    "text=Edit"
+  ],
+  "components/shared/ReactoryCalendar/MiniCalendar/MiniCalendar.tsx": [
+    "attr:aria-label=Date navigator",
+    "attr:aria-label=Next month",
+    "attr:aria-label=Previous month"
+  ],
+  "components/shared/ReactoryCalendar/MonthView/MonthView.tsx": [
+    "attr:aria-label=Month view"
+  ],
+  "components/shared/ReactoryCalendar/ScheduleView/ScheduleView.tsx": [
+    "attr:aria-label=Schedule view"
+  ],
+  "components/shared/ReactoryCalendar/WeekView/WeekView.tsx": [
+    "attr:aria-label=Week view"
+  ],
+  "components/shared/ReactoryCalendar/YearView/YearView.tsx": [
+    "attr:aria-label=Year view"
+  ],
+  "components/shared/ReactoryCoreDialog/ReactoryCoreDialog.tsx": [
+    "attr:aria-label=Close",
+    "text=Back",
+    "text=chevron_left"
+  ],
+  "components/shared/ServerFileExplorer/ServerFileExplorer.tsx": [
+    "attr:label=Folder name",
+    "attr:label=New name",
+    "attr:placeholder=Search files and folders...",
+    "attr:title=Back",
+    "attr:title=Create folder",
+    "attr:title=Delete selected",
+    "attr:title=Forward",
+    "attr:title=Grid view",
+    "attr:title=List view",
+    "attr:title=Refresh",
+    "attr:title=Up",
+    "attr:title=Upload files",
+    "text=Are you sure you want to delete",
+    "text=Cancel",
+    "text=Confirm Delete",
+    "text=Create",
+    "text=Create New Folder",
+    "text=Delete",
+    "text=Download",
+    "text=Drop files to upload",
+    "text=No files or folders found",
+    "text=Rename",
+    "text=Select (",
+    "text=Server Root",
+    "text=Sort:",
+    "text=This action cannot be undone!",
+    "text=item(s)?",
+    "text=items"
+  ],
+  "components/shared/SlideOutLauncher/SlideOutLauncher.tsx": [
+    "text=More Details",
+    "text=close"
+  ],
+  "components/shared/StaticContent/ComponentSelectorDialog.tsx": [
+    "attr:label=Component FQN / FQN Alias",
+    "attr:label=Prop Name",
+    "attr:label=Prop Value",
+    "attr:label=Type",
+    "attr:placeholder=e.g. core.Label@1.0.0",
+    "attr:placeholder=e.g. text",
+    "text=Add Prop",
+    "text=Boolean",
+    "text=Cancel",
+    "text=Component Properties (Props)",
+    "text=Float",
+    "text=Generated Tag Code",
+    "text=Integer",
+    "text=JSON Object",
+    "text=No properties configured. The component will render with default props.",
+    "text=String",
+    "text=Type"
+  ],
+  "components/shared/StaticContent/StaticContent.tsx": [
+    "attr:aria-label=Edit content",
+    "attr:label=Draft",
+    "attr:title=Edit this content",
+    "text=Create it",
+    "text=No content exists for",
+    "text=Try again",
+    "text=yet."
+  ],
+  "components/shared/StaticContent/editor/InlineContentEditor.tsx": [
+    "attr:aria-label=Authoring format",
+    "attr:aria-label=HTML editing mode",
+    "attr:label=Draft",
+    "attr:title=AI assistance",
+    "attr:title=Back to source language",
+    "attr:title=HTML Source code (< / >)",
+    "attr:title=Insert a Reactory component",
+    "attr:title=Languages",
+    "attr:title=Settings and publishing",
+    "attr:title=Visual WYSIWYG editor",
+    "text=&lt;/&gt; HTML",
+    "text=Cancel",
+    "text=Change format to",
+    "text=Convert",
+    "text=Converting from",
+    "text=Discard",
+    "text=Preview",
+    "text=Restore",
+    "text=Translate with AI",
+    "text=Translating from",
+    "text=Unsaved work from a previous session was recovered.",
+    "text=Visual",
+    "text=into",
+    "text=rewrites the body and may lose formatting that the new format cannot express. Your content is not saved until you choose Save, so you can still discard the result.",
+    "text=source",
+    "text=to",
+    "text=words"
+  ],
+  "components/shared/StaticContent/editor/dialogs/ImageInsertDialog.tsx": [
+    "attr:alt=Preview",
+    "attr:label=Alignment",
+    "attr:label=Alt Text (accessibility)",
+    "attr:label=Image URL",
+    "attr:label=Size Preset",
+    "attr:label=Title / Tooltip",
+    "attr:label=Upload Local",
+    "attr:label=Web URL",
+    "attr:placeholder=https://example.com/photo.png",
+    "text=Alignment",
+    "text=Auto / Original",
+    "text=Cancel",
+    "text=Center Block",
+    "text=Choose Image File",
+    "text=Float Left (wrap text)",
+    "text=Float Right (wrap text)",
+    "text=Full Width (100%)",
+    "text=Image loaded successfully!",
+    "text=Inline",
+    "text=Insert HTML Image",
+    "text=Insert Image",
+    "text=Large (75%)",
+    "text=Medium (50%)",
+    "text=Size Preset",
+    "text=Small (25%)"
+  ],
+  "components/shared/StaticContent/editor/dialogs/LinkInsertDialog.tsx": [
+    "attr:label=Display Text",
+    "attr:label=Title / Tooltip (optional)",
+    "attr:label=URL",
+    "attr:placeholder=Hover description",
+    "attr:placeholder=Link text",
+    "attr:placeholder=https://example.com",
+    "text=Cancel",
+    "text=Open link in a new tab",
+    "text=Remove Link"
+  ],
+  "components/shared/StaticContent/editor/dialogs/TableInsertDialog.tsx": [
+    "attr:label=Columns",
+    "attr:label=Rows",
+    "text=Bordered styling",
+    "text=Cancel",
+    "text=Include table header row (&lt;th&gt;)",
+    "text=Insert HTML Table",
+    "text=Insert Table"
+  ],
+  "components/shared/StaticContent/panels/AIAssistPanel.tsx": [
+    "attr:aria-label=Close AI assistance",
+    "attr:label=Apply result",
+    "attr:label=Chat",
+    "text=AI assistance",
+    "text=Clear",
+    "text=Paste the assistant's result here to replace the body you are editing. Your current content stays untouched until you apply.",
+    "text=Replace content",
+    "text=The ReactorChat component is not registered in this application, so conversational assistance is unavailable. You can still paste a result into the Apply tab.",
+    "text=The request below has been placed in the chat box for you to review and send."
+  ],
+  "components/shared/StaticContent/panels/SettingsPanel.tsx": [
+    "attr:helperText=Attributes passed to container component (e.g. sx, elevation, className)",
+    "attr:helperText=Form used to supply template values when previewing.",
+    "attr:helperText=JSS styles injected via makeStyles for the container",
+    "attr:helperText=Leave empty to make this visible to everyone.",
+    "attr:helperText=Press Enter to add.",
+    "attr:helperText=Short summary used for search results and previews.",
+    "attr:label=Add a topic",
+    "attr:label=Comment Layout",
+    "attr:label=Container Properties (containerProps JSON)",
+    "attr:label=Container Type",
+    "attr:label=Description",
+    "attr:label=Help topic",
+    "attr:label=JSS Style Attributes (style JSON)",
+    "attr:label=Preview input form",
+    "attr:label=Slug",
+    "attr:label=Source language",
+    "attr:label=Template engine",
+    "attr:label=Title",
+    "attr:label=Treat body as a template",
+    "attr:label=Version",
+    "attr:label=Visible to roles",
+    "attr:placeholder=USER_ONBOARDING_HELP",
+    "attr:placeholder=core.ContentPreviewForm@1.0.0",
+    "text=Accordion (Collapsible)",
+    "text=Advanced",
+    "text=Bottom (In-flow)",
+    "text=Box (Standard)",
+    "text=Card (Framed Card)",
+    "text=Card (Outlined Box)",
+    "text=Comment Layout",
+    "text=Comments & Discussion",
+    "text=Container & Layout Styling",
+    "text=Container Type",
+    "text=Details",
+    "text=Drawer (Slide-out)",
+    "text=EJS",
+    "text=Handlebars",
+    "text=Lodash",
+    "text=None",
+    "text=Paper (Elevated / Surface)",
+    "text=Publishing",
+    "text=Source language",
+    "text=Template engine",
+    "text=Topics",
+    "text=div (Plain HTML)"
+  ],
+  "components/shared/StaticContent/panels/TranslationsPanel.tsx": [
+    "attr:label=AI",
+    "attr:label=Empty",
+    "attr:label=Language",
+    "attr:label=Out of date",
+    "attr:label=Source",
+    "attr:placeholder=Search languages",
+    "attr:title=Remove this language",
+    "attr:title=Translate with AI",
+    "text=Add",
+    "text=Add a language",
+    "text=Cancel",
+    "text=Languages",
+    "text=Save or discard your current changes before switching language.",
+    "text=may be out of date because the source content changed.",
+    "text=total",
+    "text=translation"
+  ],
+  "components/shared/TabbedNavigation/TabbedNavigation.tsx": [
+    "text=NO TAB FOR",
+    "text=more_vert"
+  ],
+  "components/shared/TableChildComponentWrapper/TableChildComponentWrapper.tsx": [
+    "text=No component to mount.",
+    "text=Wrapped Component Loading"
+  ],
+  "components/shared/UserHomeFolder/UserHomeFolder.tsx": [
+    "attr:aria-label=close preview",
+    "attr:label=Current",
+    "attr:title=Close dialog",
+    "attr:title=Create new folder",
+    "attr:title=Grid view",
+    "attr:title=List view",
+    "attr:title=Select all",
+    "attr:title=Table view",
+    "text=Class:",
+    "text=Current:",
+    "text=Files will be added to chat context",
+    "text=Item:",
+    "text=List and table views are available in the full implementation",
+    "text=Menu Anchor Debug:",
+    "text=Menu Open:",
+    "text=Multi-select",
+    "text=Position:",
+    "text=Tag:",
+    "text=Upload files"
+  ],
+  "components/shared/UserHomeFolder/components/UserHomeFolderHeader.tsx": [
+    "attr:aria-label=Back to folders",
+    "attr:aria-label=Close files panel",
+    "attr:title=Refresh file list"
+  ],
+  "components/shared/UserHomeFolder/components/shared/CreateFolderDialog.tsx": [
+    "attr:label=Folder Name",
+    "attr:placeholder=Enter folder name..."
+  ],
+  "components/shared/UserHomeFolder/components/shared/MobileFabs.tsx": [
+    "attr:aria-label=Toggle view",
+    "attr:aria-label=Upload file"
+  ],
+  "components/shared/UserHomeFolder/components/shared/RenameDialog.tsx": [
+    "attr:label=File Name"
+  ],
+  "components/shared/UserList/UserList.tsx": [
+    "attr:aria-label=User list",
+    "text=Error loading users:"
+  ],
+  "components/shared/UserList/components/AccessibleUserList.tsx": [
+    "attr:aria-label=User list with keyboard navigation"
+  ],
+  "components/shared/UserList/components/Filters/AdvancedFilters.tsx": [
+    "attr:aria-label=Remove filter",
+    "attr:label=Field",
+    "attr:label=Operator",
+    "attr:label=Value",
+    "text=Add Filter",
+    "text=Advanced Filters",
+    "text=Apply",
+    "text=Cancel",
+    "text=Clear All",
+    "text=Field",
+    "text=Filters",
+    "text=No filters added. Click \"Add Filter\" to start.",
+    "text=Operator"
+  ],
+  "components/shared/UserList/components/Filters/QuickFilters.tsx": [
+    "attr:aria-label=Quick filters"
+  ],
+  "components/shared/UserList/components/UserListContent/EmptyState.tsx": [
+    "text=Try adjusting your search or filters"
+  ],
+  "components/shared/UserList/components/UserListContent/index.tsx": [
+    "attr:aria-label=User list content"
+  ],
+  "components/shared/UserList/components/UserListItem/UserListItemCompact.tsx": [
+    "attr:label=Deleted"
+  ],
+  "components/shared/UserList/components/UserListItem/UserListItemDetailed.tsx": [
+    "attr:label=Deleted",
+    "text=Last login:"
+  ],
+  "components/shared/UserList/components/UserListPagination/index.tsx": [
+    "attr:aria-label=First page",
+    "attr:aria-label=Last page",
+    "attr:aria-label=Next page",
+    "attr:aria-label=Previous page",
+    "text=Page",
+    "text=Rows per page:",
+    "text=Showing",
+    "text=of",
+    "text=users"
+  ],
+  "components/shared/UserList/components/UserListToolbar/ActionButtons.tsx": [
+    "attr:aria-label=add new user",
+    "attr:aria-label=clear selection",
+    "attr:aria-label=delete selected users",
+    "attr:aria-label=refresh user list",
+    "attr:title=Add user",
+    "attr:title=Clear selection",
+    "attr:title=Refresh"
+  ],
+  "components/shared/UserList/components/UserListToolbar/SearchBar.tsx": [
+    "attr:aria-label=clear search"
+  ],
+  "components/shared/UserList/examples/BasicUsage.tsx": [
+    "text=Roles:",
+    "text=Selected",
+    "text=Selected:",
+    "text=user(s)"
+  ],
+  "components/shared/UserProfile/UserProfile.tsx": [
+    "text=\" could not be loaded.",
+    "text=? This action cannot be undone.",
+    "text=Are you sure you want to delete the profile for",
+    "text=Cancel",
+    "text=Confirm User Deletion",
+    "text=Error Loading Profile",
+    "text=Loading profile...",
+    "text=Profile Not Found",
+    "text=Section Not Found",
+    "text=The requested profile could not be found or you don't have permission to view it.",
+    "text=The section \""
+  ],
+  "components/shared/UserProfile/components/ProfileHeader.tsx": [
+    "attr:label=Admin",
+    "attr:label=Deleted",
+    "attr:label=Editing",
+    "attr:label=New User",
+    "attr:label=Your Profile",
+    "text=Cancel",
+    "text=Edit",
+    "text=Save"
+  ],
+  "components/shared/UserProfile/components/sections/AI/AISection.tsx": [
+    "attr:label=Configuration Properties (JSON)",
+    "attr:label=Expectation & Scope",
+    "attr:label=Linked",
+    "attr:placeholder=e.g., This agent will automatically review my code commits, draft change logs, and suggest unit tests.",
+    "text=Cancel",
+    "text=Configure Linked Agent:",
+    "text=Define what you expect this agent to perform on your behalf. This gives the agent its context and scope when acting on your profile.",
+    "text=Edit",
+    "text=Link AI agents to your profile and configure your expectations. These specialized agents will run automated tasks, analyze code, or assist you across the platform based on your preferences.",
+    "text=Link Agent",
+    "text=Linked AI Agents",
+    "text=No AI personas are currently available. Contact your administrator to set up AI personas.",
+    "text=Save Configuration",
+    "text=Unlink",
+    "text=Your Expectations & Scope:"
+  ],
+  "components/shared/UserProfile/components/sections/Account/GeneralSection.tsx": [
+    "attr:label=First Name",
+    "attr:label=Last Name",
+    "attr:label=Mobile Number",
+    "text=Created:",
+    "text=General Information",
+    "text=ID:",
+    "text=Please fill in all required fields with valid information",
+    "text=Provider:",
+    "text=Recommended: Square image, max 2MB",
+    "text=Updating profile information...",
+    "text=Upload Photo"
+  ],
+  "components/shared/UserProfile/components/sections/Demographics/DemographicsSection.tsx": [
+    "text=Demographics",
+    "text=Demographics functionality will be integrated from the existing plugin Demographics component. This section will handle personal information like age, gender, race, etc.",
+    "text=Organization:",
+    "text=User:"
+  ],
+  "components/shared/UserProfile/components/sections/Memberships/MembershipsSection.tsx": [
+    "text=Add Membership",
+    "text=Add New Membership",
+    "text=Memberships (",
+    "text=No memberships found."
+  ],
+  "components/shared/UserProfile/components/sections/Memberships/components/CreateUserMembership.tsx": [
+    "attr:label=Business Unit",
+    "attr:label=Organization",
+    "attr:label=Reactor Client",
+    "text=All Business Units",
+    "text=Assign Roles",
+    "text=Business Unit",
+    "text=Cancel",
+    "text=None (Global Client Access)",
+    "text=Organization",
+    "text=Reactor Client",
+    "text=Selected:"
+  ],
+  "components/shared/UserProfile/components/sections/Memberships/components/MembershipCard.tsx": [
+    "attr:label=Selected",
+    "attr:title=Delete membership",
+    "attr:title=Edit roles",
+    "attr:title=Select membership",
+    "text=Are you sure you want to remove the membership for",
+    "text=Cancel",
+    "text=Delete",
+    "text=Delete Membership",
+    "text=Roles:",
+    "text=This action cannot be undone.",
+    "text=To confirm deletion, please type",
+    "text=below:"
+  ],
+  "components/shared/UserProfile/components/sections/Memberships/components/MembershipRoles.tsx": [
+    "text=No membership selected",
+    "text=No roles available for this membership",
+    "text=Roles for",
+    "text=Updating roles..."
+  ],
+  "components/shared/UserProfile/components/sections/Organigram/OrganigramSection.tsx": [
+    "text=Confirmed:",
+    "text=Organigram -",
+    "text=Organigram functionality will show peer relationships, managers, direct reports, and allow confirmation of organizational structure.",
+    "text=Organization:",
+    "text=Peers:",
+    "text=found"
+  ],
+  "components/shared/UserProfile/components/sections/Socials/SocialsSection.tsx": [
+    "attr:label=Profile URL",
+    "attr:label=Provider",
+    "text=No social profiles linked yet.",
+    "text=Provider",
+    "text=Social Profiles"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/WorkflowCommander.tsx": [
+    "attr:aria-label=Workflow Commander",
+    "attr:title=Workflow Commander (Click or hover to open)",
+    "text=Close",
+    "text=Workflow Executions",
+    "text=Workflow Schedule Manager",
+    "text=Workflow Task Queue"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/WorkflowCommanderFAB.tsx": [
+    "attr:aria-label=Workflow Commander",
+    "attr:title=Workflow Commander (Click or hover to open, drag to move)"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/WorkflowCommanderPopover.tsx": [
+    "attr:aria-label=Next actions",
+    "attr:aria-label=Previous actions"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/ActiveWorkflowsPanel.tsx": [
+    "attr:placeholder=Search executions by workflow name or instance ID...",
+    "attr:title=Cancel Execution",
+    "attr:title=Inspect Instance",
+    "attr:title=Inspect Instance Details",
+    "attr:title=Pause Execution",
+    "attr:title=Resume Execution",
+    "attr:title=View Logs",
+    "text=Active Runs",
+    "text=Execution History",
+    "text=ID:",
+    "text=Inspect",
+    "text=Latest:",
+    "text=No active workflows currently running.",
+    "text=No execution history found.",
+    "text=Started:",
+    "text=Switch to Execution History to view completed workflows.",
+    "text=steps"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/QuickLaunchDialog.tsx": [
+    "attr:label=Execution Inputs (JSON)",
+    "attr:label=Inferred Schema",
+    "attr:label=Select Workflow",
+    "attr:placeholder=Search accessible workflows...",
+    "attr:placeholder={ \"key\": \"value\" }",
+    "text=Cancel",
+    "text=Execute Workflow",
+    "text=Execution Parameters",
+    "text=Quick Launch Workflow",
+    "text=Raw JSON"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/TaskExecutionDialog.tsx": [
+    "attr:label=Comments / Input",
+    "attr:placeholder=Enter decision rationale or input parameters...",
+    "text=Approve / Complete",
+    "text=Cancel",
+    "text=Reject / Decline"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/UserTaskQueuePanel.tsx": [
+    "attr:title=Open & Take Action",
+    "text=Action",
+    "text=No tasks awaiting your input.",
+    "text=Pending User Tasks",
+    "text=Step:"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/WorkflowInstanceInspector.tsx": [
+    "attr:label=Data",
+    "attr:label=Event Data (JSON)",
+    "attr:label=Logs",
+    "attr:label=Overview",
+    "text=Cancel",
+    "text=Completed",
+    "text=Continue",
+    "text=Continue waiting step",
+    "text=Created",
+    "text=Duration",
+    "text=Inspection Error",
+    "text=Instance Execution Log",
+    "text=Instance ID",
+    "text=Loading log...",
+    "text=Loading workflow instance details...",
+    "text=No execution steps recorded for this instance.",
+    "text=No log file available for this instance.",
+    "text=No workflow instance data available.",
+    "text=Outcome",
+    "text=Pointer ID:",
+    "text=Publish event",
+    "text=Steps",
+    "text=Stop",
+    "text=Stop workflow instance?",
+    "text=Tabular Details",
+    "text=This will terminate the running instance. The instance cannot be resumed afterwards.",
+    "text=Version",
+    "text=Visual Canvas",
+    "text=Waiting for event:",
+    "text=Workflow Instance Data",
+    "text=to resume step execution.",
+    "text=total"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowCommander/panels/WorkflowScheduleManager.tsx": [
+    "attr:helperText=Standard 5-part cron syntax (e.g. '0 0 * * *' for midnight daily)",
+    "attr:label=Cron Expression",
+    "attr:label=Enable immediately",
+    "attr:label=Schedule Name",
+    "attr:label=Workflow ID / FQN",
+    "attr:placeholder=Daily Invoice Processing",
+    "attr:placeholder=core.WorkflowName@1.0.0",
+    "attr:title=Delete Schedule",
+    "text=Cancel",
+    "text=Create",
+    "text=Create Workflow Schedule",
+    "text=New Schedule",
+    "text=No scheduled workflows found.",
+    "text=Workflow Schedules"
+  ],
+  "components/shared/WorkflowDesigner/WorkflowDesigner.tsx": [
+    "attr:title=Load Workflow from Server",
+    "attr:title=Redo",
+    "attr:title=Undo",
+    "attr:title=Zoom In",
+    "attr:title=Zoom Out",
+    "attr:title=Zoom to Fit",
+    "attr:title=Zoom to Selection",
+    "text=Copy Step",
+    "text=Delete Connection",
+    "text=Delete Selected (",
+    "text=Delete Step",
+    "text=Download File",
+    "text=Duplicate Step",
+    "text=Load",
+    "text=My Workspace",
+    "text=Ready",
+    "text=Save",
+    "text=Save to Server",
+    "text=Select All",
+    "text=Server Workspace",
+    "text=Steps:",
+    "text=Zoom to Fit",
+    "text=Zoom:",
+    "text=| Connections:",
+    "text=| Selected:"
+  ],
+  "components/shared/WorkflowDesigner/components/Canvas/OptimizedWorkflowCanvas.tsx": [
+    "text=steps"
+  ],
+  "components/shared/WorkflowDesigner/components/Canvas/WorkflowStep.tsx": [
+    "text=properties configured"
+  ],
+  "components/shared/WorkflowDesigner/components/Instance/InstanceLogPanel.tsx": [
+    "attr:title=Refresh log",
+    "text=Instance Log",
+    "text=Loading log...",
+    "text=No log file found for this instance.",
+    "text=refresh",
+    "text=terminal"
+  ],
+  "components/shared/WorkflowDesigner/components/Instance/InstanceOverviewPanel.tsx": [
+    "attr:title=Refresh",
+    "text=Instance Overview",
+    "text=Loading instance...",
+    "text=This instance failed. Click the highlighted step(s) on the canvas to inspect the failure.",
+    "text=insights",
+    "text=refresh",
+    "text=total"
+  ],
+  "components/shared/WorkflowDesigner/components/Instance/StepDetailPopover.tsx": [
+    "attr:label=Event data (JSON)",
+    "attr:title=Step Data",
+    "text=Error History (",
+    "text=Error at:",
+    "text=No step result data captured.",
+    "text=Waiting for event:",
+    "text=bolt",
+    "text=hourglass_top"
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/PropertiesPanel.tsx": [
+    "attr:aria-label=properties tabs",
+    "attr:helperText=Human-readable workflow name",
+    "attr:helperText=Semantic version, e.g. 1.0.0",
+    "attr:helperText=e.g. user, reactory, my-org",
+    "attr:label=Author",
+    "attr:label=Config",
+    "attr:label=Description",
+    "attr:label=Inputs",
+    "attr:label=Name",
+    "attr:label=Namespace",
+    "attr:label=Run",
+    "attr:label=Step ID",
+    "attr:label=Version",
+    "attr:placeholder=Add role…",
+    "attr:placeholder=Add tag…",
+    "attr:title=Add role",
+    "attr:title=Add tag",
+    "text=Click the \"Run Step\" button above to execute this workflow step",
+    "text=Connection Properties",
+    "text=Connection property editing will be implemented in a future version.",
+    "text=Connection:",
+    "text=Define the inputs this workflow expects and the outputs it produces. These parameters are available to all steps via",
+    "text=Details",
+    "text=Execute Step",
+    "text=Execution Failed",
+    "text=Execution Result",
+    "text=Identity",
+    "text=Inputs",
+    "text=Multiple steps selected (",
+    "text=No Step Selected",
+    "text=No workflow inputs defined.",
+    "text=No workflow outputs defined.",
+    "text=Output",
+    "text=Outputs",
+    "text=Ready to Execute",
+    "text=Roles",
+    "text=Roles that are permitted to view or execute this workflow.",
+    "text=Run and test this workflow step with its current configuration",
+    "text=SUCCESS",
+    "text=Select a workflow step to run and test it",
+    "text=Tags",
+    "text=Validation",
+    "text=Workflow Inputs &amp; Outputs",
+    "text=Workflow Properties",
+    "text=substitution."
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/PropertyForm.tsx": [
+    "text=Please ensure core.ReactoryForm@1.0.0 is registered.",
+    "text=ReactoryForm component not available.",
+    "text=Step Type:",
+    "text=⚠️ Warnings"
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/StepCategoryList.tsx": [
+    "text=No categories available"
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/StepItem.tsx": [
+    "text=Tags:"
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/StepLibraryPanel.tsx": [
+    "text=No steps found",
+    "text=Step Library",
+    "text=Try adjusting your search or category filter"
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/StepSearch.tsx": [
+    "attr:aria-label=clear search",
+    "attr:placeholder=Search steps..."
+  ],
+  "components/shared/WorkflowDesigner/components/Panels/ValidationSummary.tsx": [
+    "text=All Good!",
+    "text=All Issues",
+    "text=Found",
+    "text=No validation issues found in your workflow.",
+    "text=No validation issues found. Your workflow is ready to run!",
+    "text=Re-validate",
+    "text=Selected Items Issues",
+    "text=Validation Results",
+    "text=Workflow Issues",
+    "text=error"
+  ],
+  "components/shared/WorkflowDesigner/components/StepLibraryDiagnostics.tsx": [
+    "text=ALL_STEP_DEFINITIONS:",
+    "text=All Steps by ID:",
+    "text=BUILT_IN_STEPS:",
+    "text=Check:",
+    "text=Details",
+    "text=STEP_CATEGORIES:",
+    "text=Steps by Category:",
+    "text=Summary:",
+    "text=categories",
+    "text=steps",
+    "text=⚠️ Some categories have 0 steps!",
+    "text=✓ All categories have steps",
+    "text=📊 Step Library Diagnostics"
+  ],
+  "components/shared/WorkflowDesigner/examples/BasicUsage.tsx": [
+    "text=Log Current Definition",
+    "text=Selected:",
+    "text=Zoom:",
+    "text=items"
+  ],
+  "components/shared/WorkflowDesigner/examples/DemoWorkflow.tsx": [
+    "text=Interactive demo showing a complete workflow with start, tasks, conditions, parallel processing, and end steps.",
+    "text=WorkflowDesigner Demo"
+  ],
+  "components/shared/WorkflowDesigner/examples/PerformanceDemo.tsx": [
+    "text=100 Steps",
+    "text=25 Steps",
+    "text=250 Steps",
+    "text=50 Steps",
+    "text=500 Steps",
+    "text=Performance Testing",
+    "text=Performance mode automatically activates at 50+ steps"
+  ],
+  "components/shared/WorkflowDesigner/examples/Phase3Demo.tsx": [
+    "text=Categorized Browser",
+    "text=Drag & Drop",
+    "text=Full-featured step library with categorization, search, and drag & drop functionality",
+    "text=Panel Toggles",
+    "text=Real-time Search",
+    "text=Try it:",
+    "text=Use the step library panel (left side) to browse, search, and drag steps to the canvas. Toggle panels with the toolbar buttons.",
+    "text=Visual Step Cards",
+    "text=🎉 Phase 3 Complete: Step Library System"
+  ],
+  "components/shared/WorkflowDesigner/examples/Phase4Demo.tsx": [
+    "text=Advanced property editing with dynamic forms, real-time validation, and comprehensive error reporting",
+    "text=Booleans",
+    "text=Dynamic Properties",
+    "text=Error Highlighting",
+    "text=JSON Objects",
+    "text=Multiple Field Types",
+    "text=Numbers",
+    "text=Real-time Validation",
+    "text=Select Dropdowns",
+    "text=Select any step on the canvas to see its properties panel (right side). Edit properties, see validation feedback, and check the Validation tab.",
+    "text=Text Areas",
+    "text=Text Fields",
+    "text=Try it:",
+    "text=Validation Summary",
+    "text=🎯 Phase 4 Complete: Properties & Validation System",
+    "text=🔧 Property Types Supported:"
+  ],
+  "components/shared/WorkflowDesigner/examples/PropertiesDemo.tsx": [
+    "text=Boolean Switches",
+    "text=Dynamic property forms",
+    "text=Error highlighting",
+    "text=Features Demonstrated:",
+    "text=Field descriptions and help text",
+    "text=JSON Objects",
+    "text=Multiple field types",
+    "text=Notice:",
+    "text=Number Fields",
+    "text=Properties Panel Demo",
+    "text=Properties organized into collapsible sections",
+    "text=Real-time validation",
+    "text=Real-time validation with error/warning indicators",
+    "text=Section organization",
+    "text=Select Dropdowns",
+    "text=Select a Step to Edit Properties",
+    "text=Text Areas",
+    "text=Text Fields",
+    "text=This demonstrates the Properties Panel component independently.",
+    "text=Try editing these property types:",
+    "text=Type:",
+    "text=Validation summary",
+    "text=Validation summary in the second tab"
+  ],
+  "components/shared/WorkflowDesigner/examples/StepLibraryDemo.tsx": [
+    "text=- Browse steps by category",
+    "text=- Click steps to view details, drag to canvas",
+    "text=- Collapsible categories and smooth animations",
+    "text=- Rich step cards with icons and info",
+    "text=- Search by name, description, or tags",
+    "text=- Visual filter chips with clear options",
+    "text=Active Filters",
+    "text=Category Navigation",
+    "text=Click on any step card for details",
+    "text=Features Demonstrated:",
+    "text=Filter by \"Control Flow\" category",
+    "text=Interactions",
+    "text=Real-time Search",
+    "text=Responsive Design",
+    "text=Search for \"condition\" or \"parallel\"",
+    "text=Step Details",
+    "text=Step Library Demo",
+    "text=This demonstrates the Step Library Panel component independently.",
+    "text=Try dragging steps (see console)",
+    "text=Try it:"
+  ],
+  "components/shared/WorkflowDesigner/renderers/WebGLRenderer/WorkflowWebGLCanvas.tsx": [
+    "text=FPS:",
+    "text=Steps:"
+  ],
+  "components/shared/WorkflowWidgets/WorkflowDataViewer.tsx": [
+    "text=JSON",
+    "text=YAML"
+  ],
+  "components/shared/WorkflowWidgets/WorkflowLaunch.tsx": [
+    "attr:placeholder={\\n \"key\": \"value\"\\n}",
+    "text=Execute this workflow with custom input parameters. The workflow will run asynchronously.",
+    "text=Input Parameters (JSON)",
+    "text=Instance ID:",
+    "text=Launch Workflow",
+    "text=View",
+    "text=View Instance",
+    "text=Workflow ID",
+    "text=Workflow Started",
+    "text=• Status:"
+  ],
+  "components/shared/WorkflowWidgets/WorkflowTaskApproval.tsx": [
+    "attr:label=Awaiting Approval",
+    "attr:label=New Limit",
+    "attr:label=Reason (Optional)",
+    "attr:label=Tool Limit Reached",
+    "attr:placeholder=Please specify why this request was declined...",
+    "attr:placeholder=Specify why tool execution was declined...",
+    "text=Amount",
+    "text=Annual Value",
+    "text=Approval Required",
+    "text=Approve",
+    "text=Approve & Resume",
+    "text=Cancel",
+    "text=Category",
+    "text=Completed Iterations",
+    "text=Confirm Decline",
+    "text=Confirm Rejection",
+    "text=Decline / Stop",
+    "text=Decline Tool Execution",
+    "text=Pending Tools:",
+    "text=Reject",
+    "text=Release Version",
+    "text=Requestor",
+    "text=Session:",
+    "text=Vendor"
+  ],
+  "components/shared/header/DefaultHeader.tsx": [
+    "attr:aria-label=Menu",
+    "attr:placeholder=Search...",
+    "text=- OFFLINE",
+    "text=Client ver:",
+    "text=DEVELOPMENT",
+    "text=MB",
+    "text=ROUTE INSPECTOR",
+    "text=alt_route",
+    "text=build",
+    "text=rss_feed",
+    "text=search",
+    "text=sensors",
+    "text=storage",
+    "text=ver:",
+    "text=📡&nbsp;",
+    "text=🚮&nbsp; Click to clear your cache"
+  ],
+  "components/shared/hooks/useContentRender.tsx": [
+    "attr:aria-label=Copy code",
+    "attr:aria-label=Execute command",
+    "text=&quot;:",
+    "text=Failed to retrieve &quot;",
+    "text=failed to mount:"
+  ],
+  "components/shared/image/Cropper.tsx": [
+    "text=No Image Data Available",
+    "text=No source image provided",
+    "text=check",
+    "text=close"
+  ],
+  "components/shared/menus/DropDownMenu.tsx": [
+    "text=check"
+  ]
+}
