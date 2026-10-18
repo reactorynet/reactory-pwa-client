@@ -289,6 +289,261 @@ export const replaceMathSymbols = (text: string): string => {
 };
 
 /**
+ * URL auto-linking
+ * ===============
+ *
+ * Content rendered by this hook comes from comments, tickets, articles and AI
+ * messages. Authors paste bare URLs (`https://…`, `www.…`) far more often than
+ * they write markdown links or `<a>` tags, so those URLs used to render as
+ * inert text in both the markdown and the HTML pipelines.
+ *
+ * The helpers below detect URLs in *text* only and leave everything that is
+ * already a link alone. They are shared by both pipelines:
+ *
+ *  - `splitTextLinks`   — pure tokeniser, used by the markdown plugin and the
+ *                         HTML DOM walker.
+ *  - `remarkAutoLink`  — remark/mdast transformer for `react-markdown`.
+ *  - `linkifyHtml`     — DOM walker used on sanitized HTML before injection.
+ */
+export interface TextLinkPart {
+  type: 'text' | 'link';
+  /** Literal text to display; for links this is the URL as authored. */
+  value: string;
+  /** Fully qualified destination (only set for `link` parts). */
+  href?: string;
+}
+
+/**
+ * Bare URLs accepted by the auto-linker.
+ *
+ * `http(s)://` and `www.` are the two forms that are unambiguous in prose.
+ * The character class stops at whitespace, markup delimiters and quotes so a
+ * URL inside an attribute or a code span can never be picked up from here.
+ */
+const URL_AUTOLINK_PATTERN = /(?:\bhttps?:\/\/|\bwww\.)[^\s<>"'`]+/gi;
+
+/**
+ * Removes sentence punctuation and unbalanced closing brackets that the URL
+ * character class happily swallows: `see https://example.com.` must link only
+ * `https://example.com`, and `(https://example.com/a_(b))` must keep the inner
+ * bracket pair while dropping the wrapper.
+ */
+export const trimUrlToken = (raw: string): string => {
+  let url = raw || '';
+  for (;;) {
+    const before = url;
+    url = url.replace(/[.,;:!?*]+$/, '');
+
+    const last = url[url.length - 1];
+    const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+    if (last && pairs[last]) {
+      const open = pairs[last];
+      const opened = url.split(open).length - 1;
+      const closed = url.split(last).length - 1;
+      if (closed > opened) url = url.slice(0, -1);
+    }
+
+    if (url === before) return url;
+  }
+};
+
+/**
+ * Resolves a matched token to a usable href, or `null` when it is not a real
+ * URL (e.g. a lone `https://`).
+ */
+const resolveHref = (token: string): string | null => {
+  const href = /^www\./i.test(token) ? `https://${token}` : token;
+  try {
+    const parsed = new URL(href);
+    if (!parsed.hostname) return null;
+    return href;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Splits a plain-text run into literal text and link parts.
+ *
+ * Always returns at least one part for non-empty input, so callers can use
+ * `parts.some(type === 'link')` to decide whether anything changed.
+ */
+export const splitTextLinks = (text: string): TextLinkPart[] => {
+  if (!text) return [];
+
+  const parts: TextLinkPart[] = [];
+  const pattern = new RegExp(URL_AUTOLINK_PATTERN.source, 'gi');
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const token = trimUrlToken(match[0]);
+    const href = resolveHref(token);
+
+    // Not a usable URL — leave the token in the surrounding text run.
+    if (!href || !token) continue;
+
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+
+    parts.push({ type: 'link', value: token, href });
+    lastIndex = match.index + token.length;
+    // Continue after the consumed token; any trimmed punctuation is treated as
+    // trailing text rather than being skipped or linked.
+    pattern.lastIndex = lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', value: text }];
+};
+
+interface MarkdownNode {
+  type?: string;
+  value?: string;
+  url?: string;
+  title?: string | null;
+  children?: MarkdownNode[];
+}
+
+/**
+ * mdast node types that must never be descended into: their contents are not
+ * prose. `link`/`linkReference` already are links, and code/HTML must stay
+ * verbatim.
+ */
+const MARKDOWN_AUTOLINK_SKIP = new Set([
+  'link',
+  'linkReference',
+  'image',
+  'imageReference',
+  'definition',
+  'code',
+  'inlineCode',
+  'html',
+]);
+
+/**
+ * Remark plugin that turns bare URLs in text nodes into `link` nodes.
+ *
+ * Implemented as a small mdast walk rather than by pulling in `remark-gfm`:
+ * the registry exposes GFM but it is not attached to `core.Markdown`, and
+ * enabling the whole GFM preset here would also change table, strikethrough
+ * and task-list parsing for every consumer of this hook. This plugin changes
+ * exactly one thing — plain URLs become links — and is idempotent: a text node
+ * inside an existing link is skipped.
+ */
+export const remarkAutoLink = () => (tree: MarkdownNode): void => {
+  const walk = (node: MarkdownNode): void => {
+    if (!node || !Array.isArray(node.children)) return;
+    if (node.type && MARKDOWN_AUTOLINK_SKIP.has(node.type)) return;
+
+    const next: MarkdownNode[] = [];
+
+    node.children.forEach((child) => {
+      if (child?.type === 'text' && typeof child.value === 'string') {
+        const parts = splitTextLinks(child.value);
+        if (!parts.some((part) => part.type === 'link')) {
+          next.push(child);
+          return;
+        }
+        parts.forEach((part) => {
+          if (part.type === 'link') {
+            next.push({
+              type: 'link',
+              url: part.href,
+              title: null,
+              children: [{ type: 'text', value: part.value }],
+            });
+          } else if (part.value) {
+            next.push({ type: 'text', value: part.value });
+          }
+        });
+        return;
+      }
+
+      walk(child);
+      next.push(child);
+    });
+
+    node.children = next;
+  };
+
+  walk(tree);
+};
+
+/**
+ * Elements whose text content must not be auto-linked: they are either already
+ * links or represent code / raw content where a URL is data, not prose.
+ */
+const HTML_LINKIFY_SKIP_SELECTOR = 'a, code, pre, script, style, textarea, title';
+
+/**
+ * Converts bare URLs in the *text nodes* of an HTML string into anchors.
+ *
+ * Walks the parsed DOM instead of running a regex over the markup, so URLs in
+ * attributes, comments or inside `<code>`/`<pre>` are untouched, and anchors
+ * that already exist are never nested. Anchors produced here match the ones the
+ * markdown renderer emits (`target="_blank"`, `rel="noopener noreferrer"`).
+ *
+ * Falls back to the input unchanged when no DOM parser is available (SSR), so
+ * the helper is safe to call unconditionally.
+ */
+export const linkifyHtml = (html: string): string => {
+  if (!html || typeof html !== 'string') return html;
+  if (!/(?:\bhttps?:\/\/|\bwww\.)/i.test(html)) return html;
+  if (typeof DOMParser === 'undefined') return html;
+
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const body = doc.body;
+  if (!body) return html;
+
+  // Full documents are detected by `isHtmlContent` too. Re-serialising only
+  // `body.innerHTML` would silently drop the doctype, `<head>` and its styles,
+  // so keep the document shape when the input had one.
+  const doctype = /^\s*(<!doctype[^>]*>)/i.exec(html)?.[1];
+  const isFullDocument = Boolean(doctype) || /^\s*<html[\s>]/i.test(html);
+
+  const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode as Text);
+  }
+
+  textNodes.forEach((node) => {
+    const parent = node.parentElement;
+    if (!parent || parent.closest(HTML_LINKIFY_SKIP_SELECTOR)) return;
+
+    const parts = splitTextLinks(node.nodeValue || '');
+    if (!parts.some((part) => part.type === 'link')) return;
+
+    const fragment = doc.createDocumentFragment();
+    parts.forEach((part) => {
+      if (part.type === 'link') {
+        const anchor = doc.createElement('a');
+        anchor.setAttribute('href', part.href as string);
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+        anchor.textContent = part.value;
+        fragment.appendChild(anchor);
+      } else {
+        fragment.appendChild(doc.createTextNode(part.value));
+      }
+    });
+
+    node.parentNode?.replaceChild(fragment, node);
+  });
+
+  if (isFullDocument) {
+    return `${doctype || '<!DOCTYPE html>'}${doc.documentElement.outerHTML}`;
+  }
+
+  return body.innerHTML;
+};
+
+/**
  * Content types that can be rendered
  */
 export enum ContentType {
@@ -748,6 +1003,15 @@ export const useContentRender = (
     ...cellMarkdownComponents,
   }), [cellMarkdownComponents]);
 
+  /**
+   * Remark plugins applied to every `core.Markdown` render in this hook.
+   *
+   * Stable identity (empty dependency list) so react-markdown does not rebuild
+   * its processor on every render. `remarkAutoLink` is a pure text-node
+   * transformer: markdown links, code spans and raw HTML keep their behaviour.
+   */
+  const markdownRemarkPlugins = useMemo(() => [remarkAutoLink], []);
+
   // Mermaid re-init logic
   const mermaidRef = useRef<HTMLDivElement>(null);
   const { 
@@ -782,6 +1046,15 @@ export const useContentRender = (
     }
     return raw;
   };
+
+  /**
+   * Sanitizes HTML and then auto-links any bare URL in its text nodes.
+   *
+   * Linkification runs *after* sanitization so anchors are never created from
+   * content the sanitizer would have removed, and the generated anchors only
+   * use attributes the sanitizer already allows (`href`, `target`, `rel`).
+   */
+  const renderHtml = (raw: string): string => linkifyHtml(sanitizeHtml(raw));
 
   useEffect(() => {
     //@ts-ignore
@@ -947,21 +1220,25 @@ export const useContentRender = (
             <span
               key={keyPrefix}
               className="reactor-html-content"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+              dangerouslySetInnerHTML={{ __html: renderHtml(text) }}
             />
           ) : (
             <div
               key={keyPrefix}
               className="reactor-html-content"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+              dangerouslySetInnerHTML={{ __html: renderHtml(text) }}
             />
           );
         }
         if (!Markdown) return replaceMathSymbols(text);
         return isInline ? (
-          <Markdown components={cellMarkdownComponents}>{replaceMathSymbols(text)}</Markdown>
+          <Markdown components={cellMarkdownComponents} remarkPlugins={markdownRemarkPlugins}>
+            {replaceMathSymbols(text)}
+          </Markdown>
         ) : (
-          <Markdown components={markdownCodeComponents}>{replaceMathSymbols(text)}</Markdown>
+          <Markdown components={markdownCodeComponents} remarkPlugins={markdownRemarkPlugins}>
+            {replaceMathSymbols(text)}
+          </Markdown>
         );
       }
 
@@ -996,21 +1273,33 @@ export const useContentRender = (
                 <span
                   key={segKey}
                   className="reactor-html-content"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(seg.value) }}
+                  dangerouslySetInnerHTML={{ __html: renderHtml(seg.value) }}
                 />
               ) : (
                 <div
                   key={segKey}
                   className="reactor-html-content"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(seg.value) }}
+                  dangerouslySetInnerHTML={{ __html: renderHtml(seg.value) }}
                 />
               );
             }
             if (!Markdown) return replaceMathSymbols(seg.value);
             return isInline ? (
-              <Markdown key={segKey} components={cellMarkdownComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+              <Markdown
+                key={segKey}
+                components={cellMarkdownComponents}
+                remarkPlugins={markdownRemarkPlugins}
+              >
+                {replaceMathSymbols(seg.value)}
+              </Markdown>
             ) : (
-              <Markdown key={segKey} components={markdownCodeComponents}>{replaceMathSymbols(seg.value)}</Markdown>
+              <Markdown
+                key={segKey}
+                components={markdownCodeComponents}
+                remarkPlugins={markdownRemarkPlugins}
+              >
+                {replaceMathSymbols(seg.value)}
+              </Markdown>
             );
           })}
         </React.Fragment>
@@ -1138,7 +1427,7 @@ export const useContentRender = (
               key={`html-${idx}`}
               className="reactor-html-content"
               dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(seg.content),
+                __html: renderHtml(seg.content),
               }}
             />
           );
