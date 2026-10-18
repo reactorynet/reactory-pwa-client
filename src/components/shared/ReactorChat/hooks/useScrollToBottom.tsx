@@ -1086,9 +1086,12 @@ const ChatList = (props: {
     // Handle tool results (though these should typically be filtered out)
     if (Array.isArray(message.tool_results) && message.tool_results.length > 0) {
       const resultNames = message.tool_results.map((r: any) => r.name || 'tool').join(', ');
+      // The key is pluralised (`_one`/`_other`), and i18next selects the form
+      // from `count` only — without it English rendered "1 tool calls".
       return reactory.i18n.t('reactor.client.chat.toolResultsSummary', {
+        count: message.tool_results.length,
         tools: resultNames,
-        defaultValue: 'Tool results: {{tools}}'
+        defaultValue: 'Completed {{count}} tool calls'
       });
     }
 

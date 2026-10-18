@@ -80,12 +80,12 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
   if (props.waitingFor) {
     const ComponentToMount = reactory.getComponent<any>(props.waitingFor);
     if (!ComponentToMount) {
-      return (<>{props.message || 'No component data available'}</>);
+      return (<>{props.message || reactory.i18n.t('reactor.client.notFound.noComponentData', { defaultValue: 'No component data available' })}</>);
     }
     return (<ComponentToMount {...props.args} />);
   }
 
-  return (<>No component data available</>);
+  return (<>{reactory.i18n.t('reactor.client.notFound.noComponentData', { defaultValue: 'No component data available' })}</>);
 };
 
 export default NotFound

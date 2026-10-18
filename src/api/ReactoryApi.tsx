@@ -1,7 +1,12 @@
 import React from "react";
 import i18next, { i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import { registerMomentLocale, setLocaleProvider } from './formatters';
+// No `i18next-browser-languagedetector` here on purpose. Detection is owned by
+// `./language` (`resolvePreferredLanguage`), which can honour an in-app choice;
+// the detector reads only browser preferences, so registering it added a second,
+// divergent path. The server removed its detector for the same reason — one
+// detection path per side.
 import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
@@ -76,6 +81,7 @@ import {
   isSupportedLanguage,
   languageCandidates,
   normaliseLanguage,
+  resolveAccountLanguage,
   resolvePreferredLanguage,
   setStoredLanguage,
 } from './language';
@@ -780,7 +786,15 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * Afrikaans on first paint.
    */
   async initi18n() {
-    const preferredLanguage = resolvePreferredLanguage();
+    // Order: this device's explicit choice, then the account's persisted
+    // preference, then the browser. `localStorage` stays first so a user is not
+    // switched back by a stale profile from another machine, but the account
+    // value is what makes the choice survive a *new* device — before this it was
+    // per-device only.
+    const accountLanguage = resolveAccountLanguage(
+      (this.getUser() as any)?.loggedIn?.il8n?.locale
+    );
+    const preferredLanguage = accountLanguage || resolvePreferredLanguage();
     const languagesToLoad = languageCandidates(preferredLanguage);
 
     const $resources: any = {};
@@ -836,12 +850,16 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
 
     await i18next
-      .use(LanguageDetector)
       .use(initReactI18next)
       .init({
         debug: this.isDevelopmentMode(),
         lng: activeLanguage,
-        fallbackLng: ['en-US', 'en'],
+        // The server normalises `en-US` to `en` and loads the `en` folder, so
+        // the client must prefer `en` too. The previous order (`en-US` first)
+        // was the opposite of the server's and only worked because both
+        // bundles are aliased below. `en-US` stays as a last resort for a
+        // deployment that removes the `en/` folder.
+        fallbackLng: ['en', 'en-US'],
         supportedLngs: Array.from(new Set([
           ...this.supportedLanguages.map((language) => language.code),
           ...SUPPORTED_LANGUAGE_CODES,
@@ -860,6 +878,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }).then();
 
     this.i18n = i18next;
+
+    // Dates/numbers follow the *chosen* language, not the browser locale.
+    // `moment` also needs its locale data pointed at the language — nothing did
+    // this before, so moment-formatted dates stayed English.
+    setLocaleProvider(() => (this.i18n ? this.i18n.language : undefined));
+    registerMomentLocale(activeLanguage);
   }
 
   /**
@@ -987,10 +1011,56 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
     if (token !== this.languageChangeToken) return this.getLanguage();
 
+    // Keep the formatters in step with the language the UI just switched to.
+    registerMomentLocale(target);
+
     setStoredLanguage(target);
+
+    // Persist to the account as well, so the choice follows the user to a new
+    // browser or device. Deliberately fire-and-forget and after the local
+    // switch: the UI must change language even if the write fails, and an
+    // anonymous visitor has no account to write to.
+    this.persistUserLanguage(target).catch(() => undefined);
+
     this.emit(ReactoryApiEventNames.onLanguageChanged, target);
 
     return target;
+  }
+
+  /**
+   * Writes the language preference to the signed-in user's profile.
+   *
+   * Returns false (rather than throwing) when there is no signed-in user or the
+   * server rejects the write; the local choice is already applied and stored, so
+   * a failure degrades to per-device behaviour instead of blocking the switch.
+   */
+  async persistUserLanguage(language: string): Promise<boolean> {
+    const user: any = this.getUser();
+    const userId = user && user.loggedIn && (user.loggedIn.id || user.loggedIn._id);
+    if (!userId) return false;
+
+    const SET_USER_LANGUAGE = gql`
+      mutation SetUserLanguage($language: String!) {
+        setUserLanguage(language: $language) {
+          id
+          il8n {
+            locale
+          }
+        }
+      }
+    `;
+
+    try {
+      const result: any = await this.graphqlMutation(SET_USER_LANGUAGE, { language });
+      if (result && Array.isArray(result.errors) && result.errors.length > 0) {
+        this.warning(`Could not persist the language preference: ${result.errors[0].message}`);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      this.warning(`Could not persist the language preference for language "${language}"`);
+      return false;
+    }
   }
 
   clearStoreAndCache() {

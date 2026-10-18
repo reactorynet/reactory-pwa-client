@@ -124,11 +124,6 @@ jest.mock('react-i18next', () => ({
   initReactI18next: {},
 }));
 
-jest.mock('i18next-browser-languagedetector', () => ({
-  __esModule: true,
-  default: {},
-}));
-
 jest.mock('../ApiProvider', () => ({
   withReactory: jest.fn((C) => C),
   ReactoryProvider: jest.fn(({ children }) => children),
@@ -1448,7 +1443,11 @@ describe('initi18n', () => {
     expect(i18next.init).toHaveBeenCalledWith(
       expect.objectContaining({
         lng: 'en',
-        fallbackLng: ['en-US', 'en'],
+        // `en` before `en-US`: the server normalises `en-US` -> `en` and loads
+        // the `en` folder, so the client must prefer the same bundle. The old
+        // order (`en-US` first) was the opposite of the server's and only
+        // worked because both are aliased onto each other below.
+        fallbackLng: ['en', 'en-US'],
         defaultNS: 'reactory',
         fallbackNS: expect.arrayContaining(['reactory', 'booktutor', 'forms', 'common']),
         resources: expect.objectContaining({

@@ -1,4 +1,5 @@
 import { Moment } from 'moment';
+import { languageLabel } from '@reactory/client-core/api/language';
 import { ContentFormat } from './format';
 
 /**
@@ -203,48 +204,50 @@ export interface LanguageOption {
   label: string;
 }
 
+/**
+ * Codes offered by the content-authoring language picker.
+ *
+ * Only the codes live here; labels come from `api/language.ts` so this list
+ * cannot disagree with the language selector about what a language is called.
+ */
 export const COMMON_LANGUAGES: LanguageOption[] = [
-  { code: 'en', label: 'English' },
-  { code: 'af', label: 'Afrikaans' },
-  { code: 'ar', label: 'Arabic' },
-  { code: 'bn', label: 'Bengali' },
-  { code: 'de', label: 'German' },
-  { code: 'es', label: 'Spanish' },
-  { code: 'fr', label: 'French' },
-  { code: 'hi', label: 'Hindi' },
-  { code: 'id', label: 'Indonesian' },
-  { code: 'it', label: 'Italian' },
-  { code: 'ja', label: 'Japanese' },
-  { code: 'ko', label: 'Korean' },
-  { code: 'nl', label: 'Dutch' },
-  { code: 'pl', label: 'Polish' },
-  { code: 'pt', label: 'Portuguese' },
-  { code: 'ru', label: 'Russian' },
-  { code: 'sw', label: 'Swahili' },
-  { code: 'th', label: 'Thai' },
-  { code: 'tr', label: 'Turkish' },
-  { code: 'uk', label: 'Ukrainian' },
-  { code: 'ur', label: 'Urdu' },
-  { code: 'vi', label: 'Vietnamese' },
-  { code: 'xh', label: 'Xhosa' },
-  { code: 'zh', label: 'Chinese' },
-  { code: 'zu', label: 'Zulu' },
+  { code: 'en', label: languageLabel('en') },
+  { code: 'af', label: languageLabel('af') },
+  { code: 'ar', label: languageLabel('ar') },
+  { code: 'bn', label: languageLabel('bn') },
+  { code: 'de', label: languageLabel('de') },
+  { code: 'es', label: languageLabel('es') },
+  { code: 'fr', label: languageLabel('fr') },
+  { code: 'hi', label: languageLabel('hi') },
+  { code: 'id', label: languageLabel('id') },
+  { code: 'it', label: languageLabel('it') },
+  { code: 'ja', label: languageLabel('ja') },
+  { code: 'ko', label: languageLabel('ko') },
+  { code: 'nl', label: languageLabel('nl') },
+  { code: 'pl', label: languageLabel('pl') },
+  { code: 'pt', label: languageLabel('pt') },
+  { code: 'ru', label: languageLabel('ru') },
+  { code: 'sw', label: languageLabel('sw') },
+  { code: 'th', label: languageLabel('th') },
+  { code: 'tr', label: languageLabel('tr') },
+  { code: 'uk', label: languageLabel('uk') },
+  { code: 'ur', label: languageLabel('ur') },
+  { code: 'vi', label: languageLabel('vi') },
+  { code: 'xh', label: languageLabel('xh') },
+  { code: 'zh', label: languageLabel('zh') },
+  { code: 'zu', label: languageLabel('zu') },
 ];
 
 /**
- * Resolves a language code to a display label, falling back to the code itself
- * for languages outside the working set.
+ * Language display names have exactly one implementation.
+ *
+ * This module used to carry its own (`COMMON_LANGUAGES` + `Intl.DisplayNames`),
+ * which drifted from `api/language.ts` on casing — the panels rendered
+ * "español" where the language selector rendered "Español". Re-exporting keeps
+ * the two in step by construction; `COMMON_LANGUAGES` is only the list of codes
+ * the picker offers, and takes its labels from the same helper.
+ *
+ * Re-exported rather than imported-and-wrapped so existing
+ * `import { languageLabel } from '../types'` call sites keep working.
  */
-export const languageLabel = (code: string): string => {
-  if (!code) return '';
-  const known = COMMON_LANGUAGES.find((l) => l.code === code.toLowerCase());
-  if (known) return known.label;
-
-  // Intl knows far more languages than the picker offers; use it when present.
-  try {
-    const display = new Intl.DisplayNames([code], { type: 'language' });
-    return display.of(code) || code;
-  } catch (e) {
-    return code;
-  }
-};
+export { languageLabel } from '@reactory/client-core/api/language';

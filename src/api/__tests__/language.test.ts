@@ -17,6 +17,7 @@ import {
   languageCandidates,
   languageLabel,
   normaliseLanguage,
+  resolveAccountLanguage,
   resolvePreferredLanguage,
   setStoredLanguage,
 } from '../language';
@@ -231,5 +232,65 @@ describe('header language parsing (server contract)', () => {
 
     expect(parsed).toBe('af');
     expect(isSupportedLanguage(parsed)).toBe(true);
+  });
+});
+
+describe('account language preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    setBrowserLanguages([]);
+  });
+
+  /**
+   * The preference used to live in `localStorage` only, so a user lost their
+   * choice on a new browser or device even though the server knew who they were.
+   * `user.il8n.locale` is now the durable record.
+   */
+  it('adopts the account preference when this device has no choice', () => {
+    expect(resolveAccountLanguage('af', null)).toBe('af');
+  });
+
+  it('normalises a regional account value', () => {
+    expect(resolveAccountLanguage('af-ZA', null)).toBe('af');
+  });
+
+  it('keeps this device choice ahead of the account value', () => {
+    // A stale profile from another machine must not switch the user back.
+    expect(resolveAccountLanguage('en', 'af')).toBe('af');
+  });
+
+  it('ignores an account language the server no longer ships', () => {
+    expect(resolveAccountLanguage('zz', null)).toBeNull();
+  });
+
+  it('returns null when neither source has a value', () => {
+    expect(resolveAccountLanguage(undefined, null)).toBeNull();
+    expect(resolveAccountLanguage(null, null)).toBeNull();
+  });
+});
+
+describe('languageLabel is the single source of truth', () => {
+  /**
+   * The static-content panels used to resolve labels independently
+   * (`COMMON_LANGUAGES` + `Intl.DisplayNames`) and disagreed on casing —
+   * "español" in the panels, "Español" in the selector.
+   */
+  it('uses the same endonym everywhere', () => {
+    expect(languageLabel('es')).toBe('Español');
+    expect(languageLabel('nl')).toBe('Nederlands');
+    expect(languageLabel('de')).toBe('Deutsch');
+  });
+
+  it('normalises a regional tag before lookup', () => {
+    expect(languageLabel('es-ES')).toBe('Español');
+  });
+
+  it('falls back to the code for a language it does not know', () => {
+    expect(languageLabel('zz')).toBe('zz');
+  });
+
+  it('returns an empty string for empty input', () => {
+    expect(languageLabel('')).toBe('');
+    expect(languageLabel(undefined)).toBe('');
   });
 });

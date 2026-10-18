@@ -100,32 +100,78 @@ export const resetRegisteredLanguages = (): void => {
 
 /**
  * Display labels for languages we know about, written as the language names
- * itself (endonym) so a speaker can recognise their own language in the
- * selector.
+ * themselves (endonyms) so a speaker can recognise their own language.
  *
- * Anything the server reports that is absent here still becomes selectable; it
- * just shows its code. The codes are listed explicitly rather than derived from
- * `Intl.DisplayNames`, which returns inconsistent casing ("Nederlands" but
- * "español") and renders `en-US` as "American English".
+ * This is the **single** source of truth for a language's display name. The
+ * static-content panels used to carry a second implementation (English names
+ * from `COMMON_LANGUAGES` plus an `Intl.DisplayNames` fallback) which disagreed
+ * with this one on casing — the panels rendered "español" where the selector
+ * rendered "Español". They now re-export this function.
+ *
+ * The codes are listed explicitly rather than derived from `Intl.DisplayNames`,
+ * which returns inconsistent casing ("Nederlands" but "español") and renders
+ * `en-US` as "American English".
  */
 const KNOWN_LABELS: { [code: string]: string } = {
   en: 'English',
   'en-US': 'English (US)',
   af: 'Afrikaans',
-  nl: 'Nederlands',
+  ar: 'العربية',
+  bn: 'বাংলা',
   de: 'Deutsch',
   es: 'Español',
-  it: 'Italiano',
   fr: 'Français',
+  hi: 'हिन्दी',
+  id: 'Bahasa Indonesia',
+  it: 'Italiano',
+  ja: '日本語',
+  ko: '한국어',
+  nl: 'Nederlands',
+  pl: 'Polski',
+  pt: 'Português',
+  ru: 'Русский',
+  sw: 'Kiswahili',
+  th: 'ไทย',
+  tr: 'Türkçe',
+  uk: 'Українська',
+  ur: 'اردو',
+  vi: 'Tiếng Việt',
+  xh: 'isiXhosa',
+  zh: '中文',
+  zu: 'isiZulu',
 };
 
-/** Human-readable label for a language code, falling back to the code itself. */
+/**
+ * Human-readable label for a language code.
+ *
+ * Resolution order is deliberate and stable, so the same code always renders
+ * the same string everywhere in the app:
+ *
+ *   1. the value registered in `SUPPORTED_LANGUAGES` (a host application may
+ *      override a label);
+ *   2. the endonym table above;
+ *   3. `Intl.DisplayNames` in the language itself, which covers a locale the
+ *      table has not caught up with;
+ *   4. the code itself.
+ */
 export const languageLabel = (language?: string): string => {
   if (!language) return '';
   const normalised = normaliseLanguage(language);
   const found = SUPPORTED_LANGUAGES.find((candidate) => candidate.code === normalised);
   if (found) return found.label;
-  return KNOWN_LABELS[language] || KNOWN_LABELS[normalised] || language;
+
+  const known = KNOWN_LABELS[language] || KNOWN_LABELS[normalised];
+  if (known) return known;
+
+  try {
+    const display = new Intl.DisplayNames([normalised], { type: 'language' });
+    const value = display.of(normalised);
+    if (value && value !== normalised) return value;
+  } catch (error) {
+    // `Intl.DisplayNames` is absent in older runtimes; the code is a safe label.
+  }
+
+  return language;
 };
 
 /**
@@ -218,6 +264,23 @@ export const resolvePreferredLanguage = (
 
   const normalisedFallback = normaliseLanguage(fallback);
   return isSupportedLanguage(normalisedFallback) ? normalisedFallback : DEFAULT_LANGUAGE;
+};
+
+/**
+ * Whether the account has a persisted preference we should adopt.
+ *
+ * `user.il8n.locale` is the durable record. `localStorage` is the pre-auth /
+ * first-paint fallback, so it wins on a device where the user already chose —
+ * they should not be switched back by a stale profile from another machine.
+ * The stored language is adopted only when this device has no choice yet.
+ */
+export const resolveAccountLanguage = (
+  accountLocale: string | undefined | null,
+  storedLanguage: string | null = getStoredLanguage()
+): string | null => {
+  if (storedLanguage) return storedLanguage;
+  const normalised = normaliseLanguage(accountLocale || undefined);
+  return normalised && isSupportedLanguage(normalised) ? normalised : null;
 };
 
 /**

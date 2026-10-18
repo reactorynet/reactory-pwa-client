@@ -292,7 +292,7 @@ export default (props: OrganizationSelectorProps) => {
   }
 
   if(errorOrganizations !== null && errorOrganizations !== undefined) {
-    return <>Error loading organizations</>
+    return <>{i18n.t("reactory:reactory.organizations.error_loading", "Error loading organizations")}</>
   }
 
   if(organizations.length === 0 || showNewOrganizationWidget === true) {
