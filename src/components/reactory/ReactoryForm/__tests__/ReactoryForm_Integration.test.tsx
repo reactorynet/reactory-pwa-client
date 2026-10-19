@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, cleanup, act } from '@testing-library/react';
+import { fireEvent, render, screen, cleanup, act } from '@testing-library/react';
 // @ts-ignore
 import { ReactoryForm } from '../ReactoryForm';
 import { createMockReactorySDK } from './mockReactory';
@@ -42,7 +42,14 @@ jest.mock('@reactory/client-core/api', () => ({
 }));
 
 jest.mock('../components', () => ({
-  FormLoadingIndicator: () => <div role="status">Loading...</div>,
+  FormLoadingIndicator: ({ hasError, onRetry }: any) => (
+    <div role="status">
+      Loading...
+      {hasError && onRetry ? (
+        <button type="button" onClick={onRetry}>Retry</button>
+      ) : null}
+    </div>
+  ),
   FormSkeleton: () => <div role="status" data-testid="form-skeleton">Skeleton</div>,
 }));
 
@@ -147,6 +154,7 @@ describe('ReactoryForm Integration', () => {
         progress: 0,
         activeStageLabel: 'Form could not be resolved',
       },
+      retryFormDefinition: jest.fn(),
       schema: DefaultLoadingSchema,
       uiSchema: {},
       uiOptions: { componentType: 'form' },
@@ -158,6 +166,44 @@ describe('ReactoryForm Integration', () => {
     // An explicit failure must be visible: the skeleton would hide it indefinitely.
     expect(screen.queryByTestId('form-skeleton')).not.toBeInTheDocument();
     expect(screen.getByText('Loading...')).toBeInTheDocument();
+    // And the failure branch must expose the retry affordance.
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('re-runs form resolution when the retry action is activated', () => {
+    const retryFormDefinition = jest.fn();
+
+    (useFormDefinition as jest.Mock).mockReturnValue({
+      form: { name: 'TestForm', __complete__: false },
+      loadingState: {
+        isLoading: false,
+        hasError: true,
+        stages: [
+          {
+            key: 'form-definition',
+            label: 'Loading form definition',
+            status: 'error',
+            errorMessage: 'Form "reactory.MyApplications@1.0.0" could not be resolved',
+          },
+        ],
+        progress: 0,
+        activeStageLabel: 'Loading form definition',
+      },
+      retryFormDefinition,
+      schema: DefaultLoadingSchema,
+      uiSchema: {},
+      uiOptions: { componentType: 'form' },
+      formContext: {},
+    });
+
+    render(<ReactoryForm formId="reactory.MyApplications@1.0.0" />);
+
+    const retry = screen.getByRole('button', { name: /retry/i });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fireEvent.click(retry);
+
+    expect(retryFormDefinition).toHaveBeenCalledTimes(1);
   });
 
   it('renders "No form definition" when form is undefined', () => {

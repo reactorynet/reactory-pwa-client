@@ -72,6 +72,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       isDataLoading,
       loadingState,
       setForm,
+      retryFormDefinition,
       formContext,
       schema,
       uiSchema,
@@ -440,7 +441,25 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             debug(`${SIGN}:render - form`);
           }
         }
-      } else if (!loadingState.isLoading && !loadingState.hasError && schemaIsPlaceholder) {
+      } else if (loadingState.hasError) {
+        // A failed resolution is a terminal state, not a loading state. Render
+        // the failure (and the Retry affordance) explicitly so the placeholder
+        // `DefaultLoadingSchema` never stands in for both "still loading" and
+        // "could not be loaded".
+        renderedComponent = (
+          <div aria-live="assertive" aria-atomic="true">
+            <FormLoadingIndicator
+              stages={loadingState.stages}
+              progress={loadingState.progress}
+              activeStageLabel={loadingState.activeStageLabel}
+              hasError={true}
+              onRetry={retryFormDefinition}
+              variant={uiOptions?.loadingVariant || 'full'}
+            />
+          </div>
+        );
+        debug(`${SIGN}:render - error`);
+      } else if (!loadingState.isLoading && schemaIsPlaceholder) {
         // Form definition resolved but its schema is still the placeholder (or
         // genuinely missing) — render a skeleton rather than the raw
         // "Loading Form" placeholder schema.

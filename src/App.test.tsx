@@ -876,3 +876,145 @@ describe('ReactoryHOC (App)', () => {
     });
   });
 });
+/**
+ * The server role-filters the form list, so the client may only fetch it once
+ * the session identity is known. These tests pin that ordering: a cold load
+ * while logged out must not fetch at all, and the boot fetch must not run
+ * before `status()` resolves.
+ */
+describe('Form list fetch sequencing (auth-scoped)', () => {
+  const authenticatedStatus = {
+    status: 'API OK',
+    roles: ['USER'],
+    loggedIn: {
+      id: 'user-1',
+      roles: ['USER'],
+      user: { id: 'user-1', firstName: 'Test', lastName: 'User' },
+    },
+  };
+
+  const anonymousStatus = {
+    status: 'API OK',
+    anon: true,
+    roles: ['ANON'],
+    loggedIn: {
+      id: 'anon',
+      roles: ['ANON'],
+      user: { id: 'anon', roles: ['ANON'] },
+    },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (window as any).reactory = {};
+    mockReactory.status.mockReset();
+    mockReactory.init.mockReset().mockResolvedValue(undefined);
+    mockReactory.forms.mockReset().mockResolvedValue([]);
+    mockReactory.getTheme.mockReset().mockReturnValue({ options: { palette: { mode: 'light' } } });
+    mockReactory.getUser.mockReset();
+    mockReactory.getSizeSpec.mockReset().mockReturnValue({ width: 1440, height: 900, size: 'lg' });
+    mockReactory.registerComponent.mockReset();
+    mockReactory.createNotification.mockReset();
+    mockReactory.warning.mockReset();
+    mockReactory.log.mockReset();
+    mockReactory.error.mockReset();
+    mockReactory.debug.mockReset();
+    mockReactory.emit.mockReset();
+    mockReactory.on.mockReset().mockImplementation(function () { return this; });
+    mockReactory.off.mockReset().mockImplementation(function () { return this; });
+    // Per-test so the logout test in the main suite keeps exercising its
+    // defensive fallback branch.
+    mockReactory.clearFormCache = jest.fn();
+    localStorageMock.getItem.mockReturnValue(null);
+    localStorageMock.setItem.mockImplementation(() => {});
+  });
+
+  it('does not fetch a role-scoped form list on a cold load while logged out', async () => {
+    mockReactory.status.mockResolvedValue(anonymousStatus);
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+    });
+
+    expect(mockReactory.status).toHaveBeenCalled();
+    expect(mockReactory.forms).not.toHaveBeenCalled();
+  });
+
+  it('does not begin the form fetch until the status call (auth state) has resolved', async () => {
+    let resolveStatus: (value: any) => void = () => undefined;
+    const pendingStatus = new Promise((resolve) => {
+      resolveStatus = resolve;
+    });
+    mockReactory.status.mockReturnValue(pendingStatus);
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.status).toHaveBeenCalled();
+    });
+
+    // Status is still in flight: an authenticated-scoped fetch here would be
+    // the original race (anonymous list cached before the user is known).
+    expect(mockReactory.forms).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveStatus(authenticatedStatus);
+    });
+
+    await waitFor(() => {
+      expect(mockReactory.forms).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it('fetches the form list exactly once when status() emits onLogin during boot', async () => {
+    mockReactory.status.mockImplementation(async () => {
+      // Mirrors ReactoryApi.status(): setUser happens before the emit.
+      mockReactory.getUser.mockReturnValue(authenticatedStatus);
+      const loginCall = mockReactory.on.mock.calls.find((call: any[]) => call[0] === 'onLogin');
+      if (loginCall) loginCall[1](authenticatedStatus);
+      return authenticatedStatus;
+    });
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.forms).toHaveBeenCalledWith(true);
+    });
+
+    // Let the login transition's promises settle.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockReactory.forms).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the cached role-scoped list before refetching when a login lands', async () => {
+    mockReactory.status.mockResolvedValue(anonymousStatus);
+    mockReactory.getUser.mockReturnValue(authenticatedStatus);
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.on).toHaveBeenCalled();
+    });
+
+    const onLoginCall = mockReactory.on.mock.calls.find((call: any[]) => call[0] === 'onLogin');
+    expect(onLoginCall).toBeTruthy();
+
+    mockReactory.forms.mockClear();
+    mockReactory.clearFormCache.mockClear();
+
+    await act(async () => {
+      await onLoginCall[1](authenticatedStatus);
+    });
+
+    expect(mockReactory.clearFormCache).toHaveBeenCalled();
+    expect(mockReactory.forms).toHaveBeenCalledWith(true);
+    expect(mockReactory.clearFormCache.mock.invocationCallOrder[0])
+      .toBeLessThan(mockReactory.forms.mock.invocationCallOrder[0]);
+  });
+});

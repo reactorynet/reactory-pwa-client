@@ -1617,14 +1617,27 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   /**
-   * Drops every cached form definition and the fetch watermark.
+   * Drops cached form definitions and, when no id is supplied, the fetch
+   * watermark.
    *
    * The server returns a *role filtered* form list, so a list fetched before a
    * session was established (anonymous, or mid auth-handshake) is not valid for
    * the authenticated user. Callers clear the cache on an auth transition so
    * such a list can never leak into — or outlive — a login state.
+   *
+   * Passing a `formId` drops only that definition. It is used by the per-form
+   * Retry affordance so a failed resolution can be re-attempted without
+   * discarding an otherwise valid list (and without forcing the rest of the
+   * page to re-resolve). The list watermark is left intact in that case: the
+   * list itself is still the list the server returned for this session.
    */
-  clearFormCache(): void {
+  clearFormCache(formId?: string): void {
+    if (formId) {
+      this.formSchemas = this.formSchemas.filter((form) => form.id !== formId);
+      delete this.formSchemaMap[formId];
+      return;
+    }
+
     this.formSchemas = [];
     this.formSchemaMap = {};
     this.formSchemaLastFetch = null;
