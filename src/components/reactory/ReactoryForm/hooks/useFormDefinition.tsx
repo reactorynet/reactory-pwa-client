@@ -1,7 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import { toIdSchema } from "@reactory/client-core/components/reactory/form/utils";
 import MuiReactoryPackage from "@reactory/client-core/components/reactory/ux/mui";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Params, useParams } from "react-router";
 import * as uuid from "uuid";
 import ReactoryUxPackages from "../../ux";
@@ -18,8 +18,10 @@ import { ReactoryFormState } from "../types-v2";
 import { applyIntegrity } from '@reactory/client-core/api/subresourceIntegrity';
 import { ReactoryApiEventNames } from '@reactory/client-core/api';
 import {
+  applySessionAvailable,
   resolveFormDefinition,
   retryFormDefinitionResolution,
+  subscribeToSessionAvailable,
 } from "./formDefinitionResolution";
 // Feature flags for upgrade phases — stable booleans, no hooks.
 // useSimpleFeatureFlag causes infinite re-renders due to unstable
@@ -125,6 +127,8 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
 
   // Granular loading stage tracking
   const loadingState = useFormLoadingState();
+  // Stable identity (useCallback with no deps) so effects can depend on it.
+  const { reset: resetLoadingState } = loadingState;
   const FQN = `${form?.nameSpace || "unknown"}.${form?.name || "unknown"}@${
     form?.version || "0.0.0"
   }`;
@@ -262,16 +266,17 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
    * dropped; the errored stage is reset so the retry starts from a clean state
    * instead of flashing the old failure message.
    */
-  const retryFormDefinition = useCallback(() => {
-    loadingState.reset();
-    retryFormDefinitionResolution({
-      reactory,
-      formId,
-      loadOptions: props.loadOptions,
-      callbacks: resolutionCallbacks,
+  const retryFormDefinition = () => {
+    applySessionAvailable({
+      resetLoadingState,
+      resolve: () => retryFormDefinitionResolution({
+        reactory,
+        formId,
+        loadOptions: props.loadOptions,
+        callbacks: resolutionCallbacks,
+      }),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reactory, formId, loadingState, props.loadOptions, enableStateV2]);
+  };
 
   const injectResources = () => {
     if (document) {
@@ -526,21 +531,14 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   // before an auth transition is not authoritative. Re-resolve when a session
   // becomes available: this is what lets a form that failed while logged out
   // recover after the user logs back in, instead of retaining the old error.
-  useEffect(() => {
-    const api: any = reactory;
-    if (!api || typeof api.on !== 'function') return undefined;
-
-    const onSessionAvailable = () => {
-      loadingState.reset();
-      getFormRef.current();
-    };
-
-    api.on(ReactoryApiEventNames.onLogin, onSessionAvailable);
-    return () => {
-      if (typeof api.off === 'function') api.off(ReactoryApiEventNames.onLogin, onSessionAvailable);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reactory, formId]);
+  useEffect(() => subscribeToSessionAvailable(
+    reactory as any,
+    ReactoryApiEventNames.onLogin,
+    () => applySessionAvailable({
+      resetLoadingState,
+      resolve: () => getFormRef.current(),
+    }),
+  ), [reactory, formId, resetLoadingState]);
 
   // Track UI schema loading stage
   useEffect(() => {

@@ -1,6 +1,8 @@
 import {
+  applySessionAvailable,
   resolveFormDefinition,
   retryFormDefinitionResolution,
+  subscribeToSessionAvailable,
 } from '../formDefinitionResolution';
 
 /**
@@ -148,5 +150,48 @@ describe('formDefinitionResolution', () => {
     expect(reactory.form).toHaveBeenCalledTimes(2);
     expect(reactory.forms).not.toHaveBeenCalled();
     expect(callbacks.onResolved).not.toHaveBeenCalled();
+  });
+});
+
+describe('session-available handling', () => {
+  it('resets the loading state before re-resolving', () => {
+    const order: string[] = [];
+    const deps = {
+      resetLoadingState: jest.fn(() => order.push('reset')),
+      resolve: jest.fn(() => order.push('resolve')),
+    };
+
+    applySessionAvailable(deps);
+
+    expect(deps.resetLoadingState).toHaveBeenCalledTimes(1);
+    expect(deps.resolve).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['reset', 'resolve']);
+  });
+
+  it('registers the login handler and unsubscribes the same reference', () => {
+    const api = { on: jest.fn(), off: jest.fn() };
+    const handler = jest.fn();
+
+    const unsubscribe = subscribeToSessionAvailable(api, 'onLogin', handler);
+
+    expect(api.on).toHaveBeenCalledWith('onLogin', handler);
+
+    unsubscribe();
+    expect(api.off).toHaveBeenCalledWith('onLogin', handler);
+    // Same identity: an inline arrow would never be removable.
+    expect(api.on.mock.calls[0][1]).toBe(api.off.mock.calls[0][1]);
+  });
+
+  it('tolerates a SDK with no event emitter', () => {
+    expect(() => subscribeToSessionAvailable(null, 'onLogin', jest.fn())()).not.toThrow();
+    expect(() => subscribeToSessionAvailable({}, 'onLogin', jest.fn())()).not.toThrow();
+    expect(() => subscribeToSessionAvailable(undefined, 'onLogin', jest.fn())()).not.toThrow();
+  });
+
+  it('does not throw when the SDK cannot remove listeners', () => {
+    const handler = jest.fn();
+    const unsubscribe = subscribeToSessionAvailable({ on: jest.fn() }, 'onLogin', handler);
+
+    expect(() => unsubscribe()).not.toThrow();
   });
 });

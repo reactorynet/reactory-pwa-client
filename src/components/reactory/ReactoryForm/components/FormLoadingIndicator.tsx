@@ -164,7 +164,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
           >
             <Typography
               variant="body2"
-              color={hasError ? 'error' : 'text.secondary'}
+              color="text.secondary"
               sx={{ fontWeight: 500 }}
             >
               {activeStageLabel}
@@ -176,7 +176,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
           <LinearProgress
             variant="determinate"
             value={progress}
-            color={hasError ? 'error' : 'primary'}
+            color="primary"
             sx={{
               height: 6,
               borderRadius: 3,
@@ -234,7 +234,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
         )}
 
         {/* Form skeleton preview — only in full variant */}
-        {variant === 'full' && !hasError && <FormSkeleton rows={3} sx={{ px: 0, mt: 1 }} />}
+        {variant === 'full' && <FormSkeleton rows={3} sx={{ px: 0, mt: 1 }} />}
 
         {/* Pulse animation keyframes */}
         <style>{`

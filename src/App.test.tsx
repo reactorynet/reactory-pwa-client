@@ -942,6 +942,44 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
     expect(mockReactory.forms).not.toHaveBeenCalled();
   });
 
+  it('does not fetch forms when status() emits onLogin for the anonymous account', async () => {
+    // Production path: ReactoryApi.status() sets the ANON user and then emits
+    // onLogin on *every* boot (see ReactoryApi.status(): setUser followed by
+    // emit(onLogin)). The emitter, not the getApiStatus call site, is what a
+    // logged-out cold load actually exercises — so this guard is the one that
+    // must hold.
+    mockReactory.status.mockImplementation(async () => {
+      mockReactory.getUser.mockReturnValue(anonymousStatus);
+      const loginCall = mockReactory.on.mock.calls.find((call: any[]) => call[0] === 'onLogin');
+      expect(loginCall).toBeTruthy();
+      loginCall[1](anonymousStatus);
+      return anonymousStatus;
+    });
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+    });
+
+    // Let the login transition's promises settle.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The behaviour under test: an ANON login must not fetch a role-scoped list.
+    expect(mockReactory.forms).not.toHaveBeenCalled();
+    expect(mockReactory.clearFormCache).not.toHaveBeenCalled();
+
+    // Proof the ANON handler actually ran (so the assertion above is not
+    // vacuous): the guard logs, and the success path would log the refresh.
+    expect(mockReactory.log).toHaveBeenCalledWith('App.onLogin handler', {});
+    expect(mockReactory.log).toHaveBeenCalledWith('Skipping form refresh for anonymous session');
+    expect(mockReactory.log).not.toHaveBeenCalledWith('Forms and components refreshed after login');
+  });
+
   it('does not begin the form fetch until the status call (auth state) has resolved', async () => {
     let resolveStatus: (value: any) => void = () => undefined;
     const pendingStatus = new Promise((resolve) => {

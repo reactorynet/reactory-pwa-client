@@ -68,4 +68,30 @@ describe('authStatus', () => {
     expect(isAnonymousApiStatus({ status: 'API OK', roles: ['ANON'] })).toBe(true);
     expect(isAuthenticatedApiStatus({ status: 'API OK', roles: ['USER'] })).toBe(true);
   });
+
+  it('treats a loggedIn context with roles but no user id as authenticated', () => {
+    // Covers the `loggedIn.id`-absent branch: a partial context that only
+    // carries roles must still count as a session.
+    const partial = { status: 'API OK', loggedIn: { roles: ['USER'] } };
+    expect(isAnonymousApiStatus(partial)).toBe(false);
+    expect(isAuthenticatedApiStatus(partial)).toBe(true);
+  });
+
+  it('treats the synthetic "anon" id as anonymous even when a role is listed', () => {
+    // The server's loggedInContext uses id 'anon' for anonymous callers; the
+    // id must win over any other role present so an ANON list is never fetched
+    // into an authenticated-looking cache.
+    const contradictory = {
+      status: 'API OK',
+      loggedIn: { id: 'anon', roles: ['USER'] },
+    };
+    expect(isAnonymousApiStatus(contradictory)).toBe(true);
+    expect(isAuthenticatedApiStatus(contradictory)).toBe(false);
+  });
+
+  it('treats a loggedIn context with only ANON roles as anonymous', () => {
+    const anonRoles = { status: 'API OK', loggedIn: { id: 'someone', roles: ['ANON'] } };
+    expect(isAnonymousApiStatus(anonRoles)).toBe(true);
+    expect(isAuthenticatedApiStatus(anonRoles)).toBe(false);
+  });
 });

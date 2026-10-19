@@ -104,3 +104,47 @@ export const retryFormDefinitionResolution = (request: FormResolutionRequest): v
 
   resolveFormDefinition(request, 0);
 };
+
+/**
+ * Handler invoked when the SDK reports that a session became available.
+ *
+ * Resolution is role-scoped on the server, so a definition obtained before a
+ * login is not authoritative. Clearing the stage state and resolving again is
+ * what lets a form that failed while logged out recover after the user logs
+ * back in — the ticket's "logged out, then logged back in" criterion.
+ */
+export interface SessionAvailableDeps {
+  /** Resets the granular loading stages (clears a prior error state). */
+  resetLoadingState: () => void;
+  /** Re-runs resolution. */
+  resolve: () => void;
+}
+
+export const applySessionAvailable = (deps: SessionAvailableDeps): void => {
+  deps.resetLoadingState();
+  deps.resolve();
+};
+
+/**
+ * Subscribes `handler` to the SDK's login event.
+ *
+ * Returns an unsubscribe function so the caller's effect cleanup removes the
+ * exact handler reference it registered (an inline arrow would never match on
+ * `off`, leaking the listener across mounts).
+ *
+ * A SDK without an `on` function (e.g. a bare mock) is tolerated: the returned
+ * unsubscribe is a no-op.
+ */
+export const subscribeToSessionAvailable = (
+  api: { on?: (...args: any[]) => any; off?: (...args: any[]) => any } | null | undefined,
+  eventName: string,
+  handler: () => void,
+): (() => void) => {
+  if (!api || typeof api.on !== 'function') return () => undefined;
+
+  api.on(eventName, handler);
+
+  return () => {
+    if (typeof api.off === 'function') api.off(eventName, handler);
+  };
+};

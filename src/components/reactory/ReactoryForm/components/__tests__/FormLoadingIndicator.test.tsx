@@ -70,3 +70,95 @@ describe('FormLoadingIndicator error state', () => {
     expect(container.querySelectorAll('.MuiSkeleton-root').length).toBe(0);
   });
 });
+
+const inProgressStages: FormLoadingStage[] = [
+  { key: 'form-definition', label: 'Loading form definition', status: 'complete' },
+  { key: 'ui-schema', label: 'Resolving UI schema', status: 'active' },
+  { key: 'widgets', label: 'Mapping widgets & fields', status: 'pending' },
+  { key: 'resources', label: 'Loading resources', status: 'pending' },
+  { key: 'data', label: 'Fetching data', status: 'pending' },
+];
+
+describe('FormLoadingIndicator progress state', () => {
+  const renderProgressState = (variant?: 'full' | 'compact') =>
+    render(
+      <FormLoadingIndicator
+        stages={inProgressStages}
+        progress={20}
+        activeStageLabel="Resolving UI schema"
+        hasError={false}
+        variant={variant}
+      />,
+    );
+
+  it('renders the progress bar and active stage label (full variant)', () => {
+    const { container } = renderProgressState('full');
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    // Active stage label in the header *and* the matching stage row.
+    expect(screen.getAllByText('Resolving UI schema')).toHaveLength(2);
+    expect(screen.getByText('20%')).toBeInTheDocument();
+    expect(container.querySelector('.MuiLinearProgress-root')).toBeInTheDocument();
+  });
+
+  it('lists every stage with its status in the full variant', () => {
+    renderProgressState('full');
+
+    // A list item per stage, including the pending ones (dimmed, not hidden).
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(inProgressStages.length);
+    expect(screen.getByText('Loading form definition')).toBeInTheDocument();
+    expect(screen.getByText('Mapping widgets & fields')).toBeInTheDocument();
+  });
+
+  it('renders the skeleton preview while loading in the full variant', () => {
+    const { container } = renderProgressState('full');
+    expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+  });
+
+  it('renders only the progress bar and label in the compact variant', () => {
+    const { container } = renderProgressState('compact');
+
+    expect(screen.getAllByText('Resolving UI schema')).toHaveLength(1);
+    expect(container.querySelector('.MuiLinearProgress-root')).toBeInTheDocument();
+    // The stage list and the skeleton preview are full-variant only.
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(container.querySelectorAll('.MuiSkeleton-root').length).toBe(0);
+  });
+});
+
+describe('FormLoadingIndicator defaults and defensive rendering', () => {
+  it('defaults to the full variant when no variant is supplied', () => {
+    const { container } = render(
+      <FormLoadingIndicator
+        stages={inProgressStages}
+        progress={0}
+        activeStageLabel="Preparing..."
+        hasError={false}
+      />,
+    );
+
+    // Full variant: the stage list and skeleton preview are present.
+    expect(screen.getAllByRole('listitem')).toHaveLength(inProgressStages.length);
+    expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+  });
+
+  it('labels an errored stage in the list when the stage array disagrees with hasError', () => {
+    // Defence in depth: if a caller passes hasError={false} while a stage is
+    // errored, the stage row still shows the failure instead of hiding it.
+    render(
+      <FormLoadingIndicator
+        stages={[
+          { key: 'form-definition', label: 'Loading form definition', status: 'error', errorMessage: 'boom' },
+        ]}
+        progress={0}
+        activeStageLabel="Loading form definition"
+        hasError={false}
+        variant="full"
+      />,
+    );
+
+    expect(screen.getByText('Loading form definition — boom')).toBeInTheDocument();
+  });
+});
