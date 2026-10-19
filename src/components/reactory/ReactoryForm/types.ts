@@ -91,6 +91,12 @@ export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactor
    */
   setForm: (form: Reactory.Forms.IReactoryForm) => void, 
   /**
+   * Re-attempts form resolution after a failure. Clears this form's cached
+   * entry (not the whole list) before re-resolving, so the error state can be
+   * replaced by the form without a page reload.
+   */
+  retryFormDefinition: () => void,
+  /**
    * The form definition.
    */
   form: Reactory.Forms.IReactoryForm,

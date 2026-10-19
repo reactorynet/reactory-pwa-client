@@ -43,6 +43,7 @@ import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { writeAuthToken, isTokenUsable, isTokenForClient } from './api/local';
 import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
+import { isAnonymousApiStatus, isAuthenticatedApiStatus } from './app/authStatus';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
 import Reactory from '@reactorynet/reactory-core';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -191,6 +192,34 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
+  /**
+   * The form list is role filtered on the server, so it is only meaningful once
+   * the session identity is known. Both the boot path and the login transition
+   * want that list; this ref collapses their requests into a single in-flight
+   * fetch so a cold load does not pay for two round trips (and cannot race a
+   * clear against a fetch).
+   */
+  const formsLoadRef = React.useRef<Promise<any> | null>(null);
+
+  const loadFormsForAuthenticatedSession = (options: { clearCached?: boolean } = {}): Promise<any> => {
+    if (formsLoadRef.current !== null) return formsLoadRef.current;
+
+    const load = (async () => {
+      // Drop a list fetched under a different (or absent) session before
+      // refetching, so an ANON-scoped list can never survive into a login.
+      if (options.clearCached === true && typeof (reactory as any).clearFormCache === 'function') {
+        (reactory as any).clearFormCache();
+      }
+      return (reactory as any).forms(true);
+    })();
+
+    formsLoadRef.current = load.finally(() => {
+      formsLoadRef.current = null;
+    });
+
+    return formsLoadRef.current;
+  };
+
   const getApiStatus = async (emitLogin = true): Promise<void> => {
 
     try {
@@ -199,10 +228,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       setOfflineStatus(false);
       setUser(apiStatus);
 
-      // Load forms after successful status check
-      if (apiStatus.status === 'API OK') {
+      // Only an authenticated session may fetch the role-scoped form list. On a
+      // cold load while logged out `status()` answers `API OK` for the anonymous
+      // account; fetching then caches an ANON list (0 of the user's forms) for
+      // the five minute `formSchemaLastFetch` window. The login transition
+      // handler owns the clearing fetch when a real session appears.
+      if (isAuthenticatedApiStatus(apiStatus)) {
         try {
-          await (reactory as any).forms(true);
+          await loadFormsForAuthenticatedSession();
           reactory.log('Forms loaded during initialization');
         } catch (formError) {
           reactory.error('Error loading forms during initialization:', formError);
@@ -232,24 +265,31 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setCurrentRoute(path)
   }
 
-  const onLogin = () => {
+  const onLogin = (loginStatus?: any) => {
     reactory.log('App.onLogin handler', {});
     // Set flags to prevent re-rendering loops during auth transition
     setIsAuthTransitioning(true);
     setIsAuthenticating(true);
 
+    // `status()` emits onLogin for the anonymous account too (that is the boot
+    // signal). Only a real session has a role-scoped form list worth fetching.
+    const currentUser = loginStatus || reactory.getUser();
+    const isAnonymousSession = isAnonymousApiStatus(currentUser);
+
     // Ensure forms are refreshed when login state changes
     const refreshFormsAndComponents = async () => {
       try {
+        if (isAnonymousSession === true) {
+          reactory.log('Skipping form refresh for anonymous session');
+          return;
+        }
+
         // The form list is role filtered on the server, so a list fetched before
         // the session was established (anonymous, or mid auth-handshake) is not
         // valid for the logged-in user. Drop it before refetching so a stale,
         // anon-filtered list can never survive into the authenticated session.
-        if (typeof (reactory as any).clearFormCache === 'function') {
-          (reactory as any).clearFormCache();
-        }
-        // Force refresh forms cache to get forms for the logged-in user
-        await (reactory as any).forms(true);
+        // A boot-time fetch for the same session joins this request.
+        await loadFormsForAuthenticatedSession({ clearCached: true });
 
         // Re-register built-in components after forms are loaded
         componentRegistery.forEach((componentDef) => {
@@ -264,7 +304,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     };
 
     // Get the current user data directly without triggering additional API calls
-    const currentUser = reactory.getUser();
     if (currentUser && currentUser.loggedIn) {
       setUser({ ...currentUser });
       setIsValidated(true);

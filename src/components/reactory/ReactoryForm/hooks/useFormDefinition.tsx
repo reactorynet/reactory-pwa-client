@@ -1,7 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import { toIdSchema } from "@reactory/client-core/components/reactory/form/utils";
 import MuiReactoryPackage from "@reactory/client-core/components/reactory/ux/mui";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Params, useParams } from "react-router";
 import * as uuid from "uuid";
 import ReactoryUxPackages from "../../ux";
@@ -16,7 +16,13 @@ import { useStateStore } from "../stateManagement/useStateStore";
 import { usePerformanceMonitor } from "../performanceOptimization/usePerformanceMonitor";
 import { ReactoryFormState } from "../types-v2";
 import { applyIntegrity } from '@reactory/client-core/api/subresourceIntegrity';
-
+import { ReactoryApiEventNames } from '@reactory/client-core/api';
+import {
+  applySessionAvailable,
+  resolveFormDefinition,
+  retryFormDefinitionResolution,
+  subscribeToSessionAvailable,
+} from "./formDefinitionResolution";
 // Feature flags for upgrade phases — stable booleans, no hooks.
 // useSimpleFeatureFlag causes infinite re-renders due to unstable
 // context reference in its useEffect dependency array.
@@ -121,6 +127,8 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
 
   // Granular loading stage tracking
   const loadingState = useFormLoadingState();
+  // Stable identity (useCallback with no deps) so effects can depend on it.
+  const { reset: resetLoadingState } = loadingState;
   const FQN = `${form?.nameSpace || "unknown"}.${form?.name || "unknown"}@${
     form?.version || "0.0.0"
   }`;
@@ -212,39 +220,62 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     reactory.getComponents(DEFAULT_DEPENDENCIES)
   );
 
-  const getForm = () => {
-    loadingState.setStageActive('form-definition');
-    if (enableStateV2) stateStore.setState({ loading: true });
-    let _form = formDef;
-    if (nil(_form)) {
-      _form = reactory.form(formId, (nextForm, formError) => {
-        if (nextForm && !formError) {
-          loadingState.setStageComplete('form-definition');
-          setFormWithTracking(nextForm);
-        } else if (formError) {
-          // Surface a terminal error rather than leaving the form-definition
-          // stage active forever: `form(id)` reports here when the server has
-          // nothing for the id (unknown form, or missing roles), and an endless
-          // loader is far worse than an explicit failure.
-          loadingState.setStageError(
-            'form-definition',
-            formError.message || 'Failed to load form definition'
-          );
-          warning(`Could not resolve form "${formId}": ${formError.message}`);
-        } else {
-          loadingState.setStageError('form-definition', `Form "${formId}" could not be resolved`);
-          warning(`Could not resolve form "${formId}"`);
-        }
-      }, props.loadOptions || {});
-      if (nil(_form)) {
-        warning(`Form not found: ${formId}`);
-      } else {
-        loadingState.setStageComplete('form-definition');
-        setFormWithTracking(_form);
-      }
-    } else {
+  const resolutionCallbacks = {
+    onLoading: () => {
+      loadingState.setStageActive('form-definition');
+      if (enableStateV2) stateStore.setState({ loading: true });
+    },
+    onResolved: (nextForm: Reactory.Forms.IReactoryForm) => {
       loadingState.setStageComplete('form-definition');
+      setFormWithTracking(nextForm);
+    },
+    onError: (message: string) => {
+      // Surface a terminal error rather than leaving the form-definition stage
+      // active forever: `form(id)` reports here when the server has nothing for
+      // the id (unknown form, or missing roles), and an endless loader is far
+      // worse than an explicit failure the user can retry.
+      loadingState.setStageError('form-definition', message);
+      warning(`Could not resolve form "${formId}": ${message}`);
+    },
+  };
+
+  const resolutionRequest = {
+    reactory,
+    formId,
+    loadOptions: props.loadOptions,
+    callbacks: resolutionCallbacks,
+  };
+
+  // Held in a ref so the auth-transition listener below always runs the latest
+  // closure without re-subscribing (and re-firing) on every render.
+  const getFormRef = useRef<() => void>(() => undefined);
+
+  const getForm = () => {
+    if (nil(formDef) === false) {
+      loadingState.setStageComplete('form-definition');
+      return;
     }
+
+    resolveFormDefinition(resolutionRequest, 0);
+  };
+
+  getFormRef.current = getForm;
+
+  /**
+   * Re-attempt resolution after a failure. Only this form's cached entry is
+   * dropped; the errored stage is reset so the retry starts from a clean state
+   * instead of flashing the old failure message.
+   */
+  const retryFormDefinition = () => {
+    applySessionAvailable({
+      resetLoadingState,
+      resolve: () => retryFormDefinitionResolution({
+        reactory,
+        formId,
+        loadOptions: props.loadOptions,
+        callbacks: resolutionCallbacks,
+      }),
+    });
   };
 
   const injectResources = () => {
@@ -496,6 +527,19 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     }
   }, [formDef]);
 
+  // The form list is role filtered on the server, so a resolution obtained
+  // before an auth transition is not authoritative. Re-resolve when a session
+  // becomes available: this is what lets a form that failed while logged out
+  // recover after the user logs back in, instead of retaining the old error.
+  useEffect(() => subscribeToSessionAvailable(
+    reactory as any,
+    ReactoryApiEventNames.onLogin,
+    () => applySessionAvailable({
+      resetLoadingState,
+      resolve: () => getFormRef.current(),
+    }),
+  ), [reactory, formId, resetLoadingState]);
+
   // Track UI schema loading stage
   useEffect(() => {
     if (isUiSchemaLoading) {
@@ -576,6 +620,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     form: effectiveForm,
     formContext: resolvedFormContext,
     setForm,
+    retryFormDefinition,
 
     canRefresh,
     isDataLoading,

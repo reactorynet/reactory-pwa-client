@@ -1593,4 +1593,57 @@ describe('form(id) resolution', () => {
     expect(api.formSchemaMap).toEqual({});
     expect(api.formSchemaLastFetch).toBeNull();
   });
+
+  it('clearFormCache(formId) drops only that definition and keeps the list', async () => {
+    const api = await createApi();
+    const watermark = new Date();
+    api.formSchemas = [
+      { id: 'x', __complete__: true } as any,
+      { id: FORM_ID, __complete__: true } as any,
+    ];
+    api.formSchemaMap = { x: {} as any, [FORM_ID]: {} as any };
+    api.formSchemaLastFetch = watermark;
+
+    api.clearFormCache(FORM_ID);
+
+    expect(api.formSchemas.map((form) => form.id)).toEqual(['x']);
+    expect(api.formSchemaMap.x).toBeDefined();
+    expect(api.formSchemaMap[FORM_ID]).toBeUndefined();
+    // The list itself is still valid for this session, so its watermark stays.
+    expect(api.formSchemaLastFetch).toBe(watermark);
+  });
+
+  it('re-resolves a form after its cache entry is cleared for retry', async () => {
+    const api = await createApi();
+    api.formSchemas = [
+      { id: 'x', __complete__: true } as any,
+      { id: FORM_ID, __complete__: true } as any,
+    ];
+    api.formSchemaMap = { x: {} as any, [FORM_ID]: {} as any };
+
+    api.clearFormCache(FORM_ID);
+
+    api.graphqlQuery = jest.fn().mockResolvedValue(
+      makeQueryResult({
+        ReactoryFormGetById: {
+          id: FORM_ID,
+          name: 'MyApplications',
+          nameSpace: 'reactory',
+          version: '1.0.0',
+        },
+      })
+    );
+
+    const onFormUpdated = jest.fn();
+    const returned = api.form(FORM_ID, onFormUpdated);
+
+    expect(returned).toBeUndefined();
+
+    await settle();
+
+    expect(onFormUpdated).toHaveBeenCalledWith(
+      expect.objectContaining({ id: FORM_ID, __complete__: true }),
+      null
+    );
+  });
 });

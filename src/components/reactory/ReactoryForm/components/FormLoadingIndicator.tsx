@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  Button,
   LinearProgress,
   Typography,
   Fade,
@@ -12,6 +13,7 @@ import {
   RadioButtonUnchecked as PendingIcon,
   ErrorOutline as ErrorIcon,
   MoreHoriz as ActiveIcon,
+  Refresh as RetryIcon,
 } from '@mui/icons-material';
 import { FormLoadingStage } from '../hooks/useFormLoadingState';
 import { FormSkeleton } from './FormSkeleton';
@@ -25,6 +27,11 @@ export interface FormLoadingIndicatorProps {
   activeStageLabel: string;
   /** Whether loading has errored */
   hasError: boolean;
+  /**
+   * Invoked when the user asks to resolve the form again. When supplied, an
+   * errored indicator renders a keyboard-reachable Retry action.
+   */
+  onRetry?: () => void;
   /** 
    * Display variant:
    * - 'full': Shows progress bar + stage list + skeleton preview
@@ -32,6 +39,8 @@ export interface FormLoadingIndicatorProps {
    */
   variant?: 'full' | 'compact';
 }
+
+let nextErrorDescriptionId = 0;
 
 const stageIconMap: Record<FormLoadingStage['status'], React.ReactNode> = {
   pending: <PendingIcon sx={{ fontSize: 16, color: 'text.disabled' }} />,
@@ -54,15 +63,81 @@ const getStageColor = (
 /**
  * Visual loading indicator for ReactoryForm that shows real-time
  * progress across discrete loading stages.
+ *
+ * When a stage has errored this renders a terminal error state instead of the
+ * progress/skeleton view: the failure message stays visible and, when
+ * `onRetry` is supplied, the user can re-attempt resolution without reloading
+ * the page.
  */
 export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
   stages,
   progress,
   activeStageLabel,
   hasError,
+  onRetry,
   variant = 'full',
 }) => {
   const theme = useTheme();
+  const [errorMessageId] = React.useState(() => `form-loading-error-${++nextErrorDescriptionId}`);
+
+  if (hasError) {
+    const failedStage = Array.isArray(stages)
+      ? stages.find((stage) => stage.status === 'error')
+      : undefined;
+    const errorMessage = failedStage?.errorMessage;
+
+    return (
+      <Fade in timeout={300}>
+        <Box
+          role="alert"
+          aria-live="assertive"
+          sx={{
+            width: '100%',
+            minHeight: 120,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+            py: 2,
+            px: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ErrorIcon color="error" />
+            <Typography variant="subtitle1" component="p" sx={{ fontWeight: 600 }}>
+              Could not load this form
+            </Typography>
+          </Box>
+
+          {errorMessage ? (
+            <Typography
+              id={errorMessageId}
+              variant="body2"
+              color="text.secondary"
+              sx={{ wordBreak: 'break-word' }}
+            >
+              {errorMessage}
+            </Typography>
+          ) : null}
+
+          {onRetry ? (
+            <Box>
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={onRetry}
+                startIcon={<RetryIcon />}
+                aria-describedby={errorMessage ? errorMessageId : undefined}
+              >
+                Retry
+              </Button>
+            </Box>
+          ) : null}
+        </Box>
+      </Fade>
+    );
+  }
 
   return (
     <Fade in timeout={300}>
@@ -89,7 +164,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
           >
             <Typography
               variant="body2"
-              color={hasError ? 'error' : 'text.secondary'}
+              color="text.secondary"
               sx={{ fontWeight: 500 }}
             >
               {activeStageLabel}
@@ -101,7 +176,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
           <LinearProgress
             variant="determinate"
             value={progress}
-            color={hasError ? 'error' : 'primary'}
+            color="primary"
             sx={{
               height: 6,
               borderRadius: 3,
@@ -159,7 +234,7 @@ export const FormLoadingIndicator: React.FC<FormLoadingIndicatorProps> = ({
         )}
 
         {/* Form skeleton preview — only in full variant */}
-        {variant === 'full' && !hasError && <FormSkeleton rows={3} sx={{ px: 0, mt: 1 }} />}
+        {variant === 'full' && <FormSkeleton rows={3} sx={{ px: 0, mt: 1 }} />}
 
         {/* Pulse animation keyframes */}
         <style>{`
