@@ -48,6 +48,9 @@ export { StaticContentWidget } from './StaticContentWidget';
 export { default as StepperWidget } from './StepperWidget';
 export { default as ToolbarWidget } from './ToolbarWidget';
 export { default as ReactorChatButtonWidget } from './ReactorChatButtonWidget';
+// Google Workspace consent-URL button. Usable from any form via
+// ui:widget / ui:field = 'google.GoogleAuthUrlWidget@1.0.0'.
+export { default as GoogleAuthUrlWidget } from './GoogleAuthWidget';
 export const UserListItemWidget = (props, context) => {
   return (<>Complete Import from reactory-user pluging</>)
 };

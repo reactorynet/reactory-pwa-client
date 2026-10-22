@@ -1280,6 +1280,15 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     description: 'Interactive Mermaid diagram renderer with syntax error detection, graceful fallback, and source code editor toggle.',
     tags: ['mermaid', 'diagram', 'chart', 'flowchart', 'sequence', 'visual', 'graph'],
   },
+  {
+    nameSpace: 'google',
+    name: 'GoogleAuthUrlWidget',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/GoogleAuthWidget').default,
+    description:
+      'Renders a button that mints and opens the Google Workspace OAuth consent URL. Safe to embed in any form via ui:widget or ui:field, or mount standalone as a component.',
+    tags: ['google', 'oauth', 'auth', 'connect', 'widget', 'gmail', 'calendar', 'drive'],
+  },
   // Append plugin components
   ...pluginComponents
 ];

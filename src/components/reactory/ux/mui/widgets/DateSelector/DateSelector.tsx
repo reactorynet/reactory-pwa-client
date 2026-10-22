@@ -51,9 +51,23 @@ export function DateWidget({
         label={label}
         value={formData ? moment(formData) : null}
         onChange={(newValue) => {
-          // the value will be a moment object, so we need to convert it to a string
-          const dateStr = newValue.format('YYYY-MM-DD');
-          onChange(dateStr);
+          // The picker calls onChange(null) when the user clears the field.
+          // Calling .format() on null used to throw and take the whole form
+          // down, so clearing a date was impossible.
+          if (!newValue) {
+            onChange(undefined);
+            return;
+          }
+          // Emit a full ISO-8601 timestamp when the schema asks for
+          // `format: 'date-time'` (GraphQL DateTime), otherwise a plain
+          // calendar date. Both are accepted by the DateTime scalar, but the
+          // explicit instant keeps date-time fields semantically honest.
+          const isDateTime = schema?.format === 'date-time';
+          onChange(
+            isDateTime
+              ? newValue.toISOString()
+              : newValue.format('YYYY-MM-DD'),
+          );
         }}        
         // Additional date picker options
         format={dateFormat}

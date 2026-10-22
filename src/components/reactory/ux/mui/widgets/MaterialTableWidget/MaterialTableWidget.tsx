@@ -2070,7 +2070,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           onDataChange={onToolbarDataChange}
           onSearchChange={onToolbarSearchChange}
           onFilterChange={onToolbarFilterChange}
-          searchText={searchText} 
+          // Bind to the LIVE query state, not the static `searchText` prop.
+          // `searchText` is a widget prop (usually ""); a custom toolbar renders
+          // a controlled <input value={searchText}>, so every keystroke was
+          // immediately reverted by the next render and the search box could
+          // not be typed into at all.
+          searchText={query.search || searchText}
           queryVariables={(() => {
             // Reflect the full active filter state back to the toolbar.
             // query has: page, pageSize, search + any extra filter fields (isActive, nameSpace, tags, etc.)
