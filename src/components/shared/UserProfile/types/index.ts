@@ -146,6 +146,15 @@ export interface MembershipSectionProps extends ProfileSectionProps {
 export interface DemographicsSectionProps extends ProfileSectionProps {
   selectedMembership?: Reactory.Models.IMembership;
   organizationId?: string;
+  /**
+   * The organization's `OrganizationDemographicsPolicy.selfServiceEnabled`.
+   *
+   * Optional because no USER-readable policy query exists on the demographics
+   * API: when it is omitted the section assumes the server default (enabled)
+   * and still switches to its read-only explanation if `MySaveDemographics`
+   * refuses the write on policy grounds.
+   */
+  selfServiceEnabled?: boolean;
 }
 
 export interface OrgangramSectionProps extends ProfileSectionProps {
