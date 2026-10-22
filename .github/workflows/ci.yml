@@ -10,7 +10,14 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
+      # src/components/plugins/reactory-core is a submodule that `src/` imports
+      # directly (e.g. shared/UserProfile's Demographics section imports the
+      # shared demographic form). Without it the directory is empty and both
+      # `tsc` and `jest` fail with "Cannot find module .../reactory-core/...".
+      # build-smoke-test.yml already checks submodules out for the same reason.
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -37,6 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -64,6 +73,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
