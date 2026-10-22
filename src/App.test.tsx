@@ -35,6 +35,12 @@ jest.mock('./api', () => {
       return result;
     }),
     status: jest.fn().mockResolvedValue({ ready: false, authenticated: false }),
+    graphqlQuery: jest.fn().mockResolvedValue({ data: { CoreOrganization: null } }),
+    setThemeOverride: jest.fn(),
+    amq: {
+      $sub: { def: jest.fn(() => ({ unsubscribe: jest.fn() })) },
+      $pub: { def: jest.fn() },
+    },
     log: jest.fn(),
     error: jest.fn(),
     debug: jest.fn(),
@@ -313,6 +319,9 @@ describe('ReactoryHOC (App)', () => {
     mockReactory.emit.mockReset();
     mockReactory.on.mockReset().mockImplementation(function() { return this; });
     mockReactory.off.mockReset().mockImplementation(function() { return this; });
+    mockReactory.graphqlQuery.mockReset().mockResolvedValue({ data: { CoreOrganization: null } });
+    mockReactory.setThemeOverride.mockReset();
+    mockReactory.amq.$sub.def.mockReset().mockImplementation(() => ({ unsubscribe: jest.fn() }));
     localStorageMock.getItem.mockReturnValue(null);
     localStorageMock.setItem.mockImplementation(() => {});
     localStorageMock.removeItem.mockImplementation(() => {});
@@ -1054,5 +1063,304 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
     expect(mockReactory.forms).toHaveBeenCalledWith(true);
     expect(mockReactory.clearFormCache.mock.invocationCallOrder[0])
       .toBeLessThan(mockReactory.forms.mock.invocationCallOrder[0]);
+  });
+
+  // ORG-014: the shell resolves the active organization's theme before the
+  // authenticated tree is marked ready, and falls back to the client theme when
+  // the organization pointer is unhealthy.
+  describe('Organization theme (ORG-014)', () => {
+    const organizationTheme = {
+      name: 'acme',
+      type: 'material',
+      defaultThemeMode: 'light',
+      options: { palette: { mode: 'light', primary: { main: '#ff0000' } } },
+      modes: [
+        { id: 'acme-light', mode: 'light', name: 'Light', options: { palette: { mode: 'light', primary: { main: '#ff0000' } } } },
+        { id: 'acme-dark', mode: 'dark', name: 'Dark', options: { palette: { mode: 'dark', primary: { main: '#00ff00' } } } },
+      ],
+    };
+
+    const organizationStatus = {
+      status: 'API OK',
+      roles: ['USER'],
+      activeTheme: { name: 'client', type: 'material', options: { palette: { mode: 'light' } } },
+      loggedIn: {
+        id: 'user-1',
+        roles: ['USER'],
+        user: { id: 'user-1', firstName: 'Test', lastName: 'User' },
+        organization: { id: 'org-1', name: 'Acme' },
+        memberships: [{ organization: { id: 'org-1', name: 'Acme' } }],
+      },
+    };
+
+    let themeOverride: any = null;
+
+    beforeEach(() => {
+      themeOverride = null;
+      mockReactory.status.mockResolvedValue(organizationStatus);
+      mockReactory.getUser.mockReturnValue(organizationStatus);
+      mockReactory.getTheme.mockImplementation(() => themeOverride ?? organizationStatus.activeTheme);
+      mockReactory.setThemeOverride.mockImplementation((theme: any) => {
+        themeOverride = theme;
+      });
+    });
+
+    const createThemeMock = (): jest.Mock => require('@mui/material/styles').createTheme;
+
+    const appliedThemeOptions = (): any[] =>
+      createThemeMock()
+        .mock.calls.map((call) => call[0])
+        .filter((options) => options !== undefined && options !== null);
+
+    const applyThemeImplementation = () => {
+      createThemeMock().mockImplementation((options?: any) => ({
+        palette: {
+          mode: options?.palette?.mode ?? 'light',
+          background: { default: '#ffffff' },
+          primary: { main: options?.palette?.primary?.main ?? '#1a73e8', contrastText: '#ffffff' },
+          text: { primary: '#111111' },
+        },
+      }));
+    };
+
+    it('applies the organization theme before the authenticated tree is ready', async () => {
+      mockReactory.graphqlQuery.mockResolvedValue({
+        data: {
+          CoreOrganization: {
+            id: 'org-1',
+            name: 'Acme',
+            theme: 'acme',
+            themeMode: 'dark',
+            themes: [organizationTheme],
+          },
+        },
+      });
+
+      // `createTheme` is also evaluated on every render by App's initial
+      // `useState(createTheme(...))`, so the *last* call is not the applied
+      // theme. Instead record whether the router was already mounted when the
+      // organization palette was applied - it must not have been.
+      applyThemeImplementation();
+      const routerMountedWhenApplied: boolean[] = [];
+      createThemeMock().mockImplementation((options?: any) => {
+        if (options?.palette?.primary?.main === '#00ff00') {
+          routerMountedWhenApplied.push(screen.queryByTestId('reactory-router') !== null);
+        }
+        return {
+          palette: {
+            mode: options?.palette?.mode ?? 'light',
+            background: { default: '#ffffff' },
+            primary: { main: options?.palette?.primary?.main ?? '#1a73e8', contrastText: '#ffffff' },
+            text: { primary: '#111111' },
+          },
+        };
+      });
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      expect(mockReactory.graphqlQuery).toHaveBeenCalled();
+      expect(mockReactory.setThemeOverride).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'acme' }),
+      );
+      // The organization's dark palette was applied, and it was applied while
+      // the tree was still loading: no flash of the client theme.
+      expect(routerMountedWhenApplied.length).toBeGreaterThan(0);
+      expect(routerMountedWhenApplied.every((mounted) => mounted === false)).toBe(true);
+    });
+
+    it('does not paint the authenticated tree until branding is applied on the login transition', async () => {
+      // Boot anonymous: the router is already mounted and auth_validated true,
+      // which is exactly the state in which the login transition would
+      // otherwise flash authenticated content in the client theme.
+      mockReactory.status.mockResolvedValue(anonymousStatus);
+      mockReactory.getUser.mockReturnValue(anonymousStatus);
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      const onLoginCall = mockReactory.on.mock.calls.find((call: any[]) => call[0] === 'onLogin');
+      expect(onLoginCall).toBeTruthy();
+
+      // The user signs in; the branding request is deliberately slow.
+      let resolveBranding: (value: any) => void = () => undefined;
+      const branding = new Promise((resolve) => {
+        resolveBranding = resolve;
+      });
+      mockReactory.graphqlQuery.mockReturnValue(branding);
+      mockReactory.getUser.mockReturnValue(organizationStatus);
+
+      await act(async () => {
+        onLoginCall[1](organizationStatus);
+      });
+
+      // While branding is unresolved the authenticated tree is not rendered at
+      // all - so it cannot be painted in the client theme.
+      expect(screen.queryByTestId('reactory-router')).not.toBeInTheDocument();
+      expect(screen.getByTestId('app-loading')).toBeInTheDocument();
+      expect(mockReactory.setThemeOverride).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'acme' }),
+      );
+
+      await act(async () => {
+        resolveBranding({
+          data: {
+            CoreOrganization: {
+              id: 'org-1',
+              name: 'Acme',
+              theme: 'acme',
+              themeMode: 'dark',
+              themes: [organizationTheme],
+            },
+          },
+        });
+      });
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      // First authenticated paint happened after the organization theme was
+      // published.
+      expect(mockReactory.setThemeOverride).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'acme' }),
+      );
+    });
+
+    it('subscribes to core.OrganizationUpdatedEvent and re-resolves the theme', async () => {
+      mockReactory.graphqlQuery.mockResolvedValue({
+        data: {
+          CoreOrganization: {
+            id: 'org-1',
+            name: 'Acme',
+            theme: 'acme',
+            themeMode: 'light',
+            themes: [organizationTheme],
+          },
+        },
+      });
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      const subscriber = mockReactory.amq.$sub.def.mock.calls.find(
+        (call: any[]) => call[0] === 'core.OrganizationUpdatedEvent',
+      );
+      expect(subscriber).toBeTruthy();
+      // The server publishes on the same id and channel.
+      expect(subscriber[2]).toBe('core.OrganizationUpdatedEvent');
+
+      const callsBefore = mockReactory.graphqlQuery.mock.calls.length;
+      const emittedBefore = mockReactory.emit.mock.calls.length;
+
+      await act(async () => {
+        subscriber[1]({ organizationId: 'org-1' });
+      });
+
+      await waitFor(() => {
+        expect(mockReactory.graphqlQuery.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
+      const themeChangedEvents = mockReactory.emit.mock.calls
+        .slice(emittedBefore)
+        .filter((call: any[]) => call[0] === 'onThemeChanged');
+      expect(themeChangedEvents.length).toBeGreaterThan(0);
+    });
+
+    it('unsubscribes from core.OrganizationUpdatedEvent on unmount', async () => {
+      const unsubscribe = jest.fn();
+      mockReactory.amq.$sub.def.mockImplementation(() => ({ unsubscribe }));
+
+      const view = render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      view.unmount();
+
+      expect(unsubscribe).toHaveBeenCalled();
+    });
+
+    it('installs the organization-switch and re-resolve callables on the api', async () => {
+      mockReactory.graphqlQuery.mockResolvedValue({
+        data: { CoreOrganization: { id: 'org-1', name: 'Acme', theme: null, themeMode: 'dark', themes: [] } },
+      });
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      // Both entry points share the service path, so the selector and the
+      // Branding tab cannot drift apart on how the theme is re-resolved.
+      expect(typeof (window as any).reactory.api.setActiveOrganization).toBe('function');
+      expect(typeof (window as any).reactory.api.refreshOrganizationTheme).toBe('function');
+    });
+
+    it('falls back to the client theme and logs when the named theme is missing', async () => {
+      mockReactory.graphqlQuery.mockResolvedValue({
+        data: {
+          CoreOrganization: {
+            id: 'org-1',
+            name: 'Acme',
+            theme: 'gone',
+            themeMode: 'dark',
+            themes: [organizationTheme],
+          },
+        },
+      });
+
+      applyThemeImplementation();
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      expect(mockReactory.setThemeOverride).toHaveBeenCalledWith(null);
+      expect(mockReactory.log).toHaveBeenCalledWith(
+        expect.stringContaining('"gone" is not available'),
+        expect.anything(),
+        'warn',
+      );
+
+      const applied = appliedThemeOptions();
+      // The client theme (light) was applied...
+      expect(applied.some((options) => options?.palette?.mode === 'light')).toBe(true);
+      // ...and the unhealthy organization theme never reached createTheme.
+      expect(applied.some((options) => options?.palette?.primary?.main === '#ff0000')).toBe(false);
+    });
   });
 });

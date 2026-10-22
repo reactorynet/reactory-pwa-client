@@ -408,6 +408,16 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   tokenValidated: boolean = false;
   lastValidation: number;
   tokenValid: boolean = false;
+  /**
+   * Theme resolved from the active organization (ORG-014). When set it takes
+   * precedence over `user.activeTheme` inside `getTheme()`; the organization
+   * theme service clears it whenever the organization has no usable theme, so
+   * the client theme (and then App's appTheme fallback) applies again.
+   *
+   * This is intentionally not a second theme cache: it is a value that
+   * `getTheme()` publishes, and `App.applyTheme` only ever reads `getTheme()`.
+   */
+  $themeOverride: Reactory.UX.IReactoryTheme | null = null;
   getAvatar: (profile: Reactory.Models.IUser, alt?: string) => string;
   getOrganizationLogo: (organizationId: string, file: string) => string;
   getUserFullName: (user: Reactory.Models.IUser) => string;
@@ -1910,12 +1920,32 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           icons
         }
       };
+      // ORG-014: a theme resolved for the active organization wins over the
+      // server-resolved client theme. This method remains the single place the
+      // shell learns the effective theme - App.applyTheme reads only this.
+      if (this.$themeOverride) return { ...this.$themeOverride, extensions };
       return { ...(activeTheme as Reactory.UX.IReactoryTheme), extensions };
     } catch (error) {
       this.log(`Error getting theme for the logged in user: ${error.message}`, error);
       throw error;
     }
 
+  }
+
+  /**
+   * Publishes (or clears) the theme resolved from the active organization.
+   *
+   * Called by `OrganizationThemeService` (ORG-014). Passing `null` restores the
+   * server-resolved client theme; a caller must never pass a partially built
+   * theme, because `getTheme()` is what `createTheme()` consumes.
+   */
+  setThemeOverride(theme: Reactory.UX.IReactoryTheme | null): void {
+    this.$themeOverride = theme ?? null;
+  }
+
+  /** The organization theme currently overriding the client theme, if any. */
+  getThemeOverride(): Reactory.UX.IReactoryTheme | null {
+    return this.$themeOverride ?? null;
   }
 
   getRoutes() {

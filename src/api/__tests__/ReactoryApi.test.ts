@@ -1025,6 +1025,25 @@ describe('Theme & Routes', () => {
     expect((theme.extensions as any).reactory).toBeDefined();
   });
 
+  it('getTheme should prefer the organization theme override and restore the client theme when cleared', async () => {
+    const api = await createApi();
+    const clientTheme = { id: 'client-theme', name: 'Client', type: 'material' };
+    const organizationTheme = { id: 'org-theme', name: 'Acme', type: 'material' };
+    api.setUser({ activeTheme: clientTheme, loggedIn: { roles: ['USER'] } });
+
+    api.setThemeOverride(organizationTheme);
+
+    expect(api.getTheme()).toEqual(expect.objectContaining({ id: 'org-theme', name: 'Acme' }));
+    expect(api.getThemeOverride()).toEqual(organizationTheme);
+    // The reactory icon extensions are still added on top of the override.
+    expect((api.getTheme().extensions as any).reactory).toBeDefined();
+
+    api.setThemeOverride(null);
+
+    expect(api.getTheme()).toEqual(expect.objectContaining({ id: 'client-theme', name: 'Client' }));
+    expect(api.getThemeOverride()).toBeNull();
+  });
+
   it('getRoutes should return routes from user state', async () => {
     const api = await createApi();
     const routes = [{ id: 'r1', path: '/home', componentFqn: 'core.Home@1.0.0' }];
