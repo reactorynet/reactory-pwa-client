@@ -94,6 +94,14 @@ export default async (): Promise<JestConfigWithTsJest> => {
       '/dist/',
       // This file is an imperative script (no describe/it/test blocks)
       '<rootDir>/src/api/objectMapper/objectMapper.test.ts',
+      // `src/components/plugins/reactory-core` is a submodule. This repo pulls
+      // it in as *source* (the bundle imports it, and `src/` now imports from it
+      // directly), not as a test target: the plugin owns its own suite in its
+      // own repository. Now that CI checks the submodule out, jest would
+      // otherwise collect the plugin's tests too, and two of them import
+      // `../../__index` — a file generated at app startup and gitignored — so
+      // they fail in any clean checkout, for reasons unrelated to this repo.
+      '<rootDir>/src/components/plugins/reactory-core/',
     ],
     collectCoverageFrom: [
       'src/**/*.{js,jsx,ts,tsx}',
