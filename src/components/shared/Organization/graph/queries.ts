@@ -33,6 +33,46 @@ query CoreOrganisationWithId($id: String!) {
 }
 `;
 
+/**
+ * Reads the branding fields needed to resolve a runtime organization theme
+ * (ORG-014). The server exposes `theme` as the active theme *name* and
+ * `themes` as the same ApplicationTheme shape a ReactoryClient owns, so the
+ * client can resolve without a second round trip per theme.
+ */
+export const OrganizationTheme = `
+query CoreOrganization($id: String!) {
+  CoreOrganization(id: $id) {
+    id
+    name
+    theme
+    themeMode
+    themes {
+      name
+      nameSpace
+      version
+      defaultThemeMode
+      modes {
+        id
+        mode
+        name
+        options
+      }
+      assets {
+        id
+        name
+        assetType
+        url
+        loader
+        options
+        data
+      }
+      content
+      options
+    }
+  }
+}
+`;
+
 export const SetActiveOrganisationMutation = `
 mutation CoreSetActiveOrganisation($id: String!) {
   CoreSetActiveOrganisation(id: $id) {
@@ -55,5 +95,6 @@ export default {
   CoreOrganizations,
   SetActiveOrganisationMutation,
   CoreSetOrganisationInfo: CreateOrganization,
-  CoreOrganisationWithId
+  CoreOrganisationWithId,
+  OrganizationTheme,
 };

@@ -109,6 +109,20 @@ export const useOrganization: ReactoryClientCore.Hooks.OrganizationHook =
     create: saveOrganisation,
     delete: deleteOrganisation,
     setDefaultOrganization(organizationId) {
+      // ORG-014: the shell installs a single callable for an organization
+      // switch. It persists under the same 'CoreDefaultOrganization' key, but
+      // also re-resolves the organization theme and emits onThemeChanged so the
+      // theme changes without a reload. Fall back to plain persistence in hosts
+      // that do not mount the theme integration.
+      const setActiveOrganization = (reactory as any)?.setActiveOrganization;
+      if (typeof setActiveOrganization === 'function') {
+        Promise.resolve(setActiveOrganization.call(reactory, organizationId)).catch(() => {
+          // Resolution logs and falls back to the client theme; persistence must
+          // not be reported as an error to the caller.
+        });
+        return;
+      }
+
       localStorage.setItem(LOCAL_STORAGE_DEFAULT_ORG, organizationId);
     },
     defaultOrganizationId: localStorage.getItem(LOCAL_STORAGE_DEFAULT_ORG),

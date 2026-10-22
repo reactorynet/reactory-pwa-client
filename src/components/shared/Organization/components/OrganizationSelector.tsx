@@ -180,6 +180,20 @@ export default (props: OrganizationSelectorProps) => {
                   navigation(organizationRoute.replace(':organization_id', org.id));
                 }
 
+                // ORG-014: the shell installs a single callable for an
+                // organization switch. It persists the selection under
+                // 'CoreDefaultOrganization', re-resolves the organization theme
+                // and emits onThemeChanged, so App re-applies without a reload.
+                // Kept optional so the selector still works in hosts that do
+                // not mount the theme integration.
+                const setActiveOrganization = (reactory as any).setActiveOrganization;
+                if (typeof setActiveOrganization === 'function') {
+                  Promise.resolve(setActiveOrganization.call(reactory, org)).catch(() => {
+                    // Resolution falls back to the client theme and logs; a
+                    // failed branding fetch must not break the switch.
+                  });
+                }
+
                 if (onOrganizationChanged) {
                   onOrganizationChanged(org);                  
                 }

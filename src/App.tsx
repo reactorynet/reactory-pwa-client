@@ -45,6 +45,12 @@ import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { isAnonymousApiStatus, isAuthenticatedApiStatus } from './app/authStatus';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
+import {
+  ORGANIZATION_UPDATED_EVENT,
+  OrganizationThemeService,
+  THEME_MODE_STORAGE_KEY,
+  type IOrganizationThemeReactory,
+} from './components/shared/Organization/theme';
 import Reactory from '@reactorynet/reactory-core';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -168,6 +174,16 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   // translated route content; this value is the render input that does.
   const [languageVersion, setLanguageVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
+  /**
+   * ORG-014: true while a login transition is resolving organization branding.
+   *
+   * On a cold boot `isReady === false` already hides the tree, but on a login
+   * transition the router is mounted by design and `auth_validated` is already
+   * true, so RouteGuard would paint authenticated content in the *client* theme
+   * for the duration of the branding request. Gating on this flag keeps the
+   * loading screen up until the organization theme has been applied.
+   */
+  const [isBrandingPending, setIsBrandingPending] = React.useState<boolean>(false);
   // Add flag to prevent re-rendering loops during auth transitions
   const [isAuthTransitioning, setIsAuthTransitioning] = React.useState<boolean>(false);
   const [loadingSteps, setLoadingSteps] = React.useState<LoadingStepState[]>(
@@ -175,6 +191,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   );
   const loadingStartTime = React.useRef<number>(Date.now());
   const initProgressRef = React.useRef<((evt: InitProgressEvent) => void) | null>(null);
+  // Postal subscription for ORG-014's core.OrganizationUpdatedEvent. Kept in a
+  // ref so willUnmount can unsubscribe the exact same subscription.
+  const organizationUpdatedSubRef = React.useRef<{ unsubscribe?: () => void } | null>(null);
   //@ts-ignore
   const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
     clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
@@ -184,6 +203,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }));
 
   const [store] = React.useState<any>(configureStore(null));
+
+  // ORG-014: resolves the active organization's theme and publishes it through
+  // `reactory.getTheme()`. One instance per mount; it keeps the organization
+  // document (never a resolved theme) so an `os` mode change can re-apply
+  // without another request.
+  const organizationThemeService = React.useRef<OrganizationThemeService | null>(null);
+  if (organizationThemeService.current === null) {
+    organizationThemeService.current = new OrganizationThemeService(
+      reactory as unknown as IOrganizationThemeReactory,
+    );
+  }
 
   // Keep refs in sync with state for stable comparisons in event handlers
   userRef.current = user;
@@ -242,10 +272,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         }
       }
 
+      reactory.emit(ReactoryApiEventNames.onInitProgress, { step: 'theme', status: 'active', label: 'Applying theme' } as InitProgressEvent);
+      // Resolve organization branding *before* the authenticated tree is marked
+      // ready, so the first painted theme is the organization's theme and there
+      // is no flash of the client theme. Resolution is bounded and never throws.
+      await resolveAndApplySessionTheme();
       setIsReady(true);
       setIsAuthenticating(false);
-      reactory.emit(ReactoryApiEventNames.onInitProgress, { step: 'theme', status: 'active', label: 'Applying theme' } as InitProgressEvent);
-      applyTheme();
       reactory.emit(ReactoryApiEventNames.onInitProgress, { step: 'theme', status: 'done', label: 'Applying theme' } as InitProgressEvent);
     } catch (err) {
       setIsValidated(true);
@@ -270,6 +303,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     // Set flags to prevent re-rendering loops during auth transition
     setIsAuthTransitioning(true);
     setIsAuthenticating(true);
+    // Hold the authenticated tree until the branding for this session is
+    // applied - see the isBrandingPending comment above.
+    setIsBrandingPending(true);
 
     // `status()` emits onLogin for the anonymous account too (that is the boot
     // signal). Only a real session has a role-scoped form list worth fetching.
@@ -307,25 +343,41 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     if (currentUser && currentUser.loggedIn) {
       setUser({ ...currentUser });
       setIsValidated(true);
-      applyTheme();
 
-      // Refresh forms and components after login, then set ready state
-      refreshFormsAndComponents().then(() => {
-        setIsAuthenticating(false);
-        setIsReady(true);
-        // Clear the transition flag after a short delay
-        setTimeout(() => setIsAuthTransitioning(false), 100);
-      });
+      // Branding resolution and the form/component refresh are independent.
+      // Run them together, apply the theme as soon as it resolves, and mark the
+      // session ready only after both so the tree never paints the client theme
+      // and then swaps to the organization theme.
+      const themeApplied = resolveAndApplySessionTheme();
+      const refreshed = refreshFormsAndComponents();
+      Promise.all([themeApplied, refreshed])
+        .catch((transitionError) => {
+          // Neither task is expected to reject, but a permanent loading screen
+          // would be worse than a client-themed one.
+          reactory.error('Error completing the login transition', transitionError);
+        })
+        .then(() => {
+          setIsBrandingPending(false);
+          setIsAuthenticating(false);
+          setIsReady(true);
+          // Clear the transition flag after a short delay
+          setTimeout(() => setIsAuthTransitioning(false), 100);
+        });
     } else {
       // If user data is not immediately available, set a timeout to retry
       setTimeout(async () => {
         const retryUser = reactory.getUser();
         setUser(retryUser ? { ...retryUser } : null);
         setIsValidated(true);
-        applyTheme();
 
-        // Refresh forms and components after login, then set ready state
-        await refreshFormsAndComponents();
+        const themeApplied = resolveAndApplySessionTheme();
+        const refreshed = refreshFormsAndComponents();
+        try {
+          await Promise.all([themeApplied, refreshed]);
+        } catch (transitionError) {
+          reactory.error('Error completing the login transition', transitionError);
+        }
+        setIsBrandingPending(false);
         setIsAuthenticating(false);
         setIsReady(true);
 
@@ -344,6 +396,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     // Set flag to prevent re-rendering loops during auth transition
     setIsAuthTransitioning(true);
+    // A logout cancels any login transition that was still resolving branding.
+    setIsBrandingPending(false);
 
     // Clear forms cache and component registrations to prevent stale data
     const cleanupFormsAndComponents = async () => {
@@ -385,6 +439,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       setIsValidated(true);
       setIsAuthenticating(false);
       setIsReady(true);
+      // The session no longer has an organization: drop the organization theme
+      // override so the client theme (or App's appTheme) applies on the login
+      // screen instead of the previous organization's branding.
+      organizationThemeService.current.reset();
       applyTheme();
 
       // If session expired due to 401, navigate to login with redirect param
@@ -440,16 +498,38 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   /**
-   * 
-   * @param theme 
-   * @param mode 
+   * Resolves the active organization's theme and applies it. This is the only
+   * place boot, login and logout ask for branding: `OrganizationThemeService`
+   * publishes through `reactory.getTheme()`, and `applyTheme()` consumes that,
+   * so there is exactly one effective theme.
+   *
+   * Resolution never rejects - a failed or slow branding query is logged and
+   * falls back to the client theme - so this can safely be awaited on the boot
+   * path without risking a blank screen.
+   */
+  const resolveAndApplySessionTheme = async () => {
+    await organizationThemeService.current.resolve();
+    applyTheme();
+  };
+
+  /**
+   * Re-applies the theme after a theme change. ORG-014: the organization theme
+   * is re-resolved first (from the cached organization document, so a plain
+   * light/dark toggle costs no extra request) so an organization theme that
+   * overrides the client theme is not silently replaced by it.
    */
   const onThemeChanged = () => {
-    reactory.status({
-      emitLogin: false,
-    }).then(() => {
-      applyTheme();
-    });
+    organizationThemeService.current
+      .handleThemeChanged()
+      .then(() => reactory.status({
+        emitLogin: false,
+      }))
+      .then(() => {
+        applyTheme();
+      })
+      .catch((error) => {
+        reactory.log('Could not re-apply the theme after onThemeChanged', { error }, 'error');
+      });
   };
 
   // Language changes must re-render the routed tree: components that read
@@ -504,8 +584,30 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   // Hoisted so the same reference can be added and removed. Registering an
   // inline arrow meant removal never matched, leaking the listener across
   // mounts.
+  /**
+   * ORG-014: `core.OrganizationUpdatedEvent` is raised by the admin
+   * Organization/Branding surfaces after a save. The event is unscoped or
+   * carries the updated organization; the service ignores updates for another
+   * organization and otherwise re-resolves from the server, publishing through
+   * the same `onThemeChanged` path App already re-applies from.
+   */
+  const onOrganizationUpdatedEvent = (payload?: any) => {
+    organizationThemeService.current
+      .handleOrganizationUpdated(payload)
+      .catch((error) => {
+        reactory.log('Could not re-resolve the theme after core.OrganizationUpdatedEvent', { error }, 'error');
+      });
+  };
+
   const onSystemThemeChanged = (evt: { matches: boolean }) => {
-    localStorage.setItem('$reactory$theme_mode', evt.matches === true ? 'dark' : 'light');
+    localStorage.setItem(THEME_MODE_STORAGE_KEY, evt.matches === true ? 'dark' : 'light');
+    // ORG-014: an organization theme with themeMode 'os' follows the OS. Reuse
+    // this listener for that instead of registering a second matchMedia one;
+    // the service reports whether it re-resolved so we only re-apply when the
+    // organization actually asked for the system mode.
+    if (organizationThemeService.current.handleSystemModeChanged()) {
+      applyTheme();
+    }
     setVersion((currentVersion) => currentVersion + 1);
   };
 
@@ -519,6 +621,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
     reactory.off(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
+    if (organizationUpdatedSubRef.current && typeof organizationUpdatedSubRef.current.unsubscribe === 'function') {
+      organizationUpdatedSubRef.current.unsubscribe();
+    }
+    organizationUpdatedSubRef.current = null;
     if (initProgressRef.current) {
       reactory.off(ReactoryApiEventNames.onInitProgress, initProgressRef.current);
     }
@@ -582,6 +688,34 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
         reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
         reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);        
+
+        // ORG-014: expose the organization-switch and re-resolve entry points on
+        // the api instance. `OrganizationSelector` calls the first when the user
+        // switches organization; the Branding tab calls the second after saving
+        // a theme. Both persist/emit through the same service, so App re-applies
+        // without a page reload.
+        (reactory as any).setActiveOrganization = (organization) =>
+          organizationThemeService.current.setActiveOrganization(organization);
+        (reactory as any).refreshOrganizationTheme = () =>
+          organizationThemeService.current.refreshOrganizationTheme();
+
+        // ORG-014: the Branding tab saves through server mutations and then
+        // raises core.OrganizationUpdatedEvent on the same channel/id. Subscribe
+        // here (not in a component) so the shell reacts without a reload, and
+        // keep the postal subscription for willUnmount.
+        const amq = (reactory as any).amq;
+        if (amq && amq.$sub && typeof amq.$sub.def === 'function' && organizationUpdatedSubRef.current === null) {
+          try {
+            organizationUpdatedSubRef.current = amq.$sub.def(
+              ORGANIZATION_UPDATED_EVENT,
+              onOrganizationUpdatedEvent,
+              ORGANIZATION_UPDATED_EVENT,
+            );
+          } catch (error) {
+            reactory.log('Could not subscribe to core.OrganizationUpdatedEvent', { error }, 'error');
+          }
+        }
+
         const query = queryString.parse(window.location.search);
         reactory.queryObject = query;
         reactory.queryString = window.location.search;
@@ -708,6 +842,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
   if (isReady === false) return <AppLoading message={"Loading..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
+
+  // ORG-014: never paint the authenticated tree before the session's
+  // organization theme is known - see the isBrandingPending comment.
+  if (isBrandingPending === true) return <AppLoading message={"Applying theme..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
 
   // Keep the router mounted during authentication so public routes such as
   // /login can render and so a successful login can swap the route catalog.
