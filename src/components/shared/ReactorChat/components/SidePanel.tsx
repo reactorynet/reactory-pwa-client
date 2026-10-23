@@ -242,11 +242,22 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
       )}
 
       {/* Content area */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1, position: 'relative' }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 1, position: 'relative', minHeight: 0 }}>
         {items.length === 0 ? emptyState : items.map((item) => (
           <Box
             key={item.id}
-            sx={{ display: item.id === activeItem?.id ? 'block' : 'none', height: '100%', position: 'relative', overflow: 'hidden' }}
+            sx={{
+              display: item.id === activeItem?.id ? 'block' : 'none',
+              height: '100%',
+              position: 'relative',
+              // Must NOT clip: a taller item (e.g. an image gallery with more than
+              // one screen of thumbnails) has to overflow this wrapper so the
+              // parent's overflow:auto can scroll it. With overflow:hidden here the
+              // wrapper was pinned to exactly one viewport and everything below it
+              // was silently unreachable. Items that need their own scroll set it
+              // themselves.
+              overflow: 'visible',
+            }}
           >
             <SidePanelItemRenderer item={item} reactory={reactory} />
           </Box>
