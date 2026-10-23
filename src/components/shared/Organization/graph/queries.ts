@@ -1,37 +1,17 @@
-
-const base_query = `
-    id
-    name
-    avatarURL
-    avatar
-    logoURL
-    logo
-    settings
-`;
-
-export const LoggedInOrganisationQuery = `
-query CoreActiveOrganisation {
-  CoreActiveOrganisation {
-    ${base_query}
-  }
-}
-`;
-
-export const CoreOrganizations = `
-query CoreOrganizations  {
-  CoreOrganizations {
-    ${base_query}
-  }
-}  
-`;
-
-export const CoreOrganisationWithId = `
-query CoreOrganisationWithId($id: String!) {
-  organizationWithId(id: $id) {
-    ${base_query}
-  }
-}
-`;
+/**
+ * GraphQL operations for the organization *theme* pipeline.
+ *
+ * ORG-041a: this file previously also carried the operations used by the
+ * duplicated organization UI (`LoggedInOrganisationQuery`, `CoreOrganizations`,
+ * `CoreOrganisationWithId`, `SetActiveOrganisationMutation`,
+ * `CreateOrganization`). That UI was removed because the canonical
+ * implementation lives in the `organization-management/` plugin. Only
+ * `OrganizationTheme` remains, because `theme/OrganizationThemeService.ts`
+ * (ORG-014, live) consumes it.
+ *
+ * Organization CRUD/list operations now belong to the plugin — do not re-add
+ * them here.
+ */
 
 /**
  * Reads the branding fields needed to resolve a runtime organization theme
@@ -73,28 +53,6 @@ query CoreOrganization($id: String!) {
 }
 `;
 
-export const SetActiveOrganisationMutation = `
-mutation CoreSetActiveOrganisation($id: String!) {
-  CoreSetActiveOrganisation(id: $id) {
-    ${base_query}
-  }
-}
-`;
-
-export const CreateOrganization = `
-  mutation CreateOrganization($input: CreateOrganizationInput!) {
-    createOrganization(input: $input){
-      ${base_query}
-    }
-  }
-`;
-
-
 export default {
-  LoggedInOrganisationQuery,
-  CoreOrganizations,
-  SetActiveOrganisationMutation,
-  CoreSetOrganisationInfo: CreateOrganization,
-  CoreOrganisationWithId,
   OrganizationTheme,
 };
