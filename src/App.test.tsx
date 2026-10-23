@@ -1319,8 +1319,9 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
         { timeout: 5000 },
       );
 
-      // Both entry points share the service path, so the selector and the
-      // Branding tab cannot drift apart on how the theme is re-resolved.
+      // Both entry points share the service path, so every caller re-resolves
+      // the theme the same way, whether it switches organization explicitly or
+      // reacts to core.OrganizationUpdatedEvent.
       expect(typeof (window as any).reactory.api.setActiveOrganization).toBe('function');
       expect(typeof (window as any).reactory.api.refreshOrganizationTheme).toBe('function');
     });

@@ -690,19 +690,28 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);        
 
         // ORG-014: expose the organization-switch and re-resolve entry points on
-        // the api instance. `OrganizationSelector` calls the first when the user
-        // switches organization; the Branding tab calls the second after saving
-        // a theme. Both persist/emit through the same service, so App re-applies
-        // without a page reload.
+        // the api instance for organization UI. There is no in-tree caller of
+        // either method today. Of the plugin's organization surfaces, the
+        // Overview tab (organization-management/OrganizationOverviewTab.tsx)
+        // saves through a server mutation and then emits
+        // core.OrganizationUpdatedEvent; archive and restore in
+        // OrganizationDetailPanel emit it too. App subscribes below and
+        // re-resolves through this same service. The Branding tab
+        // (OrganizationBrandingTab.tsx -> useOrganizationBranding.saveTheme)
+        // saves through mutations but emits nothing, so a theme saved there is
+        // only picked up on the next resolve/reload. These two methods remain
+        // the programmatic entry points for switching organization and forcing
+        // a re-resolve.
         (reactory as any).setActiveOrganization = (organization) =>
           organizationThemeService.current.setActiveOrganization(organization);
         (reactory as any).refreshOrganizationTheme = () =>
           organizationThemeService.current.refreshOrganizationTheme();
 
-        // ORG-014: the Branding tab saves through server mutations and then
-        // raises core.OrganizationUpdatedEvent on the same channel/id. Subscribe
-        // here (not in a component) so the shell reacts without a reload, and
-        // keep the postal subscription for willUnmount.
+        // ORG-014: the plugin raises core.OrganizationUpdatedEvent on the same
+        // channel/id after an Overview save and after archive/restore; the
+        // Branding tab does not emit. Subscribe here (not in a component) so the
+        // shell reacts without a reload, and keep the postal subscription for
+        // willUnmount.
         const amq = (reactory as any).amq;
         if (amq && amq.$sub && typeof amq.$sub.def === 'function' && organizationUpdatedSubRef.current === null) {
           try {

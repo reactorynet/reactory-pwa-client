@@ -1487,13 +1487,6 @@
     "text=Component not found (",
     "text=Create component"
   ],
-  "components/shared/Organization/components/OrganizationSelector.tsx": [
-    "attr:aria-label=contacts",
-    "text=add",
-    "text=cancel",
-    "text=more_vert",
-    "text=verified"
-  ],
   "components/shared/RadioGroupComponent/RadioGroupComponent.tsx": [
     "attr:aria-label=gender"
   ],
