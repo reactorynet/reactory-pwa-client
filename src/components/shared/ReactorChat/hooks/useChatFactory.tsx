@@ -6,6 +6,8 @@ import { exec } from "child_process"
 import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
 import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import useStreamRecovery, { StreamRecoveryReason, StreamRecoveryResyncResult } from './useStreamRecovery';
+import { resyncConversationFromServer } from './conversationResync';
 import { chatShellBus } from '../components/Shell/chatShellBus';
 import {
   cacheClientToolResult,
@@ -698,12 +700,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setIsStreaming(false);
       setWaitingForResponse(false);
 
-      // Clear the SSE inactivity watchdog and mark not-busy since
-      // the server has signalled completion.
-      if (sseInactivityTimerRef.current) {
-        clearTimeout(sseInactivityTimerRef.current);
-        sseInactivityTimerRef.current = null;
-      }
+      // The server has signalled completion: this is the one case where the
+      // client knows for certain that the turn is over, so clear the indicators
+      // directly (`useStreamRecovery` disarms its timer when `busy` goes false).
       setAgentBusy(false);
 
       // Now process any tool_calls that were accumulated during streaming.
@@ -1348,11 +1347,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [networkError, setNetworkError] = React.useState<string | null>(null);
   const [networkReconnectAttempt, setNetworkReconnectAttempt] = React.useState(0);
 
-  // Inactivity watchdog: resets busy state if no SSE events arrive within 15 seconds.
-  // This handles the case where the connection re-establishes but the server has
-  // already finished processing (e.g. the complete event was missed).
-  const SSE_INACTIVITY_TIMEOUT_MS = 15_000;
-  const sseInactivityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest committed conversation history and id, for recovery code that must
+  // merge the authoritative server record into what is on screen.
+  const chatStateRef = React.useRef(chatState);
+  chatStateRef.current = chatState;
+
+  /**
+   * Agent-busy mirror for callbacks that are bound once (SSE listeners, timers).
+   *
+   * NOTE: the 15-second "inactivity watchdog" that used to live here has been
+   * replaced by `useStreamRecovery`. Its rule was that 15 s of stream silence
+   * meant the turn was over — false for tool-driven turns, where one tool step
+   * can be silent for 13+ minutes, and it cleared the busy indicator mid-run.
+   * Silence is now only a reason to ask the server (`processing === false`);
+   * it is never itself treated as completion.
+   */
   const agentBusyRef = React.useRef(agentBusy);
   agentBusyRef.current = agentBusy;
 
@@ -1764,11 +1773,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         componentProps: event.data.componentProps,
       });
       setWaitingForResponse(false);
-      // Clear the SSE inactivity watchdog since the stream has paused
-      if (sseInactivityTimerRef.current) {
-        clearTimeout(sseInactivityTimerRef.current);
-        sseInactivityTimerRef.current = null;
-      }
+      // The turn is paused for user confirmation; clearing `busy` disarms the
+      // recovery timer.
       setAgentBusy(false);
     }, [reactory]);
 
@@ -1777,10 +1783,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (!isForActiveSession(eventSessionId)) return;
       reactory.log('[useChatFactory] Execution interrupted by user', event.data, 'info');
       setWaitingForResponse(false);
-      if (sseInactivityTimerRef.current) {
-        clearTimeout(sseInactivityTimerRef.current);
-        sseInactivityTimerRef.current = null;
-      }
+      // Interrupted by the user: the turn is over, so the recovery timer stops
+      // with `busy`.
       setAgentBusy(false);
     }, [reactory]);
 
@@ -1843,8 +1847,67 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }, [reactory]);
 
     const graph = useGraph({ reactory });
+
+    /**
+     * Holder for the recovery surface. `useSSE` is created with callback
+     * options, but `useStreamRecovery` needs `sse.rearm` and is therefore built
+     * afterwards; the SSE callbacks reach it through this ref.
+     */
+    const recoveryRef = React.useRef<ReturnType<typeof useStreamRecovery> | null>(null);
+
+    /**
+     * Ask the server for a *fresh* streaming session and connect to it.
+     *
+     * Assigned after `sse` exists (see the re-establish effect below). The URL a
+     * reconnect targets embeds a streaming-session uuid that the server keeps for
+     * one hour, so once that has passed, retrying is futile however long the
+     * budget is: the only useful recovery is a new session.
+     */
+    const reinitSseRef = React.useRef<(() => void) | null>(null);
+
+    /**
+     * Reconcile the transcript with the persisted conversation.
+     *
+     * Source: `graph.getConversation(sessionId)` → `ReactorConversation`, whose
+     * `history` is the server's persisted transcript and whose `processing`
+     * flag says whether the turn is still running. That record is authoritative.
+     * The SSE stream is a live *view* of it, not a second source of truth: the
+     * events that happened while the stream was down were never lost, only
+     * unobserved.
+     *
+     * The work itself lives in `resyncConversationFromServer` so the session
+     * scoping and the paging-cursor rule can be tested without mounting this
+     * hook. That scoping matters: the fetch is asynchronous, and a chat switch
+     * can land while it is in flight.
+     */
+    const resyncConversation = React.useCallback(async (
+      reason: StreamRecoveryReason,
+    ): Promise<StreamRecoveryResyncResult> => {
+      const outcome = await resyncConversationFromServer(reason, {
+        // `chatState.id` is the committed conversation; `activeSessionIdRef` is
+        // only written from an effect and therefore lags a switch.
+        getActiveSessionId: () => chatStateRef.current?.id ?? activeSessionIdRef.current,
+        fetchConversation: (sessionId) => graph.getConversation(sessionId),
+        getChatState: () => chatStateRef.current,
+        updateChatState: (updater) => setChatState(updater),
+        isAgentBusy: () => agentBusyRef.current,
+        setAgentBusy: (busy) => setAgentBusy(busy),
+        onWarning: (message, meta) => reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'warning'),
+        onInfo: (message, meta) => sessionLogger?.info(message, meta, 'useChatFactory'),
+      });
+      return {
+        processing: outcome.processing,
+        settled: outcome.settled,
+        added: outcome.added,
+        updated: outcome.updated,
+      };
+    }, [graph, reactory, sessionLogger]);
+
     const sse = useSSE({
       reactory,
+      // The dead-stream backstop is scoped to a turn: an idle open chat must not
+      // reconnect (and re-query) just for being quiet. See `turnActive` in useSSE.
+      turnActive: agentBusy,
       sessionLogger,
       onToken: onTokenReceived,
       onReasoning: onReasoningReceived,
@@ -1886,34 +1949,94 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (sessionId && replayPendingClientToolCallsRef.current) {
           void replayPendingClientToolCallsRef.current(sessionId);
         }
+
+        // Reconcile the gap. Messages produced while the stream was down exist
+        // on the server and nowhere else; the persisted record is the truth.
+        recoveryRef.current?.handleReconnected();
       },
       onReconnectFailed: () => {
         setNetworkStatus('error');
-        setNetworkError('Connection lost. Please check your network and try again.');
+        setNetworkError('Connection lost. The conversation will be refreshed from the server.');
+        // A give-up must not leave the transcript silently wrong.
+        //
+        // The run may well have finished while we were not listening, so
+        // reconcile from the persisted conversation instead of trusting the
+        // dead stream. `settled` — not the server's `processing` flag — decides
+        // whether the turn is over.
+        recoveryRef.current?.handleReconnectFailed();
+      },
+      onSessionExpired: () => {
+        // The streaming session behind the URL outlived the server's TTL, so no
+        // retry can succeed. Stop, reconcile what actually happened, and ask for
+        // a fresh session instead of retrying a dead URL for hours.
+        setNetworkStatus('error');
+        setNetworkError('The live connection expired. Reconnecting to the conversation…');
+        recoveryRef.current?.handleReconnectFailed();
+        reinitSseRef.current?.();
       },
       onStreamActivity: () => {
-        // When SSE data events arrive (start, token, tool_call, reasoning),
-        // ensure the busy indicator is active. This covers the reconnect case
-        // where the user navigated away and came back while the server is
-        // still processing.
+        // A content-bearing event arrived (start, token, tool_call, reasoning),
+        // so the agent is working. This also re-activates the busy indicator
+        // after a reconnect, where the user may have navigated away and back
+        // while the server kept processing.
         if (!agentBusyRef.current) {
           setAgentBusy(true);
         }
+        recoveryRef.current?.notifyActivity();
 
-        // Reset the inactivity watchdog every time we receive activity.
-        if (sseInactivityTimerRef.current) {
-          clearTimeout(sseInactivityTimerRef.current);
-        }
-        sseInactivityTimerRef.current = setTimeout(() => {
-          sseInactivityTimerRef.current = null;
-          // No events for 15 seconds — assume the server finished or the
-          // stream stalled. Clear the busy indicator so the UI isn't stuck.
-          setAgentBusy(false);
-          setIsStreaming(false);
-          setWaitingForResponse(false);
-        }, SSE_INACTIVITY_TIMEOUT_MS);
+        // No timer is armed here on purpose. Silence is not evidence that the
+        // turn ended: `useStreamRecovery` treats a long gap as a reason to ask
+        // the server, and clears the busy state only when the server answers
+        // that it is no longer processing.
+      },
+      onHeartbeat: () => {
+        // Transport-level liveness only: proves the socket is alive and says
+        // nothing about whether the model produced content. This is what lets a
+        // long silent tool step be told apart from a dead stream.
+        recoveryRef.current?.notifyHeartbeat();
       },
     });
+
+    /**
+     * The recovery loop. See `useStreamRecovery` for the policy: silence is a
+     * reason to reconcile, never a conclusion, and the busy indicators are
+     * cleared only when the server reports the turn is over.
+     */
+    const recovery = useStreamRecovery({
+      busy: agentBusy,
+      enabled: protocol === 'sse',
+      resync: resyncConversation,
+      onTurnSettled: () => {
+        setAgentBusy(false);
+        setIsStreaming(false);
+        setWaitingForResponse(false);
+      },
+      rearm: () => sse.rearm(),
+    });
+    recoveryRef.current = recovery;
+
+    /**
+     * Recover on returning to the tab.
+     *
+     * A tab can be asleep for hours: the transport gives up, and the run may
+     * have completed meanwhile. Re-arming here means the user never has to
+     * reload. The existing focus handler only drained client-tool calls and only
+     * ran when focus *changed*, which never happens while a user watches a long
+     * run — the exact case that produced this bug.
+     */
+    React.useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const onResume = () => {
+        if (document.visibilityState !== 'visible') return;
+        recoveryRef.current?.handleFocus();
+      };
+      window.addEventListener('focus', onResume);
+      document.addEventListener('visibilitychange', onResume);
+      return () => {
+        window.removeEventListener('focus', onResume);
+        document.removeEventListener('visibilitychange', onResume);
+      };
+    }, []);
 
   React.useEffect(() => {
     activeSessionIdRef.current = chatState?.id || null;
@@ -1979,6 +2102,46 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
     }
   }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, persona?.id]);
+
+  /**
+   * Ask the server for a fresh streaming session and connect to it.
+   *
+   * Same handshake the re-establish effect uses (a lightweight SSE-mode message
+   * that returns `ReactorInitiateSSE`), but callable on demand — when the previous
+   * streaming session has aged out and retrying its URL is pointless.
+   */
+  React.useEffect(() => {
+    reinitSseRef.current = () => {
+      const sessionId = chatStateRef.current?.id;
+      if (!sessionId || protocol !== 'sse') return;
+
+      graph.sendMessage({
+        message: '',
+        personaId: persona.id,
+        chatSessionId: sessionId,
+        streamingMode: 'SSE',
+      }).then((resp: any) => {
+        if (resp?.__typename !== 'ReactorInitiateSSE') {
+          reactory.log(`ChatFactory: SSE re-init after session expiry returned ${resp?.__typename}`, {}, 'warning');
+          return;
+        }
+        sse.disconnect();
+        sse.connect({
+          endpoint: resp.endpoint,
+          sessionId: resp.sessionId,
+          headers: resp.headers,
+        });
+        setNetworkStatus('connected');
+        setNetworkError(null);
+        setNetworkReconnectAttempt(0);
+        // The stream is live again; reconcile whatever was missed while it was
+        // gone (the run may have advanced or finished in the meantime).
+        recoveryRef.current?.handleReconnected();
+      }).catch((err: any) => {
+        reactory.log(`ChatFactory: SSE re-init after session expiry failed: ${err?.message}`, {}, 'warning');
+      });
+    };
+  }, [graph, persona?.id, protocol, reactory, sessionLogger, sse]);
 
   /**
    * Wraps setModelOverride to also persist the selection to the server
@@ -2291,13 +2454,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const isStreamFailure = type === 'SSE_ERROR' || type === 'PARSE_ERROR'
       || type === 'SESSION_EXPIRED' || type === 'STREAM_ERROR';
     if (isStreamFailure) {
-      // Clear the SSE inactivity watchdog — the stream is over.
-      if (sseInactivityTimerRef.current) {
-        clearTimeout(sseInactivityTimerRef.current);
-        sseInactivityTimerRef.current = null;
-      }
-      setAgentBusy(false);
+      // No tokens are arriving any more, whatever the cause.
       setIsStreaming(false);
+    }
+
+    // Only a failure that ends the turn for certain clears the agent-busy state.
+    // A transport failure (SSE_ERROR, PARSE_ERROR) is *not* evidence the run
+    // stopped: the server may still be working, and `useStreamRecovery`
+    // reconciles to find out — clearing it here is what made a finished run look
+    // idle while it was still running, and a running run look finished.
+    if (type === 'SESSION_EXPIRED' || type === 'STREAM_ERROR') {
+      setAgentBusy(false);
       setWaitingForResponse(false);
     }
 
@@ -2358,7 +2525,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setNetworkStatus('idle');
     setNetworkError(null);
     setNetworkReconnectAttempt(0);
-  }, []);
+    // The banner's only affordance has to actually do something. `rearm()`
+    // restarts a stream that gave up (or skips the remaining backoff), which is
+    // what the user is asking for when they press Retry after an outage.
+    // `sse` is a fresh object every render; depending on it would churn this
+    // callback's identity, so depend on the one stable function it uses.
+    sse.rearm();
+  }, [sse.rearm]);
 
   /**
    * Attach a ToolPrompt component to the message that owns the tool_calls.
@@ -4730,15 +4903,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     };
   }, [drainWaitingClientToolCalls, sessionLogger]);
 
-  // Clean up the SSE inactivity timer on unmount
-  React.useEffect(() => {
-    return () => {
-      if (sseInactivityTimerRef.current) {
-        clearTimeout(sseInactivityTimerRef.current);
-        sseInactivityTimerRef.current = null;
-      }
-    };
-  }, []);
+  // Stream-recovery timers are owned by `useStreamRecovery`, which clears them
+  // on unmount and whenever the turn is no longer busy — no separate effect
+  // here, and deliberately no timer that concludes anything from silence.
 
   const loadingEarlierHistoryRef = React.useRef<boolean>(false);
 
