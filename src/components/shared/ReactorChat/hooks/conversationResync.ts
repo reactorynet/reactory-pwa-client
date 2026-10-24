@@ -246,8 +246,27 @@ export interface ConversationResyncDeps {
 }
 
 export interface ConversationResyncOutcome {
-  /** The server's view: is this conversation still being processed? */
+  /**
+   * The server's `processing` flag, reported verbatim.
+   *
+   * RECORDED FOR DIAGNOSTICS ONLY — it must never end a turn. The server's own
+   * source says so (ReactorConversationService.ts:5532-5548): the flag "is set by
+   * `sendMessage` before the AUTO tool loop and cleared by *every* attempt's
+   * catch — including an attempt that then retries". Concretely it is false
+   * during the whole first provider call of every turn (it is only set at :6201,
+   * after `processAIResponse` returns), it is cleared in the retry catch (:6881)
+   * before the retry loop continues, and it is cleared while the AUTO loop is
+   * paused for a client-side tool (:6627 -> :6873). Reading `false` as "the turn
+   * ended" therefore clears the busy indicator mid-turn — the exact symptom this
+   * ticket exists to remove.
+   */
   processing?: boolean;
+  /**
+   * Positive evidence that the turn is over, taken from the transcript rather
+   * than from the flag: the persisted last message is a final assistant answer
+   * with no unanswered tool call. See `isTerminalTranscript`.
+   */
+  settled?: boolean;
   /** Messages the merge appended. */
   added?: number;
   /** Messages the merge replaced with a newer server copy. */
@@ -257,6 +276,90 @@ export interface ConversationResyncOutcome {
   /** The session the reconcile actually ran against. */
   sessionId?: string;
 }
+
+/**
+ * Collect the tool-call ids the transcript has answers for.
+ *
+ * Answers live in two places depending on how far the conversation has been
+ * processed: `tool_results` / `tool_errors` on the assistant message that made
+ * the call, and separate `role: 'tool'` messages keyed by `tool_call_id`.
+ */
+const answeredToolCallIds = (history: UXChatMessage[]): Set<string> => {
+  const answered = new Set<string>();
+  for (const message of history) {
+    for (const result of (message as any)?.tool_results ?? []) {
+      const id = idOf(result);
+      if (id) answered.add(id);
+    }
+    for (const error of (message as any)?.tool_errors ?? []) {
+      const id = idOf(error);
+      if (id) answered.add(id);
+    }
+    if (message?.role === 'tool') {
+      const id = idOf({ id: (message as any)?.tool_call_id ?? (message as any)?.id });
+      if (id) answered.add(id);
+    }
+  }
+  return answered;
+};
+
+/**
+ * Is this message the *answer* that ends a turn?
+ *
+ * A final answer is an assistant message that says something (text, reasoning or
+ * images) and is not waiting on anything. A message that carries tool calls is a
+ * mid-loop step even when every call has already been answered, because the
+ * model is going to be invoked again with those results.
+ */
+export const isTerminalAssistantMessage = (
+  message: UXChatMessage | null | undefined,
+  answered: Set<string> = new Set(),
+): boolean => {
+  if (!message || message.role !== 'assistant') return false;
+
+  const toolCalls = Array.isArray((message as any).tool_calls) ? (message as any).tool_calls : [];
+  if (toolCalls.length > 0) return false;
+
+  // An answer produced *by* a tool call still answers the call.
+  const openCallId = (message as any).tool_call_id ? idOf({ id: (message as any).tool_call_id }) : '';
+  if (openCallId && !answered.has(openCallId)) return false;
+
+  const content = typeof message.content === 'string' ? message.content.trim() : '';
+  const thinking = typeof (message as any).thinking === 'string' ? (message as any).thinking.trim() : '';
+  const images = Array.isArray((message as any).images) ? (message as any).images : [];
+
+  return content.length > 0 || thinking.length > 0 || images.length > 0;
+};
+
+/**
+ * Does the persisted transcript prove the turn is over?
+ *
+ * This is the only signal allowed to end a turn. `processing` cannot do it: the
+ * server's own source (`ReactorConversationService.ts:5532-5548`) records that
+ * the flag is cleared by every attempt's catch, including attempts that then
+ * retry, and that it is only set after `processAIResponse` returns — so it reads
+ * false throughout the first provider call, through retries, and while the AUTO
+ * loop is paused waiting on a client-side tool.
+ *
+ * Returns false when in any doubt: an empty or unreadable transcript, a last
+ * message that is not an assistant answer, a last message that still carries
+ * tool calls, or a tool call nothing has answered. `false` means "keep showing
+ * busy and keep verifying", never "finished".
+ */
+export const isTerminalTranscript = (history: UXChatMessage[] | null | undefined): boolean => {
+  if (!Array.isArray(history) || history.length === 0) return false;
+  const answered = answeredToolCallIds(history);
+
+  // Walk back over any trailing tool-result rows: the answer can sit before
+  // them when results were appended as their own messages.
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const message = history[index];
+    if (!message) return false;
+    if (message.role === 'tool') continue;
+    return isTerminalAssistantMessage(message, answered);
+  }
+  return false;
+};
 
 /**
  * Keep the "show earlier" cursor where the user left it.
@@ -318,7 +421,10 @@ export async function resyncConversationFromServer(
   deps: ConversationResyncDeps,
 ): Promise<ConversationResyncOutcome> {
   const sessionId = deps.getActiveSessionId();
-  if (!sessionId) return { processing: false };
+  // No conversation open: nothing was asked and nothing is known. Reporting
+  // `processing: false` here used to be read as "the turn ended"; it is not
+  // evidence of anything.
+  if (!sessionId) return {};
 
   let result: any;
   try {
@@ -344,6 +450,8 @@ export async function resyncConversationFromServer(
   }
 
   const serverHistory: UXChatMessage[] = Array.isArray(result.history) ? result.history : [];
+  // The only evidence that may end a turn: the persisted transcript says so.
+  const settled = isTerminalTranscript(serverHistory);
   const processing = !!(result as any).processing;
   const incomingWindow = ((result as any).historyWindow ?? null) as ChatState['historyWindow'];
 
@@ -370,23 +478,31 @@ export async function resyncConversationFromServer(
     };
   });
 
-  // The server's `processing` is the only trustworthy answer to "is this turn
-  // still running?", and it drives the busy indicator both ways: true re-arms it
-  // after a reconnect that missed the stream, false clears a stale indicator.
-  if (processing) {
-    if (!deps.isAgentBusy()) deps.setAgentBusy(true);
-  } else if (deps.isAgentBusy()) {
-    deps.setAgentBusy(false);
+  // Two independent signals, and only one of them may end a turn:
+  //
+  //   - `settled` (the transcript proves it) → the turn is over. Safe on any
+  //     trigger, including the first resync after a reconnect: if the run
+  //     finished while the stream was down the final answer is persisted, and
+  //     NOT settling would leave a finished run looking busy forever — the other
+  //     half of the original bug.
+  //   - `processing` → diagnostic only. It is false throughout the first provider
+  //     call, through retries, and while the AUTO loop waits on a client-side
+  //     tool, so it may CONFIRM busy but must never clear it. See the interface
+  //     note above and the server's own comment at
+  //     ReactorConversationService.ts:5532-5548.
+  if (processing && !deps.isAgentBusy()) {
+    deps.setAgentBusy(true);
   }
 
   deps.onInfo?.('Chat resynced from server', {
     reason,
     sessionId,
     processing,
+    settled,
     added: preview.added,
     updated: preview.updated,
     serverMessages: serverHistory.length,
   });
 
-  return { processing, added: preview.added, updated: preview.updated, sessionId };
+  return { processing, settled, added: preview.added, updated: preview.updated, sessionId };
 }

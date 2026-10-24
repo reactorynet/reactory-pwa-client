@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import useStreamRecovery, {
   DEFAULT_STALL_TIMEOUT_MS,
   UseStreamRecoveryOptions,
+  stallDelayFor,
 } from '../hooks/useStreamRecovery';
 
 /**
@@ -86,10 +87,11 @@ describe('useStreamRecovery', () => {
     expect(onTurnSettled).not.toHaveBeenCalled();
 
     // ... and keep asking, so a stream that died without firing onerror is
-    // still repaired without user action.
-    await advance(DEFAULT_STALL_TIMEOUT_MS);
+    // still repaired without user action. The interval widens after each
+    // unanswered check (F10), so advance by the schedule the hook uses.
+    await advance(stallDelayFor(DEFAULT_STALL_TIMEOUT_MS, 1));
     await flush();
-    expect(resync).toHaveBeenCalledTimes(2);
+    expect(resync.mock.calls.length).toBeGreaterThan(1);
     expect(onTurnSettled).not.toHaveBeenCalled();
   });
 
@@ -109,9 +111,9 @@ describe('useStreamRecovery', () => {
     expect(onTurnSettled).not.toHaveBeenCalled();
   });
 
-  it('settles the turn only when the server reports it is no longer processing', async () => {
+  it('settles the turn only when the transcript proves it ended, not when the flag says so', async () => {
     const { result, resync, onTurnSettled } = setup({
-      resync: jest.fn().mockResolvedValue({ processing: false }),
+      resync: jest.fn().mockResolvedValue({ settled: true, processing: false }),
     });
 
     act(() => {
@@ -122,6 +124,50 @@ describe('useStreamRecovery', () => {
 
     expect(resync).toHaveBeenCalledWith('stalled');
     expect(onTurnSettled).toHaveBeenCalledTimes(1);
+  });
+
+  // ── F7 regression ────────────────────────────────────────────────────────
+  //
+  // The server's `processing` flag is NOT proof that a turn ended: it is false
+  // throughout the first provider call of every turn, through retries, and while
+  // the AUTO loop waits on a client-side tool. Treating it as proof cleared the
+  // busy indicator mid-turn and disarmed this loop — exactly the
+  // "prematurely shows the turn as finished" symptom this ticket removes.
+  it('keeps the turn busy when a resync reports processing:false without a terminal transcript', async () => {
+    const { result, resync, onTurnSettled } = setup({
+      // The server says "not processing" but the transcript does not prove it.
+      resync: jest.fn().mockResolvedValue({ processing: false, added: 1, settled: false }),
+    });
+
+    act(() => {
+      result.current.notifyActivity();
+    });
+    await advance(DEFAULT_STALL_TIMEOUT_MS);
+    await flush();
+
+    expect(resync).toHaveBeenCalledWith('stalled');
+    expect(onTurnSettled).not.toHaveBeenCalled();
+
+    // ...and the loop must still be armed, otherwise the client is back to
+    // "silently wrong until reload, with no busy indicator". Widened interval.
+    await advance(stallDelayFor(DEFAULT_STALL_TIMEOUT_MS, 1));
+    await flush();
+    expect(resync.mock.calls.length).toBeGreaterThan(1);
+    expect(onTurnSettled).not.toHaveBeenCalled();
+  });
+
+  it('keeps the turn busy on the first resync after a reconnect when it reports processing:false', async () => {
+    const { result, onTurnSettled } = setup({
+      resync: jest.fn().mockResolvedValue({ processing: false, settled: false }),
+    });
+
+    act(() => {
+      result.current.handleReconnected();
+    });
+    await flush();
+
+    // A reconnect during the first provider call must not end the turn.
+    expect(onTurnSettled).not.toHaveBeenCalled();
   });
 
   it('resyncs after a successful reconnect', async () => {
@@ -137,7 +183,7 @@ describe('useStreamRecovery', () => {
 
   it('resyncs after the transport gives up and settles a run that already finished', async () => {
     const { result, resync, onTurnSettled } = setup({
-      resync: jest.fn().mockResolvedValue({ processing: false }),
+      resync: jest.fn().mockResolvedValue({ settled: true, processing: false }),
     });
 
     act(() => {
@@ -181,9 +227,9 @@ describe('useStreamRecovery', () => {
     expect(resync).toHaveBeenCalledTimes(1);
     expect(onTurnSettled).not.toHaveBeenCalled();
 
-    await advance(DEFAULT_STALL_TIMEOUT_MS);
+    await advance(stallDelayFor(DEFAULT_STALL_TIMEOUT_MS, 1));
     await flush();
-    expect(resync).toHaveBeenCalledTimes(2);
+    expect(resync.mock.calls.length).toBeGreaterThan(1);
   });
 
   it('treats a heartbeat as transport liveness, not as content', async () => {

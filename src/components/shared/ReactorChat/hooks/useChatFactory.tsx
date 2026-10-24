@@ -1856,6 +1856,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const recoveryRef = React.useRef<ReturnType<typeof useStreamRecovery> | null>(null);
 
     /**
+     * Ask the server for a *fresh* streaming session and connect to it.
+     *
+     * Assigned after `sse` exists (see the re-establish effect below). The URL a
+     * reconnect targets embeds a streaming-session uuid that the server keeps for
+     * one hour, so once that has passed, retrying is futile however long the
+     * budget is: the only useful recovery is a new session.
+     */
+    const reinitSseRef = React.useRef<(() => void) | null>(null);
+
+    /**
      * Reconcile the transcript with the persisted conversation.
      *
      * Source: `graph.getConversation(sessionId)` → `ReactorConversation`, whose
@@ -1885,7 +1895,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         onWarning: (message, meta) => reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'warning'),
         onInfo: (message, meta) => sessionLogger?.info(message, meta, 'useChatFactory'),
       });
-      return { processing: outcome.processing, added: outcome.added, updated: outcome.updated };
+      return {
+        processing: outcome.processing,
+        settled: outcome.settled,
+        added: outcome.added,
+        updated: outcome.updated,
+      };
     }, [graph, reactory, sessionLogger]);
 
     const sse = useSSE({
@@ -1942,10 +1957,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onReconnectFailed: () => {
         setNetworkStatus('error');
         setNetworkError('Connection lost. The conversation will be refreshed from the server.');
-        // A give-up must not leave the transcript silently wrong: the run may
-        // well have finished while we were not listening. Reconcile from the
-        // persisted conversation rather than trusting the dead stream.
+        // A give-up must not leave the transcript silently wrong.
+        //
+        // The run may well have finished while we were not listening, so
+        // reconcile from the persisted conversation instead of trusting the
+        // dead stream. `settled` — not the server's `processing` flag — decides
+        // whether the turn is over.
         recoveryRef.current?.handleReconnectFailed();
+      },
+      onSessionExpired: () => {
+        // The streaming session behind the URL outlived the server's TTL, so no
+        // retry can succeed. Stop, reconcile what actually happened, and ask for
+        // a fresh session instead of retrying a dead URL for hours.
+        setNetworkStatus('error');
+        setNetworkError('The live connection expired. Reconnecting to the conversation…');
+        recoveryRef.current?.handleReconnectFailed();
+        reinitSseRef.current?.();
       },
       onStreamActivity: () => {
         // A content-bearing event arrived (start, token, tool_call, reasoning),
@@ -2075,6 +2102,46 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
     }
   }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, persona?.id]);
+
+  /**
+   * Ask the server for a fresh streaming session and connect to it.
+   *
+   * Same handshake the re-establish effect uses (a lightweight SSE-mode message
+   * that returns `ReactorInitiateSSE`), but callable on demand — when the previous
+   * streaming session has aged out and retrying its URL is pointless.
+   */
+  React.useEffect(() => {
+    reinitSseRef.current = () => {
+      const sessionId = chatStateRef.current?.id;
+      if (!sessionId || protocol !== 'sse') return;
+
+      graph.sendMessage({
+        message: '',
+        personaId: persona.id,
+        chatSessionId: sessionId,
+        streamingMode: 'SSE',
+      }).then((resp: any) => {
+        if (resp?.__typename !== 'ReactorInitiateSSE') {
+          reactory.log(`ChatFactory: SSE re-init after session expiry returned ${resp?.__typename}`, {}, 'warning');
+          return;
+        }
+        sse.disconnect();
+        sse.connect({
+          endpoint: resp.endpoint,
+          sessionId: resp.sessionId,
+          headers: resp.headers,
+        });
+        setNetworkStatus('connected');
+        setNetworkError(null);
+        setNetworkReconnectAttempt(0);
+        // The stream is live again; reconcile whatever was missed while it was
+        // gone (the run may have advanced or finished in the meantime).
+        recoveryRef.current?.handleReconnected();
+      }).catch((err: any) => {
+        reactory.log(`ChatFactory: SSE re-init after session expiry failed: ${err?.message}`, {}, 'warning');
+      });
+    };
+  }, [graph, persona?.id, protocol, reactory, sessionLogger, sse]);
 
   /**
    * Wraps setModelOverride to also persist the selection to the server
@@ -2461,8 +2528,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // The banner's only affordance has to actually do something. `rearm()`
     // restarts a stream that gave up (or skips the remaining backoff), which is
     // what the user is asking for when they press Retry after an outage.
+    // `sse` is a fresh object every render; depending on it would churn this
+    // callback's identity, so depend on the one stable function it uses.
     sse.rearm();
-  }, [sse]);
+  }, [sse.rearm]);
 
   /**
    * Attach a ToolPrompt component to the message that owns the tool_calls.

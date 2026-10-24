@@ -36,8 +36,23 @@ export type StreamRecoveryReason =
   | 'resumed';
 
 export interface StreamRecoveryResyncResult {
-  /** Server's view: is this conversation still being processed? */
+  /**
+   * The server's `processing` flag, verbatim.
+   *
+   * DIAGNOSTIC ONLY — it must never end a turn here. The server clears it in
+   * every attempt's catch (including attempts that then retry) and only sets it
+   * after the provider call returns, so `false` is normal mid-turn. See
+   * `conversationResync.ts` and ReactorConversationService.ts:5532-5548.
+   */
   processing?: boolean;
+  /**
+   * Positive evidence that the turn is over: the persisted transcript ends with
+   * a final assistant answer that has no unanswered tool call.
+   *
+   * This is the ONLY signal that may end a turn. Absent means "keep the busy
+   * indicators and keep verifying".
+   */
+  settled?: boolean;
   /** Messages the merge appended (diagnostics only). */
   added?: number;
   /** Messages the merge replaced with a newer server copy (diagnostics only). */
@@ -98,6 +113,24 @@ export interface UseStreamRecoveryResult {
  */
 export const DEFAULT_STALL_TIMEOUT_MS = 120_000;
 
+/**
+ * Multipliers applied to the first stall interval as successive verifications
+ * go unanswered.
+ *
+ * A turn can legitimately stay busy for hours. Polling a busy conversation every
+ * two minutes for that whole time is one GraphQL read per tab per two minutes
+ * with no ceiling, so the interval widens: 2 m → 5 m → 15 m, then holds at 15 m.
+ * Each `stallTimeoutMs` is treated as the base, so a test that passes 1 s gets
+ * 1 s → 2.5 s → 7.5 s.
+ */
+export const STALL_BACKOFF_MULTIPLIERS = [1, 2.5, 7.5] as const;
+
+/** Delay before the *next* verification, given how many have already gone unanswered. */
+export const stallDelayFor = (baseMs: number, completedPolls: number): number => {
+  const index = Math.min(Math.max(0, completedPolls), STALL_BACKOFF_MULTIPLIERS.length - 1);
+  return Math.round(baseMs * STALL_BACKOFF_MULTIPLIERS[index]);
+};
+
 const useStreamRecovery = (options: UseStreamRecoveryOptions): UseStreamRecoveryResult => {
   const optionsRef = React.useRef(options);
   optionsRef.current = options;
@@ -151,22 +184,21 @@ const useStreamRecovery = (options: UseStreamRecoveryOptions): UseStreamRecovery
 
   /**
    * Reconcile, then decide what the result means:
-   *   - `processing === false` → the turn is over; settle the UI.
-   *   - anything else (still processing, or we could not ask) → keep the busy
-   *     indicators and keep verifying. Silence is never read as completion.
+   *   - `settled === false` is NOT a conclusion.
+   *   - Only a resync that reports `settled: true` — the persisted transcript
+   *     ends with a final assistant answer — ends the turn.
    */
   const resyncAndSettle = React.useCallback((reason: StreamRecoveryReason) => {
     void resyncRef.current(reason).then((result) => {
       if (!mountedRef.current) return;
       const current = optionsRef.current;
-      if (result && result.processing === false) {
-        // Positive evidence the turn is over. Only clear what is still set —
-        // a reconcile on an idle conversation has nothing to settle.
+      if (result && result.settled === true) {
+        // Transcript-level evidence the turn is over. Only clear what is still
+        // set — a reconcile on an idle conversation has nothing to settle.
         if (current.busy) current.onTurnSettled?.();
         return;
       }
-      // Still processing (or we could not ask): keep the indicators and keep
-      // verifying. Silence is never read as completion.
+      // No evidence it ended: keep the indicators and keep verifying.
       if (current.busy) armTimerRef.current();
     });
   }, []);
@@ -187,9 +219,13 @@ const useStreamRecovery = (options: UseStreamRecoveryOptions): UseStreamRecovery
     const current = optionsRef.current;
     clearTimer();
     if (!current.enabled || !current.busy || typeof current.resync !== 'function') return;
-    const delay = current.stallTimeoutMs && current.stallTimeoutMs > 0
+    const baseDelay = current.stallTimeoutMs && current.stallTimeoutMs > 0
       ? current.stallTimeoutMs
       : DEFAULT_STALL_TIMEOUT_MS;
+    // Widen the interval as unanswered verifications accumulate (F10): a busy
+    // turn can run for hours, and a flat 2-minute poll is an unbounded read
+    // stream per open tab.
+    const delay = stallDelayFor(baseDelay, stallPollsRef.current);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       handleStall();

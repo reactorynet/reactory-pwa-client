@@ -393,7 +393,7 @@ describe('SSE give-up → conversation resync', () => {
   });
 
   it('reconciles the conversation when the transport gives up', async () => {
-    const resync = jest.fn().mockResolvedValue({ processing: false });
+    const resync = jest.fn().mockResolvedValue({ settled: true, processing: false });
     const onTurnSettled = jest.fn();
 
     const { result } = renderHook(() => {
@@ -428,7 +428,7 @@ describe('SSE give-up → conversation resync', () => {
 
     // The give-up path is what used to leave the tab silently wrong forever.
     expect(resync).toHaveBeenCalledWith('reconnect-failed');
-    // The server says the run already finished while we were not listening.
+    // The run already finished while we were not listening: the transcript says so.
     expect(onTurnSettled).toHaveBeenCalledTimes(1);
   });
 

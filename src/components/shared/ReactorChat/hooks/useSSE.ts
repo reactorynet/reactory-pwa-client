@@ -189,6 +189,15 @@ export interface UseSSEOptions {
   onReconnected?: () => void;
   /** Called when the reconnect budget is exhausted and the transport gives up */
   onReconnectFailed?: (totalAttempts: number) => void;
+  /**
+   * Called when the streaming session behind the endpoint can no longer be
+   * revived, because it has outlived the server's streaming-session TTL.
+   *
+   * Distinct from `onReconnectFailed`: retrying is pointless, and the caller
+   * should resync the conversation and then obtain a *fresh* stream via
+   * `ReactorInitiateSSE`. See `STREAM_SESSION_MAX_AGE_MS`.
+   */
+  onSessionExpired?: () => void;
   /** Called whenever an SSE data event (start, token, tool_call, reasoning) is received.
    *  Useful for detecting server activity on reconnect when no explicit busy signal exists. */
   onStreamActivity?: () => void;
@@ -289,6 +298,26 @@ export const RECONNECT_MAX_ELAPSED_MS = 4 * 60 * 60 * 1000;
 const RECONNECT_MAX_ATTEMPTS = 1_000;
 
 /**
+ * How long a reconnect may keep retrying the *same* streaming session.
+ *
+ * The budget above is about the turn; this is about the transport that carries
+ * it. `ReactorInitiateSSE` returns an endpoint containing a streaming-session
+ * uuid, and the server keeps that session for one hour
+ * (StreamingSessionManager.DEFAULT_EXPIRY_HOURS = 1, plus an `expiresAt` check in
+ * getSession). Reconnecting re-opens the same URL, so once the hour has passed
+ * every attempt is answered with "session not found" and can never succeed — the
+ * client cannot see that status (EventSource hides it) and the `expiry` the
+ * server returns is 24 h, so the old guard never fired. Retrying for the rest of
+ * a 4 h budget would leave the pill on "Reconnecting…" for hours after a run had
+ * visibly finished.
+ *
+ * Slightly under an hour so the last attempt lands while the session is still
+ * valid. When this elapses the transport stops and tells the caller, which can
+ * resync and ask the server for a fresh streaming session.
+ */
+export const STREAM_SESSION_MAX_AGE_MS = 55 * 60 * 1000;
+
+/**
  * Silence (ms) after which an open stream is treated as dead even if the
  * browser never fired `onerror` — the failure mode behind an idle-socket or
  * proxy drop. Any frame (data or keepalive) resets it. This is a backstop, not
@@ -359,6 +388,7 @@ const useSSE = ({
   onReconnecting,
   onReconnected,
   onReconnectFailed,
+  onSessionExpired,
   onStreamActivity,
   onHeartbeat,
   turnActive,
@@ -399,6 +429,7 @@ const useSSE = ({
   const onReconnectingRef = React.useRef(onReconnecting);
   const onReconnectedRef = React.useRef(onReconnected);
   const onReconnectFailedRef = React.useRef(onReconnectFailed);
+  const onSessionExpiredRef = React.useRef(onSessionExpired);
   onTokenRef.current = onToken;
   onReasoningRef.current = onReasoning;
   onMessageRef.current = onMessage;
@@ -416,6 +447,7 @@ const useSSE = ({
   onStreamActivityRef.current = onStreamActivity;
   const onHeartbeatRef = React.useRef(onHeartbeat);
   onHeartbeatRef.current = onHeartbeat;
+  onSessionExpiredRef.current = onSessionExpired;
 
   // Reconnection state refs
   const lastConnectOptsRef = React.useRef<{
@@ -427,6 +459,8 @@ const useSSE = ({
   const reconnectAttemptsRef = React.useRef<number>(0);
   /** Start of the current run of reconnect attempts — the budget is elapsed time. */
   const reconnectStartedAtRef = React.useRef<number | null>(null);
+  /** When the current streaming session (the URL we reconnect to) was opened. */
+  const streamOpenedAtRef = React.useRef<number | null>(null);
   /** Backstop for a stream that dies without firing `onerror`. */
   const livenessTimerRef = React.useRef<number | null>(null);
   // Refs to the latest reconnect functions, to break circular deps and prevent
@@ -765,6 +799,20 @@ const useSSE = ({
     const elapsedMs = Date.now() - reconnectStartedAtRef.current;
     const nextAttempt = reconnectAttemptsRef.current + 1;
 
+    // The streaming session behind the URL has its own lifetime (one hour on the
+    // server), so a retry past that point can never succeed. Stop and tell the
+    // caller to obtain a fresh session, rather than leaving the pill on
+    // "Reconnecting…" for the rest of a four-hour budget.
+    const sessionAgeMs = streamOpenedAtRef.current === null
+      ? 0
+      : Date.now() - streamOpenedAtRef.current;
+    if (sessionAgeMs >= STREAM_SESSION_MAX_AGE_MS) {
+      sessionLogger?.error('SSE streaming session expired; reconnect abandoned', { sessionAgeMs }, 'useSSE');
+      giveUp(nextAttempt - 1);
+      if (onSessionExpiredRef.current) onSessionExpiredRef.current();
+      return;
+    }
+
     if (elapsedMs >= RECONNECT_MAX_ELAPSED_MS || nextAttempt > RECONNECT_MAX_ATTEMPTS) {
       sessionLogger?.error('SSE reconnect budget exhausted', { attempts: nextAttempt - 1, elapsedMs, budgetMs: RECONNECT_MAX_ELAPSED_MS }, 'useSSE');
       giveUp(nextAttempt - 1);
@@ -920,6 +968,9 @@ const useSSE = ({
     }
     setIsReconnecting(false);
     setReconnectAttempt(0);
+    // Every `connect` opens a new streaming session, so the session-age clock
+    // restarts here (see STREAM_SESSION_MAX_AGE_MS).
+    streamOpenedAtRef.current = Date.now();
 
     // Close previous
     if (eventSourceRef.current) {
@@ -1004,6 +1055,7 @@ const useSSE = ({
     // stream the caller had explicitly torn down — and a revived stream feeds
     // the previous conversation's events into whatever chat is now on screen.
     lastConnectOptsRef.current = null;
+    streamOpenedAtRef.current = null;
     setIsStreaming(false);
     setCurrentStreamingMessage('');
     sessionRef.current = null;

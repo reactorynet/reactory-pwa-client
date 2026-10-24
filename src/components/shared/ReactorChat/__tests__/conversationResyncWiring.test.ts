@@ -108,20 +108,66 @@ describe('resyncConversationFromServer', () => {
     expect(h.deps.agentBusy).toBe(true);
   });
 
-  it('clears agentBusy when the server says the turn is over', async () => {
+  it('reports settled only when the transcript proves the turn ended', async () => {
+    // `processing: false` is NOT evidence (see the F7 note in conversationResync):
+    // the server clears it in every attempt's catch and only sets it after the
+    // provider call returns. The transcript is the evidence.
     const h = harness(makeState({ id: 'A', history: [msg('m1', 'working')], processing: true }));
     h.deps.agentBusy = true;
     (h.fetchConversation as jest.Mock).mockResolvedValue({
       id: 'A',
       processing: false,
-      history: [msg('m1', 'done')],
+      history: [
+        msg('m1', 'run the long job', 'user'),
+        msg('m2', 'Done — the report is written.'),
+      ],
     });
 
-    await resyncConversationFromServer('stalled', h);
+    const outcome = await resyncConversationFromServer('stalled', h);
 
+    expect(outcome.settled).toBe(true);
     expect(h.state().processing).toBe(false);
-    expect(h.state().history[0].content).toBe('done');
-    expect(h.deps.agentBusy).toBe(false);
+    expect(h.state().history[1].content).toBe('Done — the report is written.');
+    // The recovery hook settles on `settled`, so the wiring does not need to
+    // clear busy itself; it must not re-assert it either.
+    expect(h.deps.agentBusy).toBe(true);
+  });
+
+  it('does not report settled when processing is false but the transcript is not terminal', async () => {
+    // The exact F7 case: the first provider call of a turn. The user message is
+    // persisted, the answer is not, and `processing` reads false.
+    const h = harness(makeState({ id: 'A', history: [msg('m1', 'working')], processing: true }));
+    h.deps.agentBusy = true;
+    (h.fetchConversation as jest.Mock).mockResolvedValue({
+      id: 'A',
+      processing: false,
+      history: [msg('m1', 'run the long job', 'user')],
+    });
+
+    const outcome = await resyncConversationFromServer('stalled', h);
+
+    expect(outcome.settled).toBe(false);
+    expect(outcome.processing).toBe(false);
+  });
+
+  it('does not report settled while a tool call is unanswered', async () => {
+    const h = harness(makeState({ id: 'A', history: [], processing: true }));
+    h.deps.agentBusy = true;
+    (h.fetchConversation as jest.Mock).mockResolvedValue({
+      id: 'A',
+      processing: false,
+      history: [
+        msg('m1', 'run it', 'user'),
+        {
+          ...msg('m2', ''),
+          tool_calls: [{ id: 'tc1', type: 'function', function: { name: 'shell', arguments: '{}' }, status: 'running' }],
+        } as UXChatMessage,
+      ],
+    });
+
+    const outcome = await resyncConversationFromServer('stalled', h);
+
+    expect(outcome.settled).toBe(false);
   });
 
   it('discards an answer that resolves after the user switched conversation', async () => {
@@ -198,7 +244,10 @@ describe('resyncConversationFromServer', () => {
     const outcome = await resyncConversationFromServer('focus', h);
 
     expect(h.fetchConversation).not.toHaveBeenCalled();
-    expect(outcome).toEqual({ processing: false });
+    // Unknown, not "finished": with no conversation open there is no evidence
+    // either way, and `processing: false` used to be read as "the turn ended".
+    expect(outcome).toEqual({});
+    expect(outcome.settled).toBeUndefined();
   });
 });
 
