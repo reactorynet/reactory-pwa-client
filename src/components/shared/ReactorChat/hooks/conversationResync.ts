@@ -1,4 +1,4 @@
-import { UXChatMessage } from '../types';
+import { ChatState, UXChatMessage } from '../types';
 
 /**
  * Reconciling the transcript with the persisted conversation.
@@ -216,4 +216,177 @@ export function mergeServerHistory(
   }
 
   return { history, added, updated, unchanged };
+}
+
+/**
+ * Everything the reconciliation needs from the chat hook, as plain functions.
+ *
+ * The orchestration is deliberately not inside the hook: the interesting rules
+ * (which conversation the answer belongs to, what happens to paging metadata)
+ * are the ones most likely to break, and they must be testable without mounting
+ * a 5000-line hook.
+ */
+export interface ConversationResyncDeps {
+  /** The conversation the chat window is showing *now* (not when the fetch started). */
+  getActiveSessionId: () => string | null | undefined;
+  /** Fetch the persisted conversation by id. */
+  fetchConversation: (sessionId: string) => Promise<any>;
+  /** The chat state as committed, synchronously. */
+  getChatState: () => Pick<ChatState, 'id' | 'history' | 'historyWindow' | 'processing'> | null | undefined;
+  /** Apply an update to chat state. */
+  updateChatState: (
+    updater: (prevState: ChatState) => ChatState,
+  ) => void;
+  /** Whether the agent-busy indicator is already on. */
+  isAgentBusy: () => boolean;
+  /** Turn the agent-busy indicator on. */
+  setAgentBusy: (busy: boolean) => void;
+  onWarning?: (message: string, meta?: Record<string, unknown>) => void;
+  onInfo?: (message: string, meta?: Record<string, unknown>) => void;
+}
+
+export interface ConversationResyncOutcome {
+  /** The server's view: is this conversation still being processed? */
+  processing?: boolean;
+  /** Messages the merge appended. */
+  added?: number;
+  /** Messages the merge replaced with a newer server copy. */
+  updated?: number;
+  /** True when the answer was discarded because the chat moved on meanwhile. */
+  discarded?: boolean;
+  /** The session the reconcile actually ran against. */
+  sessionId?: string;
+}
+
+/**
+ * Keep the "show earlier" cursor where the user left it.
+ *
+ * `ReactorConversation` is a *bounded* read: it returns the newest window of the
+ * transcript. If the user has paged back with "show earlier", the local history
+ * is longer than that window, so adopting the server's `oldestId` would move the
+ * cursor forward — and the next "show earlier" would re-fetch a page already on
+ * screen. When local history is longer than what came back, the older cursor wins.
+ */
+export function selectHistoryWindow(
+  local: Pick<ChatState, 'history' | 'historyWindow'>,
+  incoming: ChatState['historyWindow'] | null | undefined,
+): ChatState['historyWindow'] {
+  const next = incoming ?? null;
+  const previous = local.historyWindow ?? null;
+  if (!next) return previous;
+
+  // A periodic reconcile normally returns the same window. Keep the existing
+  // object in that case, so an identical snapshot does not re-render the list.
+  const sameWindow = !!previous
+    && previous.oldestId === next.oldestId
+    && previous.returned === next.returned
+    && previous.total === next.total
+    && previous.hasMoreBefore === next.hasMoreBefore;
+  if (sameWindow) return previous;
+  if (!previous?.oldestId) return next;
+
+  const localCount = Array.isArray(local.history) ? local.history.length : 0;
+  const returnedCount = typeof next.returned === 'number' ? next.returned : 0;
+  const pagedBack = localCount > returnedCount;
+
+  if (!pagedBack) return next;
+  return {
+    ...next,
+    oldestId: previous.oldestId,
+    hasMoreBefore: previous.hasMoreBefore ?? next.hasMoreBefore,
+  };
+}
+
+/**
+ * Reconcile the transcript with the authoritative server record.
+ *
+ * The session scope is checked twice, because the fetch is asynchronous and a
+ * chat switch can land in the middle of it:
+ *
+ *   - once before touching state, against the *currently active* conversation;
+ *   - once inside the updater, against `prevState.id`, which is the state React
+ *     is actually about to commit.
+ *
+ * Without those checks a resync issued for conversation A that resolved after
+ * the user opened B would merge A's messages into B's transcript — and because
+ * `mergeServerHistory` preserves messages the server does not know about, the
+ * damage would be permanent. Every other cross-session path in the chat hook is
+ * guarded the same way; this one is no exception.
+ */
+export async function resyncConversationFromServer(
+  reason: string,
+  deps: ConversationResyncDeps,
+): Promise<ConversationResyncOutcome> {
+  const sessionId = deps.getActiveSessionId();
+  if (!sessionId) return { processing: false };
+
+  let result: any;
+  try {
+    result = await deps.fetchConversation(sessionId);
+  } catch (error: any) {
+    // A failed reconcile leaves the current view untouched; the next stall check
+    // or interaction tries again. It is not an error state of its own.
+    deps.onWarning?.(`resync (${reason}) failed: ${error?.message || String(error)}`, { sessionId, reason });
+    return {};
+  }
+
+  if (!result || result.__typename === 'ReactorErrorResponse') {
+    deps.onWarning?.(`resync (${reason}) returned no conversation`, { sessionId, reason });
+    return {};
+  }
+
+  // The conversation we asked about must still be the one on screen. `loadChat`
+  // awaits its own fetch before committing the new id, so this can genuinely
+  // fail here even though the request was correct when it was issued.
+  if (deps.getActiveSessionId() !== sessionId) {
+    deps.onInfo?.('resync discarded: the active conversation changed', { sessionId, reason });
+    return { discarded: true, sessionId };
+  }
+
+  const serverHistory: UXChatMessage[] = Array.isArray(result.history) ? result.history : [];
+  const processing = !!(result as any).processing;
+  const incomingWindow = ((result as any).historyWindow ?? null) as ChatState['historyWindow'];
+
+  // Outcome against the committed history, for diagnostics and the return value.
+  const preview = mergeServerHistory(deps.getChatState()?.history, serverHistory);
+
+  deps.updateChatState((prevState) => {
+    // Second guard: React may be about to commit a different conversation.
+    if (prevState.id !== sessionId) return prevState;
+
+    const merged = mergeServerHistory(prevState.history, serverHistory);
+    const historyChanged = merged.added > 0 || merged.updated > 0;
+    const historyWindow = selectHistoryWindow(prevState, incomingWindow);
+    const windowChanged = historyWindow !== prevState.historyWindow;
+
+    if (!historyChanged && !windowChanged && prevState.processing === processing) return prevState;
+
+    return {
+      ...prevState,
+      history: historyChanged ? merged.history : prevState.history,
+      historyWindow,
+      processing,
+      updated: new Date(),
+    };
+  });
+
+  // The server's `processing` is the only trustworthy answer to "is this turn
+  // still running?", and it drives the busy indicator both ways: true re-arms it
+  // after a reconnect that missed the stream, false clears a stale indicator.
+  if (processing) {
+    if (!deps.isAgentBusy()) deps.setAgentBusy(true);
+  } else if (deps.isAgentBusy()) {
+    deps.setAgentBusy(false);
+  }
+
+  deps.onInfo?.('Chat resynced from server', {
+    reason,
+    sessionId,
+    processing,
+    added: preview.added,
+    updated: preview.updated,
+    serverMessages: serverHistory.length,
+  });
+
+  return { processing, added: preview.added, updated: preview.updated, sessionId };
 }

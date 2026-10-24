@@ -7,7 +7,7 @@ import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
 import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 import useStreamRecovery, { StreamRecoveryReason, StreamRecoveryResyncResult } from './useStreamRecovery';
-import { mergeServerHistory } from './conversationResync';
+import { resyncConversationFromServer } from './conversationResync';
 import { chatShellBus } from '../components/Shell/chatShellBus';
 import {
   cacheClientToolResult,
@@ -1865,71 +1865,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
      * events that happened while the stream was down were never lost, only
      * unobserved.
      *
-     * The merge (`mergeServerHistory`) is idempotent — it matches on message id,
-     * adopts locally-rendered messages the server has since persisted under a
-     * different id, and appends the rest — so calling this on every reconnect,
-     * on give-up, on focus and on each stall check cannot duplicate a bubble.
+     * The work itself lives in `resyncConversationFromServer` so the session
+     * scoping and the paging-cursor rule can be tested without mounting this
+     * hook. That scoping matters: the fetch is asynchronous, and a chat switch
+     * can land while it is in flight.
      */
     const resyncConversation = React.useCallback(async (
       reason: StreamRecoveryReason,
     ): Promise<StreamRecoveryResyncResult> => {
-      const sessionId = activeSessionIdRef.current;
-      if (!sessionId) return { processing: false };
-
-      try {
-        const result: any = await graph.getConversation(sessionId);
-        if (!result || result.__typename === 'ReactorErrorResponse') {
-          reactory.log(`[useChatFactory] resync (${reason}) returned no conversation`, { sessionId }, 'warning');
-          return {};
-        }
-
-        const serverHistory: UXChatMessage[] = Array.isArray(result.history) ? result.history : [];
-        const processing = !!(result as any).processing;
-
-        // Outcome against the committed history, for diagnostics.
-        const preview = mergeServerHistory(chatStateRef.current.history, serverHistory);
-
-        // Merge again inside the updater: tokens can land while the query is in
-        // flight, and those local-only messages must survive the reconciliation.
-        setChatState((prevState) => {
-          const merged = mergeServerHistory(prevState.history, serverHistory);
-          const historyChanged = merged.added > 0 || merged.updated > 0;
-          if (!historyChanged && prevState.processing === processing) return prevState;
-          return {
-            ...prevState,
-            history: historyChanged ? merged.history : prevState.history,
-            historyWindow: (result as any).historyWindow ?? prevState.historyWindow,
-            processing,
-            updated: new Date(),
-          };
-        });
-
-        if (processing && !agentBusyRef.current) {
-          // The server says the turn is still running, so the busy indicator is
-          // true rather than stale.
-          setAgentBusy(true);
-        }
-
-        sessionLogger?.info('Chat resynced from server', {
-          reason,
-          sessionId,
-          processing,
-          added: preview.added,
-          updated: preview.updated,
-          serverMessages: serverHistory.length,
-        }, 'useChatFactory');
-
-        return { processing, added: preview.added, updated: preview.updated };
-      } catch (error: any) {
-        // A failed reconcile leaves the current view untouched; the next stall
-        // check or interaction tries again. It is not an error state of its own.
-        reactory.log(`[useChatFactory] resync (${reason}) failed: ${error?.message || String(error)}`, {}, 'warning');
-        return {};
-      }
+      const outcome = await resyncConversationFromServer(reason, {
+        // `chatState.id` is the committed conversation; `activeSessionIdRef` is
+        // only written from an effect and therefore lags a switch.
+        getActiveSessionId: () => chatStateRef.current?.id ?? activeSessionIdRef.current,
+        fetchConversation: (sessionId) => graph.getConversation(sessionId),
+        getChatState: () => chatStateRef.current,
+        updateChatState: (updater) => setChatState(updater),
+        isAgentBusy: () => agentBusyRef.current,
+        setAgentBusy: (busy) => setAgentBusy(busy),
+        onWarning: (message, meta) => reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'warning'),
+        onInfo: (message, meta) => sessionLogger?.info(message, meta, 'useChatFactory'),
+      });
+      return { processing: outcome.processing, added: outcome.added, updated: outcome.updated };
     }, [graph, reactory, sessionLogger]);
 
     const sse = useSSE({
       reactory,
+      // The dead-stream backstop is scoped to a turn: an idle open chat must not
+      // reconnect (and re-query) just for being quiet. See `turnActive` in useSSE.
+      turnActive: agentBusy,
       sessionLogger,
       onToken: onTokenReceived,
       onReasoning: onReasoningReceived,
@@ -2495,7 +2458,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setNetworkStatus('idle');
     setNetworkError(null);
     setNetworkReconnectAttempt(0);
-  }, []);
+    // The banner's only affordance has to actually do something. `rearm()`
+    // restarts a stream that gave up (or skips the remaining backoff), which is
+    // what the user is asking for when they press Retry after an outage.
+    sse.rearm();
+  }, [sse]);
 
   /**
    * Attach a ToolPrompt component to the message that owns the tool_calls.

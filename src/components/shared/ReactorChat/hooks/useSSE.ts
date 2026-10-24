@@ -197,6 +197,17 @@ export interface UseSSEOptions {
    *  model produced anything, which is what lets a long silent tool step be
    *  told apart from a dead stream. */
   onHeartbeat?: () => void;
+  /**
+   * Whether a turn is currently in flight.
+   *
+   * The dead-stream backstop only applies while a turn is running. An open but
+   * idle chat has nothing to prove: the next message re-establishes the stream
+   * anyway, so treating an idle stream's silence as failure closed and reopened
+   * a perfectly healthy connection every five minutes — re-arming the timer,
+   * flashing 'Reconnecting...'/'Reconnected' and forcing a conversation fetch
+   * each cycle. That is the same untruthful status this ticket exists to remove.
+   */
+  turnActive?: boolean;
   /** Optional session logger for client-to-server debug logging */
   sessionLogger?: SessionLogger;
 }
@@ -350,8 +361,12 @@ const useSSE = ({
   onReconnectFailed,
   onStreamActivity,
   onHeartbeat,
+  turnActive,
   sessionLogger,
 }: UseSSEOptions): UseSSEResult => {
+  /** Whether a turn is in flight, readable from timers that were bound once. */
+  const turnActiveRef = React.useRef<boolean>(!!turnActive);
+  turnActiveRef.current = !!turnActive;
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -693,9 +708,13 @@ const useSSE = ({
   const noteFrame = () => {
     if (hasCompletedRef.current) return;
     clearLivenessTimer();
+    // Only an in-flight turn needs its stream proven alive. An idle open chat
+    // re-establishes its transport before the next message, so silence here is
+    // normal rather than suspicious.
+    if (!turnActiveRef.current) return;
     livenessTimerRef.current = window.setTimeout(() => {
       livenessTimerRef.current = null;
-      if (hasCompletedRef.current) return;
+      if (hasCompletedRef.current || !turnActiveRef.current) return;
       sessionLogger?.warn?.('SSE stream silent; recycling connection', { silenceMs: SSE_LIVENESS_TIMEOUT_MS }, 'useSSE');
       reactory.log('useSSE: stream silent, recycling connection', 'warning');
       setConnected(false);
@@ -851,6 +870,28 @@ const useSSE = ({
   // Keep refs in sync every render to prevent stale closures in timers/callbacks
   reconnectNowRef.current = reconnectNow;
   attemptReconnectRef.current = attemptReconnect;
+
+  /**
+   * Arm the dead-stream backstop when a turn starts, and drop it when the turn
+   * ends.
+   *
+   * Arming is driven by the *turn*, not by the connection. `loadChat`
+   * re-establishes an SSE transport for every session it loads, so there are
+   * open streams with no turn in flight; an idle conversation has nothing to
+   * prove, and recycling it for staying quiet would flash the reconnect pill and
+   * force a conversation fetch every five minutes, forever. The next message
+   * re-establishes the transport anyway.
+   */
+  React.useEffect(() => {
+    if (!turnActive) {
+      if (livenessTimerRef.current !== null) {
+        clearTimeout(livenessTimerRef.current);
+        livenessTimerRef.current = null;
+      }
+      return;
+    }
+    noteFrameRef.current();
+  }, [turnActive]);
 
   const connect = React.useCallback(({
     endpoint,

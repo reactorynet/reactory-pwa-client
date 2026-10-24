@@ -105,7 +105,7 @@ describe('SSE reconnect policy', () => {
       expect(computeReconnectDelay(200, () => 1)).toBe(30_000);
     });
 
-    it('jitters each delay by up to 25% and never below the base', () => {
+    it('spreads each delay by ±25% within a 250 ms floor and the per-delay cap', () => {
       expect(computeReconnectDelay(1, () => 0)).toBe(750);
       expect(computeReconnectDelay(1, () => 1)).toBe(1_250);
       expect(computeReconnectDelay(1, () => 0)).toBeGreaterThanOrEqual(750);
@@ -255,8 +255,8 @@ describe('SSE reconnect policy', () => {
     expect(onStreamActivity).not.toHaveBeenCalled();
   });
 
-  it('recycles a completely silent stream after the liveness window', async () => {
-    const { result } = renderHook(() => useSSE({ reactory }));
+  it('recycles a live-but-silent stream after the liveness window while a turn is running', async () => {
+    const { result } = renderHook(() => useSSE({ reactory, turnActive: true }));
 
     act(() => {
       result.current.connect(connectOpts);
@@ -279,8 +279,84 @@ describe('SSE reconnect policy', () => {
     expect(FakeEventSource.instances.length).toBe(2);
   });
 
+  it('leaves an idle open chat alone: no reconnect, no resync, one stream', async () => {
+    // Regression: the backstop used to be armed on every opened stream, so a
+    // perfectly healthy idle chat closed and reopened its SSE connection every
+    // five minutes — flashing 'Reconnecting...'/'Reconnected' and forcing a
+    // conversation fetch each time. `loadChat` re-establishes a stream for every
+    // session it loads, so idle open streams are the common case.
+    const onReconnecting = jest.fn();
+    const onReconnected = jest.fn();
+    const onReconnectFailed = jest.fn();
+    const onHeartbeat = jest.fn();
+
+    const { result } = renderHook(() => useSSE({
+      reactory,
+      onReconnecting,
+      onReconnected,
+      onReconnectFailed,
+      onHeartbeat,
+      // No turn in flight: this is a chat sitting open with nothing to do.
+      turnActive: false,
+    }));
+
+    act(() => {
+      result.current.connect(connectOpts);
+    });
+    act(() => {
+      latest().open();
+    });
+
+    for (let window = 0; window < 3; window += 1) {
+      await act(async () => {
+        jest.advanceTimersByTime(SSE_LIVENESS_TIMEOUT_MS);
+        await Promise.resolve();
+      });
+    }
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(FakeEventSource.instances[0].readyState).toBe(FakeEventSource.OPEN);
+    expect(onReconnecting).not.toHaveBeenCalled();
+    expect(onReconnected).not.toHaveBeenCalled();
+    expect(onReconnectFailed).not.toHaveBeenCalled();
+    expect(result.current.isReconnecting).toBe(false);
+  });
+
+  it('starts watching liveness when a turn begins and stops when it ends', async () => {
+    const { result, rerender } = renderHook(
+      ({ turnActive }: { turnActive: boolean }) => useSSE({ reactory, turnActive }),
+      { initialProps: { turnActive: false } },
+    );
+
+    act(() => {
+      result.current.connect(connectOpts);
+    });
+    act(() => {
+      latest().open();
+    });
+
+    // Idle: silence proves nothing.
+    await act(async () => {
+      jest.advanceTimersByTime(SSE_LIVENESS_TIMEOUT_MS);
+      await Promise.resolve();
+    });
+    expect(FakeEventSource.instances).toHaveLength(1);
+
+    // A turn starts: the stream must now prove it is alive.
+    rerender({ turnActive: true });
+    await act(async () => {
+      jest.advanceTimersByTime(SSE_LIVENESS_TIMEOUT_MS);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+    expect(FakeEventSource.instances.length).toBeGreaterThan(1);
+  });
+
   it('does not treat a 13-minute silent tool step as a dead stream', async () => {
-    const { result } = renderHook(() => useSSE({ reactory }));
+    const { result } = renderHook(() => useSSE({ reactory, turnActive: true }));
 
     act(() => {
       result.current.connect(connectOpts);
