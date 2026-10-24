@@ -187,11 +187,16 @@ export interface UseSSEOptions {
   onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
   /** Called when a dropped SSE connection is successfully re-established */
   onReconnected?: () => void;
-  /** Called when all reconnect attempts have been exhausted */
+  /** Called when the reconnect budget is exhausted and the transport gives up */
   onReconnectFailed?: (totalAttempts: number) => void;
   /** Called whenever an SSE data event (start, token, tool_call, reasoning) is received.
    *  Useful for detecting server activity on reconnect when no explicit busy signal exists. */
   onStreamActivity?: () => void;
+  /** Called for every transport keepalive: a `heartbeat`/`keepalive` event frame,
+   *  or the connection opening. Proves the socket is alive without claiming the
+   *  model produced anything, which is what lets a long silent tool step be
+   *  told apart from a dead stream. */
+  onHeartbeat?: () => void;
   /** Optional session logger for client-to-server debug logging */
   sessionLogger?: SessionLogger;
 }
@@ -214,6 +219,13 @@ export interface UseSSEResult {
   isReconnecting: boolean;
   /** The current reconnection attempt number (0 = not reconnecting) */
   reconnectAttempt: number;
+  /**
+   * Revive the transport on demand: restart a stream that gave up, or skip the
+   * remaining backoff of one that is still retrying. No-op (returns false) when
+   * no stream was ever opened, the stream already completed, or it is healthy.
+   * Called on focus/visibilitychange so returning to the tab always recovers.
+   */
+  rearm: () => boolean;
 }
 
 /**
@@ -233,11 +245,66 @@ const DRIP_THRESHOLD = 80;
  */
 const DRIP_INTERVAL_MS = 20;
 
-/** Maximum number of automatic reconnect attempts after an SSE connection drops */
-const MAX_RECONNECT_ATTEMPTS = 5;
+/**
+ * Reconnect policy.
+ *
+ * The previous policy was five attempts with fixed delays (1 s, 2 s, 4 s, 8 s,
+ * 16 s) — a 31-second budget in total — after which the transport gave up
+ * permanently. A single agent turn routinely outlives that: tool steps of 13–14
+ * minutes were observed in the field, and an idle-socket/proxy drop or a machine
+ * sleep of more than half a minute would exhaust the budget long before the turn
+ * finished. The client then watched a stream that no longer existed and never
+ * learned the run had completed.
+ *
+ * The budget is now expressed in *time*, not attempts: keep trying for
+ * `RECONNECT_MAX_ELAPSED_MS`, with exponential backoff that jitters and is
+ * capped per delay. Retrying is cheap (one TCP connect every ≤30 s) and the
+ * visible "reconnecting" state tells the user what is happening.
+ */
+const RECONNECT_BASE_DELAY_MS = 1_000;
+/** Ceiling for a single backoff delay — the budget is long, not each wait. */
+const RECONNECT_MAX_DELAY_MS = 30_000;
+/** Delay jitter, as a fraction of the computed delay (±25%). */
+const RECONNECT_JITTER_RATIO = 0.25;
+/**
+ * How long the transport keeps trying before declaring the stream lost.
+ * Four hours comfortably covers the longest expected turn; after that the
+ * conversation is resynced from the server and the user can re-arm by
+ * interacting (or by returning to the tab).
+ */
+export const RECONNECT_MAX_ELAPSED_MS = 4 * 60 * 60 * 1000;
+/** Hard stop for a pathological timer loop; at the 30 s cap this far exceeds
+ *  the elapsed budget, so it is a safety valve rather than the real limit. */
+const RECONNECT_MAX_ATTEMPTS = 1_000;
 
-/** Exponential backoff delays (ms) for each reconnect attempt */
-const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
+/**
+ * Silence (ms) after which an open stream is treated as dead even if the
+ * browser never fired `onerror` — the failure mode behind an idle-socket or
+ * proxy drop. Any frame (data or keepalive) resets it. This is a backstop, not
+ * the primary detector: `onerror` and the recovery hook's server resync usually
+ * get there first. A server-side heartbeat would make it exact; until then a
+ * genuinely silent stream is recycled at most this often.
+ */
+export const SSE_LIVENESS_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * Compute the backoff delay for an attempt (1-based).
+ * Exponential from `RECONNECT_BASE_DELAY_MS`, capped at `RECONNECT_MAX_DELAY_MS`,
+ * with ±25% jitter so a fleet of tabs does not reconnect in lockstep.
+ */
+export const computeReconnectDelay = (
+  attempt: number,
+  random: () => number = Math.random,
+): number => {
+  const exponent = Math.max(0, attempt - 1);
+  const exponential = RECONNECT_BASE_DELAY_MS * Math.pow(2, exponent);
+  const capped = Math.min(exponential, RECONNECT_MAX_DELAY_MS);
+  const jitter = 1 + RECONNECT_JITTER_RATIO * (random() * 2 - 1);
+  const jittered = capped * jitter;
+  // The floor is a sanity bound, not the base delay: jitter may legitimately
+  // make the first retry come sooner than the base.
+  return Math.max(250, Math.min(RECONNECT_MAX_DELAY_MS, Math.round(jittered)));
+};
 
 /**
  * Identity for an SSE connection, so the server can say *who* is subscribed.
@@ -266,7 +333,25 @@ const tabInstanceId = (): string => {
   }
 };
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onInterrupted, onRetry, onCompaction, onShell, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({
+  reactory,
+  onToken,
+  onReasoning,
+  onMessage,
+  onError,
+  onToolCall,
+  onToolIterationLimit,
+  onInterrupted,
+  onRetry,
+  onCompaction,
+  onShell,
+  onReconnecting,
+  onReconnected,
+  onReconnectFailed,
+  onStreamActivity,
+  onHeartbeat,
+  sessionLogger,
+}: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -314,6 +399,8 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onReconnectedRef.current = onReconnected;
   onReconnectFailedRef.current = onReconnectFailed;
   onStreamActivityRef.current = onStreamActivity;
+  const onHeartbeatRef = React.useRef(onHeartbeat);
+  onHeartbeatRef.current = onHeartbeat;
 
   // Reconnection state refs
   const lastConnectOptsRef = React.useRef<{
@@ -323,9 +410,15 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const hasCompletedRef = React.useRef<boolean>(false);
   const reconnectTimerRef = React.useRef<number | null>(null);
   const reconnectAttemptsRef = React.useRef<number>(0);
-  // Refs to latest reconnect functions to break circular deps and prevent stale closures
+  /** Start of the current run of reconnect attempts — the budget is elapsed time. */
+  const reconnectStartedAtRef = React.useRef<number | null>(null);
+  /** Backstop for a stream that dies without firing `onerror`. */
+  const livenessTimerRef = React.useRef<number | null>(null);
+  // Refs to the latest reconnect functions, to break circular deps and prevent
+  // stale closures.
   const reconnectNowRef = React.useRef<() => void>(() => {});
   const attemptReconnectRef = React.useRef<() => void>(() => {});
+  const noteFrameRef = React.useRef<() => void>(() => {});
 
   // Token drip-feed queue: words waiting to be emitted
   const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
@@ -432,6 +525,9 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     // agent-busy state mid-run.
     if (typeof event?.data !== 'string') return;
 
+    // Any frame proves the socket is alive: content, keepalive, or completion.
+    noteFrameRef.current();
+
     try {
       const data = JSON.parse(event.data);
 
@@ -458,6 +554,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
         }
         case 'complete': {
           hasCompletedRef.current = true;
+          clearLivenessTimer();
           sessionLogger?.info('SSE complete event received', { finishReason: (data as CompletionStreamingEvent).data?.finishReason, contentLength: (data as CompletionStreamingEvent).data?.content?.length || 0 }, 'useSSE');
 
           // If the drip queue is still running, flush all remaining segments
@@ -557,6 +654,13 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           }
           break;
         }
+        case 'heartbeat':
+        case 'keepalive': {
+          // Transport keepalive: proves the stream is alive without claiming the
+          // model produced anything.
+          if (onHeartbeatRef.current) onHeartbeatRef.current();
+          break;
+        }
         default:
           reactory.debug('useSSE: unknown event', data.type);
       }
@@ -567,11 +671,64 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     }
   }, [enqueueTokenDrip, reactory]);
 
+  /** Stop the dead-stream backstop. */
+  const clearLivenessTimer = () => {
+    if (livenessTimerRef.current !== null) {
+      clearTimeout(livenessTimerRef.current);
+      livenessTimerRef.current = null;
+    }
+  };
+
   /**
-   * Schedule a reconnect with exponential backoff. Guards against:
-   * - Natural stream completions (hasCompletedRef)
-   * - Expired session tokens
-   * - Exceeding MAX_RECONNECT_ATTEMPTS
+   * Note that the transport produced *something* — a content frame, a keepalive,
+   * or a connection open — and re-arm the dead-stream backstop.
+   *
+   * The backstop exists because an SSE connection can die without the browser
+   * ever firing `onerror`: an idle socket reaped by a proxy, or a machine that
+   * slept. `SSE_LIVENESS_TIMEOUT_MS` of total silence on a stream we believe is
+   * open is treated as dead — the stream is closed and the reconnect policy
+   * takes over, rather than watching a socket that will never deliver again.
+   * A server-side heartbeat makes this precise; without one it is a backstop.
+   */
+  const noteFrame = () => {
+    if (hasCompletedRef.current) return;
+    clearLivenessTimer();
+    livenessTimerRef.current = window.setTimeout(() => {
+      livenessTimerRef.current = null;
+      if (hasCompletedRef.current) return;
+      sessionLogger?.warn?.('SSE stream silent; recycling connection', { silenceMs: SSE_LIVENESS_TIMEOUT_MS }, 'useSSE');
+      reactory.log('useSSE: stream silent, recycling connection', 'warning');
+      setConnected(false);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      attemptReconnectRef.current();
+    }, SSE_LIVENESS_TIMEOUT_MS);
+  };
+  noteFrameRef.current = noteFrame;
+
+  /**
+   * Declare the transport lost: stop retrying, surface the failure to the
+   * consumer (which reconciles from the server), and leave the connect options
+   * in place so `rearm()` can revive the stream on focus.
+   */
+  const giveUp = (nextAttempt: number) => {
+    reconnectAttemptsRef.current = 0;
+    reconnectStartedAtRef.current = null;
+    clearLivenessTimer();
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
+    if (onReconnectFailedRef.current) onReconnectFailedRef.current(nextAttempt);
+  };
+
+  /**
+   * Schedule a reconnect.
+   *
+   * The budget is elapsed time, not an attempt count: a turn can legitimately
+   * run for hours, and the transport must not declare it lost after 31 seconds.
+   * Delays are exponential with jitter and capped per delay, so a long outage
+   * costs one connect attempt every ≤30 s.
    */
   const attemptReconnect = () => {
     if (hasCompletedRef.current) return; // Natural server close — not an error
@@ -580,36 +737,66 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     const expiry = lastConnectOptsRef.current.expiry;
     if (expiry && new Date() >= expiry) {
       sessionLogger?.error('SSE reconnect aborted: session token expired', { attempts: reconnectAttemptsRef.current }, 'useSSE');
-      setIsReconnecting(false);
-      if (onReconnectFailedRef.current) onReconnectFailedRef.current(reconnectAttemptsRef.current);
+      giveUp(reconnectAttemptsRef.current);
       if (onErrorRef.current) onErrorRef.current({ message: 'Session token has expired', type: 'SESSION_EXPIRED' });
       return;
     }
 
+    if (reconnectStartedAtRef.current === null) reconnectStartedAtRef.current = Date.now();
+    const elapsedMs = Date.now() - reconnectStartedAtRef.current;
     const nextAttempt = reconnectAttemptsRef.current + 1;
-    if (nextAttempt > MAX_RECONNECT_ATTEMPTS) {
-      reconnectAttemptsRef.current = 0;
-      setIsReconnecting(false);
-      setReconnectAttempt(0);
-      if (onReconnectFailedRef.current) onReconnectFailedRef.current(MAX_RECONNECT_ATTEMPTS);
+
+    if (elapsedMs >= RECONNECT_MAX_ELAPSED_MS || nextAttempt > RECONNECT_MAX_ATTEMPTS) {
+      sessionLogger?.error('SSE reconnect budget exhausted', { attempts: nextAttempt - 1, elapsedMs, budgetMs: RECONNECT_MAX_ELAPSED_MS }, 'useSSE');
+      giveUp(nextAttempt - 1);
       if (onErrorRef.current) onErrorRef.current({ message: 'Streaming connection error', type: 'SSE_ERROR' });
       return;
     }
 
     reconnectAttemptsRef.current = nextAttempt;
-    const delay = RECONNECT_BACKOFF_MS[Math.min(nextAttempt - 1, RECONNECT_BACKOFF_MS.length - 1)];
-    sessionLogger?.info(`SSE reconnecting (attempt ${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})`, { attempt: nextAttempt, maxAttempts: MAX_RECONNECT_ATTEMPTS, delayMs: delay }, 'useSSE');
+    const delay = computeReconnectDelay(nextAttempt);
+    sessionLogger?.info(`SSE reconnecting (attempt ${nextAttempt})`, { attempt: nextAttempt, elapsedMs, delayMs: delay, budgetMs: RECONNECT_MAX_ELAPSED_MS }, 'useSSE');
     setIsReconnecting(true);
     setReconnectAttempt(nextAttempt);
-    if (onReconnectingRef.current) onReconnectingRef.current(nextAttempt, MAX_RECONNECT_ATTEMPTS, delay);
+    if (onReconnectingRef.current) onReconnectingRef.current(nextAttempt, RECONNECT_MAX_ATTEMPTS, delay);
 
     reconnectTimerRef.current = window.setTimeout(() => {
       reconnectTimerRef.current = null;
       if (!hasCompletedRef.current && lastConnectOptsRef.current) {
-        reactory.log(`useSSE: reconnecting (attempt ${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        reactory.log(`useSSE: reconnecting (attempt ${nextAttempt})`, 'info');
         reconnectNowRef.current();
       }
     }, delay);
+  };
+
+  /**
+   * Bind the stream channels.
+   *
+   * Shared by `connect` and `reconnectNow` so the two paths cannot drift — the
+   * keepalive channels in particular must be bound on both, or a reconnected
+   * stream silently loses its only liveness proof and falls back to the
+   * dead-stream backstop.
+   */
+  const addStreamListeners = (es: EventSource) => {
+    es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('reasoning', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
+    // Keepalives are handled directly rather than through `handleMessage`: they
+    // may carry a bare token (`ping`, `:keepalive` is invisible to EventSource)
+    // and must never be parsed as a streaming event.
+    const onKeepalive = () => {
+      noteFrame();
+      if (onHeartbeatRef.current) onHeartbeatRef.current();
+    };
+    es.addEventListener('heartbeat', onKeepalive);
+    es.addEventListener('keepalive', onKeepalive);
+    es.onmessage = (event) => handleMessage(event);
   };
 
   /**
@@ -629,29 +816,24 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       const es = new EventSource(streamUrl(opts.endpoint));
 
       es.onopen = () => {
-        reactory.log(`useSSE: reconnected (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        reactory.log(`useSSE: reconnected (attempt ${reconnectAttemptsRef.current})`, 'info');
         sessionLogger?.info('SSE reconnected successfully', { previousAttempts: reconnectAttemptsRef.current }, 'useSSE');
         reconnectAttemptsRef.current = 0;
+        reconnectStartedAtRef.current = null;
         setIsReconnecting(false);
         setReconnectAttempt(0);
         setConnected(true);
+        noteFrame();
+        if (onHeartbeatRef.current) onHeartbeatRef.current();
         if (onReconnectedRef.current) onReconnectedRef.current();
       };
 
-      es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('reasoning', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
-      es.onmessage = (event) => handleMessage(event);
+      addStreamListeners(es);
 
       es.onerror = () => {
         setIsStreaming(false);
         setConnected(false);
+        clearLivenessTimer();
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;
@@ -689,6 +871,8 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     lastConnectOptsRef.current = { endpoint, sessionId, token, headers, expiry, onConnectionOpened };
     hasCompletedRef.current = false;
     reconnectAttemptsRef.current = 0;
+    reconnectStartedAtRef.current = null;
+    clearLivenessTimer();
     if (reconnectTimerRef.current !== null) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
@@ -715,33 +899,25 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.onopen = () => {
         sessionLogger?.info('SSE connection opened', { sessionId }, 'useSSE');
         reactory.log('useSSE: connected', 'info');
+        noteFrame();
+        if (onHeartbeatRef.current) onHeartbeatRef.current();
         if (onConnectionOpened) onConnectionOpened();
       };
 
-      // Listen for custom events with specific types
-      es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('reasoning', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
-      es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
-
-      // Also listen for generic message events as fallback
-      es.onmessage = (event) => handleMessage(event);
+      addStreamListeners(es);
 
       es.onerror = (err) => {
         sessionLogger?.error('SSE connection error', { sessionId }, 'useSSE');
         reactory.error('useSSE: EventSource error', err);
         setIsStreaming(false);
         setConnected(false);
+        clearLivenessTimer();
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;
         }
-        // Attempt automatic reconnection with backoff
+        // Attempt automatic reconnection. The budget is elapsed time, not a
+        // fixed number of attempts — see RECONNECT_MAX_ELAPSED_MS.
         attemptReconnectRef.current();
       };
 
@@ -764,6 +940,8 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       reconnectTimerRef.current = null;
     }
     reconnectAttemptsRef.current = 0;
+    reconnectStartedAtRef.current = null;
+    clearLivenessTimer();
     setIsReconnecting(false);
     setReconnectAttempt(0);
 
@@ -791,9 +969,54 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     setConnected(false);
   }, []);
 
+  /**
+   * Revive the transport on demand — used on focus/visibilitychange so a tab
+   * that slept through a stream drop (and whose transport gave up) recovers
+   * without a reload.
+   *
+   *  - no stream was ever opened, or it completed naturally → nothing to do;
+   *  - a retry is already scheduled → skip the remaining backoff, try now;
+   *  - a stream is open and healthy → leave it alone (focus must not churn).
+   */
+  const rearm = React.useCallback((): boolean => {
+    const opts = lastConnectOptsRef.current;
+    if (!opts || hasCompletedRef.current) return false;
+
+    const openAndHealthy = eventSourceRef.current !== null
+      && eventSourceRef.current.readyState !== 2; // EventSource.CLOSED
+
+    if (openAndHealthy && reconnectTimerRef.current === null) return false;
+
+    if (reconnectTimerRef.current !== null) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+
+    // The user is back: start a fresh budget rather than resuming a clock that
+    // expired while the machine was asleep.
+    reconnectAttemptsRef.current = 1;
+    reconnectStartedAtRef.current = Date.now();
+    setIsReconnecting(true);
+    setReconnectAttempt(1);
+    if (onReconnectingRef.current) onReconnectingRef.current(1, RECONNECT_MAX_ATTEMPTS, 0);
+    sessionLogger?.info('SSE transport re-armed on demand', { sessionId: opts.sessionId }, 'useSSE');
+    reconnectNowRef.current();
+    return true;
+  }, []);
+
   React.useEffect(() => () => disconnect(), [disconnect]);
 
-  return { connect, disconnect, isStreaming, currentStreamingMessage, connected, eventSource: eventSourceRef.current, isReconnecting, reconnectAttempt };
+  return {
+    connect,
+    disconnect,
+    rearm,
+    isStreaming,
+    currentStreamingMessage,
+    connected,
+    eventSource: eventSourceRef.current,
+    isReconnecting,
+    reconnectAttempt,
+  };
 };
 
 export default useSSE;

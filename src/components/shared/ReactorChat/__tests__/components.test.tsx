@@ -201,6 +201,13 @@ describe('NetworkStatusIndicator', () => {
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
+  it('does not claim an attempt ceiling when the reconnect budget is time-based', () => {
+    // `useSSE` retries for hours, so the pill must not show "3/5".
+    render_('reconnecting', { reconnectAttempt: 7, maxAttempts: 0 });
+    expect(screen.getByText('Reconnecting…')).toBeInTheDocument();
+    expect(screen.queryByText(/\/\d/)).toBeNull();
+  });
+
   it('renders error state with Retry button', () => {
     render_('error');
     expect(screen.getByText('Connection lost')).toBeInTheDocument();

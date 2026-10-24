@@ -55,11 +55,20 @@ const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
   let iconEl: React.ReactNode = (
     <CircularProgress size={12} color="inherit" sx={{ mr: 0.75, flexShrink: 0 }} />
   );
-  let label = il8n?.t('reactor.network.reconnecting', {
-    defaultValue: `Reconnecting… (${reconnectAttempt}/${maxAttempts})`,
-    attempt: reconnectAttempt,
-    max: maxAttempts,
-  });
+  // The reconnect budget is bounded by time, not attempts (see useSSE's
+  // RECONNECT_MAX_ELAPSED_MS), so "3/5" becomes a lie as soon as the client
+  // keeps trying past the fifth attempt. Only show a ceiling when there is one.
+  const hasAttemptCeiling = Number.isFinite(maxAttempts) && maxAttempts > 0;
+  let label = hasAttemptCeiling
+    ? il8n?.t('reactor.network.reconnecting', {
+        defaultValue: `Reconnecting… (${reconnectAttempt}/${maxAttempts})`,
+        attempt: reconnectAttempt,
+        max: maxAttempts,
+      })
+    : il8n?.t('reactor.network.reconnectingAttempt', {
+        defaultValue: 'Reconnecting…',
+        attempt: reconnectAttempt,
+      });
 
   if (showReconnected) {
     bgColor = 'success.main';
