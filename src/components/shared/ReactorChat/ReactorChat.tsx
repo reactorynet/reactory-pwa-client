@@ -2946,6 +2946,7 @@ export default (props) => {
           chatStatusInfo.status === 'streaming' ? '#2979ff' :
           chatStatusInfo.status === 'executing_tools' ? '#ff9100' :
           chatStatusInfo.status === 'waiting_focus' ? '#ff9800' :
+          chatStatusInfo.status === 'awaiting_tools' ? '#ff9800' :
           '#4caf50'
         }
         mainBadgeContent={

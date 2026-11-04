@@ -239,7 +239,18 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
          
   }, [macros]);
 
-  const executeMacro = useCallback(async (macro: MacroComponentDefinition<unknown>, args?: any, calledBy?: string, callId?: string) => {
+  const executeMacro = useCallback(async (
+    macro: MacroComponentDefinition<unknown>,
+    args?: any,
+    calledBy?: string,
+    callId?: string,
+    options?: { reportResult?: boolean },
+  ) => {
+    // A batch caller submits every result itself, in one call, so its results are
+    // persisted before the continuation it dispatches. Suppressing the per-call
+    // report is what makes that ordering possible (and avoids a second
+    // submission of the same toolCallId, which the server rejects).
+    const reportResult = options?.reportResult !== false;
     if (!macro) {
       sessionLogger?.error('executeMacro called without macro argument', { calledBy, callId }, 'useMacros');
       if (onMacroCallError) {
@@ -324,20 +335,27 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         // as part of a tool call (callId present). This persists the result
         // on the server so the conversation history stays consistent and the
         // AI provider can see the tool output.
+        // Awaited on purpose. The result must be persisted BEFORE the caller
+        // dispatches the continuation that resumes the paused turn: two
+        // concurrent mutations race, and a continuation that wins the race
+        // resumes a turn whose result is still outstanding — which is exactly
+        // the placeholder-result failure this whole path exists to prevent.
         const isClientSide = macro.runat === 'client' || macro.runat === null || macro.runat === undefined;
-        if (isClientSide && callId && onClientToolComplete) {
+        if (isClientSide && callId && onClientToolComplete && reportResult) {
           const toolName = macro.alias || macro.name;
           const resultContent = result?.content
             || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
             || `Client tool "${toolName}" executed successfully (no content returned).`;
           sessionLogger?.info(`Completing client tool call loop: ${toolName} (callId: ${callId})`, {}, 'useMacros');
-          onClientToolComplete([{
-            toolCallId: callId,
-            toolName,
-            result: resultContent,
-          }], false).catch((err) => {
+          try {
+            await onClientToolComplete([{
+              toolCallId: callId,
+              toolName,
+              result: resultContent,
+            }], false);
+          } catch (err: any) {
             sessionLogger?.error(`Failed to complete client tool call: ${err?.message || String(err)}`, { callId, toolName }, 'useMacros');
-          });
+          }
         }
 
         return result;
@@ -346,17 +364,28 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         reactory.error(`Error executing macro: ${macro.name}`, error);
         if (onMacroCallError) onMacroCallError(error, macro, chatState);
 
-        // Report client-side tool errors to the server as well
+        // Report client-side tool errors to the server as well (awaited, for the
+        // same ordering reason as the success path).
         const isClientSide = macro.runat === 'client' || macro.runat === null || macro.runat === undefined;
-        if (isClientSide && callId && onClientToolComplete) {
+        if (isClientSide && callId && onClientToolComplete && reportResult) {
           const toolName = macro.alias || macro.name;
-          onClientToolComplete([{
-            toolCallId: callId,
-            toolName,
-            isError: true,
-            error: error?.message || String(error),
-          }], false).catch(() => {});
+          try {
+            await onClientToolComplete([{
+              toolCallId: callId,
+              toolName,
+              isError: true,
+              error: error?.message || String(error),
+            }], false);
+          } catch {
+            // Reported failure of a failure report: the batch caller or the
+            // server's turn-boundary reconciler will answer the call.
+          }
         }
+
+        // A batch caller owns submission, so it needs to know the call did not
+        // produce a result. The legacy per-call path keeps returning null so
+        // existing callers (prompt approval, the AUTO loop) are unaffected.
+        if (!reportResult) throw error;
 
         return null;
       }

@@ -14,6 +14,17 @@ export enum StreamingEventType {
   COMPACTION = 'compaction',
   SHELL = 'shell',
   START= 'start',
+  /**
+   * The turn is PAUSED, not finished: a client-routed tool call was forwarded
+   * and its result is still outstanding.
+   *
+   * Emitted where the server used to emit `COMPLETE` while a client tool was
+   * unanswered. It must do the terminal *UI* work `COMPLETE` did — stop the
+   * streaming indicator, finalise the buffered assistant text — without
+   * claiming the turn is over. The turn resumes when the browser reports the
+   * result through `ReactorCompleteClientToolCalls`.
+   */
+  AWAITING_CLIENT_TOOL = 'awaiting_client_tool',
 }
 
 /**
@@ -170,6 +181,21 @@ export interface CompactionStreamingEvent extends StreamingEventBase {
   };
 }
 
+/**
+ * The turn paused on an outstanding client-tool result.
+ *
+ * Carries the calls the browser owes a result for, so the client resumes exactly
+ * those calls instead of inferring them from the transcript. Shape mirrors the
+ * server's `AwaitingClientToolStreamingEvent`.
+ */
+export interface AwaitingClientToolStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.AWAITING_CLIENT_TOOL;
+  data: {
+    /** The calls the turn is paused on — the browser must run these and report back. */
+    pendingToolCalls: Array<{ toolCallId: string; toolName: string }>;
+  };
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
@@ -183,6 +209,12 @@ export interface UseSSEOptions {
   onCompaction?: (event: CompactionStreamingEvent) => void;
   /** Called for each shell stream event (stdout/stderr/lifecycle from a shell process) */
   onShell?: (event: ShellStreamingEvent) => void;
+  /**
+   * Called when the server pauses the turn on an outstanding client-tool
+   * result. The consumer must execute (or explicitly fail) the listed calls and
+   * report them back; it must not treat the turn as finished.
+   */
+  onAwaitingClientTool?: (event: AwaitingClientToolStreamingEvent) => void;
   /** Called when the SSE connection drops and a reconnect attempt begins */
   onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
   /** Called when a dropped SSE connection is successfully re-established */
@@ -385,6 +417,7 @@ const useSSE = ({
   onRetry,
   onCompaction,
   onShell,
+  onAwaitingClientTool,
   onReconnecting,
   onReconnected,
   onReconnectFailed,
@@ -426,6 +459,7 @@ const useSSE = ({
   const onRetryRef = React.useRef(onRetry);
   const onCompactionRef = React.useRef(onCompaction);
   const onShellRef = React.useRef(onShell);
+  const onAwaitingClientToolRef = React.useRef(onAwaitingClientTool);
   const onReconnectingRef = React.useRef(onReconnecting);
   const onReconnectedRef = React.useRef(onReconnected);
   const onReconnectFailedRef = React.useRef(onReconnectFailed);
@@ -440,6 +474,7 @@ const useSSE = ({
   onRetryRef.current = onRetry;
   onCompactionRef.current = onCompaction;
   onShellRef.current = onShell;
+  onAwaitingClientToolRef.current = onAwaitingClientTool;
   const onStreamActivityRef = React.useRef(onStreamActivity);
   onReconnectingRef.current = onReconnecting;
   onReconnectedRef.current = onReconnected;
@@ -586,7 +621,16 @@ const useSSE = ({
 
       // Notify consumer of server-side activity for any data-bearing event.
       // This allows the consumer to re-activate busy indicators on reconnect.
-      if (data.type === 'start' || data.type === 'token' || data.type === 'tool_call' || data.type === 'reasoning') {
+      // `awaiting_client_tool` belongs here too: the turn is paused, not ended,
+      // so it is still activity (it keeps the busy indicator honest and stops a
+      // stall timer from treating the pause as silence).
+      if (
+        data.type === 'start'
+        || data.type === 'token'
+        || data.type === 'tool_call'
+        || data.type === 'reasoning'
+        || data.type === 'awaiting_client_tool'
+      ) {
         if (onStreamActivityRef.current) onStreamActivityRef.current();
       }
 
@@ -700,6 +744,53 @@ const useSSE = ({
           const shellEvt = data as ShellStreamingEvent;
           if (onShellRef.current) {
             onShellRef.current(shellEvt);
+          }
+          break;
+        }
+        case 'awaiting_client_tool': {
+          const awaitingEvt = data as AwaitingClientToolStreamingEvent;
+          const pending = awaitingEvt.data?.pendingToolCalls ?? [];
+
+          // A call is blocking the turn: this is not a routine unknown event.
+          sessionLogger?.warn(
+            `SSE awaiting_client_tool: turn paused, ${pending.length} client tool result(s) outstanding`,
+            { pendingToolCalls: pending, sessionId: awaitingEvt.sessionId },
+            'useSSE',
+          );
+          reactory.log(
+            `useSSE: turn paused awaiting client tool result(s): ${pending.map((c) => `${c.toolName} (${c.toolCallId})`).join(', ') || '(none listed)'}`,
+            { pendingToolCalls: pending },
+            'warning',
+          );
+
+          // No `complete` is coming for this turn, so do the terminal UI work
+          // here: stop the streaming indicator and flush any drip-fed content
+          // still queued, so the assistant message reflects everything the
+          // model produced before the pause. `hasCompletedRef` deliberately
+          // stays false — the turn resumes server-side when the result arrives.
+          hasCompletedRef.current = false;
+          setIsStreaming(false);
+
+          if (dripTimerRef.current !== null) {
+            clearTimeout(dripTimerRef.current);
+            dripTimerRef.current = null;
+          }
+          const pendingQueue = tokenQueueRef.current;
+          tokenQueueRef.current = [];
+          for (const entry of pendingQueue) {
+            const remaining = entry.segments.join('');
+            if (remaining && onTokenRef.current) {
+              onTokenRef.current({
+                ...entry.template,
+                data: { ...entry.template.data, content: remaining, delta: remaining },
+              });
+            }
+          }
+          // Any deferred completion is stale: the turn is paused, not complete.
+          pendingCompleteRef.current = null;
+
+          if (onAwaitingClientToolRef.current) {
+            onAwaitingClientToolRef.current(awaitingEvt);
           }
           break;
         }
@@ -854,6 +945,15 @@ const useSSE = ({
     es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
     es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
     es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
+    // These three are dispatched by `handleMessage` below. Registering them is
+    // what makes an `event: <name>` frame reach that switch at all: the server
+    // sends named SSE events, so a `case` with no listener here is dead code.
+    // `awaiting_client_tool` in particular used to be missing on BOTH sides of
+    // this seam — no listener, no case — which is why a paused turn delivered
+    // no terminal event at all.
+    es.addEventListener('awaiting_client_tool', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('retry', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('interrupted', (event) => handleMessage(event as MessageEvent));
     // Keepalives are handled directly rather than through `handleMessage`: they
     // may carry a bare token (`ping`, `:keepalive` is invisible to EventSource)
     // and must never be parsed as a streaming event.

@@ -27,7 +27,11 @@ export default function useChatStatus({
 }: UseChatStatusParams): ChatStatusInfo {
   return useMemo(() => {
     if (waitingClientToolCount > 0) {
-      return { status: 'waiting_focus' as const, label: 'Waiting for focus...', icon: 'priority_high', color: 'warning.main' };
+      // The turn is paused because the server is waiting on a client tool
+      // result. This is deliberately NOT "waiting for focus": execution no
+      // longer depends on the window having focus, and telling the user to
+      // focus the window would blame them for a pause the client owns.
+      return { status: 'awaiting_tools' as const, label: 'Waiting for tool result…', icon: 'hourglass_top', color: 'warning.main' };
     }
     if (pendingToolCallResume) {
       return { status: 'pending_resume' as const, label: 'Pending tool calls', icon: 'history', color: 'warning.main' };
@@ -45,5 +49,5 @@ export default function useChatStatus({
       return { status: 'thinking' as const, label: 'Thinking...', icon: 'psychology', color: 'primary.main' };
     }
     return { status: 'idle' as const, label: 'Ready', icon: 'check_circle', color: 'success.main' };
-  }, [busy, isStreaming, toolIterationLimitInfo, pendingToolCallResume, executingToolCount]);
+  }, [busy, isStreaming, toolIterationLimitInfo, pendingToolCallResume, executingToolCount, waitingClientToolCount]);
 }
