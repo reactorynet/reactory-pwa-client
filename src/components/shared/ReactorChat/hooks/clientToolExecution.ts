@@ -1,15 +1,16 @@
-import { MacroComponentDefinition } from '../types';
+import { MacroComponentDefinition, ToolApprovalMode } from '../types';
 
 /**
  * Event-driven execution of client-routed tool calls.
  *
  * WHY THIS EXISTS
  * ---------------
- * A client-side tool call is not optional work. The server forwards it, pauses
- * the turn and blocks on the result (45 s by default, `REACTOR_CLIENT_TOOL_TIMEOUT_MS`).
- * Until it arrives, nothing in the conversation progresses; when it never
- * arrives, the server synthesises a placeholder result and the model is told a
- * tool it asked for produced nothing.
+ * A client-side tool call is not optional work *once the server has paused on
+ * it*. The server forwards the call, pauses the turn and blocks on the result
+ * (45 s by default, `REACTOR_CLIENT_TOOL_TIMEOUT_MS`). Until it arrives, nothing
+ * in the conversation progresses; when it never arrives, the server synthesises
+ * a placeholder result and the model is told a tool it asked for produced
+ * nothing.
  *
  * The client used to gate that execution on `document.hasFocus()` — an *OS
  * window focus* check — and queue the call until the window was refocused. A
@@ -18,15 +19,21 @@ import { MacroComponentDefinition } from '../types';
  * regained focus in the same page lifetime. That is a correctness failure driven
  * by a UI heuristic.
  *
- * `hasFocus()` is a reasonable gate for "is it safe to start an unprompted side
- * effect". It is the wrong gate for "should I answer a call the server is
- * already blocked on". Focus is therefore *observed and logged* here, never
- * consulted before executing: every call handed to this module gets exactly one
- * outcome — a result, or an explicit structured error naming the tool.
+ * WHAT THIS MODULE DELIBERATELY DOES NOT DO
+ * -----------------------------------------
+ * It does not decide *whether* a call should run without approval. That decision
+ * belongs to the caller, because it depends on the session's tool-approval mode
+ * (`shouldAdmitClientToolCallToBatch` below expresses the rule). In
+ * PROMPT / SAFE_AUTO / PLAN the same `tool_call` frame still has to go through
+ * the approval prompt, and executing it here would run the tool unapproved — and
+ * then again when the user approved it.
  *
- * This module is deliberately free of React and of transport details so the
- * "unfocused still reports" rule can be asserted directly, with the focus state
- * faked, instead of depending on the test runner's window.
+ * SUBMISSION ORDER
+ * ----------------
+ * This module submits the whole batch itself (`reportResult: false` is passed to
+ * the executor, so nothing is reported twice) and awaits that submission before
+ * it dispatches the continuation. Two concurrent mutations race, and a
+ * continuation that wins resumes a turn whose result is still outstanding.
  */
 
 /** The minimum a call needs for this module to answer it. */
@@ -54,22 +61,33 @@ export interface ClientToolExecutionDeps {
   /**
    * Run a client macro.
    *
-   * Contract, matching `useMacros`: the executor reports its own result through
-   * `onClientToolComplete` (so the result is cached before it is submitted), and
-   * swallows the error after reporting it as `isError`. This module still
-   * handles a thrown error so a broken executor cannot leave a call unanswered.
+   * Called with `{ reportResult: false }`: this module submits a batch
+   * submission for the whole set, so the executor must not report the same call
+   * as well. A thrown error is turned into an explicit error result — a broken
+   * executor must not leave a call unanswered.
    */
   executeMacro: (
     macro: MacroComponentDefinition<unknown>,
     args: any,
     calledBy: 'auto' | 'user',
     callId: string,
+    options?: { reportResult?: boolean },
   ) => Promise<any>;
-  /** Submit results / request the continuation. */
+  /** Submit results / request the continuation. Must reject on failure. */
   reportResults: (
     results: ClientToolResultSubmission[],
     continueProcessing: boolean,
   ) => Promise<any>;
+  /**
+   * Whether to ask the server to resume after reporting.
+   *
+   * Must be `false` unless the server is actually paused on this batch:
+   * `awaiting_client_tool` is the authoritative signal, and AUTO mode is the
+   * only mode in which the send path pauses on a client tool. A continuation
+   * for a turn that was never paused resumes nothing and can duplicate a
+   * provider turn.
+   */
+  requestContinuation?: boolean;
   /**
    * OS window focus, for the log line only.
    *
@@ -100,9 +118,11 @@ export interface ClientToolExecutionSummary {
   failed: number;
   /** Calls with no resolvable client macro — answered with an explicit error. */
   missing: number;
-  /** Error results submitted to the server. */
-  reportedErrors: number;
-  /** Whether a continuation was requested for the batch. */
+  /** Results (successes and errors) accepted by the server. */
+  reported: number;
+  /** Whether the result submission was rejected. */
+  reportFailed: boolean;
+  /** Whether a continuation was requested AND accepted. */
   continued: boolean;
   /** Per-call outcome, for updating the transcript without guessing. */
   outcomes: ClientToolCallOutcome[];
@@ -120,16 +140,61 @@ export const isClientRoutedMacro = (
 ): boolean => !!macro && (macro.runat === 'client' || macro.runat === null || macro.runat === undefined);
 
 /**
+ * Is this call the implicit batch's to run?
+ *
+ * A `tool_call` frame is streamed for every tool the model emits, *before* the
+ * server executes anything and irrespective of approval mode. So the frame alone
+ * proves nothing about whether the server is waiting on the client. Two
+ * conditions make a call ours:
+ *
+ *  - **The server announced it as paused** (`awaiting_client_tool`). Authoritative:
+ *    the turn is blocked on exactly these calls, and answering is mandatory.
+ *  - **The session is in AUTO mode.** AUTO is the only mode whose send path
+ *    forwards client tools instead of asking the user, so a forwarded client call
+ *    there is ours to run.
+ *
+ * In PROMPT / SAFE_AUTO / PLAN the same call must stay on the approval path
+ * (`processToolCallsRef` → `ToolPrompt`). Running it here would execute the tool
+ * without consent *and* again when the user approves it — twice for a
+ * side-effecting macro such as `amq`, `login` or `host_field_update`.
+ */
+export const shouldAdmitClientToolCallToBatch = (params: {
+  macro: MacroComponentDefinition<unknown> | null | undefined;
+  toolApprovalMode?: string | null;
+  announcedByServer?: boolean;
+}): boolean => {
+  if (!isClientRoutedMacro(params.macro)) return false;
+  if (params.announcedByServer === true) return true;
+  return params.toolApprovalMode === ToolApprovalMode.AUTO;
+};
+
+/**
+ * May we ask the server to resume after reporting?
+ *
+ * Only when it is actually paused: an announcement, or AUTO mode, where the send
+ * path pauses on client tools by construction. Anything else would despatch a
+ * continuation for a turn that is still running server-side (PROMPT waits for
+ * the approval round-trip, so it is not paused at this point).
+ */
+export const shouldResumePausedTurn = (params: {
+  announcedByServer?: boolean;
+  toolApprovalMode?: string | null;
+}): boolean =>
+  params.announcedByServer === true || params.toolApprovalMode === ToolApprovalMode.AUTO;
+
+/** The string form of a macro result, matching what `useMacros` reports. */
+export const clientToolResultContent = (result: any, toolName: string): string =>
+  result?.content
+  || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+  || `Client tool "${toolName}" executed successfully (no content returned).`;
+
+/**
  * Execute a batch of client-routed tool calls and ensure every one is answered.
  *
- * The batch is executed as a unit and followed by exactly one continuation
- * request: reporting each call with `continueProcessing: true` would start one
- * provider turn per call, and the first of those turns would carry the still
- * unanswered sibling calls — the malformed-transcript failure this whole path
- * exists to prevent.
- *
- * Never throws: a failure to report is logged and returned in the summary, and
- * the server's deadline reconciler remains the backstop.
+ * Each call gets exactly one outcome — a result, or an explicit structured error
+ * naming the tool — and the batch produces at most one submission and at most one
+ * continuation. Never throws: reporting failures are logged and reported in the
+ * summary, and the server's deadline reconciler remains the backstop.
  */
 export const executeClientToolCalls = async (
   calls: ClientToolCallRef[],
@@ -139,7 +204,8 @@ export const executeClientToolCalls = async (
     executed: 0,
     failed: 0,
     missing: 0,
-    reportedErrors: 0,
+    reported: 0,
+    reportFailed: false,
     continued: false,
     outcomes: [],
   };
@@ -156,7 +222,7 @@ export const executeClientToolCalls = async (
   if (batch.length === 0) return summary;
 
   const focused = deps.isFocused ? deps.isFocused() : true;
-  const errorResults: ClientToolResultSubmission[] = [];
+  const submissions: ClientToolResultSubmission[] = [];
 
   for (const call of batch) {
     const meta = {
@@ -189,7 +255,7 @@ export const executeClientToolCalls = async (
         status: 'error',
         error: `Client macro not found: ${call.toolName}`,
       });
-      errorResults.push({
+      submissions.push({
         toolCallId: call.toolCallId,
         toolName: call.toolName,
         isError: true,
@@ -205,9 +271,16 @@ export const executeClientToolCalls = async (
     }
 
     try {
-      await deps.executeMacro(macro, call.args, 'auto', call.toolCallId);
+      const result = await deps.executeMacro(macro, call.args, 'auto', call.toolCallId, {
+        reportResult: false,
+      });
       summary.executed += 1;
       summary.outcomes.push({ toolCallId: call.toolCallId, status: 'success' });
+      submissions.push({
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        result: clientToolResultContent(result, call.toolName),
+      });
     } catch (error: any) {
       summary.failed += 1;
       summary.outcomes.push({
@@ -215,7 +288,7 @@ export const executeClientToolCalls = async (
         status: 'error',
         error: error?.message || String(error),
       });
-      errorResults.push({
+      submissions.push({
         toolCallId: call.toolCallId,
         toolName: call.toolName,
         isError: true,
@@ -228,30 +301,43 @@ export const executeClientToolCalls = async (
     }
   }
 
-  if (errorResults.length > 0) {
+  // One submission for the whole batch, awaited. This is what guarantees the
+  // results are persisted before the continuation below is despatched.
+  if (submissions.length > 0) {
     try {
-      await deps.reportResults(errorResults, false);
-      summary.reportedErrors = errorResults.length;
+      await deps.reportResults(submissions, false);
+      summary.reported = submissions.length;
     } catch (error: any) {
+      summary.reportFailed = true;
       deps.log?.error?.(
-        `Failed to report ${errorResults.length} client tool error result(s); the server will reconcile them at the turn boundary`,
+        `Failed to report ${submissions.length} client tool result(s); the server will reconcile them at the turn boundary`,
         { chatSessionId: deps.chatSessionId, error: error?.message || String(error) },
       );
     }
   }
 
-  // One continuation for the batch. `continueProcessing` with no results means
-  // "the results are already persisted — resume the turn".
-  try {
-    await deps.reportResults([], true);
-    summary.continued = true;
-  } catch (error: any) {
-    // Not retried here on purpose: a retry loop on a paused turn is how a client
-    // turns one failure into a storm. The server deadline is the backstop, and
-    // the replay path re-queries pending calls on the next reconnect/focus.
-    deps.log?.error?.(
-      'Failed to resume the turn after reporting client tool results; the pending-call reconciler will retry at the turn boundary',
-      { chatSessionId: deps.chatSessionId, error: error?.message || String(error) },
+  // One continuation for the batch, and only for a turn the server is paused on.
+  //
+  // Skipped when the submission failed: resuming a turn whose results did not
+  // land is the exact race that produces an unattributed result. Skipped when
+  // `requestContinuation` is false: a turn that was never paused must not be
+  // resumed. Not retried here on purpose — a retry loop on a paused turn is how
+  // a client turns one failure into a storm; the pending-call reconciler and the
+  // server deadline are the backstops.
+  if (deps.requestContinuation !== false && !summary.reportFailed) {
+    try {
+      await deps.reportResults([], true);
+      summary.continued = true;
+    } catch (error: any) {
+      deps.log?.error?.(
+        'Failed to resume the turn after reporting client tool results; the pending-call reconciler will retry at the turn boundary',
+        { chatSessionId: deps.chatSessionId, error: error?.message || String(error) },
+      );
+    }
+  } else if (deps.requestContinuation === false) {
+    deps.log?.info?.(
+      'Client tool results reported; no continuation requested because the server has not paused this turn',
+      { chatSessionId: deps.chatSessionId, toolCallIds: submissions.map((s) => s.toolCallId) },
     );
   }
 

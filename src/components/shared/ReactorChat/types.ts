@@ -593,8 +593,12 @@ export type ChatState = {
    */
   chats?: SubAgentSummary[]
   /**
-   * Client-side tool calls that are waiting for the chat window to gain focus
-   * before they can execute.
+   * The client-side tool calls the turn is currently paused on.
+   *
+   * This is the single authoritative view of the pause: it is written when
+   * `awaiting_client_tool` arrives (or when a call is admitted to the implicit
+   * batch) and cleared when the results have been reported or the turn ends. It
+   * is NOT a deferral queue — nothing waits for the window to gain focus.
    */
   waitingClientToolCalls?: WaitingClientToolCall[]
 }
@@ -683,7 +687,22 @@ export interface MacrosHookResults {
    * @param macroText 
    * @returns 
    */
-  executeMacro: (macro: MacroComponentDefinition<unknown>, args?: any, calledBy?: string, callId?: string) => Promise<UXChatMessage | null>
+  /**
+   * Execute a macro.
+   *
+   * `options.reportResult` (default `true`) controls whether a client-side tool
+   * result is submitted through `onClientToolComplete`. Set it to `false` when
+   * the caller submits a whole batch itself: one submission for the batch is
+   * both faster and the only way to guarantee the results are persisted before
+   * the continuation that depends on them is dispatched.
+   */
+  executeMacro: (
+    macro: MacroComponentDefinition<unknown>,
+    args?: any,
+    calledBy?: string,
+    callId?: string,
+    options?: { reportResult?: boolean },
+  ) => Promise<UXChatMessage | null>
 }
 
 export interface MacrosHookProps {
