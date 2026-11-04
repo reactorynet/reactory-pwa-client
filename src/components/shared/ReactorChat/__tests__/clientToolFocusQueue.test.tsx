@@ -23,10 +23,10 @@ describe('Client Tool Focus Queue & Status Indicators', () => {
       );
     }
 
-    it('returns waiting_focus status when waitingClientToolCount > 0', () => {
+    it('returns awaiting_tools status when waitingClientToolCount > 0', () => {
       render(
         <StatusHarness
-          busy={false}
+          busy
           isStreaming={false}
           toolIterationLimitInfo={null}
           pendingToolCallResume={false}
@@ -34,9 +34,12 @@ describe('Client Tool Focus Queue & Status Indicators', () => {
         />
       );
 
-      expect(screen.getByTestId('status-key')).toHaveTextContent('waiting_focus');
-      expect(screen.getByTestId('status-label')).toHaveTextContent('Waiting for focus...');
-      expect(screen.getByTestId('status-icon')).toHaveTextContent('priority_high');
+      // The turn is paused on a client tool result. "Waiting for focus" was the
+      // old wording, from when execution was deferred until the window was
+      // refocused — the client now answers regardless of focus.
+      expect(screen.getByTestId('status-key')).toHaveTextContent('awaiting_tools');
+      expect(screen.getByTestId('status-label')).toHaveTextContent('Waiting for tool result');
+      expect(screen.getByTestId('status-icon')).toHaveTextContent('hourglass_top');
     });
 
     it('returns idle status when waitingClientToolCount is 0 and idle', () => {

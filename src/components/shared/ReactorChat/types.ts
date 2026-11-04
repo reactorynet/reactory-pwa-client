@@ -138,6 +138,7 @@ export type ChatActivityStatus =
   | 'streaming'       // AI response is being streamed
   | 'executing_tools' // Tools are being executed
   | 'waiting_focus'   // Waiting for chat window focus before executing client tool(s)
+  | 'awaiting_tools'  // Turn paused: the server is blocked on a client tool result
   | 'paused'          // Paused at iteration limit, awaiting user decision
   | 'pending_resume'; // Loaded conversation with unfinished tool calls
 
