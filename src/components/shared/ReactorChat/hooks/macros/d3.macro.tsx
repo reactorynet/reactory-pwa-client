@@ -65,13 +65,26 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   // Normalise force-graph data: legacy { data: [...nodes], links: [...] } shape
   // → new { nodes, links } shape expected by D3ForceGraphData
   let chartData: unknown;
+  let dataWrapped = false;
   const parsedData = tryParseJSON(parsed.data) as any;
   if (chartType === 'force') {
     const nodesInput = parsedData?.nodes ?? parsedData ?? [];
     const linksInput = parsedData?.links ?? (tryParseJSON(parsed.links) as any) ?? [];
     chartData = { nodes: nodesInput, links: linksInput };
   } else {
-    chartData = parsedData ?? [];
+    // Cartesian/pie renderers index into `data` as an array (`data.map(...)`), so a
+    // single object throws inside the renderer and the try/catch there leaves the
+    // chart empty — a blank side-panel tab with no explanation. The tool schema
+    // advertises `data` as an object, so this shape is easy for a model to produce.
+    // Wrap it: one data point still draws, and `dataWrapped` tells the model what
+    // happened so it can correct on the next turn.
+    const raw = parsedData ?? [];
+    if (Array.isArray(raw) || typeof raw !== 'object' || raw === null) {
+      chartData = raw;
+    } else {
+      chartData = [raw];
+      dataWrapped = true;
+    }
   }
 
   const vizProps: Record<string, any> = {
@@ -82,7 +95,12 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     xKey:        parsed.xKey        ?? 'name',
     yKey:        parsed.yKey        ?? 'value',
     ...(parsed.y2Key     !== undefined ? { y2Key:        parsed.y2Key }        : {}),
-    ...(parsed.seriesKeys !== undefined ? { seriesKeys:  parsed.seriesKeys }   : {}),
+    // `data`, `margin` and `styling` are already JSON-parsed above because providers
+    // serialise freeform values as strings; these two were not, so a JSON-encoded
+    // array reached D3Chart as a *string*. That crashed the chart rather than
+    // rendering it (see `normaliseStringArray` there) — "the grouped series is not
+    // rendering" was this.
+    ...(parsed.seriesKeys !== undefined ? { seriesKeys:  tryParseJSON(parsed.seriesKeys) }   : {}),
     // Dimensions
     height:      parsed.height ?? 400,
     width:       parsed.width  ?? '100%',
@@ -95,7 +113,7 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     showTooltip: parsed.showTooltip ?? true,
     // Legend
     showLegend:  parsed.showLegend  ?? false,
-    ...(parsed.legendLabels !== undefined ? { legendLabels: parsed.legendLabels } : {}),
+    ...(parsed.legendLabels !== undefined ? { legendLabels: tryParseJSON(parsed.legendLabels) } : {}),
     // Colour scheme
     ...(parsed.colorScheme !== undefined ? { colorScheme: parsed.colorScheme }   : {}),
     // Margin override
@@ -124,7 +142,7 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     return {
       __typename: "ReactorChatMessage",
       role: "assistant",
-      content: `Updated visualization "${referenceId}" in the side panel.`,
+      content: `Updated visualization "${referenceId}" in the side panel.${dataWrapped ? ' Note: `data` was a single object rather than an array of points, so it was plotted as one data point — pass an array for a multi-point chart.' : ''}`,
       id: reactory.utils.uuid(),
       rating: 0,
       timestamp: new Date(),
@@ -148,7 +166,7 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   return {
     __typename: "ReactorChatMessage",
     role: "assistant",
-    content: `Opened D3 visualization **${vizTitle}** in the side panel (ref: \`${itemId}\`).`,
+    content: `Opened D3 visualization **${vizTitle}** in the side panel (ref: \`${itemId}\`).${dataWrapped ? ' Note: `data` was a single object rather than an array of points, so it was plotted as one data point — pass an array for a multi-point chart.' : ''}`,
     id: reactory.utils.uuid(),
     rating: 0,
     timestamp: new Date(),
