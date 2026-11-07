@@ -310,6 +310,20 @@ export default (props) => {
   const autoResume: boolean =
     props?.autoResume !== undefined ? props.autoResume === true : useCase === 'standalone';
 
+  /**
+   * Optional host override for the SSE dead-stream window (ms).
+   *
+   * Read from props — the same place `personaId` / `autoResume` come from — so a
+   * deployment can pin the window without editing `useChatFactory`. Undefined in
+   * normal operation, where the window is derived from the server's observed
+   * heartbeat cadence.
+   */
+  const sseLivenessTimeoutMs: number | undefined = (() => {
+    const raw = props?.sseLivenessTimeoutMs ?? props?.formData?.sseLivenessTimeoutMs;
+    const value = typeof raw === 'string' ? Number(raw) : raw;
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+  })();
+
   const chatFactory = useChatFactory({
     reactory,
     persona: selectedPersona,
@@ -320,6 +334,7 @@ export default (props) => {
     getProviderAuthOverride,
     useCase,
     edges: hostEdges,
+    sseLivenessTimeoutMs,
   });
 
 

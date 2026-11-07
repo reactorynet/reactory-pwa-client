@@ -225,6 +225,16 @@ interface ChatFactorHookOptions {
    * a content slug, a related conversation.
    */
   edges?: import('../types').ReactorConversationEdge[];
+  /**
+   * Operator/host override for the SSE dead-stream window, in milliseconds.
+   *
+   * Left undefined in normal operation: the window is derived from the server's
+   * observed heartbeat cadence (see `useSSE`'s `deriveLivenessTimeoutMs`). Set it
+   * to pin the window for a deployment whose heartbeat cadence is unusual, or to
+   * shorten/lengthen detection while diagnosing. Values that are not finite and
+   * positive are ignored by `useSSE`.
+   */
+  sseLivenessTimeoutMs?: number;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -515,6 +525,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     existingSession,
     sessionLogger,
     getProviderAuthOverride,
+    sseLivenessTimeoutMs,
   } = props;
 
   const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
@@ -1076,9 +1087,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
     setAgentBusy(true);
+    // Sending is itself a retry: the terminal transport state is over and the
+    // send path re-establishes the stream, so an error from this attempt must be
+    // reportable again.
+    terminalTransportRef.current = false;
     sessionLogger?.info(`Sending message (${message.length} chars)`, { hasImages: !!images?.length }, 'useChatFactory');
-    // Clear any lingering network error when the user tries sending again
-    if (networkStatus === 'error') {
+    // Clear any lingering network error when the user tries sending again.
+    // `lost` counts too: sending a message is itself a retry, and the send path
+    // re-establishes the transport.
+    if (networkStatus === 'error' || networkStatus === 'lost') {
       setNetworkStatus('idle');
       setNetworkError(null);
     }
@@ -1503,6 +1520,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [networkStatus, setNetworkStatus] = React.useState<NetworkStatus>('idle');
   const [networkError, setNetworkError] = React.useState<string | null>(null);
   const [networkReconnectAttempt, setNetworkReconnectAttempt] = React.useState(0);
+  /**
+   * True once the transport has given up (`lost` is showing) until a stream is
+   * live again.
+   *
+   * A REF, not the committed state, because the two callbacks that produce this
+   * sequence fire on the same tick: `useSSE` calls `onReconnectFailed` and then —
+   * in the same event handler — `onError`. React batches both, so a state read
+   * inside `onError` still sees the pre-batch value and the guard is useless.
+   * The flag is written synchronously by the give-up callbacks, which is what
+   * makes "an error may not downgrade a give-up" true under batching.
+   */
+  const terminalTransportRef = React.useRef(false);
 
   // Latest committed conversation history and id, for recovery code that must
   // merge the authoritative server record into what is on screen.
@@ -2212,6 +2241,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // The dead-stream backstop is scoped to a turn: an idle open chat must not
       // reconnect (and re-query) just for being quiet. See `turnActive` in useSSE.
       turnActive: agentBusy,
+      // Optional, host-supplied. Undefined means "derive it from the heartbeat
+      // cadence the server actually beats at", which is the desired default.
+      livenessTimeoutMs: sseLivenessTimeoutMs,
       sessionLogger,
       onToken: onTokenReceived,
       onReasoning: onReasoningReceived,
@@ -2237,11 +2269,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         chatShellBus.push(owner, event.data);
       },
       onReconnecting: (attempt, maxAttempts) => {
+        // A retry cycle is in progress, so the transport is no longer terminal.
+        terminalTransportRef.current = false;
         setNetworkStatus('reconnecting');
         setNetworkReconnectAttempt(attempt);
         setNetworkError(null);
       },
       onReconnected: () => {
+        terminalTransportRef.current = false;
         setNetworkStatus('connected');
         setNetworkError(null);
         setNetworkReconnectAttempt(0);
@@ -2260,7 +2295,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         recoveryRef.current?.handleReconnected();
       },
       onReconnectFailed: () => {
-        setNetworkStatus('error');
+        // Terminal, not transient: the transport has given up. `lost` renders a
+        // persistent banner with an explicit reconnect, because a frozen stream
+        // with no indicator is indistinguishable from a hung agent — and the
+        // user must be able to tell the difference and act.
+        // Set the flag FIRST: `useSSE` may fire an error on the same tick and
+        // `onError` consults it synchronously.
+        terminalTransportRef.current = true;
+        setNetworkStatus('lost');
         setNetworkError('Connection lost. The conversation will be refreshed from the server.');
         // A give-up must not leave the transcript silently wrong.
         //
@@ -2274,7 +2316,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // The streaming session behind the URL outlived the server's TTL, so no
         // retry can succeed. Stop, reconcile what actually happened, and ask for
         // a fresh session instead of retrying a dead URL for hours.
-        setNetworkStatus('error');
+        // Terminal until the fresh session actually connects (or the user
+        // reconnects); set the flag before any await, as above.
+        terminalTransportRef.current = true;
+        setNetworkStatus('lost');
         setNetworkError('The live connection expired. Reconnecting to the conversation…');
         recoveryRef.current?.handleReconnectFailed();
         reinitSseRef.current?.();
@@ -2299,6 +2344,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // nothing about whether the model produced content. This is what lets a
         // long silent tool step be told apart from a dead stream.
         recoveryRef.current?.notifyHeartbeat();
+      },
+      onResync: () => {
+        // The server could not replay from the requested `Last-Event-ID` (it
+        // was evicted from its bounded buffer), so resuming from an unknown
+        // point would silently skip whatever the client never saw. Re-fetch the
+        // conversation through the existing reconcile path — a resync is a
+        // recovery reason, not a second recovery mechanism.
+        recoveryRef.current?.handleResyncRequest();
       },
     });
 
@@ -2776,6 +2829,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
     if (type === 'SSE_ERROR' || type === 'PARSE_ERROR' || type === 'SESSION_EXPIRED') {
+      // A give-up is TERMINAL. `lost` is the persistent, non-dismissible
+      // "connection lost / reconnect" state; downgrading it to the dismissible
+      // `error` pill here is what made that state unreachable in production,
+      // because a late PARSE_ERROR (or any other error raised by the dead
+      // stream) would land after `onReconnectFailed` and win as the last write.
+      // Keep the truthful state and its message.
+      if (terminalTransportRef.current) return;
       setNetworkStatus('error');
       setNetworkError(errorMessage);
       return;
@@ -2817,6 +2877,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   /** Clear the network error indicator and allow the user to continue */
   const dismissNetworkError = React.useCallback(() => {
+    // An explicit user action ends the terminal state; only then may a later
+    // error move the pill back to the dismissible form.
+    terminalTransportRef.current = false;
     setNetworkStatus('idle');
     setNetworkError(null);
     setNetworkReconnectAttempt(0);
@@ -2827,16 +2890,33 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * The next sendMessage call will attempt to reconnect automatically.
    */
   const retryConnection = React.useCallback(() => {
-    setNetworkStatus('idle');
     setNetworkError(null);
-    setNetworkReconnectAttempt(0);
     // The banner's only affordance has to actually do something. `rearm()`
     // restarts a stream that gave up (or skips the remaining backoff), which is
     // what the user is asking for when they press Retry after an outage.
     // `sse` is a fresh object every render; depending on it would churn this
     // callback's identity, so depend on the one stable function it uses.
-    sse.rearm();
-  }, [sse.rearm]);
+    const revived = sse.rearm();
+    if (revived) {
+      // `rearm()` already reported attempt 1 through `onReconnecting`; make sure
+      // the banner reflects it even if that callback was not wired. Clearing the
+      // terminal flag here is correct: a new transport is connecting.
+      terminalTransportRef.current = false;
+      setNetworkStatus('reconnecting');
+      setNetworkReconnectAttempt(1);
+      return;
+    }
+    // Nothing was revived. For the terminal `lost` state the banner must stay —
+    // and stay ARMED — because clearing this would return the UI to the silent
+    // frozen look the whole path exists to remove.
+    if (networkStatus === 'lost') {
+      terminalTransportRef.current = true;
+      return;
+    }
+    terminalTransportRef.current = false;
+    setNetworkStatus('idle');
+    setNetworkReconnectAttempt(0);
+  }, [networkStatus, sse.rearm]);
 
   /**
    * Attach a ToolPrompt component to the message that owns the tool_calls.
