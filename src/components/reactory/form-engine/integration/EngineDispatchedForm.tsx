@@ -206,6 +206,11 @@ export const EngineDispatchedForm: React.FC<EngineDispatchedFormProps> = (props)
     disabled: rest.disabled,
     readonly: rest.readonly,
     showErrorList: rest.showErrorList,
+    // Server-derived field errors from the ReactoryForm wrapper
+    // (useGraphQLDataManager -> useDataManager -> errorSchema). rjsf v5 takes
+    // them as `extraErrors`; the fork path receives the same tree as
+    // `errorSchema` via `rest`.
+    extraErrors: (rest as { extraErrors?: unknown }).extraErrors,
   } as unknown as Parameters<typeof useReactoryForm>[0];
   const v5 = useReactoryForm(v5HookArgs);
 

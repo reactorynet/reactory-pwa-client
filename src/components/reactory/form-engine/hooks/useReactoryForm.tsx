@@ -94,6 +94,13 @@ export interface UseReactoryFormArgs<TData = unknown> {
    * rjsf `<Form>` as `extraErrors`. See `useAsyncValidation`.
    */
   customAsyncValidate?: AsyncValidator<TData>;
+  /**
+   * Externally supplied validation errors, in rjsf `errorSchema` shape.
+   * Used for errors that come back with a server response rather than from a
+   * validator — e.g. a GraphQL mutation rejected with a per-field message.
+   * Merged with (and subordinated to) `customAsyncValidate` output.
+   */
+  extraErrors?: RjsfFormProps<any>['extraErrors'];
   /** Debounce for async validation in ms. Default 200. */
   asyncValidateDebounceMs?: number;
 }
@@ -129,6 +136,44 @@ function chooseEngine(args: UseReactoryFormArgs): FormEngine {
   const fromFormDef = args.formContext.formDef?.options?.engine;
   if (fromFormDef) return fromFormDef;
   return 'fork';
+}
+
+/**
+ * Merge two rjsf error schemas. `secondary` wins on conflicting scalar values,
+ * while `__errors` arrays are concatenated (deduplicated) so an async
+ * validator message and a server response message about the same field both
+ * survive. An absent side is passed through untouched, so when no async
+ * validator is configured the caller's tree keeps its own identity.
+ */
+export function mergeExtraErrors(primary: any, secondary: any): any {
+  if (!primary) return secondary;
+  if (!secondary) return primary;
+
+  const merged: Record<string, any> = { ...primary };
+  for (const key of Object.keys(secondary)) {
+    const next = secondary[key];
+    const current = merged[key];
+
+    if (key === '__errors' && Array.isArray(current) && Array.isArray(next)) {
+      merged[key] = Array.from(new Set([...current, ...next]));
+      continue;
+    }
+
+    if (
+      current &&
+      next &&
+      typeof current === 'object' &&
+      typeof next === 'object' &&
+      !Array.isArray(current) &&
+      !Array.isArray(next)
+    ) {
+      merged[key] = mergeExtraErrors(current, next);
+      continue;
+    }
+
+    merged[key] = next;
+  }
+  return merged;
 }
 
 /** Generate a stable but locally-unique form instance id. */
@@ -294,7 +339,7 @@ export function useReactoryForm<TData = unknown>(
       fields: registry.fields,
       widgets: registry.widgets,
       templates,
-      extraErrors: asyncValidation.extraErrors,
+      extraErrors: mergeExtraErrors(args.extraErrors, asyncValidation.extraErrors),
       liveValidate: args.liveValidate,
       noValidate: args.noValidate,
       noHtml5Validate: args.noHtml5Validate,
@@ -331,6 +376,7 @@ export function useReactoryForm<TData = unknown>(
     validator,
     registry,
     templates,
+    args.extraErrors,
     asyncValidation.extraErrors,
     reactory,
     // Bumped when a component registers, so a late-loaded FQN widget re-resolves.

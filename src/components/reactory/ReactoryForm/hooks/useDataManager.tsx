@@ -111,6 +111,22 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   const { schema } = formDefinition;
 
+  // The GraphQL data manager is the component that talks to the server, so it
+  // owns the server-derived validation state (see useGraphQLDataManager). Mirror
+  // it here so the form definition (and therefore the rendered rjsf Form) sees
+  // the latest errorSchema/errors; this is what turns a mutation error into an
+  // inline field message instead of a toast-only failure.
+  const graphqlErrorSchema = graphqlDataManager?.errorSchema;
+  const graphqlErrors = graphqlDataManager?.errors;
+
+  useEffect(() => {
+    setErrorSchema(graphqlErrorSchema || {});
+  }, [graphqlErrorSchema]);
+
+  useEffect(() => {
+    setErrors(Array.isArray(graphqlErrors) ? graphqlErrors : []);
+  }, [graphqlErrors]);
+
   const getData = async (bypassCache = false) => { 
     reactory.debug(`${SIGN} getData`, { formData, formContext, props, bypassCache });
     setIsDataLoading(true);
@@ -437,8 +453,8 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   return {
     canRefresh: isRefeshAllowed,
-    errors: [],
-    errorSchema: {},
+    errors,
+    errorSchema,
     isDataLoading,
     isValidating,
     onSubmit,

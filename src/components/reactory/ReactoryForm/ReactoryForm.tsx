@@ -314,6 +314,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       noValidate: false,
       liveValidate: false,
       errorSchema,
+      // Server-derived validation feedback (see useGraphQLDataManager). rjsf v5
+      // merges `extraErrors` into its own errorSchema, so a GraphQL mutation
+      // error renders inline on the offending field; the legacy fork consumes
+      // the same tree through `errorSchema`.
+      extraErrors: errorSchema,
       validate,
       // @ts-ignore
       onChange,
