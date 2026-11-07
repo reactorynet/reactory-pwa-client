@@ -61,6 +61,45 @@ import { ServerFileExplorer } from '../ServerFileExplorer';
 />
 ```
 
+## Consuming the registered component
+
+The explorer is registered as **`core.ServerFileExplorer@1.0.0`** (roles `ADMIN`, `DEVELOPER`,
+`wrapWithApi: true`). Components delivered as server modules are compiled into a client plugin and
+resolve dependencies only through `reactory.getComponents()`, so this is the way they reach it:
+
+```tsx
+const { ServerFileExplorer } = reactory.getComponents<{ ServerFileExplorer: any }>([
+  'core.ServerFileExplorer@1.0.0',
+]);
+
+<ServerFileExplorer
+  open={pickerOpen}
+  onClose={() => setPickerOpen(false)}
+  serverPath="/Users/me/repositories/my-repo"
+  onFolderSelection={(folders) => setWorkdir(folders[0].fullPath)}
+  title="Choose repository folder"
+  readonly
+  allowUpload={false}
+  allowCreateFolder={false}
+/>;
+```
+
+`reactory` is injected by `withReactory`, so consumers do not pass it. Direct importers (such as
+`WorkflowDesigner`) keep passing it explicitly.
+
+### Choosing a folder
+
+Clicking a folder row navigates **into** it. To choose a folder, use either:
+
+- the footer action (`Select this folder`, shown when `onFolderSelection` is supplied), which reports
+  the folder currently being browsed, or
+- `Select this folder` in a folder row's context menu.
+
+Both report the `fullPath` the `ReactoryServerFiles` resolver returned, unchanged. Note the resolver's
+contract: `fullPath` is **absolute only when the requested `serverPath` is absolute**. When the path
+contains a template such as `${APP_DATA_ROOT}`, the resolver returns the still-templated path, so pass
+an absolute root if the consumer needs to persist a filesystem path.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -70,7 +109,10 @@ import { ServerFileExplorer } from '../ServerFileExplorer';
 | `reactory` | `Reactory.Client.ReactorySDK` | - | Reactory SDK instance |
 | `serverPath` | `string` | `"${APP_DATA_ROOT}"` | Base server path to browse |
 | `onFileSelection` | `(files: ServerFileItem[]) => void` | - | File selection callback |
-| `onFolderSelection` | `(folders: ServerFolderItem[]) => void` | - | Folder selection callback |
+| `onFolderSelection` | `(folders: ServerFolderItem[]) => void` | - | Folder selection callback; receives the resolver's `fullPath` |
+| `showFolderSelectionButton` | `boolean` | `true` when `onFolderSelection` is set | Show the footer action that selects the current folder |
+| `folderSelectionLabel` | `string` | `'Select this folder'` | Label for that action |
+| `closeOnFolderSelection` | `boolean` | `true` | Close the dialog after a folder is selected |
 | `selectionMode` | `'single' \| 'multi'` | `'single'` | Selection mode |
 | `allowedFileTypes` | `string[]` | `[]` | Allowed file types/extensions |
 | `title` | `string` | `'Server File Explorer'` | Dialog title |
