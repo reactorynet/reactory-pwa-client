@@ -36,6 +36,11 @@ jest.mock('./api', () => {
     }),
     status: jest.fn().mockResolvedValue({ ready: false, authenticated: false }),
     graphqlQuery: jest.fn().mockResolvedValue({ data: { CoreOrganization: null } }),
+    // ORG-014: the canonical organization-switch write. It is a mutation, so it
+    // goes through `client.mutate` - `graphqlQuery` cannot serve it.
+    graphqlMutation: jest.fn().mockResolvedValue({
+      data: { setActiveOrganization: { id: 'org-1', name: 'Acme' } },
+    }),
     setThemeOverride: jest.fn(),
     amq: {
       $sub: { def: jest.fn(() => ({ unsubscribe: jest.fn() })) },
@@ -227,6 +232,10 @@ jest.mock('react-router-dom', () => ({
 // Mock Apollo Client
 jest.mock('@apollo/client', () => ({
   ApolloProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  // The GraphQL document registry (`src/api/graphql`) builds its documents with
+  // `gql` at module load. The parsed document is irrelevant here - mutations are
+  // mocked at the Reactory API boundary - but the tag has to exist.
+  gql: (strings: any) => String(strings),
 }));
 
 // Mock Redux
@@ -320,6 +329,9 @@ describe('ReactoryHOC (App)', () => {
     mockReactory.on.mockReset().mockImplementation(function() { return this; });
     mockReactory.off.mockReset().mockImplementation(function() { return this; });
     mockReactory.graphqlQuery.mockReset().mockResolvedValue({ data: { CoreOrganization: null } });
+    mockReactory.graphqlMutation.mockReset().mockResolvedValue({
+      data: { setActiveOrganization: { id: 'org-1', name: 'Acme' } },
+    });
     mockReactory.setThemeOverride.mockReset();
     mockReactory.amq.$sub.def.mockReset().mockImplementation(() => ({ unsubscribe: jest.fn() }));
     localStorageMock.getItem.mockReturnValue(null);
@@ -1303,6 +1315,144 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
       view.unmount();
 
       expect(unsubscribe).toHaveBeenCalled();
+    });
+
+    // ORG-014 gap: the headline acceptance criterion is that switching
+    // organization changes the applied theme without a page reload. This drives
+    // the real switch entry point the header selector calls
+    // (`window.reactory.api.switchOrganization`) and asserts the observable
+    // outcome: the canonical mutation ran, the new palette is what `createTheme`
+    // receives, the outgoing palette is never repainted once the switch starts,
+    // and nothing was re-initialised (no reload).
+    it('switches organization without a reload, applying the new theme and never repainting the old one', async () => {
+      const betaTheme = {
+        name: 'beta',
+        type: 'material',
+        defaultThemeMode: 'light',
+        options: { palette: { mode: 'light', primary: { main: '#0000ff' } } },
+        modes: [
+          { id: 'beta-light', mode: 'light', name: 'Light', options: { palette: { mode: 'light', primary: { main: '#0000ff' } } } },
+        ],
+      };
+
+      const organizationDocument = (id: string, name: string, theme: any, themes: any[]) => ({
+        id,
+        name,
+        theme: theme.name,
+        themeMode: 'light',
+        themes,
+      });
+
+      let sessionOrganization: any = { id: 'org-1', name: 'Acme' };
+      const sessionStatus = () => ({
+        ...organizationStatus,
+        loggedIn: { ...organizationStatus.loggedIn, organization: sessionOrganization },
+      });
+
+      mockReactory.status.mockImplementation(async () => sessionStatus());
+      mockReactory.getUser.mockImplementation(() => sessionStatus());
+
+      // The server knows both organizations; each has its own theme.
+      mockReactory.graphqlQuery.mockImplementation(async (_query: any, variables: any) => ({
+        data: {
+          CoreOrganization: variables?.id === 'org-2'
+            ? organizationDocument('org-2', 'Beta', betaTheme, [betaTheme])
+            : organizationDocument('org-1', 'Acme', organizationTheme, [organizationTheme]),
+        },
+      }));
+
+      // The canonical write: it changes what the session returns afterwards,
+      // exactly as `UserResolver.setActiveOrganization` does on the server.
+      mockReactory.graphqlMutation.mockImplementation(async (_mutation: any, variables: any) => {
+        sessionOrganization = { id: variables.organizationId, name: 'Beta' };
+        return { data: { setActiveOrganization: { id: variables.organizationId, name: 'Beta' } } };
+      });
+
+      // Record every palette that was actually applied through createTheme.
+      const appliedPalettes: string[] = [];
+      createThemeMock().mockImplementation((options?: any) => {
+        const primary = options?.palette?.primary?.main;
+        if (primary) appliedPalettes.push(primary);
+        return {
+          palette: {
+            mode: options?.palette?.mode ?? 'light',
+            background: { default: '#ffffff' },
+            primary: { main: primary ?? '#1a73e8', contrastText: '#ffffff' },
+            text: { primary: '#111111' },
+          },
+        };
+      });
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      // Baseline: organization A's theme is the applied one.
+      expect(appliedPalettes).toContain('#ff0000');
+      expect(appliedPalettes).not.toContain('#0000ff');
+
+      const palettesBeforeSwitch = appliedPalettes.length;
+
+      // B's branding is slow on purpose, so the gate is observable.
+      let resolveBranding: (value: any) => void = () => undefined;
+      const branding = new Promise((resolve) => {
+        resolveBranding = resolve;
+      });
+      mockReactory.graphqlQuery.mockImplementation((_query: any, variables: any) => (
+        variables?.id === 'org-2'
+          ? branding
+          : Promise.resolve({
+            data: { CoreOrganization: organizationDocument('org-1', 'Acme', organizationTheme, [organizationTheme]) },
+          })
+      ));
+
+      const switchOrganization = (window as any).reactory.api.switchOrganization;
+      expect(typeof switchOrganization).toBe('function');
+
+      let switchResult: Promise<any>;
+      await act(async () => {
+        switchResult = switchOrganization({ id: 'org-2', name: 'Beta' });
+      });
+
+      await waitFor(() => expect(mockReactory.graphqlMutation).toHaveBeenCalled());
+      expect(mockReactory.graphqlMutation.mock.calls[0][1]).toEqual({ organizationId: 'org-2' });
+
+      // The gate is up while the new branding resolves, so the tree that could
+      // still be painted in the outgoing organization's theme is not rendered.
+      expect(screen.queryByTestId('reactory-router')).not.toBeInTheDocument();
+      expect(screen.getByTestId('app-loading')).toBeInTheDocument();
+      expect(appliedPalettes.slice(palettesBeforeSwitch)).not.toContain('#ff0000');
+
+      await act(async () => {
+        resolveBranding({
+          data: { CoreOrganization: organizationDocument('org-2', 'Beta', betaTheme, [betaTheme]) },
+        });
+        await switchResult;
+      });
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+
+      // Organization B's theme is the published and applied one...
+      expect(mockReactory.setThemeOverride).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'beta' }),
+      );
+      expect(appliedPalettes[appliedPalettes.length - 1]).toBe('#0000ff');
+      // ...and the outgoing palette was never applied after the switch began.
+      const palettesDuringAndAfterSwitch = appliedPalettes.slice(palettesBeforeSwitch);
+      expect(palettesDuringAndAfterSwitch).toContain('#0000ff');
+      expect(palettesDuringAndAfterSwitch).not.toContain('#ff0000');
+      // No reload and no re-boot: the api was initialised exactly once.
+      expect(mockReactory.init).toHaveBeenCalledTimes(1);
     });
 
     it('installs the organization-switch and re-resolve callables on the api', async () => {

@@ -34,6 +34,7 @@ import { useNavigate } from 'react-router';
 import Reactory from '@reactorynet/reactory-core';
 import localForage from 'localforage';
 import { ReactoryAvatar } from './AvatarComponent';
+import { OrganizationSelector } from '../Organization/components/OrganizationSelector';
 import RouteInspectorPreferenceButton from '../../../app/router/widgets/RouteInspectorPreferenceButton';
 import {
   isRouteInspectorEnabled,
@@ -642,6 +643,11 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           )}
 
           <LanguageSelector reactory={reactory} />
+
+          {/* ORG-014: switches the session's active organization and re-resolves
+              its theme without a page reload. Renders nothing unless the user
+              has more than one organization to choose from. */}
+          <OrganizationSelector reactory={reactory} />
 
           <IconButton onClick={toggleDarkMode} size="large">
             <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>

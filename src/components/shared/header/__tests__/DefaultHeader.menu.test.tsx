@@ -148,4 +148,41 @@ describe('DefaultHeader left-nav menu titles', () => {
     // A literal is language-independent.
     expect(screen.getByText('Chat')).toBeInTheDocument();
   });
+  // ORG-014: the live organization switch lives in the toolbar. It has to be
+  // mounted here for a multi-organization user, and it must stay invisible for
+  // everyone else.
+  it('mounts the organization switcher for a user with more than one organization', () => {
+    const reactory = createReactory('en');
+    reactory.getUser.mockReturnValue({
+      when: new Date(),
+      loggedIn: {
+        roles: ['USER'],
+        organization: { id: 'org-1', name: 'Acme Corporation' },
+        memberships: [
+          { organization: { id: 'org-1', name: 'Acme Corporation' } },
+          { organization: { id: 'org-2', name: 'Beta Incorporated' } },
+        ],
+      },
+    });
+
+    renderHeader(reactory);
+
+    expect(screen.getByTestId('organization-selector-button')).toBeInTheDocument();
+  });
+
+  it('leaves the toolbar free of an organization switcher for a single-organization user', () => {
+    const reactory = createReactory('en');
+    reactory.getUser.mockReturnValue({
+      when: new Date(),
+      loggedIn: {
+        roles: ['USER'],
+        organization: { id: 'org-1', name: 'Acme Corporation' },
+        memberships: [{ organization: { id: 'org-1', name: 'Acme Corporation' } }],
+      },
+    });
+
+    renderHeader(reactory);
+
+    expect(screen.queryByTestId('organization-selector-button')).toBeNull();
+  });
 });

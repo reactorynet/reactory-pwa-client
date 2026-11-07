@@ -1,5 +1,6 @@
 import Reactory from '@reactorynet/reactory-core';
 import { ReactoryApiEventNames } from '../../../../api/ApiEventNames';
+import ReactoryGraphQL from '../../../../api/graphql';
 import OrganizationQueries from '../graph/queries';
 import { resolveOrganizationTheme } from './resolveOrganizationTheme';
 import {
@@ -17,6 +18,12 @@ export interface IOrganizationThemeReactory {
   getUser?: () => any;
   getTheme?: () => Reactory.UX.IReactoryTheme;
   graphqlQuery?: (query: any, variables?: any) => Promise<any>;
+  /**
+   * Runs a mutation document through the host's Apollo client
+   * (`ReactoryApi.graphqlMutation`). When absent the switch cannot be persisted
+   * and `setActiveOrganization` refuses rather than writing client-only state.
+   */
+  graphqlMutation?: (mutation: any, variables?: any) => Promise<any>;
   emit?: (event: string, payload?: any) => any;
   log?: (message: string, params?: unknown, level?: string) => void;
   /**
@@ -48,6 +55,27 @@ export const ORGANIZATION_UPDATED_EVENT = 'core.OrganizationUpdatedEvent';
 /** Bounded so an unreachable branding query cannot delay the authenticated tree. */
 export const DEFAULT_THEME_RESOLUTION_TIMEOUT_MS = 2500;
 
+/**
+ * The canonical client document for switching the session's active
+ * organisation. It lives in the API's GraphQL registry (the server field is
+ * `setActiveOrganization(organizationId: String!): Organization`) and is
+ * executed here through `ReactoryApi.graphqlMutation` - this module owns no
+ * second copy, so the two cannot drift.
+ */
+export const ACTIVE_ORGANIZATION_MUTATION = ReactoryGraphQL.mutations.Users.setActiveOrganization;
+
+/**
+ * A switch that did not reach the server. Thrown by `setActiveOrganization` so
+ * a caller can tell "the organisation was refused" from "the branding query
+ * was slow" - the theme is only re-resolved after the write succeeded.
+ */
+export class OrganizationSwitchError extends Error {
+  constructor(message: string, public readonly organizationId: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'OrganizationSwitchError';
+  }
+}
+
 const LIGHT: OrganizationThemeMode = 'light';
 const DARK: OrganizationThemeMode = 'dark';
 
@@ -64,17 +92,32 @@ const DARK: OrganizationThemeMode = 'dark';
  *  - publishes the resolved theme through `reactory.setThemeOverride()`, which
  *    makes `reactory.getTheme()` - and therefore `App.applyTheme` - the single
  *    source of truth,
- *  - persists the active organization id under `CoreDefaultOrganization` and
- *    emits `onThemeChanged` so App re-applies without a page reload.
+ *  - persists the active organization through the canonical
+ *    `setActiveOrganization` mutation (and mirrors the id under
+ *    `CoreDefaultOrganization` for the next boot) and emits `onThemeChanged` so
+ *    App re-applies without a page reload.
  *
- * Every public method is failure tolerant: it logs and falls back to the client
- * theme instead of throwing, because it runs during boot and during auth
- * transitions where a rejected promise would leave a blank screen.
+ * Resolution is failure tolerant: it logs and falls back to the client theme
+ * instead of throwing, because it runs during boot and during auth transitions
+ * where a rejected promise would leave a blank screen. The one method that does
+ * reject is `setActiveOrganization`, because a switch the server refused must
+ * be reported rather than silently skipped.
  */
 export class OrganizationThemeService {
   private cachedOrganization: IOrganizationBranding | null = null;
   private cachedOrganizationId: string | null = null;
   private lastResolution: IThemeResolution | null = null;
+  /**
+   * The organisation this service last wrote through the canonical mutation.
+   *
+   * The write lands on the server, but `getUser()` is a snapshot that the host
+   * refreshes *after* the mutation returns. Until that refresh the snapshot
+   * still names the organisation the user just left, and re-resolution would
+   * read the old one. Remembering the accepted write bridges that window; it is
+   * not a second source of truth because it is discarded as soon as the session
+   * snapshot agrees (`reconcileSwitchedOrganizationId`) and on logout.
+   */
+  private switchedOrganizationId: string | null = null;
   private inFlight: Promise<IThemeResolution> | null = null;
   private inFlightOrganizationId: string | null = null;
   /**
@@ -107,29 +150,40 @@ export class OrganizationThemeService {
   /**
    * The organization the theme should be resolved for.
    *
-   * Order: the organization this browser persisted (`CoreDefaultOrganization`,
-   * written by `OrganizationSelector` via `setActiveOrganization`) and the
-   * session is still a member of, then the server's active organization for the
-   * session. A persisted id the current user is not a member of is ignored so
-   * one user's choice cannot theme another user's session.
+   * Order:
    *
-   * An anonymous session never resolves an organization: the persisted choice
+   *  1. the organization this service just switched to (the mutation already
+   *     succeeded; this only covers the window before the host refreshes the
+   *     session snapshot);
+   *  2. **the server's active organization for the session** - authoritative,
+   *     because `setActiveOrganization` writes exactly that field and ApiStatus
+   *     projects it back as an Organization document;
+   *  3. the id a previous switch persisted in this browser
+   *     (`CoreDefaultOrganization`), used *only* when the session reports no
+   *     organization at all, and only when the current user is still a member
+   *     of it. It is a hint for hosts whose session carries no organization,
+   *     never an override of the server.
+   *
+   * An anonymous session never resolves an organization: the persisted value
    * belongs to the previous user and must not theme the login screen.
    */
   getActiveOrganizationId(): string | null {
     if (this.getLoggedInContext() === null) return null;
 
-    const serverOrganizationId = this.getServerOrganizationId();
-    const persistedId = this.getPersistedOrganizationId();
+    if (this.switchedOrganizationId !== null) return this.switchedOrganizationId;
 
-    if (persistedId === null) return serverOrganizationId;
+    const serverOrganizationId = this.getServerOrganizationId();
+    if (serverOrganizationId !== null) return serverOrganizationId;
+
+    const persistedId = this.getPersistedOrganizationId();
+    if (persistedId === null) return null;
 
     const memberships = this.getMemberships();
     if (memberships !== null && memberships.length > 0) {
       const isMember = memberships.some(
         (membership: any) => membership?.organization?.id === persistedId,
       );
-      if (isMember === false) return serverOrganizationId;
+      if (isMember === false) return null;
     }
 
     return persistedId;
@@ -155,6 +209,10 @@ export class OrganizationThemeService {
     const organizationId = options.organizationId === undefined
       ? this.getActiveOrganizationId()
       : options.organizationId;
+
+    // The id above has already been read; a remembered switch that the session
+    // now also reports is no longer needed.
+    this.reconcileSwitchedOrganizationId();
 
     if (organizationId === null || organizationId === undefined || organizationId === '') {
       // No organization for this session: the client theme is the effective
@@ -214,10 +272,24 @@ export class OrganizationThemeService {
   }
 
   /**
-   * The single callable for an organization switch. Persists the selection,
-   * re-resolves (always from the server so a freshly edited theme is picked
-   * up) and emits `onThemeChanged`, which App answers by re-applying the theme
-   * and refreshing the user snapshot - no page reload.
+   * The single callable for an organization switch.
+   *
+   * Order matters and is enforced here rather than by the caller:
+   *
+   *  1. **Persist first** through the canonical mutation
+   *     (`setActiveOrganization(organizationId: String!)`). A refused switch
+   *     throws `OrganizationSwitchError` and changes nothing - no mirror write,
+   *     no re-resolution, no `onThemeChanged`, so the previous branding stays
+   *     applied and the UI can report why.
+   *  2. Mirror the id under `CoreDefaultOrganization`. This is a hint for the
+   *     next boot only; the server write above is the source of truth.
+   *  3. Re-resolve the new organization's theme from the server (a freshly
+   *     edited theme must be picked up) and emit `onThemeChanged`, which App
+   *     answers by re-applying the theme - no page reload.
+   *
+   * This method deliberately does not emit `core.OrganizationUpdatedEvent`
+   * handling: that event is about organization *records* being edited, not
+   * about which organization the session is viewing.
    */
   async setActiveOrganization(organization: IOrganizationBranding | string): Promise<IThemeResolution> {
     const organizationId = typeof organization === 'string' ? organization : organization?.id;
@@ -227,6 +299,9 @@ export class OrganizationThemeService {
       return this.lastResolution ?? this.resolve();
     }
 
+    await this.persistActiveOrganization(organizationId);
+
+    this.switchedOrganizationId = organizationId;
     this.persistOrganizationId(organizationId);
 
     // A caller that already holds the full document (with themes) can skip the
@@ -248,6 +323,60 @@ export class OrganizationThemeService {
     const resolution = await this.resolve({ force: true, organizationId });
     this.emitThemeChanged();
     return resolution;
+  }
+
+  /**
+   * Persists the switch through the canonical GraphQL mutation.
+   *
+   * Throws `OrganizationSwitchError` when the host has no mutation transport,
+   * when the server rejects the switch (not a member, unknown id, expired
+   * session - the server types these in `extensions.code`), or when the server
+   * answers without an organization. Every one of those must leave the current
+   * theme untouched.
+   */
+  private async persistActiveOrganization(organizationId: string): Promise<void> {
+    const mutate = this.reactory.graphqlMutation;
+
+    if (typeof mutate !== 'function') {
+      const message = `Cannot switch to organization "${organizationId}": the Reactory API does not expose graphqlMutation`;
+      this.warn(message, { organizationId });
+      throw new OrganizationSwitchError(message, organizationId);
+    }
+
+    try {
+      const result = await mutate.call(this.reactory, ACTIVE_ORGANIZATION_MUTATION, { organizationId });
+
+      const errors = (result as any)?.errors;
+      if (Array.isArray(errors) && errors.length > 0) {
+        throw new Error(errors.map((entry: any) => entry?.message || String(entry)).join('; '));
+      }
+
+      const organization = (result as any)?.data?.setActiveOrganization;
+      if (organization === null || organization === undefined) {
+        throw new Error('the server did not confirm the new active organization');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.warn(
+        `Could not switch the active organization to "${organizationId}" (${message}) - the previous organization stays active.`,
+        { organizationId },
+      );
+      throw new OrganizationSwitchError(message, organizationId, error);
+    }
+  }
+
+  /**
+   * Drops the remembered switch once the session snapshot names it too.
+   *
+   * Called at the start of `resolve()`, before the id is used: by then the id
+   * has already been read, so clearing it cannot change this resolution - it
+   * only stops a stale remembered value from outliving the refresh.
+   */
+  private reconcileSwitchedOrganizationId(): void {
+    if (this.switchedOrganizationId === null) return;
+    if (this.getServerOrganizationId() === this.switchedOrganizationId) {
+      this.switchedOrganizationId = null;
+    }
   }
 
   /**
@@ -281,6 +410,9 @@ export class OrganizationThemeService {
     this.requestToken += 1;
     this.cachedOrganization = null;
     this.cachedOrganizationId = null;
+    // The session is gone: a remembered switch must not theme the next user's
+    // boot with the previous user's organization.
+    this.switchedOrganizationId = null;
     return this.apply(
       resolveOrganizationTheme({
         organization: null,

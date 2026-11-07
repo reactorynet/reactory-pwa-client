@@ -1,5 +1,7 @@
 import {
+  ACTIVE_ORGANIZATION_MUTATION,
   DEFAULT_ORGANIZATION_STORAGE_KEY,
+  OrganizationSwitchError,
   OrganizationThemeService,
   THEME_MODE_STORAGE_KEY,
 } from '../OrganizationThemeService';
@@ -69,6 +71,7 @@ const authenticatedUser = (overrides: any = {}) => ({
 const createReactory = (options: {
   user?: any;
   query?: (query: any, variables?: any) => Promise<any>;
+  mutate?: (mutation: any, variables?: any) => Promise<any>;
 } = {}) => {
   const state = {
     user: options.user === undefined ? authenticatedUser() : options.user,
@@ -84,6 +87,14 @@ const createReactory = (options: {
       options.query
         ?? (async (_query: any, variables: any) => ({
           data: { CoreOrganization: organizationDocument({ id: variables?.id ?? 'org-1' }) },
+        })),
+    ),
+    graphqlMutation: jest.fn(
+      options.mutate
+        ?? (async (_mutation: any, variables: any) => ({
+          // The canonical mutation returns the organization document, so a
+          // caller can re-resolve branding without a second round trip.
+          data: { setActiveOrganization: { id: variables?.organizationId, name: 'Organization' } },
         })),
     ),
     setThemeOverride: jest.fn((theme: any) => {
@@ -162,15 +173,42 @@ describe('OrganizationThemeService', () => {
     expect(service.getActiveOrganizationId()).toBeNull();
   });
 
-  it('resolves the organization persisted by a previous switch when the user is a member', async () => {
+  it('treats the session\'s active organization as authoritative over a stale browser value', async () => {
     const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-2' });
     const { reactory } = createReactory();
     const service = new OrganizationThemeService(reactory, { storage });
 
-    expect(service.getActiveOrganizationId()).toBe('org-2');
+    // The switch is server state (`setActiveOrganization` writes the session's
+    // organization), so the session wins. The older contract let a browser-local
+    // value override it - exactly the second source of truth this replaced.
+    expect(service.getActiveOrganizationId()).toBe('org-1');
 
     await service.resolve();
-    expect(reactory.graphqlQuery.mock.calls[0][1]).toEqual({ id: 'org-2' });
+    expect(reactory.graphqlQuery.mock.calls[0][1]).toEqual({ id: 'org-1' });
+  });
+
+  it('uses the persisted organization when the session has no active organization', async () => {
+    const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-2' });
+    const user = authenticatedUser();
+    const { reactory } = createReactory({
+      user: { activeTheme: clientTheme, loggedIn: { ...user.loggedIn, organization: null } },
+    });
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    // No session organization to defer to: the browser hint is still usable
+    // while the user holds a membership for it.
+    expect(service.getActiveOrganizationId()).toBe('org-2');
+  });
+
+  it('does not fall back to a persisted organization the user is not a member of', async () => {
+    const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-other' });
+    const user = authenticatedUser();
+    const { reactory } = createReactory({
+      user: { activeTheme: clientTheme, loggedIn: { ...user.loggedIn, organization: null } },
+    });
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    expect(service.getActiveOrganizationId()).toBeNull();
   });
 
   it('ignores a persisted organization the current user is not a member of', async () => {
@@ -192,25 +230,126 @@ describe('OrganizationThemeService', () => {
     expect(reactory.graphqlQuery).not.toHaveBeenCalled();
   });
 
-  it('promotes an organization switch: persists, re-resolves and emits onThemeChanged', async () => {
+  it('promotes an organization switch: persists through the mutation, re-resolves and emits onThemeChanged', async () => {
     const storage = createStorage();
     const { reactory, state } = createReactory();
     const service = new OrganizationThemeService(reactory, { storage });
 
     await service.setActiveOrganization({ id: 'org-2', name: 'Beta Incorporated' });
 
+    // The write goes through the canonical document, with the id the server
+    // declares as non-null.
+    expect(reactory.graphqlMutation).toHaveBeenCalledTimes(1);
+    expect(reactory.graphqlMutation.mock.calls[0][0]).toBe(ACTIVE_ORGANIZATION_MUTATION);
+    expect(reactory.graphqlMutation.mock.calls[0][1]).toEqual({ organizationId: 'org-2' });
+    // ...before the browser mirror and the branding fetch.
+    expect(reactory.graphqlMutation.mock.invocationCallOrder[0])
+      .toBeLessThan(reactory.graphqlQuery.mock.invocationCallOrder[0]);
     expect(storage.setItem).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY, 'org-2');
     expect(reactory.graphqlQuery.mock.calls[0][1]).toEqual({ id: 'org-2' });
     expect(state.emitted).toContain('onThemeChanged');
     expect(service.getActiveOrganizationId()).toBe('org-2');
   });
 
-  it('skips the fetch when the caller already holds the full organization document', async () => {
+  it('leaves the current organization and theme untouched when the switch is refused', async () => {
+    const storage = createStorage();
+    const { reactory, state } = createReactory({
+      mutate: async () => {
+        throw new Error('User 1 is not an active member of organization org-9');
+      },
+    });
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    await service.resolve();
+    expect((lastOverride(state) as any).name).toBe('acme');
+    const overridesBefore = state.overrides.length;
+    const emittedBefore = state.emitted.length;
+
+    await expect(service.setActiveOrganization({ id: 'org-9', name: 'Not Mine' }))
+      .rejects.toBeInstanceOf(OrganizationSwitchError);
+
+    // No theme change, no re-resolve, no local "persistence" of a value the
+    // server refused, and the old organization still resolves.
+    expect(state.overrides.length).toBe(overridesBefore);
+    expect((lastOverride(state) as any).name).toBe('acme');
+    expect(state.emitted.length).toBe(emittedBefore);
+    expect(reactory.graphqlQuery).toHaveBeenCalledTimes(1);
+    expect(storage.setItem).not.toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY, 'org-9');
+    expect(service.getActiveOrganizationId()).toBe('org-1');
+    expect(state.logs.some((entry) => entry.message.includes('not an active member'))).toBe(true);
+  });
+
+  it('refuses to switch when the host cannot persist the mutation (no client-only switch)', async () => {
+    const storage = createStorage();
+    const { reactory } = createReactory();
+    delete (reactory as any).graphqlMutation;
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    await expect(service.setActiveOrganization('org-2')).rejects.toBeInstanceOf(OrganizationSwitchError);
+
+    expect(storage.setItem).not.toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY, 'org-2');
+    expect(reactory.graphqlQuery).not.toHaveBeenCalled();
+  });
+
+  it('refuses to switch when the server answers without an organization', async () => {
+    const { reactory } = createReactory({
+      mutate: async () => ({ data: { setActiveOrganization: null } }),
+    });
+    const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+    await expect(service.setActiveOrganization('org-2')).rejects.toBeInstanceOf(OrganizationSwitchError);
+    expect(reactory.graphqlQuery).not.toHaveBeenCalled();
+  });
+
+  it('keeps resolving the organization it switched to while the session snapshot is stale', async () => {
+    const { reactory } = createReactory();
+    const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+    await service.resolve();
+    expect(service.getActiveOrganizationId()).toBe('org-1');
+
+    // The mutation succeeded, but the host has not refreshed `getUser()` yet -
+    // it still names org-1. `onThemeChanged` re-application must not go back.
+    await service.setActiveOrganization('org-2');
+
+    const reapplied = await service.handleThemeChanged();
+    expect(reapplied.organizationId).toBe('org-2');
+    expect(service.getActiveOrganizationId()).toBe('org-2');
+  });
+
+  it('drops the remembered switch once the session snapshot names it', async () => {
+    const storage = createStorage();
+    const { reactory, state } = createReactory();
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    await service.setActiveOrganization('org-2');
+    expect((service as any).switchedOrganizationId).toBe('org-2');
+
+    // The host refreshed the session; the server value now carries the switch.
+    const user = authenticatedUser();
+    state.user = {
+      activeTheme: clientTheme,
+      loggedIn: { ...user.loggedIn, organization: { id: 'org-2', name: 'Beta Incorporated' } },
+    };
+
+    await service.resolve();
+
+    expect((service as any).switchedOrganizationId).toBeNull();
+    expect(service.getActiveOrganizationId()).toBe('org-2');
+  });
+
+  it('skips the branding fetch when the caller already holds the full organization document', async () => {
     const { reactory, state } = createReactory();
     const service = new OrganizationThemeService(reactory, { storage: createStorage() });
 
     await service.setActiveOrganization(organizationDocument({ id: 'org-2' }));
 
+    // Still a server write - the caller holding the document only saves the
+    // branding round trip.
+    expect(reactory.graphqlMutation).toHaveBeenCalledWith(
+      ACTIVE_ORGANIZATION_MUTATION,
+      { organizationId: 'org-2' },
+    );
     expect(reactory.graphqlQuery).not.toHaveBeenCalled();
     expect(state.emitted).toContain('onThemeChanged');
     expect(lastOverride(state)).toEqual(expect.objectContaining({ name: 'acme' }));
