@@ -513,6 +513,63 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   /**
+   * The live organization switch (ORG-014).
+   *
+   * The active organization is server state (`setActiveOrganization`), so a
+   * switch is three steps and the whole of it runs inside the existing
+   * `isBrandingPending` gate:
+   *
+   *  1. `OrganizationThemeService.setActiveOrganization` persists the switch
+   *     through the canonical mutation and re-resolves the new organization's
+   *     theme. A refused switch (not a member, unknown id, expired session)
+   *     throws and leaves the previous branding applied - nothing is written
+   *     locally and `onThemeChanged` is not emitted.
+   *  2. `status()` refreshes the session snapshot so `loggedIn.organization` -
+   *     which the service reads as the source of truth - names the new
+   *     organization. Without this a later resolve would go back to the one we
+   *     just left.
+   *  3. `applyTheme()` publishes the resolved theme to MUI.
+   *
+   * `isBrandingPending` is the login transition's own gate, reused rather than
+   * reinvented: while it is true the authenticated tree is not rendered at all,
+   * so the outgoing organization's theme is never repainted over the incoming
+   * one. Nothing reloads - the React tree, the router and the Reactory api
+   * instance all survive the switch.
+   *
+   * Rejects when the switch was refused; callers (the header selector) report
+   * that to the user.
+   */
+  const switchOrganization = async (organization: any) => {
+    const organizationId = typeof organization === 'string' ? organization : organization?.id;
+
+    setIsBrandingPending(true);
+    try {
+      const resolution = await organizationThemeService.current.setActiveOrganization(organization);
+
+      try {
+        const apiStatus = await reactory.status({ emitLogin: false, forceLogout: false });
+        if (isNil(apiStatus) === false) {
+          setUser({ ...apiStatus });
+          userRef.current = { ...apiStatus };
+        }
+      } catch (statusError) {
+        // The write already succeeded; a failed snapshot refresh must not fail
+        // the switch. The next resolution asks the server again.
+        reactory.log(
+          'Could not refresh the session snapshot after an organization switch',
+          { statusError, organizationId },
+          'warn',
+        );
+      }
+
+      applyTheme();
+      return resolution;
+    } finally {
+      setIsBrandingPending(false);
+    }
+  };
+
+  /**
    * Re-applies the theme after a theme change. ORG-014: the organization theme
    * is re-resolved first (from the cached organization document, so a plain
    * light/dark toggle costs no extra request) so an organization theme that
@@ -689,21 +746,26 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.on(ReactoryApiEventNames.onLanguageChanged, onLanguageChanged);
         reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);        
 
-        // ORG-014: expose the organization-switch and re-resolve entry points on
-        // the api instance for organization UI. There is no in-tree caller of
-        // either method today. Of the plugin's organization surfaces, the
-        // Overview tab (organization-management/OrganizationOverviewTab.tsx)
-        // saves through a server mutation and then emits
-        // core.OrganizationUpdatedEvent; archive and restore in
-        // OrganizationDetailPanel emit it too. App subscribes below and
-        // re-resolves through this same service. The Branding tab
-        // (OrganizationBrandingTab.tsx -> useOrganizationBranding.saveTheme)
-        // saves through mutations but emits nothing, so a theme saved there is
-        // only picked up on the next resolve/reload. These two methods remain
-        // the programmatic entry points for switching organization and forcing
-        // a re-resolve.
-        (reactory as any).setActiveOrganization = (organization) =>
-          organizationThemeService.current.setActiveOrganization(organization);
+        // ORG-014: expose the organization switch and the forced re-resolve on
+        // the api instance. `switchOrganization` is the single live switch path:
+        // it persists through the canonical `setActiveOrganization` mutation,
+        // re-resolves branding and applies it under the isBrandingPending gate,
+        // so the theme follows the switch with no page reload. The header's
+        // OrganizationSelector calls it; `setActiveOrganization` stays as an
+        // alias so any other host surface keeps working.
+        //
+        // Of the plugin's organization surfaces, the Overview tab
+        // (organization-management/OrganizationOverviewTab.tsx) saves through a
+        // server mutation and then emits core.OrganizationUpdatedEvent; archive
+        // and restore in OrganizationDetailPanel emit it too. App subscribes
+        // below and re-resolves through this same service. That path is about
+        // editing an organization record, not about which organization the
+        // session is viewing, and the switch above does not depend on it.
+        // `switchOrganization` is defined above and closes over the service and
+        // the branding gate, so the api entry point and the header selector run
+        // exactly the same orchestration.
+        (reactory as any).switchOrganization = switchOrganization;
+        (reactory as any).setActiveOrganization = switchOrganization;
         (reactory as any).refreshOrganizationTheme = () =>
           organizationThemeService.current.refreshOrganizationTheme();
 
