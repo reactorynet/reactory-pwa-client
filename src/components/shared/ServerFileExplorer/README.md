@@ -91,14 +91,19 @@ const { ServerFileExplorer } = reactory.getComponents<{ ServerFileExplorer: any 
 
 Clicking a folder row navigates **into** it. To choose a folder, use either:
 
-- the footer action (`Select this folder`, shown when `onFolderSelection` is supplied), which reports
-  the folder currently being browsed, or
+- the footer action (`Select this folder`, shown when `onFolderSelection` is supplied), or
 - `Select this folder` in a folder row's context menu.
 
-Both report the `fullPath` the `ReactoryServerFiles` resolver returned, unchanged. Note the resolver's
-contract: `fullPath` is **absolute only when the requested `serverPath` is absolute**. When the path
-contains a template such as `${APP_DATA_ROOT}`, the resolver returns the still-templated path, so pass
-an absolute root if the consumer needs to persist a filesystem path.
+What each one reports:
+
+- The **footer action** reports the path currently being browsed - i.e. the `serverPath` that was
+  requested. It is not read back from the `ReactoryServerFiles` response.
+- The **context menu** reports that folder row's `fullPath` from the resolver response.
+
+Both are passed through unchanged (no client-side path joining). Note the resolver's contract:
+`fullPath` is **absolute only when the requested `serverPath` is absolute**. When the path contains a
+template such as `${APP_DATA_ROOT}`, the resolver returns the still-templated path, so pass an absolute
+root if the consumer needs to persist a filesystem path.
 
 ## Props
 
@@ -109,7 +114,7 @@ an absolute root if the consumer needs to persist a filesystem path.
 | `reactory` | `Reactory.Client.ReactorySDK` | - | Reactory SDK instance |
 | `serverPath` | `string` | `"${APP_DATA_ROOT}"` | Base server path to browse |
 | `onFileSelection` | `(files: ServerFileItem[]) => void` | - | File selection callback |
-| `onFolderSelection` | `(folders: ServerFolderItem[]) => void` | - | Folder selection callback; receives the resolver's `fullPath` |
+| `onFolderSelection` | `(folders: ServerFolderItem[]) => void` | - | Folder selection callback; footer action sends the browsed path, context menu sends the row's resolver `fullPath` |
 | `showFolderSelectionButton` | `boolean` | `true` when `onFolderSelection` is set | Show the footer action that selects the current folder |
 | `folderSelectionLabel` | `string` | `'Select this folder'` | Label for that action |
 | `closeOnFolderSelection` | `boolean` | `true` | Close the dialog after a folder is selected |

@@ -1096,8 +1096,8 @@ export const ServerFileExplorerComponentDefinition: Reactory.IReactoryComponentD
   component: ServerFileExplorer,
   description:
     'Modal server-side folder/file browser over the ReactoryServerFiles resolver - navigation, breadcrumbs, ' +
-    'search, filtering and a "select this folder" action that reports the resolver\'s fullPath. ' +
-    'Requires ADMIN or DEVELOPER.',
+    'search, filtering and "select this folder" actions that report the browsed path (footer) or a folder ' +
+    'row\'s resolver fullPath (context menu). Requires ADMIN or DEVELOPER.',
   tags: ['file', 'folder', 'explorer', 'browser', 'picker', 'server', 'shared'],
   roles: ['ADMIN', 'DEVELOPER'],
   wrapWithApi: true,
