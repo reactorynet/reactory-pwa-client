@@ -1254,6 +1254,42 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
       );
     });
 
+    // QF-1 regression at the integration level: an anonymous boot must not fetch
+    // branding, even when the previous user's switch is still sitting in
+    // browser storage. The anonymous `loggedIn` context is non-null, so a
+    // `loggedIn === null` guard alone would let it through and brand the login
+    // screen with the previous user's organization.
+    it('does not resolve branding for an anonymous boot with a persisted organization', async () => {
+      mockReactory.status.mockResolvedValue(anonymousStatus);
+      mockReactory.getUser.mockReturnValue(anonymousStatus);
+
+      // Seed the *real* jsdom localStorage: assigning a stand-in to
+      // `global.localStorage` does not reach the service, which reads
+      // `window.localStorage` directly. Seeding the real one is the only way
+      // this test can fail when the guard is missing.
+      window.localStorage.setItem('CoreDefaultOrganization', 'org-prev');
+      expect(window.localStorage.getItem('CoreDefaultOrganization')).toBe('org-prev');
+
+      try {
+        render(<ReactoryHOC appTheme={{}} />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByTestId('reactory-router')).toBeInTheDocument();
+          },
+          { timeout: 5000 },
+        );
+
+        // Nothing was fetched for the previous user's organization...
+        expect(mockReactory.graphqlQuery).not.toHaveBeenCalled();
+        // ...and no organization theme was published over the login screen.
+        expect(mockReactory.setThemeOverride).toHaveBeenCalledTimes(1);
+        expect(mockReactory.setThemeOverride).toHaveBeenCalledWith(null);
+      } finally {
+        window.localStorage.removeItem('CoreDefaultOrganization');
+      }
+    });
+
     it('subscribes to core.OrganizationUpdatedEvent and re-resolves the theme', async () => {
       mockReactory.graphqlQuery.mockResolvedValue({
         data: {

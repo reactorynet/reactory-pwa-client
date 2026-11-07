@@ -50,6 +50,14 @@ It was reintroduced (ORG-014 follow-up, REACTORY-302016408/20261107/1899253698)
 only after `setActiveOrganization` landed on the server, and it is wired to the
 canonical mutation rather than to browser storage.
 
+## Shell entry points
+
+| Callable | Contract |
+|---|---|
+| `reactory.switchOrganization(organization)` | The live switch: persists through `setActiveOrganization`, re-resolves branding under the `isBrandingPending` gate, refreshes the session and applies the theme. **Rejects** (`OrganizationSwitchError`) when the server refuses, leaving the current organisation and theme untouched. |
+| `reactory.setActiveOrganization(organization)` | **Alias of the above.** It used to persist to `localStorage` and return a resolution with no server write; it is now the full switch and rejects on refusal. Kept so earlier host surfaces keep working. |
+| `reactory.refreshOrganizationTheme()` | Forces a re-fetch of the active organisation's branding and re-applies it. |
+
 ## Rules
 
 - Do not add organization **management** UI, hooks or models here. Extend the

@@ -34,7 +34,6 @@ export interface OrganizationAwareReactory {
   getUser?: () => any;
   switchOrganization?: (organization: SwitchableOrganization | string) => Promise<unknown>;
   createNotification?: (message: string, options?: any) => unknown;
-  i18n?: { t?: (key: string, defaultValue?: string) => string };
 }
 
 export interface OrganizationSelectorProps {
@@ -45,12 +44,38 @@ export interface OrganizationSelectorProps {
 }
 
 /**
+ * English defaults for the control's labels.
+ *
+ * Deliberately not `reactory:reactory.organizations.*` keys: those keys are not
+ * present in any locale bundle (`reactory-data/i18n/<locale>/reactory.json`), so
+ * a namespaced lookup would silently fall through to these same English
+ * strings while looking translated. When the keys are added to the `reactory`
+ * namespace, route these constants through `reactory.i18n.t(key, LABELS.x)` -
+ * one change, in one place.
+ */
+const LABELS = {
+  switchOrganization: 'Switch organization',
+  organization: 'Organization',
+  switchUnavailable: 'Switching organization is not available in this application.',
+  switchFailed: 'Could not switch organization. Please try again.',
+};
+
+/**
  * The organizations the current session may switch to, in display order.
  *
- * Reads `loggedIn.memberships`, drops disabled memberships and anything without
- * an organization document, and de-duplicates by id (a user can hold several
- * memberships in the same organization - different business units, for example -
- * and that is still one choice in this menu).
+ * Reads `loggedIn.memberships`, drops entries without an organization
+ * document, and de-duplicates by id (a user can hold several memberships in the
+ * same organization - different business units, for example - and that is still
+ * one choice in this menu).
+ *
+ * A membership's own `enabled` flag is honoured **only when the session payload
+ * carries it**. The `ApiStatus` `loggedIn.memberships` fragment does not request
+ * `enabled`, so in this application the flag is always `undefined` and this
+ * filter is inert: a deactivated membership can still be listed. The authority
+ * is the server - `setActiveOrganization` refuses a membership that is not
+ * enabled with `ORGANIZATION_MEMBERSHIP_REQUIRED`, and the shell reports that
+ * refusal without changing the theme. Extending the fragment and the server
+ * projection would let this menu hide such memberships up front.
  *
  * The session's active organization is authoritative on the user document: if
  * it is not in the membership projection it is still offered as an entry, so the
@@ -68,7 +93,9 @@ export const switchableOrganizations = (reactory?: OrganizationAwareReactory): S
   const byId = new Map<string, SwitchableOrganization>();
 
   memberships.forEach((membership: any) => {
-    if (!membership || membership.enabled === false) return;
+    if (!membership) return;
+    // Defensive only - see the doc comment: the session projection omits this.
+    if (membership.enabled === false) return;
     const organization = membership.organization;
     const id = organization?.id ? `${organization.id}` : '';
     if (id.length === 0 || byId.has(id)) return;
@@ -124,17 +151,6 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
   // A single organization is not a choice; stay out of the toolbar.
   if (organizations.length < 2) return null;
 
-  const translate = (key: string, defaultValue: string): string => {
-    const t = reactory?.i18n?.t;
-    if (typeof t !== 'function') return defaultValue;
-    try {
-      const translated = t.call(reactory.i18n, key, defaultValue);
-      return typeof translated === 'string' && translated.length > 0 ? translated : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  };
-
   const activeName = organizations.find((organization) => organization.id === activeId)?.name ?? '';
 
   const onSelect = (organization: SwitchableOrganization) => {
@@ -143,24 +159,25 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 
     const switchOrganization = reactory?.switchOrganization;
     if (typeof switchOrganization !== 'function') {
-      reactory?.createNotification?.(
-        translate(
-          'reactory:reactory.organizations.switch_unavailable',
-          'Switching organization is not available in this application.',
-        ),
-        { type: 'warning', canDismiss: true, timeout: 5000, showInAppNotification: true },
-      );
+      reactory?.createNotification?.(LABELS.switchUnavailable, {
+        type: 'warning',
+        canDismiss: true,
+        timeout: 5000,
+        showInAppNotification: true,
+      });
       return;
     }
 
-    // Switching can be refused (not a member, expired session). The shell logs
-    // the reason and leaves the current branding in place; keep the rejection
-    // from surfacing as an unhandled promise and tell the user.
+    // Switching can be refused (not a member, unknown id, expired session). The
+    // shell logs the reason and leaves the current branding in place; keep the
+    // rejection from surfacing as an unhandled promise and tell the user.
     Promise.resolve(switchOrganization.call(reactory, organization)).catch(() => {
-      reactory?.createNotification?.(
-        translate('reactory:reactory.organizations.switch_failed', 'Could not switch organization. Please try again.'),
-        { type: 'error', canDismiss: true, timeout: 5000, showInAppNotification: true },
-      );
+      reactory?.createNotification?.(LABELS.switchFailed, {
+        type: 'error',
+        canDismiss: true,
+        timeout: 5000,
+        showInAppNotification: true,
+      });
     });
   };
 
@@ -169,13 +186,13 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
       <Tooltip
         title={
           activeName.length > 0
-            ? `${translate('reactory:reactory.organizations.active', 'Organization')}: ${activeName}`
-            : translate('reactory:reactory.organizations.switch', 'Switch organization')
+            ? `${LABELS.organization}: ${activeName}`
+            : LABELS.switchOrganization
         }
       >
         <IconButton
           color="inherit"
-          aria-label={translate('reactory:reactory.organizations.switch', 'Switch organization')}
+          aria-label={LABELS.switchOrganization}
           aria-haspopup="true"
           aria-controls={open ? 'reactory-organization-menu' : undefined}
           onClick={(event) => setAnchorEl(event.currentTarget)}

@@ -219,6 +219,89 @@ describe('OrganizationThemeService', () => {
     expect(service.getActiveOrganizationId()).toBe('org-1');
   });
 
+  // QF-1 regression: the anonymous session is NOT `loggedIn: null`. The server's
+  // `loggedInContext` returns `{ id: 'anon', roles: ['ANON'], memberships: [],
+  // organization: null }`, and the shell stores that whole object. A guard that
+  // only checks for a null context lets the previous user's persisted
+  // organization theme the login screen.
+  describe('anonymous session (server shape: non-null context, no memberships)', () => {
+    const anonymousUser = {
+      activeTheme: null,
+      loggedIn: {
+        id: 'anon',
+        roles: ['ANON'],
+        memberships: [],
+        organization: null,
+      },
+    };
+
+    it('does not honour a seeded CoreDefaultOrganization for the anonymous context', async () => {
+      const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-prev' });
+      const { reactory } = createReactory({ user: anonymousUser });
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      expect(service.getPersistedOrganizationId()).toBe('org-prev');
+      expect(service.getActiveOrganizationId()).toBeNull();
+
+      const resolution = await service.resolve();
+
+      // Nothing is fetched, so the login screen cannot be branded with the
+      // previous user's organization...
+      expect(reactory.graphqlQuery).not.toHaveBeenCalled();
+      expect(resolution.source).toBe('app');
+    });
+
+    it('recognises the anonymous context by id when the role is not carried', () => {
+      const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-prev' });
+      const { reactory } = createReactory({
+        user: { activeTheme: null, loggedIn: { id: 'anon', memberships: [] } },
+      });
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      expect(service.getActiveOrganizationId()).toBeNull();
+    });
+
+    it('treats any ANON- or ANONYMOUS-role session as anonymous', () => {
+      const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-prev' });
+      const { reactory } = createReactory({
+        user: { activeTheme: null, loggedIn: { id: 'session-1', roles: ['anonymous'], memberships: [] } },
+      });
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      expect(service.getActiveOrganizationId()).toBeNull();
+    });
+
+    it('does not fall back to the persisted id for a signed-in session with no memberships', () => {
+      // Second line of defence: an authenticated projection that carries no
+      // memberships belongs to no organization, so a stale browser value must
+      // not theme it either.
+      const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-prev' });
+      const { reactory } = createReactory({
+        user: { activeTheme: clientTheme, loggedIn: { id: 'user-1', roles: ['USER'], memberships: [], organization: null } },
+      });
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      expect(service.getActiveOrganizationId()).toBeNull();
+    });
+
+    it('clears the persisted organization when the session is reset on logout', async () => {
+      const storage = createStorage();
+      const { reactory } = createReactory();
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      // A switch writes the browser hint...
+      await service.setActiveOrganization('org-2');
+      expect(storage.setItem).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY, 'org-2');
+
+      // ...and logout drops it, so the next (possibly anonymous) boot has
+      // nothing to inherit.
+      service.reset();
+
+      expect(storage.removeItem).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY);
+      expect(service.getPersistedOrganizationId()).toBeNull();
+    });
+  });
+
   it('never resolves an organization for an anonymous session, even with a persisted id', async () => {
     const storage = createStorage({ [DEFAULT_ORGANIZATION_STORAGE_KEY]: 'org-2' });
     const { reactory } = createReactory({ user: { activeTheme: null, loggedIn: null } });
@@ -338,6 +421,42 @@ describe('OrganizationThemeService', () => {
     expect(service.getActiveOrganizationId()).toBe('org-2');
   });
 
+  it('ignores a switch that names no organization and reports it', async () => {
+    const { reactory, state } = createReactory();
+    const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+    await service.resolve();
+    const overridesBefore = state.overrides.length;
+
+    const resolution = await service.setActiveOrganization({} as any);
+
+    // Falls back to the current resolution: no mutation, no new fetch, no theme
+    // change - an id-less request cannot name a target.
+    expect(reactory.graphqlMutation).not.toHaveBeenCalled();
+    expect(reactory.graphqlQuery).toHaveBeenCalledTimes(1);
+    expect(state.overrides.length).toBe(overridesBefore);
+    expect(resolution.organizationId).toBe('org-1');
+    expect(state.logs.some((entry) => entry.message.includes('without an id'))).toBe(true);
+  });
+
+  it('refuses the switch when the mutation answers with a GraphQL errors array', async () => {
+    const storage = createStorage();
+    const { reactory, state } = createReactory({
+      mutate: async () => ({ data: null, errors: [{ message: 'ORGANIZATION_MEMBERSHIP_REQUIRED' }] }),
+    });
+    const service = new OrganizationThemeService(reactory, { storage });
+
+    await service.resolve();
+    const overridesBefore = state.overrides.length;
+
+    await expect(service.setActiveOrganization('org-9')).rejects.toBeInstanceOf(OrganizationSwitchError);
+
+    expect(state.overrides.length).toBe(overridesBefore);
+    expect(storage.setItem).not.toHaveBeenCalledWith(DEFAULT_ORGANIZATION_STORAGE_KEY, 'org-9');
+    expect(reactory.graphqlQuery).toHaveBeenCalledTimes(1);
+    expect(state.logs.some((entry) => entry.message.includes('ORGANIZATION_MEMBERSHIP_REQUIRED'))).toBe(true);
+  });
+
   it('skips the branding fetch when the caller already holds the full organization document', async () => {
     const { reactory, state } = createReactory();
     const service = new OrganizationThemeService(reactory, { storage: createStorage() });
@@ -448,6 +567,84 @@ describe('OrganizationThemeService', () => {
     expect(resolution.source).toBe('client');
     expect(lastOverride(state)).toBeNull();
     expect(state.logs.some((entry) => entry.message.includes('graphqlQuery'))).toBe(true);
+  });
+
+  // Failure tolerance is part of this service's contract: it runs during boot
+  // and during auth transitions, where a thrown error would leave a blank
+  // screen. These exercise the hostile-host paths directly.
+  describe('failure tolerance', () => {
+    it('survives a storage that throws on read, write and remove', async () => {
+      const storage = {
+        getItem: jest.fn(() => { throw new Error('storage disabled'); }),
+        setItem: jest.fn(() => { throw new Error('quota exceeded'); }),
+        removeItem: jest.fn(() => { throw new Error('storage disabled'); }),
+        clear: jest.fn(),
+        key: jest.fn(() => null),
+        length: 0,
+      } as unknown as Storage;
+      const { reactory, state } = createReactory();
+      const service = new OrganizationThemeService(reactory, { storage });
+
+      expect(service.getPersistedOrganizationId()).toBeNull();
+
+      const resolution = await service.resolve();
+      expect(resolution.source).toBe('organization');
+
+      await service.setActiveOrganization('org-2');
+      service.reset();
+
+      expect(state.logs.some((entry) => entry.message.includes('Could not persist the active organization'))).toBe(true);
+      expect(state.logs.some((entry) => entry.message.includes('Could not clear the persisted default organization'))).toBe(true);
+      expect(state.logs.some((entry) => entry.message.includes('Could not read the persisted default organization'))).toBe(true);
+    });
+
+    it('survives a setThemeOverride that throws', async () => {
+      const { reactory, state } = createReactory();
+      reactory.setThemeOverride = jest.fn(() => { throw new Error('api not ready'); });
+      const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+      const resolution = await service.resolve();
+
+      // The resolution still returns; the host simply could not be told.
+      expect(resolution.source).toBe('organization');
+      expect(state.logs.some((entry) => entry.message.includes('Could not publish the resolved organization theme'))).toBe(true);
+    });
+
+    it('survives an emit that throws', async () => {
+      const { reactory, state } = createReactory();
+      reactory.emit = jest.fn(() => { throw new Error('listener exploded'); });
+      const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+      const resolution = await service.setActiveOrganization('org-2');
+
+      expect(resolution.organizationId).toBe('org-2');
+      expect(state.logs.some((entry) => entry.message.includes('Could not emit onThemeChanged'))).toBe(true);
+    });
+
+    it('survives a getUser that throws', async () => {
+      const { reactory, state } = createReactory();
+      reactory.getUser = jest.fn(() => { throw new Error('session unavailable'); });
+      reactory.getTheme = jest.fn(() => { throw new Error('no theme yet'); });
+      const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+      const resolution = await service.resolve();
+
+      expect(resolution.source).toBe('app');
+      expect(reactory.graphqlQuery).not.toHaveBeenCalled();
+      expect(state.logs.some((entry) => entry.message.includes('Could not read the client theme'))).toBe(true);
+    });
+
+    it('falls back to the app theme when there is no user snapshot and getTheme throws', async () => {
+      const { reactory } = createReactory({ user: null });
+      reactory.getUser = jest.fn(() => null);
+      reactory.getTheme = jest.fn(() => { throw new Error('no theme yet'); });
+      const service = new OrganizationThemeService(reactory, { storage: createStorage() });
+
+      const resolution = await service.resolve();
+
+      expect(resolution.source).toBe('app');
+      expect(resolution.theme).toBeNull();
+    });
   });
 
   it('re-applies an os-mode theme when the system preference changes', async () => {

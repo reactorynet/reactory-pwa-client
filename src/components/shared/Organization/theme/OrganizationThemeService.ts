@@ -159,27 +159,45 @@ export class OrganizationThemeService {
    *     because `setActiveOrganization` writes exactly that field and ApiStatus
    *     projects it back as an Organization document;
    *  3. the id a previous switch persisted in this browser
-   *     (`CoreDefaultOrganization`), used *only* when the session reports no
-   *     organization at all, and only when the current user is still a member
-   *     of it. It is a hint for hosts whose session carries no organization,
-   *     never an override of the server.
+   *     (`CoreDefaultOrganization`), used *only* for an authenticated session
+   *     that carries memberships but no active organization yet, and only when
+   *     the current user is still a member of it. It is a hint for hosts whose
+   *     session projection omits `organization`, never an override of the
+   *     server.
    *
-   * An anonymous session never resolves an organization: the persisted value
-   * belongs to the previous user and must not theme the login screen.
+   * A session that holds no organization and no memberships resolves nothing.
+   * That covers both `loggedIn: null` and the anonymous context, which is NOT
+   * null: the server answers `{ id: 'anon', roles: ['ANON'], memberships: [],
+   * organization: null }`. Treating that as "no organization yet" and falling
+   * back to the persisted id would theme the login screen with the previous
+   * user's organization - the persisted value belongs to that user.
    */
   getActiveOrganizationId(): string | null {
-    if (this.getLoggedInContext() === null) return null;
+    const loggedInContext = this.getLoggedInContext();
+    if (loggedInContext === null) return null;
+
+    // The anonymous context is non-null, so it needs its own guard: see the
+    // method comment. Checked before the remembered switch because an anon
+    // session must resolve nothing at all.
+    if (this.isAnonymousSession(loggedInContext)) return null;
 
     if (this.switchedOrganizationId !== null) return this.switchedOrganizationId;
 
     const serverOrganizationId = this.getServerOrganizationId();
     if (serverOrganizationId !== null) return serverOrganizationId;
 
+    const memberships = this.getMemberships();
+
+    // No memberships means the session belongs to no organization, so there is
+    // nothing to fall back to. This is the second line of defence against the
+    // anonymous shape (`memberships: []`), and it also stops an authenticated
+    // user who holds no memberships from being themed by a stale browser value.
+    if (memberships !== null && memberships.length === 0) return null;
+
     const persistedId = this.getPersistedOrganizationId();
     if (persistedId === null) return null;
 
-    const memberships = this.getMemberships();
-    if (memberships !== null && memberships.length > 0) {
+    if (memberships !== null) {
       const isMember = memberships.some(
         (membership: any) => membership?.organization?.id === persistedId,
       );
@@ -187,6 +205,31 @@ export class OrganizationThemeService {
     }
 
     return persistedId;
+  }
+
+  /**
+   * True when the session is the anonymous context rather than a signed-in user.
+   *
+   * The server's `loggedInContext` returns a populated object for anonymous
+   * sessions (`id: 'anon'`, `roles: ['ANON']`, `memberships: []`,
+   * `organization: null`) and the client stores that whole object, so a
+   * `loggedIn === null` check alone never fires in the shell. `ANON` is pushed
+   * only for anonymous users (`ApiStatus.getRoles`), so the role is a reliable
+   * signal, and the id is checked too so the guard survives a host that
+   * renames roles.
+   */
+  private isAnonymousSession(loggedInContext: any): boolean {
+    if (!loggedInContext) return true;
+
+    const roles = Array.isArray(loggedInContext.roles) ? loggedInContext.roles : [];
+    const hasAnonymousRole = roles.some((role: any) => {
+      const normalised = `${role ?? ''}`.toUpperCase();
+      return normalised === 'ANON' || normalised === 'ANONYMOUS';
+    });
+    if (hasAnonymousRole) return true;
+
+    const id = loggedInContext.id;
+    return typeof id === 'string' && id.toLowerCase() === 'anon';
   }
 
   getPersistedOrganizationId(): string | null {
@@ -402,6 +445,12 @@ export class OrganizationThemeService {
   /**
    * Drops the organization override so the client theme applies again. Used on
    * logout, where the session no longer has an organization.
+   *
+   * Also forgets the browser-persisted organization id. The write belongs to
+   * the user who just signed out, and `getActiveOrganizationId` will not honour
+   * it for the anonymous session that follows - dropping it here means a shared
+   * browser does not carry one user's organization into the next user's
+   * session either.
    */
   reset(): IThemeResolution {
     // A logout must invalidate any pending branding response: otherwise a slow
@@ -413,6 +462,7 @@ export class OrganizationThemeService {
     // The session is gone: a remembered switch must not theme the next user's
     // boot with the previous user's organization.
     this.switchedOrganizationId = null;
+    this.clearPersistedOrganizationId();
     return this.apply(
       resolveOrganizationTheme({
         organization: null,
@@ -615,6 +665,18 @@ export class OrganizationThemeService {
     }
 
     return ((result as any).data?.CoreOrganization ?? null) as IOrganizationBranding | null;
+  }
+
+  /**
+   * Forgets the browser-persisted organization id. Best effort: storage may be
+   * unavailable (private mode, quota) and that must never break a logout.
+   */
+  private clearPersistedOrganizationId(): void {
+    try {
+      this.getStorage()?.removeItem(DEFAULT_ORGANIZATION_STORAGE_KEY);
+    } catch (error) {
+      this.warn('Could not clear the persisted default organization', { error });
+    }
   }
 
   private persistOrganizationId(organizationId: string): void {
