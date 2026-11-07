@@ -22,6 +22,20 @@ const useServerNavigation = (basePath: string): UseServerNavigationReturn => {
     setHistoryIndex(newHistory.length - 1);
   }, [currentPath, pathHistory, historyIndex]);
 
+  /**
+   * Jump to `path` and drop the history stack. Used when the explorer is
+   * reopened against a different root `serverPath` while still mounted.
+   *
+   * Deliberately dependency-free and idempotent: callers can put it in an
+   * effect dependency list without the reset re-firing on every navigation.
+   */
+  const reset = useCallback((path: string) => {
+    setCurrentPath((previous) => (previous === path ? previous : path));
+    setPathHistory((previous) =>
+      previous.length === 1 && previous[0] === path ? previous : [path]);
+    setHistoryIndex((previous) => (previous === 0 ? previous : 0));
+  }, []);
+
   const navigateUp = useCallback(() => {
     const parentPath = getParentPath(currentPath);
     if (parentPath !== currentPath) {
@@ -55,6 +69,7 @@ const useServerNavigation = (basePath: string): UseServerNavigationReturn => {
     canGoBack,
     canGoForward,
     navigate,
+    reset,
     navigateUp,
     goBack,
     goForward,

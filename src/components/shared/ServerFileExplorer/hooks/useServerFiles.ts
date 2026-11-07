@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ServerFileItem, ServerFolderItem, ServerSelectedItem, UseServerFilesReturn } from '../types';
 
   // Real GraphQL queries matching our server implementation
@@ -150,6 +150,17 @@ const useServerFiles = (
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState(basePath);
 
+  /**
+   * Monotonic id of the most recently issued listing request.
+   *
+   * Whichever response resolves last must not win: a slow read of the previous
+   * root would otherwise overwrite folders/files/currentPath after the caller
+   * already moved on (prop change, breadcrumb, back/forward, refresh). The
+   * listing and the path the picker reports would then disagree, and clicking
+   * a row would navigate into the old root's children.
+   */
+  const requestIdRef = useRef(0);
+
   const loadPath = useCallback(async (path: string, options?: {
     limit?: number;
     offset?: number;
@@ -161,6 +172,12 @@ const useServerFiles = (
     includeSystemFiles?: boolean;
     fileTypes?: string[];
   }) => {
+    // Claim this request before the first await; any older in-flight request
+    // becomes stale the moment a newer one starts.
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const isCurrent = () => requestId === requestIdRef.current;
+
     setLoading(true);
     setError(null);
     
@@ -232,6 +249,10 @@ const useServerFiles = (
           };
         };
       };
+
+      // Superseded while the read was in flight: drop the response entirely -
+      // do not touch folders, files, currentPath or error.
+      if (!isCurrent()) return;
       
       if (result.data?.ReactoryServerFiles?.__typename === 'ReactoryServerFilesErrorResponse') {
         throw new Error(result.data.ReactoryServerFiles.message);
@@ -270,12 +291,17 @@ const useServerFiles = (
       setCurrentPath(path);
       
     } catch (err) {
+      // A stale failure must not surface as the current path's error.
+      if (!isCurrent()) return;
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to load server files';
       setError(errorMessage);
       console.error('Error loading server path:', err);
       reactory.error('Server File Load Error', errorMessage);
     } finally {
-      setLoading(false);
+      // Only the newest request owns the loading flag; a stale completion must
+      // not clear the spinner while the current read is still running.
+      if (isCurrent()) setLoading(false);
     }
   }, [reactory]);
 
