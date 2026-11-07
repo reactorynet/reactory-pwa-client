@@ -550,14 +550,6 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
   
   {
     nameSpace: 'core',
-    name: 'ResetPassword',
-    component: () => new Error('Complete core.ResetPassword Migratation to reactory-user plugin'),
-    version: '1.0.0',
-    description: 'A placeholder component indicating that password reset functionality has been migrated to the reactory-user plugin.',
-    tags: ['password', 'reset', 'migration', 'placeholder'],
-  },  
-  {
-    nameSpace: 'core',
     name: 'DateSelector',
     component: DateSelector,
     version: '1.0.0',
