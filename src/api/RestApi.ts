@@ -75,8 +75,17 @@ export const checkUsername = (username: string) => {
   }).then((response) => response.json());
 }
 
+/**
+ * Complete a password reset.
+ *
+ * The path was `useraccount/reset`, which has never existed on the server — the
+ * reset link 404'd even before the endpoint was missing. The server now serves
+ * `POST /useraccount/reset-password` with `{ token, password, confirmPassword }`,
+ * which is what the {@link PasswordReset} page posts directly (see
+ * `components/plugins/reactory-core/password-reset`).
+ */
 export const reset = (resetPayload) => {
-  const url = safeUrl([api_root, 'useraccount/reset']);
+  const url = safeUrl([api_root, 'useraccount/reset-password']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(resetPayload),
