@@ -8,6 +8,7 @@ import {
 import { cloneDeep } from "lodash";
 import { useNavigate } from "react-router";
 import { ApolloQueryResult, FetchResult } from "@apollo/client";
+import { buildErrorSchemaFromGraphQLErrors } from "./graphqlErrorSchema";
 
 /**
  * GraphQL Data Manager Hook for Reactory Forms.
@@ -93,6 +94,13 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
 
   const [localData, setLocalData] = useState<unknown>(formData);
   const [isBusy, setIsBusy] = useState<boolean>(false);
+  // Server-side validation feedback, in the shape rjsf consumes. `errorSchema`
+  // drives inline field messages (rjsf `extraErrors` / legacy `errorSchema`),
+  // `errors` drives the form's error summary list. Both are cleared whenever a
+  // new submit starts so a stale failure never outlives the data that caused
+  // it, and cleared again when a submit succeeds.
+  const [errorSchema, setErrorSchema] = useState<any>({});
+  const [errors, setErrors] = useState<any[]>([]);
 
   /**
    * @param options
@@ -217,11 +225,16 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
           });
           return;
         }
+        // `getComponent` returns null when the referenced handler is not
+        // registered yet (plugin not loaded, or a form that declares an
+        // `onError.componentRef` but ships no handler). That must not abort the
+        // submit path: the field-level errorSchema produced above is already
+        // applied and is the primary feedback channel.
         const component: any = reactory.getComponent(componentRef);
-        if (component.onError && typeof component.onError === "function") {
+        if (component?.onError && typeof component.onError === "function") {
           component.onError(error);
         } else {
-          if (component[method] && typeof component[method] === "function") {
+          if (component?.[method] && typeof component[method] === "function") {
             component[method](error);
           } else {
             reactory.warning(
@@ -273,6 +286,8 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
     
     setLocalData(data);
     setIsBusy(true);
+    setErrorSchema({});
+    setErrors([]);
     if (
       graphql &&
       (graphql?.mutation || Object.keys(graphql?.mutation).length > 0)
@@ -324,6 +339,20 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
         if (errors) {
           reactory.error(`Error in GraphQL Mutation: ${mutationText}`, errors);
           hasErrors = true;
+
+          // Translate the server payload into an rjsf errorSchema so the
+          // offending field can render the message inline. `onError.fieldMap`
+          // is the form-definition hint that maps server extension keys onto
+          // schema paths; without it the extension's own key is used when it
+          // names a real schema property, and anything unattributable falls
+          // back to the form-level `_error`.
+          const validation = buildErrorSchemaFromGraphQLErrors(errors, {
+            fieldMap: (onError as any)?.fieldMap,
+            schema,
+          });
+          setErrorSchema(validation.errorSchema);
+          setErrors(validation.errors);
+
           if (onError) {
             const error: any = {
               errors,
@@ -332,6 +361,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
               form,
               formContext,
               reactory,
+              errorSchema: validation.errorSchema,
             };
             const { method, onErrorMethod, componentRef } = onError;
 
@@ -340,15 +370,18 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
                 doHandleErrors(method, error);
               });
             } else if (onErrorMethod && method === "function") {
+              // Same null-safety as doHandleErrors: an unregistered handler
+              // component must not turn a handled mutation error into an
+              // unhandled rejection.
               const component: any = reactory.getComponent(componentRef);
               if (
-                component.onError &&
+                component?.onError &&
                 typeof component.onError === "function"
               ) {
                 component.onError(error);
               } else {
                 if (
-                  component[method] &&
+                  component?.[method] &&
                   typeof component[method] === "function"
                 ) {
                   component[method](error);
@@ -531,6 +564,8 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
     getData,
     refresh,
     isBusy,
+    errorSchema,
+    errors,
     available: Object.keys(graphql || {}).length > 0,
   } as IReactoryFormDataManagerHookResult;
 };
