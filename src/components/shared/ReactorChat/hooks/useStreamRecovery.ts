@@ -33,7 +33,14 @@ export type StreamRecoveryReason =
   | 'reconnected'
   | 'reconnect-failed'
   | 'stalled'
-  | 'resumed';
+  | 'resumed'
+  /**
+   * The server explicitly said the gap cannot be replayed from the requested
+   * `Last-Event-ID` (it was evicted from the replay buffer). The socket is
+   * alive; what is unknown is *where* it resumes, so the transcript must be
+   * re-fetched rather than trusted.
+   */
+  | 'resync';
 
 export interface StreamRecoveryResyncResult {
   /**
@@ -98,6 +105,12 @@ export interface UseStreamRecoveryResult {
   handleReconnected: () => void;
   /** The stream gave up. The transcript is now stale until reconciled. */
   handleReconnectFailed: () => void;
+  /**
+   * The server signalled `resync`: the gap cannot be replayed, so re-fetch the
+   * conversation through the same reconcile path every other recovery reason
+   * uses. This is deliberately NOT a second recovery mechanism.
+   */
+  handleResyncRequest: () => void;
   /** The tab regained focus/visibility. */
   handleFocus: () => void;
   /** Force a reconcile now (exposed for tests and manual refresh paths). */
@@ -260,6 +273,19 @@ const useStreamRecovery = (options: UseStreamRecoveryOptions): UseStreamRecovery
     resyncAndSettle('reconnect-failed');
   }, [resyncAndSettle]);
 
+  /**
+   * The server could not replay from the requested id and said so explicitly.
+   *
+   * Re-fetch the conversation through the same path a reconnect or a stall
+   * uses — the socket is alive, but what it resumes from is unknown, so the
+   * local transcript is now a guess. Reset the verification counter: this is a
+   * new, server-declared gap, not the continuation of an unanswered poll.
+   */
+  const handleResyncRequest = React.useCallback(() => {
+    stallPollsRef.current = 0;
+    resyncAndSettle('resync');
+  }, [resyncAndSettle]);
+
   const handleFocus = React.useCallback(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
     const current = optionsRef.current;
@@ -296,6 +322,7 @@ const useStreamRecovery = (options: UseStreamRecoveryOptions): UseStreamRecovery
     notifyHeartbeat,
     handleReconnected,
     handleReconnectFailed,
+    handleResyncRequest,
     handleFocus,
     resyncNow: resync,
     stop,

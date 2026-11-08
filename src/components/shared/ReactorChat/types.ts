@@ -125,8 +125,15 @@ export interface ChatCompletionResponseMessageStore extends OpenAI.Chat.ChatComp
 
 export type ReactorConversationHistory = UXChatMessage[]
 
-/** Represents the current network connection status for the ReactorChat session. */
-export type NetworkStatus = 'idle' | 'connected' | 'reconnecting' | 'error';
+/**
+ * Represents the current network connection status for the ReactorChat session.
+ *
+ * `error` is a transient failure the user may dismiss; `lost` is the terminal
+ * state after the reconnect budget is exhausted — the transport has given up and
+ * the transcript may be stale, so the banner must stay and keep offering a
+ * reconnect rather than letting a frozen stream look like a hung agent.
+ */
+export type NetworkStatus = 'idle' | 'connected' | 'reconnecting' | 'error' | 'lost';
 
 /**
  * High-level activity status of the chat session, derived from
