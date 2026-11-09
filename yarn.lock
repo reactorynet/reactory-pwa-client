@@ -5120,7 +5120,7 @@ __metadata:
     "@storybook/addon-essentials": "npm:^8.6.14"
     "@storybook/addon-interactions": "npm:^8.6.14"
     "@storybook/addon-links": "npm:^9.0.18"
-    "@storybook/addon-onboarding": "npm:^9.0.18"
+    "@storybook/addon-onboarding": "npm:^10.6.6"
     "@storybook/addon-webpack5-compiler-swc": "npm:^3.0.0"
     "@storybook/manager-api": "npm:^8.6.14"
     "@storybook/react": "npm:^9.0.18"
@@ -5733,12 +5733,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@storybook/addon-onboarding@npm:^9.0.18":
-  version: 9.1.19
-  resolution: "@storybook/addon-onboarding@npm:9.1.19"
+"@storybook/addon-onboarding@npm:^10.6.6":
+  version: 10.6.6
+  resolution: "@storybook/addon-onboarding@npm:10.6.6"
   peerDependencies:
-    storybook: ^9.1.19
-  checksum: 10c0/4f65011fc8b995fa2f0169ef7d90c314a3c75fc450e8701cfaad41a43f1fe39ff5ee7e47d2c68940b7c4227534fd1fba2a32c8af5507c8565bb03cf24cf0d460
+    storybook: ^10.6.6
+  checksum: 10c0/53dc2638f32fc7c9aa5251fc962062f71a00b9ed3113f70db42ed9ecf29b9f25874202b220b9fb604720cf873e9aa22df86b048a4dc9adb968c1a1b47195486b
   languageName: node
   linkType: hard
 
