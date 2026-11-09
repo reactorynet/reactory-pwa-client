@@ -24,7 +24,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
@@ -52,7 +52,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
@@ -81,7 +81,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
