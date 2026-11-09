@@ -3034,8 +3034,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // closing over it.
   const chatListFilterRef = React.useRef<ChatListFilter>(chatListFilter);
   chatListFilterRef.current = chatListFilter;
+
+  /**
+   * The status the CONTROLLERS read.
+   *
+   * Written together with the state in `applyChatListStatus` — never synced on
+   * render. A guard that only sees `error`/`loading` after React has re-rendered
+   * lets a "Load more" click that lands in the same tick page off the PREVIOUS
+   * window; that is exactly the B1 hazard (append onto the previous query's
+   * rows) re-entering through the back door.
+   */
   const chatListStatusRef = React.useRef<ChatListStatus>(chatListStatus);
-  chatListStatusRef.current = chatListStatus;
+
+  /** The ONLY writer of the list status: updates the ref and the state together. */
+  const applyChatListStatus = (next: ChatListStatus): ChatListStatus => {
+    chatListStatusRef.current = next;
+    setChatListStatus(next);
+    return next;
+  };
+
   const chatsRef = React.useRef<any[]>(chats);
   chatsRef.current = chats;
 
@@ -3078,12 +3095,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const seq = chatListRequestSeqRef.current + 1;
     chatListRequestSeqRef.current = seq;
 
-    setChatListStatus((prev) => ({
-      ...prev,
+    applyChatListStatus({
+      ...chatListStatusRef.current,
       loading: !append,
       loadingMore: append,
       error: null,
-    }));
+      retry: null,
+    });
 
     try {
       const page = (await graph.listConversations(buildConversationFilter(requestFilter, requestedOffset))) || [];
@@ -3100,7 +3118,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       chatsRef.current = merged.chats;
       setChats(merged.chats);
-      setChatListStatus(merged.status);
+      applyChatListStatus(merged.status);
       return merged.chats;
     } catch (error: any) {
       if (seq !== chatListRequestSeqRef.current) return [];
@@ -3113,15 +3131,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // Deliberately NOT `onError`: that pushes a system message into the
       // conversation transcript, and a history-list failure is not a chat
       // message. The panel renders this as an inline error with a retry.
-      setChatListStatus((prev) => ({
-        ...prev,
+      applyChatListStatus({
+        ...chatListStatusRef.current,
         loading: false,
         loadingMore: false,
         error: error?.message || 'Unable to load conversations',
         // Remember exactly which window failed. Retry replays it verbatim — a
         // failed first page must not be retried as an append.
         retry: { offset: requestedOffset, pageSize },
-      }));
+      });
       return [];
     }
   };
