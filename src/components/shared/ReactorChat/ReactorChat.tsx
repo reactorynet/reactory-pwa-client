@@ -1454,9 +1454,13 @@ export default (props) => {
     setChatHistoryPanelOpen(willOpen);
     // Refresh the chat list when opening the history panel
     if (willOpen) {
-      // Refresh with the COMMITTED filter (search term included) and keep the
-      // loaded window: re-opening the panel must not un-filter the list.
-      void refreshChatList();
+      // Refresh with the COMMITTED filter (search term and host scope included)
+      // and keep the loaded window: re-opening the panel must not un-filter the
+      // list. The one member that is deliberately cleared is the persona: the
+      // history panel groups conversations across agents, which is what the old
+      // unscoped `listChats({})` call did — the term survives, the persona scope
+      // does not.
+      void refreshChatList({ personaId: null });
     }
   }, [chatHistoryPanelOpen, refreshChatList]);
 

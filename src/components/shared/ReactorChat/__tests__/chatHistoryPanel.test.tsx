@@ -246,15 +246,58 @@ describe('ChatHistoryPanel — search affordance', () => {
     fireEvent.keyDown(searchField(), { key: 'Escape' });
     expect(onSearch).toHaveBeenCalledWith('');
   });
+
+  it('does not clobber keystrokes typed while a debounced commit lands', () => {
+    jest.useFakeTimers();
+    try {
+      const onSearch = jest.fn();
+      const { rerender, props } = renderPanel({ onSearch, activeSearchTerm: '' });
+
+      const input = searchField();
+      fireEvent.change(input, { target: { value: 'Email T' } });
+      // The user keeps typing before the debounce fires, then the commit for
+      // the shorter term lands: the field must keep what the user has typed
+      // (resetting it to the committed prefix would eat "emplates" and move
+      // the caret).
+      fireEvent.change(input, { target: { value: 'Email Templates' } });
+      rerender(<ChatHistoryPanel {...props} activeSearchTerm="Email T" />);
+
+      expect(searchField()).toHaveValue('Email Templates');
+
+      // Settle the pending debounce so no timer outlives the test.
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+      expect(onSearch).toHaveBeenCalledWith('Email Templates');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe('ChatHistoryPanel — committed term is displayed as the active filter', () => {
   it('shows the term and the number of matching conversations', () => {
-    renderPanel({ activeSearchTerm: 'Email Templates', chats: chats(3) });
+    renderPanel({
+      activeSearchTerm: 'Email Templates',
+      chats: chats(3),
+      listStatus: withStatus({ exhausted: true }),
+    });
 
     expect(screen.getByTestId('chat-history-active-filter')).toBeInTheDocument();
     expect(screen.getByText('Filtering by "Email Templates"')).toBeInTheDocument();
     expect(screen.getByTestId('chat-history-match-count').textContent).toBe('3 matches');
+  });
+
+  it('reports an open-ended count until the list is known to be complete', () => {
+    // The server returns no total, so while another page may exist the count is
+    // "N+" rather than a total the panel cannot know.
+    renderPanel({
+      activeSearchTerm: 'Email Templates',
+      chats: chats(3),
+      listStatus: withStatus({ offset: 3, exhausted: false }),
+    });
+
+    expect(screen.getByTestId('chat-history-match-count').textContent).toBe('3+ matches');
   });
 
   it('says "No conversations match <term>" rather than "No chats found"', () => {
@@ -273,6 +316,25 @@ describe('ChatHistoryPanel — committed term is displayed as the active filter'
 
     expect(screen.getByText('No chats found')).toBeInTheDocument();
     expect(screen.queryByTestId('chat-history-active-filter')).not.toBeInTheDocument();
+  });
+
+  it('says the list is still updating while a replace is in flight over existing rows', () => {
+    renderPanel({
+      activeSearchTerm: 'Email Templates',
+      chats: chats(3),
+      listStatus: withStatus({ loading: true, offset: 3 }),
+    });
+
+    expect(screen.getByTestId('chat-history-updating')).toBeInTheDocument();
+    // The rows stay on screen (no flash of an empty list) and the committed
+    // term is displayed, so the transient state is unambiguous.
+    expect(screen.getByText('Conversation 0')).toBeInTheDocument();
+    expect(screen.getByText('Filtering by "Email Templates"')).toBeInTheDocument();
+  });
+
+  it('hides the updating hint once the request settles', () => {
+    renderPanel({ chats: chats(3), listStatus: withStatus({ loading: false }) });
+    expect(screen.queryByTestId('chat-history-updating')).not.toBeInTheDocument();
   });
 
   it('never renders the empty state over a load failure', () => {

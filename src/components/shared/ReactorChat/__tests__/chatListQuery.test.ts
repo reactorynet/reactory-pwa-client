@@ -76,6 +76,29 @@ describe('chatListQuery — filter state', () => {
     expect(filter.search).toBe('');
   });
 
+  it('an explicit null clears a scope without touching the term', () => {
+    // This is what opening the history panel does: the panel lists
+    // conversations across every agent, so it drops the persona scope while
+    // keeping the committed term and the host scope.
+    const current = createChatListFilter({
+      search: 'Email Templates',
+      personaId: 'persona-1',
+      use_case: 'workflow',
+    });
+
+    const unscoped = patchChatListFilter(current, { personaId: null });
+
+    expect(unscoped.search).toBe('Email Templates');
+    expect(unscoped.use_case).toBe('workflow');
+    expect('personaId' in unscoped).toBe(false);
+    expect(buildConversationFilter(unscoped, 0)).toEqual({
+      search: 'Email Templates',
+      use_case: 'workflow',
+      limit: CHAT_LIST_PAGE_SIZE,
+      offset: 0,
+    });
+  });
+
   it('changes identity only when something actually changed', () => {
     const a = createChatListFilter({ search: 'email' });
     const b = createChatListFilter({ search: 'email' });

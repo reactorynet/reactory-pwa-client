@@ -141,14 +141,6 @@ const renderChat = (overrides: Record<string, any> = {}) => {
   return renderHook(() => useChatFactory(options as any));
 };
 
-const flush = async () => {
-  await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-  });
-};
-
 /** A promise whose settlement the test controls, to force response ordering. */
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
@@ -258,6 +250,33 @@ describe('useChatFactory — committed search term', () => {
     expect(graph.listConversations).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'Email Templates', personaId: 'persona-2' }),
     );
+  });
+
+  it('opening the history panel unscopes the persona but keeps the term', async () => {
+    // `handleChatHistoryPanelToggle` refreshes with `{ personaId: null }`: the
+    // panel groups conversations across agents (which is what the old unscoped
+    // `listChats({})` did) and must still honour the committed term and the
+    // host scope.
+    const { result } = renderChat();
+    graph.listConversations.mockResolvedValue([row('email-1')]);
+
+    await act(async () => {
+      await result.current.commitChatSearch('Email Templates');
+    });
+    expect(result.current.chatListFilter.personaId).toBe('persona-1');
+
+    graph.listConversations.mockClear();
+
+    await act(async () => {
+      await result.current.refreshChatList({ personaId: null });
+    });
+
+    expect(result.current.chatListFilter.search).toBe('Email Templates');
+    expect(result.current.chatListFilter.personaId).toBeUndefined();
+    const sent = graph.listConversations.mock.calls[0][0];
+    expect(sent.search).toBe('Email Templates');
+    expect(sent.use_case).toBe('workflow');
+    expect('personaId' in sent).toBe(false);
   });
 
   it('deleting a chat refreshes with the term instead of reloading everything', async () => {
@@ -553,5 +572,36 @@ describe('useChatFactory — load failures', () => {
     expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE + 2);
     expect(result.current.chatListStatus.error).toBeNull();
     expect(result.current.chatListStatus.exhausted).toBe(true);
+  });
+
+  it('retries a failed search as a replacement, not as an append', async () => {
+    const { result } = renderChat();
+
+    // A page is already on screen when the user searches and the search fails.
+    graph.listConversations.mockResolvedValueOnce(rows('page1', CHAT_LIST_PAGE_SIZE));
+    await act(async () => {
+      await result.current.refreshChatList(undefined, { preserveWindow: false });
+    });
+    expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE);
+
+    graph.listConversations.mockRejectedValueOnce(new Error('network is down'));
+    await act(async () => {
+      await result.current.commitChatSearch('Email Templates');
+    });
+    expect(result.current.chatListStatus.error).toBe('network is down');
+
+    graph.listConversations.mockResolvedValueOnce([row('email-1', 'Email Templates rollout')]);
+    await act(async () => {
+      await result.current.retryChatList();
+    });
+
+    // Retry replays the FIRST page of the committed search: offset 0 replaces
+    // the stale rows. Retrying at the previous offset would have appended a
+    // later page to them and never shown page one of the result set.
+    expect(graph.listConversations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: 'Email Templates', offset: 0 }),
+    );
+    expect(result.current.chats.map((c: any) => c.id)).toEqual(['email-1']);
+    expect(result.current.chatListStatus.error).toBeNull();
   });
 });

@@ -3107,6 +3107,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         loading: false,
         loadingMore: false,
         error: error?.message || 'Unable to load conversations',
+        // Remember exactly which window failed. Retry replays it verbatim — a
+        // failed first page must not be retried as an append.
+        retry: { offset: requestedOffset, pageSize },
       }));
       return [];
     }
@@ -3133,8 +3136,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     return runChatListQueryImpl(filter, 0, windowSize);
   };
 
-  const commitChatSearchImpl = (term: string): Promise<any[]> =>
-    refreshChatListImpl({ search: term ?? '' }, { preserveWindow: false });
+  /**
+   * Commit a search term as list state and reload from the first page.
+   *
+   * Committing the term that is already in force is a no-op: the panel commits
+   * on Enter and again from the typing debounce, so without this guard a settled
+   * term would be fetched twice (and the second response would only ever be a
+   * duplicate of the first). A failed list is retried even for the same term.
+   */
+  const commitChatSearchImpl = (term: string): Promise<any[]> => {
+    const current = chatListFilterRef.current;
+    const nextSearch = typeof term === 'string' ? term.trim() : '';
+    if (nextSearch === (current.search || '') && !chatListStatusRef.current.error) {
+      return Promise.resolve(chatsRef.current || []);
+    }
+    return refreshChatListImpl({ search: nextSearch }, { preserveWindow: false });
+  };
 
   const loadMoreChatsImpl = (): Promise<any[]> => {
     const status = chatListStatusRef.current;
@@ -3144,8 +3161,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     return runChatListQueryImpl(chatListFilterRef.current, status.offset);
   };
 
-  const retryChatListImpl = (): Promise<any[]> =>
-    runChatListQueryImpl(chatListFilterRef.current, chatListStatusRef.current.offset);
+  const retryChatListImpl = (): Promise<any[]> => {
+    const status = chatListStatusRef.current;
+    const window = status.retry;
+    return window
+      ? runChatListQueryImpl(chatListFilterRef.current, window.offset, window.pageSize)
+      : runChatListQueryImpl(chatListFilterRef.current, status.offset);
+  };
 
   /**
    * Read-only probe: returns conversations matching `filter` WITHOUT writing the

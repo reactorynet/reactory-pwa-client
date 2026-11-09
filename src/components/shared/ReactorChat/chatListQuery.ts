@@ -53,8 +53,23 @@ export interface ChatListFilter {
   pageSize: number;
 }
 
-/** Non-committed / partial form used by patches from call sites. */
-export type ChatListFilterPatch = Partial<Omit<ChatListFilter, 'search'>> & { search?: string };
+/**
+ * Non-committed / partial form used by patches from call sites.
+ *
+ * `undefined` means "leave this member alone" (a persona switch must never
+ * clear the search term by omission). `null` is the explicit request to CLEAR a
+ * scope — the history panel uses it to list conversations across every agent
+ * while still honouring the committed term:
+ *
+ *   refreshChatList({ personaId: null })   // all personas, same search
+ */
+export type ChatListFilterPatch = Partial<{
+  search: string;
+  personaId: string | null;
+  use_case: string | null;
+  edges: ReactorConversationEdge[] | null;
+  pageSize: number;
+}>;
 
 /** Observable status of the history list, rendered by the panel. */
 export interface ChatListStatus {
@@ -70,6 +85,20 @@ export interface ChatListStatus {
   capped: boolean;
   /** Offset to request for the next page. */
   offset: number;
+  /**
+   * The window the last failed request asked for, or null when nothing failed.
+   *
+   * Retry must replay THAT request: a failed first page (offset 0, replace)
+   * retried at the current `offset` would be an append, mixing the rows still on
+   * screen with a later page of the new query and never fetching its page one.
+   */
+  retry: ChatListRequestWindow | null;
+}
+
+/** The window a request asked for, so Retry can replay exactly that request. */
+export interface ChatListRequestWindow {
+  offset: number;
+  pageSize: number;
 }
 
 export const initialChatListStatus = (): ChatListStatus => ({
@@ -79,6 +108,7 @@ export const initialChatListStatus = (): ChatListStatus => ({
   exhausted: false,
   capped: false,
   offset: 0,
+  retry: null,
 });
 
 /**
@@ -110,9 +140,11 @@ export const chatListFilterKey = (filter: ChatListFilter): string =>
   });
 
 /**
- * Merge a patch into the committed filter. `undefined` members are ignored so a
- * caller cannot accidentally clear the search term by spreading an object with
- * an explicit `undefined`.
+ * Merge a patch into the committed filter.
+ *
+ * `undefined` members are ignored so a caller cannot accidentally clear the
+ * search term by spreading an object with an explicit `undefined`; an explicit
+ * `null` removes a member (an unscoped refresh).
  */
 export const patchChatListFilter = (
   current: ChatListFilter,
@@ -120,8 +152,13 @@ export const patchChatListFilter = (
 ): ChatListFilter => {
   const merged: ChatListFilterPatch = { ...current };
   (Object.keys(patch) as (keyof ChatListFilterPatch)[]).forEach((key) => {
-    if (patch[key] !== undefined) {
-      (merged as any)[key] = patch[key];
+    const value = patch[key];
+    if (value === null) {
+      delete (merged as any)[key];
+      return;
+    }
+    if (value !== undefined) {
+      (merged as any)[key] = value;
     }
   });
   return createChatListFilter(merged);
@@ -226,6 +263,8 @@ export const mergeChatListPage = (
       exhausted,
       capped,
       offset: nextOffset,
+      // A successful page clears any pending retry window.
+      retry: null,
     },
   };
 };

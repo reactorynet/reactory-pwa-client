@@ -116,8 +116,22 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   // Reopening the panel shows the committed term, which is also what the rows
   // were fetched with. While the panel is closed it does not re-render at all
   // (see `arePanelPropsEqual`), so this runs exactly on open.
+  const openRef = React.useRef(open);
+  const lastCommittedRef = React.useRef(committedTerm);
+  const searchInputRef = React.useRef(searchInput);
+  searchInputRef.current = searchInput;
   React.useEffect(() => {
-    if (open) {
+    const reopened = open && !openRef.current;
+    openRef.current = open;
+    const previous = lastCommittedRef.current;
+    lastCommittedRef.current = committedTerm;
+    if (!open) return;
+    // Adopt the committed term when the panel opens, and afterwards only when
+    // the field still holds the PREVIOUS committed term (an external reset).
+    // A debounced commit can land while the user is already on the next
+    // keystroke; re-syncing unconditionally would delete that character and
+    // move the caret mid-word.
+    if (reopened || searchInputRef.current.trim() === previous) {
       setSearchInput(committedTerm);
     }
   }, [open, committedTerm]);
@@ -324,6 +338,8 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                 bgcolor: 'action.selected',
               }}
               data-testid="chat-history-active-filter"
+              role="status"
+              aria-live="polite"
             >
               <Typography variant="caption" sx={{ flex: 1, minWidth: 0 }} noWrap>
                 {interpolate(
@@ -339,10 +355,17 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                 variant="outlined"
                 data-testid="chat-history-match-count"
                 label={interpolate(
-                  il8n?.t('reactor.client.chat.history.matchCount', {
-                    defaultValue: '{{count}} matches',
-                    count: totalLoaded,
-                  }) ?? '{{count}} matches',
+                  // The server returns no total, so an unfinished list is
+                  // reported as "N+" instead of claiming N is the match count.
+                  status.exhausted
+                    ? il8n?.t('reactor.client.chat.history.matchCount', {
+                        defaultValue: '{{count}} matches',
+                        count: totalLoaded,
+                      }) ?? '{{count}} matches'
+                    : il8n?.t('reactor.client.chat.history.matchCountPartial', {
+                        defaultValue: '{{count}}+ matches',
+                        count: totalLoaded,
+                      }) ?? '{{count}}+ matches',
                   { count: totalLoaded },
                 )}
                 sx={{ height: 18, fontSize: '0.65rem' }}
@@ -355,6 +378,21 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
               >
                 {il8n?.t('reactor.client.chat.history.resetFilter', { defaultValue: 'Reset' })}
               </Button>
+            </Box>
+          )}
+
+          {/* A replace in flight while rows are on screen: the committed term is
+              already displayed above, so say that the list is still catching up
+              rather than leaving stale rows looking authoritative. */}
+          {status.loading && hasRows && (
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
+              data-testid="chat-history-updating"
+            >
+              {CircularProgress ? <CircularProgress size={12} /> : null}
+              <Typography variant="caption" color="text.secondary">
+                {il8n?.t('reactor.client.chat.history.updating', { defaultValue: 'Updating list…' })}
+              </Typography>
             </Box>
           )}
 
