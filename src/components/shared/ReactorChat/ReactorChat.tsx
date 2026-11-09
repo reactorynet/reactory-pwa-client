@@ -356,11 +356,15 @@ export default (props) => {
     loadArchivedHistory = (async () => {}) as () => Promise<void>,
     archivedHistoryLoading = false,
     fetchConversationMeta,
-    listChats,
     listRecentChats,
     setToolApprovalMode,
     chats,
-    setChats,
+    chatListFilter,
+    chatListStatus,
+    refreshChatList,
+    commitChatSearch,
+    loadMoreChats,
+    retryChatList,
     deleteChat,
     updateChatData,
     transferToPersona,
@@ -481,19 +485,19 @@ export default (props) => {
   const refreshChatListForPersona = useCallback(
     async (personaId: string) => {
       try {
-        const list = await listChats({
-          personaId,
-          use_case: useCase,
-          edges: hostEdges,
-        });
-        setChats((list || []) as ChatState[]);
+        // One list state: patch the persona but keep the committed search term,
+        // and restart the paging window for the newly scoped list.
+        await refreshChatList(
+          { personaId, use_case: useCase, edges: hostEdges },
+          { preserveWindow: false },
+        );
       } catch (error) {
         reactory.log('ReactorChat: Failed to refresh chat list for persona', { error, personaId }, 'warning');
       } finally {
         chatListLoadedForPersonaRef.current = personaId;
       }
     },
-    [listChats, setChats, useCase, hostEdges, reactory],
+    [refreshChatList, useCase, hostEdges, reactory],
   );
 
   const handleSessionSwitch = useCallback((sessionId: string, personaId?: string) => {
@@ -1096,12 +1100,10 @@ export default (props) => {
       reactory.log(`ReactorChat: Loading chat list for persona: ${selectedPersona?.name || 'none'}`);
       // Scoped to this use case so an embedded chat's history panel shows only
       // its own conversations, never the user's unrelated standalone ones.
-      const chatList = await listChats({
-        personaId: selectedPersona?.id,
-        use_case: useCase,
-        edges: hostEdges,
-      });
-      setChats(chatList as ChatState[]);
+      const chatList = await refreshChatList(
+        { personaId: selectedPersona?.id, use_case: useCase, edges: hostEdges },
+        { preserveWindow: false },
+      );
 
       // Auto-initialize session when we have personaId but no sessionId in URL.
       // We check whether the current chatState already belongs to this persona
@@ -1149,7 +1151,7 @@ export default (props) => {
         }
       }
     })();
-  }, [selectedPersona?.id, listChats, setChats, useCase, hostEdges, autoResume]);
+  }, [selectedPersona?.id, refreshChatList, useCase, hostEdges, autoResume]);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 
@@ -1452,11 +1454,11 @@ export default (props) => {
     setChatHistoryPanelOpen(willOpen);
     // Refresh the chat list when opening the history panel
     if (willOpen) {
-      listChats({}).then((chatList) => {
-        setChats(chatList as ChatState[]);
-      });
+      // Refresh with the COMMITTED filter (search term included) and keep the
+      // loaded window: re-opening the panel must not un-filter the list.
+      void refreshChatList();
     }
-  }, [chatHistoryPanelOpen, listChats, selectedPersona?.id, setChats]);
+  }, [chatHistoryPanelOpen, refreshChatList]);
 
   const handleChatHistoryPanelClose = useCallback(() => {
     setChatHistoryPanelOpen(false);
@@ -1535,11 +1537,29 @@ export default (props) => {
 
   // Hoisted out of the JSX: as an inline arrow this prop was new on every
   // render, so ChatHistoryPanel could never be skipped by its memo.
+  //
+  // Every one of these is a stable callback (the hook returns `useCallback`
+  // wrappers over refs), which is what keeps `arePanelPropsEqual` — a shallow
+  // `Object.is` comparison — from re-rendering the panel on every parent pass.
+
+  /**
+   * Commit a search term into the list state. The panel calls this on Enter and
+   * after the typing debounce; it is never called per keystroke.
+   */
   const handleChatHistorySearch = useCallback((query: string) => {
-    listChats({ search: query }).then((chatList) => {
-      setChats(chatList as ChatState[]);
-    });
-  }, [listChats, setChats]);
+    void commitChatSearch(query);
+  }, [commitChatSearch]);
+
+  /** Append the next page of conversations. */
+  const handleChatHistoryLoadMore = useCallback(() => {
+    void loadMoreChats();
+  }, [loadMoreChats]);
+
+  /** Retry the last failed history-list request. */
+  const handleChatHistoryRetry = useCallback(() => {
+    void retryChatList();
+  }, [retryChatList]);
+
 
   const handleRecordingPanelToggle = useCallback(() => {
     // Close other panels first
@@ -2756,6 +2776,10 @@ export default (props) => {
               onEditChat={handleChatEdit}
               onTransferChat={handleChatTransferOpen}
               onSearch={handleChatHistorySearch}
+              activeSearchTerm={chatListFilter.search}
+              onLoadMore={handleChatHistoryLoadMore}
+              onRetry={handleChatHistoryRetry}
+              listStatus={chatListStatus}
               Material={Material}
               il8n={il8n}
             />
