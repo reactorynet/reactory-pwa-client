@@ -221,3 +221,105 @@ describe('chatListQuery — page merge', () => {
     expect(result.status.loadingMore).toBe(false);
   });
 });
+
+/**
+ * B2 — a background refresh must not lose a terminal state.
+ *
+ * `refreshChatList` re-validates the window it already holds. It asks for ONE
+ * row more than it keeps, and that extra row is a sentinel: its presence proves
+ * at least one more conversation exists, its absence is the short page that ends
+ * the list. Before this, the refresh asked for exactly the rows it held, so the
+ * response was always a FULL page — `shortPage` could not fire and
+ * `exhausted`/`capped` were reset to false on every panel re-open, putting a
+ * "Load more" button on a list that could not grow.
+ *
+ * Falsification: drop the `keep` handling from `mergeChatListPage` (or pass
+ * `pageSize = keep` without the sentinel) and the first two tests fail; drop the
+ * `capBounded` rule and the third fails.
+ */
+describe('chatListQuery — re-validating a loaded window (B2)', () => {
+  const MAX = 30;
+  // Deliberately ABOVE the window, so the sentinel cases are not confused with
+  // the cap case (which has its own test below).
+  const NOT_CAPPED = 100;
+
+  it('a sentinel row proves more exist, and is not rendered', () => {
+    // 30 loaded, asked for 31, got 31: row #31 exists.
+    const loaded = Array.from({ length: MAX }, (_, i) => chat(`row-${i}`));
+    const response = [...loaded, chat('row-30')];
+
+    const result = mergeChatListPage(loaded, response, {
+      offset: 0,
+      pageSize: MAX + 1,
+      keep: MAX,
+      maxRows: NOT_CAPPED,
+    });
+
+    // The window did not grow: the sentinel was evidence, not content.
+    expect(result.chats).toHaveLength(MAX);
+    expect(ids(result.chats)).not.toContain('row-30');
+    expect(result.status.exhausted).toBe(false);
+    expect(result.status.capped).toBe(false);
+    // "Load more" continues AT the sentinel, not past it.
+    expect(result.status.offset).toBe(MAX);
+  });
+
+  it('a short re-validation keeps the list terminal', () => {
+    // 30 loaded, asked for 31, got 30: nothing older exists.
+    const loaded = Array.from({ length: MAX }, (_, i) => chat(`row-${i}`));
+
+    const result = mergeChatListPage(loaded, loaded, {
+      offset: 0,
+      pageSize: MAX + 1,
+      keep: MAX,
+      maxRows: NOT_CAPPED,
+    });
+
+    expect(result.chats).toHaveLength(MAX);
+    expect(result.status.exhausted).toBe(true);
+    expect(result.status.capped).toBe(false);
+  });
+
+  it('a re-validation at the row cap reports the cap, not completeness', () => {
+    // At the cap the 501st row cannot be requested, so a full response carries
+    // no new evidence. The client cannot show more, and cannot verify that
+    // nothing older exists, so the cap is the only honest report.
+    const loaded = Array.from({ length: MAX }, (_, i) => chat(`row-${i}`));
+
+    const result = mergeChatListPage(loaded, loaded, {
+      offset: 0,
+      pageSize: MAX,
+      keep: MAX,
+      maxRows: MAX,
+    });
+
+    expect(result.status.capped).toBe(true);
+    expect(result.status.exhausted).toBe(true);
+  });
+
+  it('a cap-bounded window that shrank is genuinely complete', () => {
+    // Rows were deleted: the response is short, so the cap no longer truncates
+    // anything and the list really is at its end.
+    const loaded = Array.from({ length: MAX }, (_, i) => chat(`row-${i}`));
+    const shrunk = loaded.slice(0, MAX - 5);
+
+    const result = mergeChatListPage(loaded, shrunk, {
+      offset: 0,
+      pageSize: MAX,
+      keep: MAX,
+      maxRows: MAX,
+    });
+
+    expect(result.chats).toHaveLength(MAX - 5);
+    expect(result.status.capped).toBe(false);
+    expect(result.status.exhausted).toBe(true);
+  });
+
+  it('keeps the ordinary append/replace behaviour when `keep` is absent', () => {
+    const page = Array.from({ length: 25 }, (_, i) => chat(`p-${i}`));
+    const result = mergeChatListPage([], page, { offset: 0, pageSize: 25 });
+    expect(result.chats).toHaveLength(25);
+    expect(result.status.exhausted).toBe(false);
+    expect(result.status.offset).toBe(25);
+  });
+});

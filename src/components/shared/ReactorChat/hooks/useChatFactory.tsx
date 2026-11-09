@@ -3086,6 +3086,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     filter: ChatListFilter,
     offset: number = 0,
     pageSizeOverride?: number,
+    mergeOptions: { keep?: number } = {},
   ): Promise<any[]> => {
     const requestedOffset = Math.max(0, Math.floor(offset) || 0);
     const append = requestedOffset > 0;
@@ -3114,6 +3115,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         offset: requestedOffset,
         pageSize,
         maxRows: CHAT_LIST_MAX_ROWS,
+        // Present on a preserve-window re-validation: `pageSize` is `keep + 1`
+        // and the extra row is the sentinel that proves more rows exist.
+        ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
       });
 
       chatsRef.current = merged.chats;
@@ -3138,7 +3142,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         error: error?.message || 'Unable to load conversations',
         // Remember exactly which window failed. Retry replays it verbatim — a
         // failed first page must not be retried as an append.
-        retry: { offset: requestedOffset, pageSize },
+        retry: {
+          offset: requestedOffset,
+          pageSize,
+          ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
+        },
       });
       return [];
     }
@@ -3159,10 +3167,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const filter = applyChatListFilterImpl(patch);
     const preserveWindow = options.preserveWindow !== false;
     const loaded = (chatsRef.current || []).length;
-    const windowSize = preserveWindow
-      ? Math.min(Math.max(loaded, filter.pageSize), CHAT_LIST_MAX_ROWS)
-      : filter.pageSize;
-    return runChatListQueryImpl(filter, 0, windowSize);
+
+    // Nothing on screen: this is an ordinary first page.
+    if (!preserveWindow || loaded === 0) {
+      return runChatListQueryImpl(filter, 0, filter.pageSize);
+    }
+
+    // Re-validate the visible window WITHOUT changing it.
+    //
+    // Ask for ONE row more than we hold and let the merge treat it as a
+    // sentinel: if it arrives, at least one more conversation exists; if it
+    // does not, the page is short and the list is terminal. Requesting exactly
+    // the rows already loaded instead always comes back FULL, which made
+    // `exhausted`/`capped` false again on every panel re-open (B2) and put a
+    // "Load more" button on a list that could not grow.
+    const keep = Math.min(loaded, CHAT_LIST_MAX_ROWS);
+    // Bounded by the cap: at 500 rows we cannot ask for the 501st, so the merge
+    // reports the cap instead of guessing (see `mergeChatListPage`).
+    const pageSize = Math.min(keep + 1, CHAT_LIST_MAX_ROWS);
+    return runChatListQueryImpl(filter, 0, pageSize, { keep });
   };
 
   /**
@@ -3199,7 +3222,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const status = chatListStatusRef.current;
     const window = status.retry;
     return window
-      ? runChatListQueryImpl(chatListFilterRef.current, window.offset, window.pageSize)
+      ? runChatListQueryImpl(chatListFilterRef.current, window.offset, window.pageSize, {
+          keep: window.keep,
+        })
       : runChatListQueryImpl(chatListFilterRef.current, status.offset);
   };
 

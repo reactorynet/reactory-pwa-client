@@ -375,6 +375,68 @@ describe('ChatHistoryPanel — paging affordances', () => {
     expect(screen.queryByTestId('chat-history-load-more')).not.toBeInTheDocument();
   });
 
+  /**
+   * The user-visible half of B2.
+   *
+   * A `preserveWindow` refresh (panel re-open, delete, chat-data edit) re-checks
+   * the rows already loaded. Before the fix that request came back FULL, so the
+   * hook republished `exhausted:false` and this footer flipped from
+   * 'All conversations loaded' back to a 'Load more' button for a list that
+   * could not grow — repeatable on every refresh.
+   *
+   * The panel's job is narrow and complete: whatever terminal state the status
+   * reports must render as terminal, never as an affordance. This pins that for
+   * both terminal shapes, from a state where 'Load more' is genuinely on screen
+   * first, so the assertion cannot pass by accident.
+   */
+  it('renders the refreshed terminal state instead of putting "Load more" back', () => {
+    const onLoadMore = jest.fn();
+    const { rerender, props } = renderPanel({
+      onLoadMore,
+      chats: chats(CHAT_LIST_PAGE_SIZE),
+      listStatus: withStatus({ offset: CHAT_LIST_PAGE_SIZE, exhausted: false }),
+    });
+    // Precondition: mid-paging, the affordance IS on screen.
+    expect(screen.getByTestId('chat-history-load-more')).toBeInTheDocument();
+
+    // Same rows after a preserveWindow refresh that proved there is nothing
+    // older: the footer must be terminal.
+    rerender(
+      <ChatHistoryPanel
+        {...props}
+        chats={chats(CHAT_LIST_PAGE_SIZE)}
+        listStatus={withStatus({ offset: CHAT_LIST_PAGE_SIZE, exhausted: true })}
+      />,
+    );
+
+    expect(screen.getByTestId('chat-history-all-loaded')).toHaveTextContent('All conversations loaded');
+    expect(screen.queryByTestId('chat-history-load-more')).not.toBeInTheDocument();
+  });
+
+  it('keeps the cap notice after a refresh at the row cap', () => {
+    const onLoadMore = jest.fn();
+    const { rerender, props } = renderPanel({
+      onLoadMore,
+      chats: chats(CHAT_LIST_MAX_ROWS),
+      // Not yet known to be terminal, and not capped: this is the state where
+      // the footer WOULD offer 'Load more'.
+      listStatus: withStatus({ offset: CHAT_LIST_MAX_ROWS, exhausted: false }),
+    });
+    expect(screen.getByTestId('chat-history-load-more')).toBeInTheDocument();
+
+    rerender(
+      <ChatHistoryPanel
+        {...props}
+        chats={chats(CHAT_LIST_MAX_ROWS)}
+        listStatus={withStatus({ offset: CHAT_LIST_MAX_ROWS, exhausted: true, capped: true })}
+      />,
+    );
+
+    expect(screen.getByTestId('chat-history-capped').textContent).toContain(String(CHAT_LIST_MAX_ROWS));
+    expect(screen.queryByTestId('chat-history-load-more')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chat-history-all-loaded')).not.toBeInTheDocument();
+  });
+
   it('says so when the in-memory cap is reached instead of pretending the list ended', () => {
     renderPanel({
       chats: chats(10),

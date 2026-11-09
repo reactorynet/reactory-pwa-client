@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react-hooks';
 import { ChatState, ToolApprovalMode } from '../types';
-import { CHAT_LIST_PAGE_SIZE } from '../chatListQuery';
+import { CHAT_LIST_MAX_ROWS, CHAT_LIST_PAGE_SIZE } from '../chatListQuery';
 
 /**
  * Chat-history list state — the hook-level half of REACTORY-302016408.
@@ -515,10 +515,11 @@ describe('useChatFactory — real paging', () => {
       await result.current.refreshChatList();
     });
 
-    // The refresh asks for the rows already loaded in one window, so the user
-    // does not lose page 2 by closing and re-opening the panel.
+    // The refresh re-validates the rows already loaded in one window, so the
+    // user does not lose page 2 by closing and re-opening the panel, and it asks
+    // for ONE row beyond them so a short response still means "end of list".
     expect(graph.listConversations).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 0, limit: CHAT_LIST_PAGE_SIZE * 2 }),
+      expect.objectContaining({ offset: 0, limit: CHAT_LIST_PAGE_SIZE * 2 + 1 }),
     );
     expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE * 2);
   });
@@ -672,5 +673,115 @@ describe('useChatFactory — load failures', () => {
     );
     expect(result.current.chats.map((c: any) => c.id)).toEqual(['email-1']);
     expect(result.current.chatListStatus.error).toBeNull();
+  });
+});
+
+/**
+ * B2 — a background refresh must not resurrect a terminal state.
+ *
+ * `refreshChatList` (the default `preserveWindow` path, used by panel open,
+ * delete and chat-data edit) used to re-request EXACTLY the rows already loaded.
+ * That response is always a full page, so `mergeChatListPage` computed
+ * `shortPage: false` and `capped: false` and republished `exhausted: false`:
+ * a user who had loaded every conversation — or hit the 500-row cap — closed and
+ * re-opened the panel and was told "Load more" again, and clicking it fetched
+ * rows that were sliced away before the truth was restored. That is the exact
+ * terminal-state requirement (6) and the contradictory-affordance case (7).
+ *
+ * The fix requests one row MORE than the window and treats it as a sentinel, so
+ * the short-page rule still fires on a refresh; at the cap, where the sentinel
+ * cannot be fetched, the cap is reported instead.
+ *
+ * Falsification: restore `pageSize = loaded` (no sentinel) and the first test
+ * fails with `exhausted: false`; drop the `capBounded` rule and the second
+ * fails with `capped: false`.
+ */
+describe('useChatFactory — B2: a refresh keeps the terminal state it already knew', () => {
+  it('keeps a short-page list terminal, and "Load more" stays inert', async () => {
+    const { result } = renderChat();
+
+    graph.listConversations
+      .mockResolvedValueOnce(rows('page1', CHAT_LIST_PAGE_SIZE))
+      .mockResolvedValueOnce(rows('page2', 5));
+
+    await act(async () => {
+      await result.current.refreshChatList(undefined, { preserveWindow: false });
+    });
+    await act(async () => {
+      await result.current.loadMoreChats();
+    });
+
+    // 25 + 5 = 30 rows; the 5-row page is short, so the list is terminal.
+    expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE + 5);
+    expect(result.current.chatListStatus.exhausted).toBe(true);
+
+    // Exactly what a panel re-open / delete / chat-data edit does.
+    graph.listConversations.mockResolvedValueOnce([
+      ...rows('page1', CHAT_LIST_PAGE_SIZE),
+      ...rows('page2', 5),
+    ]);
+    await act(async () => {
+      await result.current.refreshChatList();
+    });
+
+    // One row MORE than we hold is requested: the sentinel.
+    expect(graph.listConversations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 0, limit: CHAT_LIST_PAGE_SIZE + 6 }),
+    );
+    // The visible window is unchanged...
+    expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE + 5);
+    // ...and so is the terminal state (this is what B2 broke).
+    expect(result.current.chatListStatus.exhausted).toBe(true);
+    expect(result.current.chatListStatus.capped).toBe(false);
+
+    // And "Load more" is inert rather than offering rows that do not exist.
+    graph.listConversations.mockClear();
+    await act(async () => {
+      await result.current.loadMoreChats();
+    });
+    expect(graph.listConversations).not.toHaveBeenCalled();
+  });
+
+  it('keeps the cap report after a refresh at CHAT_LIST_MAX_ROWS', async () => {
+    const { result } = renderChat();
+
+    graph.listConversations.mockResolvedValueOnce(rows('first', CHAT_LIST_PAGE_SIZE));
+    await act(async () => {
+      await result.current.refreshChatList(undefined, { preserveWindow: false });
+    });
+
+    // Page until the cap is crossed: 25 + 20 x 25 = 525 requested, 500 kept.
+    for (let page = 0; page < CHAT_LIST_MAX_ROWS / CHAT_LIST_PAGE_SIZE; page += 1) {
+      graph.listConversations.mockResolvedValueOnce(rows(`fill${page}`, CHAT_LIST_PAGE_SIZE));
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        await result.current.loadMoreChats();
+      });
+    }
+
+    expect(result.current.chats).toHaveLength(CHAT_LIST_MAX_ROWS);
+    expect(result.current.chatListStatus.capped).toBe(true);
+    expect(result.current.chatListStatus.exhausted).toBe(true);
+
+    // Panel re-open at the cap.
+    graph.listConversations.mockResolvedValueOnce(rows('cap-revalidated', CHAT_LIST_MAX_ROWS));
+    await act(async () => {
+      await result.current.refreshChatList();
+    });
+
+    // The 501st row is the row the cap forbids fetching, so the re-validation is
+    // bounded there and the cap — not "all loaded" — is the honest report.
+    expect(graph.listConversations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 0, limit: CHAT_LIST_MAX_ROWS }),
+    );
+    expect(result.current.chats).toHaveLength(CHAT_LIST_MAX_ROWS);
+    expect(result.current.chatListStatus.capped).toBe(true);
+    expect(result.current.chatListStatus.exhausted).toBe(true);
+
+    graph.listConversations.mockClear();
+    await act(async () => {
+      await result.current.loadMoreChats();
+    });
+    expect(graph.listConversations).not.toHaveBeenCalled();
   });
 });

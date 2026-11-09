@@ -99,6 +99,12 @@ export interface ChatListStatus {
 export interface ChatListRequestWindow {
   offset: number;
   pageSize: number;
+  /**
+   * Present when the request was a re-validation of an already-loaded window
+   * (see `ChatListPageOptions.keep`). Retried verbatim so the replay derives
+   * the same terminal state as the request that failed.
+   */
+  keep?: number;
 }
 
 export const initialChatListStatus = (): ChatListStatus => ({
@@ -190,6 +196,22 @@ export interface ChatListPageOptions {
   pageSize: number;
   /** Row cap for the in-memory list. */
   maxRows?: number;
+  /**
+   * Set when this page RE-VALIDATES an already-loaded window instead of
+   * fetching a new one.
+   *
+   * The caller requests `keep + 1` rows and passes `keep` here: the one extra
+   * row is a SENTINEL that proves at least one more conversation exists, and is
+   * never rendered. Only `keep` rows are kept, so a background refresh
+   * re-checks the visible set without growing or shrinking it.
+   *
+   * This is what makes the terminal state survive a refresh. Requesting exactly
+   * the rows already loaded instead would always come back as a FULL page, so
+   * the short-page rule could not fire and `exhausted`/`capped` were reset to
+   * false on every panel re-open (B2) — the user was told 'Load more' about a
+   * list that could not grow.
+   */
+  keep?: number;
 }
 
 export interface ChatListPageResult {
@@ -224,6 +246,15 @@ export const mergeChatListPage = (
   const base = append ? existing || [] : [];
   const incomingRows = page || [];
 
+  // A re-validation page may carry ONE row beyond the window being re-checked
+  // (see `ChatListPageOptions.keep`). That row is evidence, not content: it is
+  // dropped here so the visible set stays exactly what the user already had,
+  // while `shortPage` below still measures the FULL response.
+  const keep = typeof options.keep === 'number' && Number.isFinite(options.keep)
+    ? Math.max(0, Math.floor(options.keep))
+    : undefined;
+  const windowRows = keep === undefined ? incomingRows : incomingRows.slice(0, keep);
+
   const seen = new Set<string>();
   base.forEach((chat) => {
     const id = chat?.id ? String(chat.id) : '';
@@ -231,7 +262,7 @@ export const mergeChatListPage = (
   });
 
   const added: ChatState[] = [];
-  incomingRows.forEach((chat) => {
+  windowRows.forEach((chat) => {
     const id = chat?.id ? String(chat.id) : '';
     if (id) {
       if (seen.has(id)) return;
@@ -241,13 +272,26 @@ export const mergeChatListPage = (
   });
 
   const requestedTotal = base.length + added.length;
-  const capped = requestedTotal > maxRows;
-  const chats = capped ? [...base, ...added].slice(0, maxRows) : [...base, ...added];
-
-  // The next window starts after the rows the SERVER returned, not after the
-  // rows we kept: de-duplication must not shift the window and re-fetch rows.
-  const nextOffset = offset + incomingRows.length;
+  const crossedCap = requestedTotal > maxRows;
   const shortPage = incomingRows.length < pageSize;
+
+  // A window that already fills the row cap cannot be re-validated: the extra
+  // row that would prove "more exist" is the row the cap forbids fetching. A
+  // response that fills such a window therefore carries no new evidence, and
+  // reporting the cap is the only honest option — the client cannot show more
+  // than this, and cannot verify that nothing older exists.
+  const capBounded = keep !== undefined && keep >= maxRows;
+  const capped = crossedCap || (capBounded && !shortPage);
+
+  const chats = requestedTotal > maxRows
+    ? [...base, ...added].slice(0, maxRows)
+    : [...base, ...added];
+
+  // The next window starts after the rows we actually HOLD. For an append that
+  // is every row the server returned (de-duplication must not shift the window
+  // and re-fetch rows); for a re-validation it is the window itself, so
+  // "Load more" continues at the sentinel row rather than past it.
+  const nextOffset = offset + windowRows.length;
   // Defensive: a full page that contributes nothing new would make "Load more"
   // loop forever. Treat it as the end of the list.
   const stalled = append && !shortPage && added.length === 0;
