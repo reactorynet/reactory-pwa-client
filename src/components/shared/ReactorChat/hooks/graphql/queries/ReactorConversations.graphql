@@ -1,3 +1,25 @@
+# Conversation list for the chat history panel.
+#
+# PAGINATION CONTRACT
+# The schema exposes `ReactorConversations(filter: ReactorConversationFilter)`
+# only — there are no root-level `limit`/`offset` arguments — and the filter
+# input carries `search`, `limit`, `offset`, `use_case` and `edges`
+# (see reactory-express-server: modules/reactory-reactor/graphql/schema/
+# ReactorChat.graphql, `input ReactorConversationFilter`).
+#
+# Therefore the window travels INSIDE `$filter`. Every caller must send an
+# explicit `limit` and `offset`: the service defaults to `limit = 50`,
+# `offset = 0`, which is the hard ceiling that made conversation #51 and older
+# unreachable in the UI.
+#
+# Built by `buildConversationFilter()` in
+# `src/components/shared/ReactorChat/chatListQuery.ts`:
+#
+#   { search?, personaId?, use_case?, edges?, limit: pageSize, offset }
+#
+# The server returns a plain list — no total count and no `hasMore` — so the
+# client treats a short page (`rows.length < limit`) as the terminal state.
+# Adding `total`/`hasMore` to this query is a server-side follow-up.
 query ReactoryConversations($filter: ReactorConversationFilter) {
   ReactorConversations(filter: $filter) {
     id
@@ -17,4 +39,3 @@ query ReactoryConversations($filter: ReactorConversationFilter) {
     edges { name value edge_type }
   }
 }
-

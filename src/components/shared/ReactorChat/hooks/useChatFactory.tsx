@@ -16,6 +16,18 @@ import useStreamRecovery, { StreamRecoveryReason, StreamRecoveryResyncResult } f
 import { resyncConversationFromServer } from './conversationResync';
 import { chatShellBus } from '../components/Shell/chatShellBus';
 import {
+  CHAT_LIST_MAX_ROWS,
+  ChatListFilter,
+  ChatListFilterPatch,
+  ChatListStatus,
+  buildConversationFilter,
+  chatListFilterKey,
+  createChatListFilter,
+  initialChatListStatus,
+  mergeChatListPage,
+  patchChatListFilter,
+} from '../chatListQuery';
+import {
   cacheClientToolResult,
   evictClientToolResults,
   getCachedClientToolResult,
@@ -64,7 +76,35 @@ interface ChatFactoryHookResult {
   newChat: () => Promise<string | null>
   // function use to return all the available chats for the
   // current user.
+  //
+  // Read-only probe: returns the conversations matching `filter` WITHOUT
+  // writing the rendered history list. The list is owned by the controller
+  // below (`refreshChatList` / `commitChatSearch` / `loadMoreChats`), which
+  // always applies the committed filter — see `chatListQuery.ts`.
   listChats(filter?: any): Promise<any[]>
+  /**
+   * The committed history-list query. Shared by EVERY refresh path (panel open,
+   * persona switch, search, delete, chat-data edit) so an active search term can
+   * never be silently dropped by a background refresh.
+   */
+  chatListFilter: ChatListFilter
+  /** Observable paging/loading/error state for the history list. */
+  chatListStatus: ChatListStatus
+  /**
+   * Refresh the history list with the committed filter, optionally patching it
+   * first (e.g. `{ personaId }`). `preserveWindow` (default true) re-requests
+   * the rows already loaded so a background refresh does not shrink the list.
+   */
+  refreshChatList: (
+    patch?: ChatListFilterPatch,
+    options?: { preserveWindow?: boolean },
+  ) => Promise<any[]>
+  /** Commit a search term as list state and reload from the first page. */
+  commitChatSearch: (term: string) => Promise<any[]>
+  /** Append the next page. No-op once the list is exhausted or capped. */
+  loadMoreChats: () => Promise<any[]>
+  /** Retry the last failed request (first page or the page that failed). */
+  retryChatList: () => Promise<any[]>
   /**
    * Most-recently-updated conversations for the user, across every persona.
    *
@@ -74,6 +114,17 @@ interface ChatFactoryHookResult {
    * whatever the user last touched regardless of which agent owns it.
    */
   listRecentChats(limit?: number): Promise<any[]>
+  /**
+   * The conversation this persona should be resumed into, or `null` if it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume / auto-init decision. It is
+   * an UNFILTERED probe: it never carries the history panel's committed search
+   * term, because a term that happens to match (or match nothing) must not
+   * decide whether the user resumes their latest conversation or gets a brand
+   * new one. Read-only — it does not write `chats`.
+   */
+  getMostRecentChatForPersona(personaId: string): Promise<any | null>
   // expose chats state
   chats: any[]
   // expose setChats function
@@ -2958,17 +3009,241 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }, [chatState.history, chatState.tools, chatState.macros]);
 
+  // ---------------------------------------------------------------------------
+  // Chat history list — ONE filter, ONE request sequence, ONE writer
+  // ---------------------------------------------------------------------------
+  //
+  // `chats` is the list the history panel renders. Every path that refreshes it
+  // (panel open, persona switch, search, delete, chat-data edit) goes through
+  // `runChatListQueryImpl` with the COMMITTED filter below. That is the fix for
+  // the defect where a background refresh called `listChats({})` and silently
+  // dropped the active search term while the field kept displaying it.
+
+  const [chatListFilter, setChatListFilterState] = React.useState<ChatListFilter>(() =>
+    createChatListFilter({
+      personaId: props?.persona?.id,
+      use_case: props?.useCase,
+      edges: props?.edges,
+    }),
+  );
+  const [chatListStatus, setChatListStatus] = React.useState<ChatListStatus>(initialChatListStatus);
+
+  // Mirrors of the newest values. The public controllers below are intentionally
+  // identity-stable (they are handed to `ChatHistoryPanel`, whose memo comparator
+  // uses `Object.is`), so they must read current state through refs instead of
+  // closing over it.
+  const chatListFilterRef = React.useRef<ChatListFilter>(chatListFilter);
+  chatListFilterRef.current = chatListFilter;
+
+  /**
+   * The status the CONTROLLERS read.
+   *
+   * Written together with the state in `applyChatListStatus` — never synced on
+   * render. A guard that only sees `error`/`loading` after React has re-rendered
+   * lets a "Load more" click that lands in the same tick page off the PREVIOUS
+   * window; that is exactly the B1 hazard (append onto the previous query's
+   * rows) re-entering through the back door.
+   */
+  const chatListStatusRef = React.useRef<ChatListStatus>(chatListStatus);
+
+  /** The ONLY writer of the list status: updates the ref and the state together. */
+  const applyChatListStatus = (next: ChatListStatus): ChatListStatus => {
+    chatListStatusRef.current = next;
+    setChatListStatus(next);
+    return next;
+  };
+
+  const chatsRef = React.useRef<any[]>(chats);
+  chatsRef.current = chats;
+
+  /**
+   * Monotonic request sequence. Only the response whose sequence is still the
+   * newest is applied, so a slower earlier query (a prefix of the term the user
+   * has settled on) can never overwrite a newer result. "Last response wins"
+   * was the second half of the search defect.
+   */
+  const chatListRequestSeqRef = React.useRef(0);
+
+  /** Commit a filter patch (no fetch). Returns the filter now in force. */
+  const applyChatListFilterImpl = (patch: ChatListFilterPatch = {}): ChatListFilter => {
+    const next = patchChatListFilter(chatListFilterRef.current, patch);
+    if (chatListFilterKey(next) !== chatListFilterKey(chatListFilterRef.current)) {
+      chatListFilterRef.current = next;
+      setChatListFilterState(next);
+    }
+    return chatListFilterRef.current;
+  };
+
+  /**
+   * Run one list request against the committed filter.
+   *
+   * `offset === 0` replaces the list; `offset > 0` appends and de-duplicates by
+   * conversation id (see `mergeChatListPage`). A failure becomes an error state
+   * with a retry — the rows already on screen are kept, never collapsed to
+   * "No chats found".
+   */
+  const runChatListQueryImpl = async (
+    filter: ChatListFilter,
+    offset: number = 0,
+    pageSizeOverride?: number,
+    mergeOptions: { keep?: number } = {},
+  ): Promise<any[]> => {
+    const requestedOffset = Math.max(0, Math.floor(offset) || 0);
+    const append = requestedOffset > 0;
+    const pageSize = pageSizeOverride && pageSizeOverride > 0 ? pageSizeOverride : filter.pageSize;
+    const requestFilter: ChatListFilter = pageSize === filter.pageSize ? filter : { ...filter, pageSize };
+
+    const seq = chatListRequestSeqRef.current + 1;
+    chatListRequestSeqRef.current = seq;
+
+    applyChatListStatus({
+      ...chatListStatusRef.current,
+      loading: !append,
+      loadingMore: append,
+      error: null,
+      retry: null,
+    });
+
+    try {
+      const page = (await graph.listConversations(buildConversationFilter(requestFilter, requestedOffset))) || [];
+
+      // Superseded: a newer request has been issued since this one started.
+      // Dropping the response is the whole point of the sequence number.
+      if (seq !== chatListRequestSeqRef.current) return [];
+
+      const merged = mergeChatListPage(chatsRef.current || [], page as any[], {
+        offset: requestedOffset,
+        pageSize,
+        maxRows: CHAT_LIST_MAX_ROWS,
+        // Present on a preserve-window re-validation: `pageSize` is `keep + 1`
+        // and the extra row is the sentinel that proves more rows exist.
+        ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
+      });
+
+      chatsRef.current = merged.chats;
+      setChats(merged.chats);
+      applyChatListStatus(merged.status);
+      return merged.chats;
+    } catch (error: any) {
+      if (seq !== chatListRequestSeqRef.current) return [];
+
+      reactory.log(
+        '[useChatFactory] chat history list load failed',
+        { error, filter: requestFilter, offset: requestedOffset },
+        'warning',
+      );
+      // Deliberately NOT `onError`: that pushes a system message into the
+      // conversation transcript, and a history-list failure is not a chat
+      // message. The panel renders this as an inline error with a retry.
+      applyChatListStatus({
+        ...chatListStatusRef.current,
+        loading: false,
+        loadingMore: false,
+        error: error?.message || 'Unable to load conversations',
+        // Remember exactly which window failed. Retry replays it verbatim — a
+        // failed first page must not be retried as an append.
+        retry: {
+          offset: requestedOffset,
+          pageSize,
+          ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
+        },
+      });
+      return [];
+    }
+  };
+
+  /**
+   * Refresh the list with the committed filter (optionally patching it first).
+   *
+   * `preserveWindow` re-requests the rows already loaded as one page, so a
+   * background refresh (panel re-open, delete, chat-data edit) leaves the user
+   * looking at the same rows they had. Callers that change the query itself
+   * (search, persona switch) start from page 0 instead.
+   */
+  const refreshChatListImpl = (
+    patch: ChatListFilterPatch = {},
+    options: { preserveWindow?: boolean } = {},
+  ): Promise<any[]> => {
+    const filter = applyChatListFilterImpl(patch);
+    const preserveWindow = options.preserveWindow !== false;
+    const loaded = (chatsRef.current || []).length;
+
+    // Nothing on screen: this is an ordinary first page.
+    if (!preserveWindow || loaded === 0) {
+      return runChatListQueryImpl(filter, 0, filter.pageSize);
+    }
+
+    // Re-validate the visible window WITHOUT changing it.
+    //
+    // Ask for ONE row more than we hold and let the merge treat it as a
+    // sentinel: if it arrives, at least one more conversation exists; if it
+    // does not, the page is short and the list is terminal. Requesting exactly
+    // the rows already loaded instead always comes back FULL, which made
+    // `exhausted`/`capped` false again on every panel re-open (B2) and put a
+    // "Load more" button on a list that could not grow.
+    const keep = Math.min(loaded, CHAT_LIST_MAX_ROWS);
+    // Bounded by the cap: at 500 rows we cannot ask for the 501st, so the merge
+    // reports the cap instead of guessing (see `mergeChatListPage`).
+    const pageSize = Math.min(keep + 1, CHAT_LIST_MAX_ROWS);
+    return runChatListQueryImpl(filter, 0, pageSize, { keep });
+  };
+
+  /**
+   * Commit a search term as list state and reload from the first page.
+   *
+   * Committing the term that is already in force is a no-op: the panel commits
+   * on Enter and again from the typing debounce, so without this guard a settled
+   * term would be fetched twice (and the second response would only ever be a
+   * duplicate of the first). A failed list is retried even for the same term.
+   */
+  const commitChatSearchImpl = (term: string): Promise<any[]> => {
+    const current = chatListFilterRef.current;
+    const nextSearch = typeof term === 'string' ? term.trim() : '';
+    if (nextSearch === (current.search || '') && !chatListStatusRef.current.error) {
+      return Promise.resolve(chatsRef.current || []);
+    }
+    return refreshChatListImpl({ search: nextSearch }, { preserveWindow: false });
+  };
+
+  const loadMoreChatsImpl = (): Promise<any[]> => {
+    const status = chatListStatusRef.current;
+    // `error` blocks paging on purpose. After a FAILED replace the rows on screen
+    // still belong to the PREVIOUS query while `offset` describes the new one, so
+    // appending here would splice two different result sets together — and the
+    // page-one rows of the new query were never fetched. Retry is the only
+    // correct continuation from that state.
+    if (status.loading || status.loadingMore || status.exhausted || status.capped || status.error) {
+      return Promise.resolve(chatsRef.current || []);
+    }
+    return runChatListQueryImpl(chatListFilterRef.current, status.offset);
+  };
+
+  const retryChatListImpl = (): Promise<any[]> => {
+    const status = chatListStatusRef.current;
+    const window = status.retry;
+    return window
+      ? runChatListQueryImpl(chatListFilterRef.current, window.offset, window.pageSize, {
+          keep: window.keep,
+        })
+      : runChatListQueryImpl(chatListFilterRef.current, status.offset);
+  };
+
+  /**
+   * Read-only probe: returns conversations matching `filter` WITHOUT writing the
+   * rendered history list. The list state is owned by the controller above
+   * (`refreshChatList` / `commitChatSearch` / `loadMoreChats`), which always
+   * applies the committed filter — an ad-hoc `listChats(...)` writing `chats` is
+   * exactly the bug this replaced.
+   */
   const fetchConversationsImpl = async (filter: any) => {
     try {
       const list = await graph.listConversations(filter);
-      setChats(list || []);
       return list || [];
     } catch (error) {
       onError(error);
-      setChats([]);
       return [];
     }
-  }
+  };
 
   /**
    * Read-only recency probe: the server sorts by `updated` descending and
@@ -2989,23 +3264,65 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  /**
+   * The conversation a persona should be resumed into, or `null` when it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume decision, and it is
+   * deliberately a separate request from the history panel's list:
+   *
+   *   * it never carries `search`, so a committed search term cannot decide which
+   *     conversation is resumed (or whether a new one is created);
+   *   * it is scoped to the persona and the host use case / edges, matching what
+   *     "resume this persona's conversation" actually means;
+   *   * it asks for exactly one row — the server sorts by `updated` descending,
+   *     so only the newest can be a resume target;
+   *   * it is read-only: it does NOT write `chats`, so it cannot disturb the
+   *     (possibly filtered) list the history panel is showing.
+   *
+   * A probe failure resolves to `null`, matching what `listChats` used to
+   * produce (it caught and returned `[]`), so auto-init on a failed request
+   * behaves as it did before this change.
+   */
+  const fetchMostRecentChatImpl = async (personaId: string): Promise<any | null> => {
+    if (!personaId) return null;
+    try {
+      const list = await graph.listConversations({
+        personaId,
+        ...(props?.useCase ? { use_case: props.useCase } : {}),
+        ...(Array.isArray(props?.edges) && props.edges.length > 0 ? { edges: props.edges } : {}),
+        limit: 1,
+        offset: 0,
+      } as any);
+      return (list && list[0]) || null;
+    } catch (error) {
+      reactory.log(
+        '[useChatFactory] failed to probe the most recent conversation for a persona',
+        { error, personaId },
+        'warning',
+      );
+      return null;
+    }
+  };
+
   const deleteChatImpl = async (id: string | string[]) => {
     const deleteId = Array.isArray(id) ? id[0] : id;
     sessionLogger?.info(`Deleting chat session`, { chatSessionId: deleteId }, 'useChatFactory');
     try {
       // Only single id supported by schema
       await graph.deleteChatSession(deleteId);
-      await fetchConversationsImpl({}); // Refresh the chat list after deletion
+      // Refresh with the committed filter, preserving the loaded window: a
+      // delete must not silently un-filter the list or throw away pages.
+      await refreshChatListImpl();
     } catch (error) {
       onError(error);
     }
   };
 
   // Stable wrappers over the latest implementation, for the same reason as
-  // `loadChat`: both are handed to ChatHistoryPanel as props and both appear in
-  // consumer dependency arrays (`handleChatHistoryPanelToggle` lists
-  // `listChats`), so a fresh identity each render defeated every memo
-  // downstream of them.
+  // `loadChat`: the list controllers are handed to ChatHistoryPanel as props
+  // (whose memo comparator is `Object.is`), so a fresh identity each render
+  // defeated every memo downstream of them.
   const fetchConversationsImplRef = React.useRef(fetchConversationsImpl);
   fetchConversationsImplRef.current = fetchConversationsImpl;
   const fetchConversations = React.useCallback(
@@ -3013,10 +3330,40 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     [],
   );
 
+  const refreshChatListImplRef = React.useRef(refreshChatListImpl);
+  refreshChatListImplRef.current = refreshChatListImpl;
+  const refreshChatList = React.useCallback(
+    (patch?: ChatListFilterPatch, options?: { preserveWindow?: boolean }) =>
+      refreshChatListImplRef.current(patch, options),
+    [],
+  );
+
+  const commitChatSearchImplRef = React.useRef(commitChatSearchImpl);
+  commitChatSearchImplRef.current = commitChatSearchImpl;
+  const commitChatSearch = React.useCallback(
+    (term: string) => commitChatSearchImplRef.current(term),
+    [],
+  );
+
+  const loadMoreChatsImplRef = React.useRef(loadMoreChatsImpl);
+  loadMoreChatsImplRef.current = loadMoreChatsImpl;
+  const loadMoreChats = React.useCallback(() => loadMoreChatsImplRef.current(), []);
+
+  const retryChatListImplRef = React.useRef(retryChatListImpl);
+  retryChatListImplRef.current = retryChatListImpl;
+  const retryChatList = React.useCallback(() => retryChatListImplRef.current(), []);
+
   const fetchRecentConversationsImplRef = React.useRef(fetchRecentConversationsImpl);
   fetchRecentConversationsImplRef.current = fetchRecentConversationsImpl;
   const fetchRecentConversations = React.useCallback(
     (limit?: number) => fetchRecentConversationsImplRef.current(limit),
+    [],
+  );
+
+  const fetchMostRecentChatImplRef = React.useRef(fetchMostRecentChatImpl);
+  fetchMostRecentChatImplRef.current = fetchMostRecentChatImpl;
+  const getMostRecentChatForPersona = React.useCallback(
+    (personaId: string) => fetchMostRecentChatImplRef.current(personaId),
     [],
   );
 
@@ -3061,18 +3408,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       // Reconcile the history list with the server. The optimistic patch above
       // gives instant feedback; this makes the list authoritative and picks up
-      // anything else the update may have touched. Scoped to this chat's use
-      // case / edges but deliberately NOT to a persona, because the history
-      // panel lists conversations across agents. A refresh failure must not
-      // fail the edit — the local patch already reflects it.
+      // anything else the update may have touched. It re-uses the COMMITTED
+      // list filter (search term included) and keeps the loaded window, so an
+      // edit never un-filters the panel. A refresh failure must not fail the
+      // edit — the local patch already reflects it.
       try {
-        const refreshFilter: any = {
-          ...(props?.useCase ? { use_case: props.useCase } : {}),
-          ...(Array.isArray(props?.edges) && props.edges.length > 0
-            ? { edges: props.edges }
-            : {}),
-        };
-        await fetchConversationsImpl(refreshFilter);
+        await refreshChatListImpl();
       } catch (refreshError: any) {
         reactory.log(
           `ChatFactory: chat data saved but history refresh failed: ${refreshError?.message}`,
@@ -5719,6 +6060,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     fetchConversationMeta,
     listChats: fetchConversations,
     listRecentChats: fetchRecentConversations,
+    getMostRecentChatForPersona,
+    chatListFilter,
+    chatListStatus,
+    refreshChatList,
+    commitChatSearch,
+    loadMoreChats,
+    retryChatList,
     setToolApprovalMode,
     chats,
     setChats,
