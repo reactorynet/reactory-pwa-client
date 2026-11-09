@@ -15,7 +15,7 @@ jobs:
       # shared demographic form). Without it the directory is empty and both
       # `tsc` and `jest` fail with "Cannot find module .../reactory-core/...".
       # build-smoke-test.yml already checks submodules out for the same reason.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -43,7 +43,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -72,7 +72,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
