@@ -434,6 +434,34 @@ describe('ChatHistoryPanel — load failures', () => {
     expect(screen.getByText('Conversation 0')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
+
+  /**
+   * B1, panel half. After a failed REPLACE the rows on screen belong to the
+   * previous query while the paging window describes the new one, so offering
+   * "Load more" would splice two result sets together. Retry is the only valid
+   * continuation — the hook refuses the append (`chatHistoryListState.test.tsx`
+   * › 'B1: a failed replace blocks paging and Retry replaces'), and the panel
+   * must not offer the control either.
+   */
+  it('hides "Load more" after a failed replace and keeps Retry as the only continuation', () => {
+    const onLoadMore = jest.fn();
+    const onRetry = jest.fn();
+    renderPanel({
+      chats: chats(CHAT_LIST_PAGE_SIZE),
+      onLoadMore,
+      onRetry,
+      // A full page is loaded and the list is not exhausted, so the ONLY thing
+      // suppressing the control is the error state.
+      listStatus: withStatus({ error: 'invalid regex', offset: CHAT_LIST_PAGE_SIZE }),
+    });
+
+    expect(screen.queryByTestId('chat-history-load-more')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('chat-history-retry'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onLoadMore).not.toHaveBeenCalled();
+  });
 });
 
 describe('ChatHistoryPanel — per-persona collapse reconciled with paging', () => {

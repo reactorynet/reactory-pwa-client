@@ -524,6 +524,75 @@ describe('useChatFactory — real paging', () => {
   });
 });
 
+/**
+ * B1 — the failed-replace window, pinned end to end.
+ *
+ * Why: after a REPLACE fails (the user's search), the rows still on screen
+ * belong to the PREVIOUS query while `chatListStatus.offset` describes the new
+ * one. Two things must therefore be true, and they are the same invariant seen
+ * from both ends:
+ *
+ *   1. `loadMoreChats` must NOT issue a request — appending a page of the new
+ *      query onto the old rows would splice two different result sets
+ *      together, and page one of the new query was never fetched.
+ *   2. `retryChatList` must REPLACE at offset 0 (the window that actually
+ *      failed), not continue from the stale offset.
+ *
+ * The panel mirrors (1) by hiding "Load more" while `status.error` is set; see
+ * `chatHistoryPanel.test.tsx` › 'hides "Load more" after a failed replace'.
+ * Falsification: drop `|| status.error` from `loadMoreChatsImpl` and the first
+ * half fails; retry from `status.offset` instead of `status.retry` and the
+ * second half fails.
+ */
+describe('useChatFactory — B1: a failed replace blocks paging and Retry replaces', () => {
+  it('does not page onto stale rows and replaces them on retry', async () => {
+    const { result } = renderChat();
+
+    // 25 rows of the previous (unfiltered) query are on screen.
+    graph.listConversations.mockResolvedValueOnce(rows('old', CHAT_LIST_PAGE_SIZE));
+    await act(async () => {
+      await result.current.refreshChatList(undefined, { preserveWindow: false });
+    });
+    expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE);
+
+    // The search fails — e.g. the server's regex rejects the raw term.
+    graph.listConversations.mockRejectedValueOnce(new Error('invalid regex'));
+    await act(async () => {
+      await result.current.commitChatSearch('(Email');
+    });
+    expect(result.current.chatListStatus.error).toBe('invalid regex');
+    expect(result.current.chatListFilter.search).toBe('(Email');
+
+    // (1) Load more is INERT: no request, and the stale rows are untouched.
+    graph.listConversations.mockClear();
+    // Deliberately no queued result: the assertion is that NO request is
+    // issued. A queued `mockResolvedValueOnce` here would (a) weaken that into
+    // "the call happened but was ignored" and (b) leak into the retry below,
+    // which then consumes the wrong page.
+    await act(async () => {
+      await result.current.loadMoreChats();
+    });
+    expect(graph.listConversations).not.toHaveBeenCalled();
+    expect(result.current.chats).toHaveLength(CHAT_LIST_PAGE_SIZE);
+    expect(result.current.chats[0].id).toBe('old-0');
+
+    // (2) Retry replays the FAILED window: the first page of the committed
+    // search, at offset 0 — a replacement, not an append.
+    graph.listConversations.mockClear();
+    graph.listConversations.mockResolvedValueOnce([row('email-1', 'Email Templates rollout')]);
+    await act(async () => {
+      await result.current.retryChatList();
+    });
+
+    expect(graph.listConversations).toHaveBeenCalledTimes(1);
+    expect(graph.listConversations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: '(Email', limit: CHAT_LIST_PAGE_SIZE, offset: 0 }),
+    );
+    expect(result.current.chats.map((c: any) => c.id)).toEqual(['email-1']);
+    expect(result.current.chatListStatus.error).toBeNull();
+  });
+});
+
 describe('useChatFactory — load failures', () => {
   it('surfaces an error state and keeps the rows already loaded', async () => {
     const { result } = renderChat();

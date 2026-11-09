@@ -230,7 +230,11 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
 
   const totalLoaded = chats?.length || 0;
   const hasRows = totalLoaded > 0;
-  const canLoadMore = !status.exhausted && !status.capped && !!onLoadMore;
+  // Paging is only offered when the list on screen actually corresponds to the
+  // committed query. After a failed replace it does NOT: the rows are the
+  // previous query's and `offset` describes the new one, so appending would
+  // splice two result sets together. Retry is the only valid continuation.
+  const canLoadMore = !status.exhausted && !status.capped && !status.error && !!onLoadMore;
 
   return (
     <Paper

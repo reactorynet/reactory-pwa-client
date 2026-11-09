@@ -31,6 +31,7 @@ import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatDataEditorDialog from './components/ChatDataEditorDialog';
 import ChatTransferDialog from './components/ChatTransferDialog';
 import { resolveChatSelectionTarget, isPersonaSwitch } from './hooks/chatSelection';
+import { resolveAutoSessionTarget } from './personaAutoSession';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
@@ -357,6 +358,7 @@ export default (props) => {
     archivedHistoryLoading = false,
     fetchConversationMeta,
     listRecentChats,
+    getMostRecentChatForPersona = async () => null,
     setToolApprovalMode,
     chats,
     chatListFilter,
@@ -1098,12 +1100,31 @@ export default (props) => {
 
     (async () => {
       reactory.log(`ReactorChat: Loading chat list for persona: ${selectedPersona?.name || 'none'}`);
-      // Scoped to this use case so an embedded chat's history panel shows only
-      // its own conversations, never the user's unrelated standalone ones.
-      const chatList = await refreshChatList(
-        { personaId: selectedPersona?.id, use_case: useCase, edges: hostEdges },
-        { preserveWindow: false },
-      );
+
+      // Two different questions, asked separately and on purpose:
+      //
+      //   1. DISPLAY  — what should the history panel list? That is the
+      //      committed (possibly SEARCH-FILTERED) list, refreshed here so a
+      //      persona switch shows the new persona's rows. Its return value is
+      //      deliberately ignored below.
+      //   2. RESUME   — which conversation should this persona open? That must
+      //      be the persona's most recent conversation, resolved from an
+      //      UNFILTERED probe. Deriving it from the filtered list would let a
+      //      committed search term decide the user's session: an old matching
+      //      thread instead of their latest one, or — when nothing matches — a
+      //      silently created new conversation.
+      //
+      // Both are scoped to the host's use case / edges so an embedded chat only
+      // ever sees its own conversations.
+      const [, recentChat] = await Promise.all([
+        refreshChatList(
+          { personaId: selectedPersona?.id, use_case: useCase, edges: hostEdges },
+          { preserveWindow: false },
+        ),
+        autoResume
+          ? getMostRecentChatForPersona(selectedPersona.id)
+          : Promise.resolve(null),
+      ]);
 
       // Auto-initialize session when we have personaId but no sessionId in URL.
       // We check whether the current chatState already belongs to this persona
@@ -1123,14 +1144,17 @@ export default (props) => {
           // Resume the most recent chat if one exists and this use case wants
           // continuity. When it does not, fall through to a fresh session so
           // the host's pre-filled prompt starts a new conversation.
-          if (autoResume && chatList && chatList.length > 0) {
-            const mostRecentChat = chatList[0]; // sorted most-recent first by server
-            reactory.log(`ReactorChat: Resuming latest session ${mostRecentChat.id}`);
+          //
+          // `recentChat` is the unfiltered probe result — never the history
+          // panel's list, which may be narrowed by a committed search term.
+          const target = resolveAutoSessionTarget({ autoResume, recent: recentChat });
+          if (target.kind === 'resume') {
+            reactory.log(`ReactorChat: Resuming latest session ${target.sessionId}`);
             navigate({
               pathname: location.pathname,
-              search: `?sessionId=${mostRecentChat.id}&personaId=${selectedPersona.id}`,
+              search: `?sessionId=${target.sessionId}&personaId=${selectedPersona.id}`,
             });
-            await loadChat(mostRecentChat.id);
+            await loadChat(target.sessionId);
           } else {
             // No existing chats — create a new session
             reactory.log(`ReactorChat: Auto-initializing new session for persona ${selectedPersona.name}`);
@@ -1151,7 +1175,7 @@ export default (props) => {
         }
       }
     })();
-  }, [selectedPersona?.id, refreshChatList, useCase, hostEdges, autoResume]);
+  }, [selectedPersona?.id, refreshChatList, getMostRecentChatForPersona, useCase, hostEdges, autoResume]);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 

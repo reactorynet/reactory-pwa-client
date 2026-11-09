@@ -114,6 +114,17 @@ interface ChatFactoryHookResult {
    * whatever the user last touched regardless of which agent owns it.
    */
   listRecentChats(limit?: number): Promise<any[]>
+  /**
+   * The conversation this persona should be resumed into, or `null` if it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume / auto-init decision. It is
+   * an UNFILTERED probe: it never carries the history panel's committed search
+   * term, because a term that happens to match (or match nothing) must not
+   * decide whether the user resumes their latest conversation or gets a brand
+   * new one. Read-only — it does not write `chats`.
+   */
+  getMostRecentChatForPersona(personaId: string): Promise<any | null>
   // expose chats state
   chats: any[]
   // expose setChats function
@@ -3155,7 +3166,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const loadMoreChatsImpl = (): Promise<any[]> => {
     const status = chatListStatusRef.current;
-    if (status.loading || status.loadingMore || status.exhausted || status.capped) {
+    // `error` blocks paging on purpose. After a FAILED replace the rows on screen
+    // still belong to the PREVIOUS query while `offset` describes the new one, so
+    // appending here would splice two different result sets together — and the
+    // page-one rows of the new query were never fetched. Retry is the only
+    // correct continuation from that state.
+    if (status.loading || status.loadingMore || status.exhausted || status.capped || status.error) {
       return Promise.resolve(chatsRef.current || []);
     }
     return runChatListQueryImpl(chatListFilterRef.current, status.offset);
@@ -3204,6 +3220,47 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       return [];
     }
   }
+
+  /**
+   * The conversation a persona should be resumed into, or `null` when it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume decision, and it is
+   * deliberately a separate request from the history panel's list:
+   *
+   *   * it never carries `search`, so a committed search term cannot decide which
+   *     conversation is resumed (or whether a new one is created);
+   *   * it is scoped to the persona and the host use case / edges, matching what
+   *     "resume this persona's conversation" actually means;
+   *   * it asks for exactly one row — the server sorts by `updated` descending,
+   *     so only the newest can be a resume target;
+   *   * it is read-only: it does NOT write `chats`, so it cannot disturb the
+   *     (possibly filtered) list the history panel is showing.
+   *
+   * A probe failure resolves to `null`, matching what `listChats` used to
+   * produce (it caught and returned `[]`), so auto-init on a failed request
+   * behaves as it did before this change.
+   */
+  const fetchMostRecentChatImpl = async (personaId: string): Promise<any | null> => {
+    if (!personaId) return null;
+    try {
+      const list = await graph.listConversations({
+        personaId,
+        ...(props?.useCase ? { use_case: props.useCase } : {}),
+        ...(Array.isArray(props?.edges) && props.edges.length > 0 ? { edges: props.edges } : {}),
+        limit: 1,
+        offset: 0,
+      } as any);
+      return (list && list[0]) || null;
+    } catch (error) {
+      reactory.log(
+        '[useChatFactory] failed to probe the most recent conversation for a persona',
+        { error, personaId },
+        'warning',
+      );
+      return null;
+    }
+  };
 
   const deleteChatImpl = async (id: string | string[]) => {
     const deleteId = Array.isArray(id) ? id[0] : id;
@@ -3257,6 +3314,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   fetchRecentConversationsImplRef.current = fetchRecentConversationsImpl;
   const fetchRecentConversations = React.useCallback(
     (limit?: number) => fetchRecentConversationsImplRef.current(limit),
+    [],
+  );
+
+  const fetchMostRecentChatImplRef = React.useRef(fetchMostRecentChatImpl);
+  fetchMostRecentChatImplRef.current = fetchMostRecentChatImpl;
+  const getMostRecentChatForPersona = React.useCallback(
+    (personaId: string) => fetchMostRecentChatImplRef.current(personaId),
     [],
   );
 
@@ -5953,6 +6017,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     fetchConversationMeta,
     listChats: fetchConversations,
     listRecentChats: fetchRecentConversations,
+    getMostRecentChatForPersona,
     chatListFilter,
     chatListStatus,
     refreshChatList,
