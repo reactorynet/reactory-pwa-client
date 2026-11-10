@@ -58,11 +58,17 @@ export default async (): Promise<JestConfigWithTsJest> => {
     },
     // ESM-only packages that tests exercise for real (stubbing a physics
     // engine would make the GraphExplorer layout tests meaningless). The d3
-    // micro-packages are tiny; babel-jest transforms them via the js rule.
+    // packages are tiny; babel-jest transforms them via the js rule.
     // `marked` is ESM-only from v16 and is used for real by the static content
     // format conversion tests, so it is transformed rather than stubbed.
+    //
+    // The umbrella `d3` package is included (rather than only the micro-packages
+    // listed before it) because `D3Chart` imports it, and a chart test that cannot
+    // render the real component cannot catch a chart defect. `delaunator`,
+    // `robust-predicates` and `internmap` are its ESM-only transitive deps, which
+    // are pulled in by that import and would otherwise fail to parse.
     transformIgnorePatterns: [
-      '/node_modules/(?!(d3-force|d3-quadtree|d3-dispatch|d3-timer|marked)/)',
+      '/node_modules/(?!(d3|d3-[\\w.@-]+|delaunator|robust-predicates|internmap|marked)/)',
     ],
     moduleNameMapper: {
       // Path aliases

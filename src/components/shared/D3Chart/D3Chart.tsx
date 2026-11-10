@@ -36,9 +36,38 @@ function resolveColors(scheme?: D3ColorScheme | string[]): string[] {
 }
 
 const DEFAULT_MARGIN: Required<D3Margin> = { top: 20, right: 20, bottom: 40, left: 50 };
-
 function resolveMargin(m?: D3Margin): Required<D3Margin> {
   return { ...DEFAULT_MARGIN, ...m };
+}
+
+/**
+ * Normalise an array-of-strings prop.
+ *
+ * `seriesKeys` and `legendLabels` are typed `string[]`, but the value arrives from a
+ * tool call, and not every provider emits real JSON arrays — Gemini in particular
+ * serialises freeform objects as *strings*. A string used to reach
+ * `seriesKeys.join(',')` in this component's effect dependency array, which throws
+ * (`seriesKeys.join is not a function`) during render and unmounts the whole side-panel
+ * item: a blank tab, with the only clue in the console.
+ *
+ * Accepts an array, a JSON-encoded array, or a bare string (treated as a one-element
+ * list) and always returns an array, so no caller can crash the chart.
+ */
+function normaliseStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string' || typeof v === 'number').map(String);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return normaliseStringArray(parsed);
+      } catch {
+        // fall through — treat as a single key
+      }
+    }
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
 }
 
 // ─── Shared style extraction ──────────────────────────────────────────────────
@@ -887,7 +916,7 @@ const D3Chart: React.FC<D3ChartProps> = ({
   xKey = 'name',
   yKey = 'value',
   y2Key,
-  seriesKeys = [],
+  seriesKeys: seriesKeysProp = [],
   height = 300,
   width = '100%',
   colorScheme,
@@ -903,6 +932,10 @@ const D3Chart: React.FC<D3ChartProps> = ({
   customRenderer,
   tooltipFormatter,
 }) => {
+  // Normalised once, here: a non-array prop must never reach `.join()` / `.map()`
+  // further down or the component throws and the panel item renders as an empty tab.
+  const seriesKeys = normaliseStringArray(seriesKeysProp);
+  const legendLabelList = legendLabels === undefined ? undefined : normaliseStringArray(legendLabels);
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -1064,7 +1097,7 @@ const D3Chart: React.FC<D3ChartProps> = ({
 
   // ── Legend derivation ─────────────────────────────────────────────────────
   const legendItems = showLegend
-    ? (legendLabels ?? (seriesKeys.length > 0 ? seriesKeys : [yKey]))
+    ? (legendLabelList && legendLabelList.length > 0 ? legendLabelList : (seriesKeys.length > 0 ? seriesKeys : [yKey]))
     : [];
 
   // ── Render ────────────────────────────────────────────────────────────────

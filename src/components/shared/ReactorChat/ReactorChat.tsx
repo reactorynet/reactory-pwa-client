@@ -31,6 +31,7 @@ import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatDataEditorDialog from './components/ChatDataEditorDialog';
 import ChatTransferDialog from './components/ChatTransferDialog';
 import { resolveChatSelectionTarget, isPersonaSwitch } from './hooks/chatSelection';
+import { resolveAutoSessionTarget } from './personaAutoSession';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
@@ -310,6 +311,20 @@ export default (props) => {
   const autoResume: boolean =
     props?.autoResume !== undefined ? props.autoResume === true : useCase === 'standalone';
 
+  /**
+   * Optional host override for the SSE dead-stream window (ms).
+   *
+   * Read from props — the same place `personaId` / `autoResume` come from — so a
+   * deployment can pin the window without editing `useChatFactory`. Undefined in
+   * normal operation, where the window is derived from the server's observed
+   * heartbeat cadence.
+   */
+  const sseLivenessTimeoutMs: number | undefined = (() => {
+    const raw = props?.sseLivenessTimeoutMs ?? props?.formData?.sseLivenessTimeoutMs;
+    const value = typeof raw === 'string' ? Number(raw) : raw;
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+  })();
+
   const chatFactory = useChatFactory({
     reactory,
     persona: selectedPersona,
@@ -320,6 +335,7 @@ export default (props) => {
     getProviderAuthOverride,
     useCase,
     edges: hostEdges,
+    sseLivenessTimeoutMs,
   });
 
 
@@ -341,11 +357,16 @@ export default (props) => {
     loadArchivedHistory = (async () => {}) as () => Promise<void>,
     archivedHistoryLoading = false,
     fetchConversationMeta,
-    listChats,
     listRecentChats,
+    getMostRecentChatForPersona = async () => null,
     setToolApprovalMode,
     chats,
-    setChats,
+    chatListFilter,
+    chatListStatus,
+    refreshChatList,
+    commitChatSearch,
+    loadMoreChats,
+    retryChatList,
     deleteChat,
     updateChatData,
     transferToPersona,
@@ -466,19 +487,19 @@ export default (props) => {
   const refreshChatListForPersona = useCallback(
     async (personaId: string) => {
       try {
-        const list = await listChats({
-          personaId,
-          use_case: useCase,
-          edges: hostEdges,
-        });
-        setChats((list || []) as ChatState[]);
+        // One list state: patch the persona but keep the committed search term,
+        // and restart the paging window for the newly scoped list.
+        await refreshChatList(
+          { personaId, use_case: useCase, edges: hostEdges },
+          { preserveWindow: false },
+        );
       } catch (error) {
         reactory.log('ReactorChat: Failed to refresh chat list for persona', { error, personaId }, 'warning');
       } finally {
         chatListLoadedForPersonaRef.current = personaId;
       }
     },
-    [listChats, setChats, useCase, hostEdges, reactory],
+    [refreshChatList, useCase, hostEdges, reactory],
   );
 
   const handleSessionSwitch = useCallback((sessionId: string, personaId?: string) => {
@@ -1079,14 +1100,31 @@ export default (props) => {
 
     (async () => {
       reactory.log(`ReactorChat: Loading chat list for persona: ${selectedPersona?.name || 'none'}`);
-      // Scoped to this use case so an embedded chat's history panel shows only
-      // its own conversations, never the user's unrelated standalone ones.
-      const chatList = await listChats({
-        personaId: selectedPersona?.id,
-        use_case: useCase,
-        edges: hostEdges,
-      });
-      setChats(chatList as ChatState[]);
+
+      // Two different questions, asked separately and on purpose:
+      //
+      //   1. DISPLAY  — what should the history panel list? That is the
+      //      committed (possibly SEARCH-FILTERED) list, refreshed here so a
+      //      persona switch shows the new persona's rows. Its return value is
+      //      deliberately ignored below.
+      //   2. RESUME   — which conversation should this persona open? That must
+      //      be the persona's most recent conversation, resolved from an
+      //      UNFILTERED probe. Deriving it from the filtered list would let a
+      //      committed search term decide the user's session: an old matching
+      //      thread instead of their latest one, or — when nothing matches — a
+      //      silently created new conversation.
+      //
+      // Both are scoped to the host's use case / edges so an embedded chat only
+      // ever sees its own conversations.
+      const [, recentChat] = await Promise.all([
+        refreshChatList(
+          { personaId: selectedPersona?.id, use_case: useCase, edges: hostEdges },
+          { preserveWindow: false },
+        ),
+        autoResume
+          ? getMostRecentChatForPersona(selectedPersona.id)
+          : Promise.resolve(null),
+      ]);
 
       // Auto-initialize session when we have personaId but no sessionId in URL.
       // We check whether the current chatState already belongs to this persona
@@ -1106,14 +1144,17 @@ export default (props) => {
           // Resume the most recent chat if one exists and this use case wants
           // continuity. When it does not, fall through to a fresh session so
           // the host's pre-filled prompt starts a new conversation.
-          if (autoResume && chatList && chatList.length > 0) {
-            const mostRecentChat = chatList[0]; // sorted most-recent first by server
-            reactory.log(`ReactorChat: Resuming latest session ${mostRecentChat.id}`);
+          //
+          // `recentChat` is the unfiltered probe result — never the history
+          // panel's list, which may be narrowed by a committed search term.
+          const target = resolveAutoSessionTarget({ autoResume, recent: recentChat });
+          if (target.kind === 'resume') {
+            reactory.log(`ReactorChat: Resuming latest session ${target.sessionId}`);
             navigate({
               pathname: location.pathname,
-              search: `?sessionId=${mostRecentChat.id}&personaId=${selectedPersona.id}`,
+              search: `?sessionId=${target.sessionId}&personaId=${selectedPersona.id}`,
             });
-            await loadChat(mostRecentChat.id);
+            await loadChat(target.sessionId);
           } else {
             // No existing chats — create a new session
             reactory.log(`ReactorChat: Auto-initializing new session for persona ${selectedPersona.name}`);
@@ -1134,7 +1175,7 @@ export default (props) => {
         }
       }
     })();
-  }, [selectedPersona?.id, listChats, setChats, useCase, hostEdges, autoResume]);
+  }, [selectedPersona?.id, refreshChatList, getMostRecentChatForPersona, useCase, hostEdges, autoResume]);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 
@@ -1437,11 +1478,15 @@ export default (props) => {
     setChatHistoryPanelOpen(willOpen);
     // Refresh the chat list when opening the history panel
     if (willOpen) {
-      listChats({}).then((chatList) => {
-        setChats(chatList as ChatState[]);
-      });
+      // Refresh with the COMMITTED filter (search term and host scope included)
+      // and keep the loaded window: re-opening the panel must not un-filter the
+      // list. The one member that is deliberately cleared is the persona: the
+      // history panel groups conversations across agents, which is what the old
+      // unscoped `listChats({})` call did — the term survives, the persona scope
+      // does not.
+      void refreshChatList({ personaId: null });
     }
-  }, [chatHistoryPanelOpen, listChats, selectedPersona?.id, setChats]);
+  }, [chatHistoryPanelOpen, refreshChatList]);
 
   const handleChatHistoryPanelClose = useCallback(() => {
     setChatHistoryPanelOpen(false);
@@ -1520,11 +1565,29 @@ export default (props) => {
 
   // Hoisted out of the JSX: as an inline arrow this prop was new on every
   // render, so ChatHistoryPanel could never be skipped by its memo.
+  //
+  // Every one of these is a stable callback (the hook returns `useCallback`
+  // wrappers over refs), which is what keeps `arePanelPropsEqual` — a shallow
+  // `Object.is` comparison — from re-rendering the panel on every parent pass.
+
+  /**
+   * Commit a search term into the list state. The panel calls this on Enter and
+   * after the typing debounce; it is never called per keystroke.
+   */
   const handleChatHistorySearch = useCallback((query: string) => {
-    listChats({ search: query }).then((chatList) => {
-      setChats(chatList as ChatState[]);
-    });
-  }, [listChats, setChats]);
+    void commitChatSearch(query);
+  }, [commitChatSearch]);
+
+  /** Append the next page of conversations. */
+  const handleChatHistoryLoadMore = useCallback(() => {
+    void loadMoreChats();
+  }, [loadMoreChats]);
+
+  /** Retry the last failed history-list request. */
+  const handleChatHistoryRetry = useCallback(() => {
+    void retryChatList();
+  }, [retryChatList]);
+
 
   const handleRecordingPanelToggle = useCallback(() => {
     // Close other panels first
@@ -2741,6 +2804,10 @@ export default (props) => {
               onEditChat={handleChatEdit}
               onTransferChat={handleChatTransferOpen}
               onSearch={handleChatHistorySearch}
+              activeSearchTerm={chatListFilter.search}
+              onLoadMore={handleChatHistoryLoadMore}
+              onRetry={handleChatHistoryRetry}
+              listStatus={chatListStatus}
               Material={Material}
               il8n={il8n}
             />
@@ -2946,6 +3013,7 @@ export default (props) => {
           chatStatusInfo.status === 'streaming' ? '#2979ff' :
           chatStatusInfo.status === 'executing_tools' ? '#ff9100' :
           chatStatusInfo.status === 'waiting_focus' ? '#ff9800' :
+          chatStatusInfo.status === 'awaiting_tools' ? '#ff9800' :
           '#4caf50'
         }
         mainBadgeContent={

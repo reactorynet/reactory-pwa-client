@@ -177,6 +177,45 @@ export const invalidDataManagerHookResult = {
 };
 
 // ============================================================================
+// SERVER-SIDE VALIDATION ERROR MAPPING (REACTORY-302016408)
+// ============================================================================
+
+/**
+ * Compile-time fixture for the `graphql.mutation.<op>.onError.fieldMap` hint.
+ *
+ * This is the exact shape documented in `ReactoryForm.md`: a server extension
+ * key mapped onto a schema path so a failed mutation can highlight the
+ * offending field. It lives here (rather than in a test) because `tsc` excludes
+ * test files, and this is the only place a typed form definition is compiled
+ * as part of the build.
+ *
+ * If `fieldMap` disappears from
+ * `Reactory.Forms.IReactoryFormQueryErrorHandlerDefinition`, this file stops
+ * compiling — which is the point. See `src/types/reactory-forms.augment.d.ts`
+ * for the local declaration merge that currently supplies the property.
+ */
+export const formDefinitionWithOnErrorFieldMap: Reactory.Forms.IFormGraphDefinition = {
+  mutation: {
+    edit: {
+      name: 'updateClass',
+      text: 'mutation UpdateClass($input: ReactoryClassroomClassInput) { updateClass(input: $input) { id } }',
+      onError: {
+        onErrorMethod: 'none',
+        method: 'function',
+        componentRef: 'classroom.ClassFormErrorHandler@1.0.0',
+        fieldMap: { classCode: 'code' },
+      },
+    },
+  },
+};
+
+/**
+ * The `fieldMap` value must stay a `Record<string, string>` — schema paths.
+ */
+export const onErrorFieldMapType: Record<string, string> =
+  formDefinitionWithOnErrorFieldMap.mutation.edit.onError.fieldMap;
+
+// ============================================================================
 // TYPE GUARD TESTS
 // ============================================================================
 

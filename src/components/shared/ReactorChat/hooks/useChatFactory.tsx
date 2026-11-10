@@ -5,10 +5,28 @@ import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import useSSE, { AwaitingClientToolStreamingEvent, CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import {
+  executeClientToolCalls,
+  isClientRoutedMacro,
+  shouldAdmitClientToolCallToBatch,
+  shouldResumePausedTurn,
+} from './clientToolExecution';
 import useStreamRecovery, { StreamRecoveryReason, StreamRecoveryResyncResult } from './useStreamRecovery';
 import { resyncConversationFromServer } from './conversationResync';
 import { chatShellBus } from '../components/Shell/chatShellBus';
+import {
+  CHAT_LIST_MAX_ROWS,
+  ChatListFilter,
+  ChatListFilterPatch,
+  ChatListStatus,
+  buildConversationFilter,
+  chatListFilterKey,
+  createChatListFilter,
+  initialChatListStatus,
+  mergeChatListPage,
+  patchChatListFilter,
+} from '../chatListQuery';
 import {
   cacheClientToolResult,
   evictClientToolResults,
@@ -58,7 +76,35 @@ interface ChatFactoryHookResult {
   newChat: () => Promise<string | null>
   // function use to return all the available chats for the
   // current user.
+  //
+  // Read-only probe: returns the conversations matching `filter` WITHOUT
+  // writing the rendered history list. The list is owned by the controller
+  // below (`refreshChatList` / `commitChatSearch` / `loadMoreChats`), which
+  // always applies the committed filter — see `chatListQuery.ts`.
   listChats(filter?: any): Promise<any[]>
+  /**
+   * The committed history-list query. Shared by EVERY refresh path (panel open,
+   * persona switch, search, delete, chat-data edit) so an active search term can
+   * never be silently dropped by a background refresh.
+   */
+  chatListFilter: ChatListFilter
+  /** Observable paging/loading/error state for the history list. */
+  chatListStatus: ChatListStatus
+  /**
+   * Refresh the history list with the committed filter, optionally patching it
+   * first (e.g. `{ personaId }`). `preserveWindow` (default true) re-requests
+   * the rows already loaded so a background refresh does not shrink the list.
+   */
+  refreshChatList: (
+    patch?: ChatListFilterPatch,
+    options?: { preserveWindow?: boolean },
+  ) => Promise<any[]>
+  /** Commit a search term as list state and reload from the first page. */
+  commitChatSearch: (term: string) => Promise<any[]>
+  /** Append the next page. No-op once the list is exhausted or capped. */
+  loadMoreChats: () => Promise<any[]>
+  /** Retry the last failed request (first page or the page that failed). */
+  retryChatList: () => Promise<any[]>
   /**
    * Most-recently-updated conversations for the user, across every persona.
    *
@@ -68,6 +114,17 @@ interface ChatFactoryHookResult {
    * whatever the user last touched regardless of which agent owns it.
    */
   listRecentChats(limit?: number): Promise<any[]>
+  /**
+   * The conversation this persona should be resumed into, or `null` if it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume / auto-init decision. It is
+   * an UNFILTERED probe: it never carries the history panel's committed search
+   * term, because a term that happens to match (or match nothing) must not
+   * decide whether the user resumes their latest conversation or gets a brand
+   * new one. Read-only — it does not write `chats`.
+   */
+  getMostRecentChatForPersona(personaId: string): Promise<any | null>
   // expose chats state
   chats: any[]
   // expose setChats function
@@ -171,6 +228,7 @@ interface ChatFactoryHookResult {
   // client tool calls waiting for window focus
   waitingClientToolCalls: WaitingClientToolCall[]
   hasWaitingClientToolCalls: boolean
+  /** Execute/report anything still owed and reconcile with the server. Never focus-gated. */
   drainWaitingClientToolCalls: () => Promise<void>
   retryConnection: () => void
   dismissNetworkError: () => void
@@ -218,6 +276,16 @@ interface ChatFactorHookOptions {
    * a content slug, a related conversation.
    */
   edges?: import('../types').ReactorConversationEdge[];
+  /**
+   * Operator/host override for the SSE dead-stream window, in milliseconds.
+   *
+   * Left undefined in normal operation: the window is derived from the server's
+   * observed heartbeat cadence (see `useSSE`'s `deriveLivenessTimeoutMs`). Set it
+   * to pin the window for a deployment whose heartbeat cadence is unusual, or to
+   * shorten/lengthen detection while diagnosing. Values that are not finite and
+   * positive are ignored by `useSSE`.
+   */
+  sseLivenessTimeoutMs?: number;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -508,6 +576,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     existingSession,
     sessionLogger,
     getProviderAuthOverride,
+    sseLivenessTimeoutMs,
   } = props;
 
   const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
@@ -536,7 +605,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * (`loadChatImpl`, the SSE `onReconnected` handler) can reach the newest
    * version. Same pattern as `completeClientToolCallsRef`.
    */
-  const replayPendingClientToolCallsRef = React.useRef<((chatSessionId: string) => Promise<number>) | null>(null);
+  const replayPendingClientToolCallsRef = React.useRef<(
+    (chatSessionId: string, options?: { skipToolCallIds?: Set<string> }) => Promise<number>
+  ) | null>(null);
+  /**
+   * Coalesces overlapping replays for the same conversation.
+   *
+   * Replay is triggered from four places — mount, reconnect, focus while paused,
+   * and `awaiting_client_tool` — and two of them frequently coincide. Without
+   * this guard both would read the same pending list and both would execute a
+   * `RERUN_SAFE` macro, which is exactly the duplicate-result case the server
+   * now rejects. A duplicate is not silently repaired server-side: it is an
+   * error response, so it must not be produced in the first place.
+   */
+  const replayInFlightRef = React.useRef<{
+    chatSessionId: string;
+    promise: Promise<number>;
+  } | null>(null);
   /** Session id currently being fetched by `loadChat`, or null. Re-entrancy guard. */
   const loadInFlightRef = React.useRef<string | null>(null);
 
@@ -567,12 +652,86 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // as a batch once the completion event arrives.
   const pendingToolCallsRef = React.useRef<any[]>([]);
 
-  // Waiting client-side tool calls queue (when chat window is blurred/unfocused)
+  /**
+   * Client tool calls the current turn is paused on.
+   *
+   * This used to be a queue of calls *deferred until the window was focused*,
+   * kept only in React state, drained on a `focus` event and lost on reload.
+   * That made an OS-focus heuristic authoritative over a call the server was
+   * already blocked on: if focus never returned in the same page lifetime, the
+   * call was never answered at all.
+   *
+   * It is now a *view* of the pause announced by `awaiting_client_tool`, used to
+   * surface the paused state and to drive the recovery path. Execution is driven
+   * by the event, not by this list, and durability comes from the server's
+   * authoritative pending-call list (`ReactorPendingClientToolCalls`), which is
+   * replayed on mount, on reconnect, on focus and whenever a pause is announced.
+   */
   const [waitingClientToolCalls, setWaitingClientToolCalls] = React.useState<WaitingClientToolCall[]>([]);
   const waitingClientToolCallsRef = React.useRef<WaitingClientToolCall[]>([]);
   waitingClientToolCallsRef.current = waitingClientToolCalls;
+
+  /**
+   * Write the pause in ONE place, to both views.
+   *
+   * `chatState.waitingClientToolCalls` is the inspectable, persisted view of the
+   * pause (it is what a debug panel or a resumed session reads); the hook state is
+   * the render-facing mirror the chrome renders from. They are written together so
+   * they cannot disagree — the previous version left `chatState` writes dead after
+   * the deferral queue was removed, which made it impossible to tell whether the
+   * pause was wired at all.
+   */
+  const applyPausedClientToolCalls = React.useCallback((calls: WaitingClientToolCall[]) => {
+    waitingClientToolCallsRef.current = calls;
+    setWaitingClientToolCalls(calls);
+    setChatState((prevState) => {
+      const current = prevState.waitingClientToolCalls || [];
+      const same = current.length === calls.length
+        && current.every((existing, index) => existing.id === calls[index]?.id);
+      if (same) return prevState;
+      return { ...prevState, waitingClientToolCalls: calls, updated: new Date() };
+    });
+  }, []);
   const isDrainingClientToolsRef = React.useRef<boolean>(false);
 
+  /**
+   * Calls received from `tool_call` events that the server is waiting on and
+   * that have not been executed yet.
+   *
+   * Keyed by tool call id so a repeated event for the same call is idempotent.
+   * The batch is flushed by `awaiting_client_tool` (the server's authoritative
+   * "here is what I am waiting for" announcement), with a short timer as a
+   * fallback so a transport that drops the announcement still answers inside the
+   * server's deadline.
+   */
+  const pendingClientToolBatchRef = React.useRef<Map<string, WaitingClientToolCall>>(new Map());
+  const clientToolFlushTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Tool call ids the server has explicitly announced as paused
+   * (`awaiting_client_tool`).
+   *
+   * This is the authoritative "the server is blocked on this" signal, and it is
+   * the only thing that may authorise a continuation in a non-AUTO session. An
+   * id is added when the announcement arrives and cleared once its batch has
+   * been reported.
+   */
+  const serverAnnouncedToolCallIdsRef = React.useRef<Set<string>>(new Set());
+  /** Tool call ids already handed to an executor — never executed twice. */
+  const handledClientToolCallIdsRef = React.useRef<Set<string>>(new Set());
+  /** Set by the flush callback, which is defined after the SSE callbacks. */
+  const flushClientToolBatchRef = React.useRef<((reason: string) => Promise<string[]>) | null>(null);
+
+  /**
+   * How long to wait for `awaiting_client_tool` before answering anyway.
+   *
+   * The announcement follows the `tool_call` events on the same stream, so this
+   * is a safety net for a dropped frame or an older server — not the normal
+   * trigger. It must stay far below the server deadline (45 s) so the batch is
+   * answered even when the announcement never arrives.
+   */
+  const CLIENT_TOOL_FLUSH_FALLBACK_MS = 1_500;
+
+  /** OS window/visibility focus. Reported to the execution path, never obeyed by it. */
   const isChatFocused = React.useCallback((): boolean => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return true;
     return document.visibilityState === 'visible' && document.hasFocus();
@@ -705,6 +864,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // directly (`useStreamRecovery` disarms its timer when `busy` goes false).
       setAgentBusy(false);
 
+      // The turn is over: any pause view is stale.
+      applyPausedClientToolCalls([]);
+
       // Now process any tool_calls that were accumulated during streaming.
       const accumulated = pendingToolCallsRef.current;
       pendingToolCallsRef.current = [];
@@ -725,153 +887,50 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       const isAutoSSE = chatState.toolApprovalMode === ToolApprovalMode.AUTO && protocol === 'sse';
 
       if (accumulated.length > 0 && isAutoSSE) {
-        // In AUTO+SSE: identify client-only tools that the server skipped.
-        // These arrived with isComplete=false and their status is still 'running'.
-        // Server-executed tools arrive with isComplete=true (status='success').
-        const clientOnlyTools = accumulated.filter((tc: any) => {
-          // Check if this tool is a client-side macro
-          const macro = findMacroByAlias(tc.function?.name)
-            || chatState.macros?.find((m: any) =>
-              m.name === tc.function?.name || m.alias === tc.function?.name
-            );
-          return macro?.runat === 'client' || (!macro?.runat && tc.status !== 'success');
-        });
+        // In AUTO+SSE a client-routed call is forwarded with isComplete=false:
+        // the server does not run it, it pauses the turn and waits for the
+        // browser's result. The `tool_call` handler already enqueued those calls,
+        // so this branch only catches entries it could not classify or a server
+        // that still terminates a client-tool turn with `complete`.
+        //
+        // Nothing here may be conditioned on window focus. A call the server is
+        // blocked on has exactly two acceptable outcomes: it is executed, or it
+        // is answered with an explicit error. The old focus branch here did
+        // neither — it parked the call in an in-memory queue that was lost on
+        // reload and only drained if the window regained focus.
+        // Only calls this client can positively classify as client-routed are
+        // picked up here. An unknown name is NOT assumed client-side: a
+        // server-executed tool whose macro is not advertised to the browser
+        // would otherwise be "answered" with a spurious macro-not-found error
+        // for a call the server already ran. Unknown-but-pending calls are
+        // covered authoritatively by `awaiting_client_tool` / the pending list.
+        const clientOnlyTools = accumulated.filter((tc: any) =>
+          isClientRoutedMacro(resolveClientMacro(tc.function?.name || tc.name)),
+        );
+        const unhandled = clientOnlyTools.filter(
+          (tc: any) => tc.id && !handledClientToolCallIdsRef.current.has(tc.id),
+        );
 
-        if (clientOnlyTools.length > 0) {
-          if (!isChatFocused()) {
-            console.log('🔧 [useChatFactory] AUTO+SSE: Chat window not focused, queueing', clientOnlyTools.length, 'client-side tool(s)');
-            sessionLogger?.info('Chat window not focused, queueing client-side tool(s)', { count: clientOnlyTools.length }, 'useChatFactory');
-            const newWaiting: WaitingClientToolCall[] = clientOnlyTools.map((tc: any) => {
-              const name = tc.function?.name;
-              const args = tc.function?.arguments;
-              let macro = findMacroByAlias(name);
-              if (!macro) {
-                macro = chatState.macros?.find(
-                  (m: any) => m.name === name || m.alias === name
-                ) ?? null;
-              }
-              return {
-                id: tc.id,
-                name,
-                args,
-                sessionId: eventSessionId || chatState.id,
-                calledBy: 'auto',
-                macro,
-                receivedAt: new Date(),
-              };
+        if (unhandled.length > 0) {
+          sessionLogger?.info(
+            `AUTO+SSE: ${unhandled.length} client-side tool call(s) unanswered at completion — executing and reporting`,
+            {
+              toolCalls: unhandled.map((tc: any) => ({
+                toolCallId: tc.id,
+                toolName: tc.function?.name || tc.name,
+              })),
+            },
+            'useChatFactory',
+          );
+          for (const tc of unhandled) {
+            enqueueClientToolCall({
+              id: tc.id,
+              name: tc.function?.name || tc.name,
+              args: tc.function?.arguments,
+              sessionId: eventSessionId || chatState.id,
             });
-
-            // Mark status on message tool_calls as 'waiting_focus' in state
-            setChatState((prevState) => {
-              const history = [...prevState.history];
-              for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
-                  const tcs = (history[i].tool_calls as any[]).map((t: any) => {
-                    if (newWaiting.some(w => w.id === t.id)) {
-                      return { ...t, status: 'waiting_focus' as const };
-                    }
-                    return t;
-                  });
-                  history[i] = { ...history[i], tool_calls: tcs };
-                }
-              }
-              return {
-                ...prevState,
-                history,
-                waitingClientToolCalls: [...(prevState.waitingClientToolCalls || []), ...newWaiting],
-                updated: new Date(),
-              };
-            });
-
-            setWaitingClientToolCalls((prev) => {
-              const existingIds = new Set(prev.map(w => w.id));
-              const additions = newWaiting.filter(w => !existingIds.has(w.id));
-              const updated = [...prev, ...additions];
-              waitingClientToolCallsRef.current = updated;
-              return updated;
-            });
-          } else {
-            console.log('🔧 [useChatFactory] AUTO+SSE: Executing', clientOnlyTools.length, 'client-side tool(s) and reporting results');
-
-            let hasClientTools = false;
-
-            for (const toolCall of clientOnlyTools) {
-              const name = toolCall.function?.name;
-              const args = toolCall.function?.arguments;
-              let macro = findMacroByAlias(name);
-              if (!macro) {
-                macro = chatState.macros?.find(
-                  (m: any) => m.name === name || m.alias === name
-                ) ?? null;
-              }
-
-              if (macro) {
-                try {
-                  // executeMacro now persists the result via onClientToolComplete
-                  const result = await executeMacro(macro, args, 'auto', toolCall.id);
-                  const resultContent = result?.content
-                    || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
-                    || `Client tool "${name}" executed successfully (no content returned).`;
-                  hasClientTools = true;
-
-                  // Update UI: mark tool as success
-                  setChatState((prevState) => {
-                    const history = [...prevState.history];
-                    for (let i = history.length - 1; i >= 0; i--) {
-                      if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
-                        const tcs = history[i].tool_calls as any[];
-                        const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
-                        if (idx >= 0) {
-                          tcs[idx] = { ...tcs[idx], status: 'success' };
-                          const existingResults = (history[i] as any).tool_results || [];
-                          history[i] = {
-                            ...history[i],
-                            tool_calls: [...tcs],
-                            tool_results: [...existingResults, {
-                              id: toolCall.id,
-                              name,
-                              content: resultContent,
-                              timestamp: new Date(),
-                            }],
-                          };
-                          break;
-                        }
-                      }
-                    }
-                    return { ...prevState, history, updated: new Date() };
-                  });
-                } catch (error: any) {
-                  hasClientTools = true;
-                  // executeMacro's catch block also persists errors via onClientToolComplete
-                }
-              } else {
-                // Macro not found — persist the error directly since executeMacro wasn't called
-                hasClientTools = true;
-                try {
-                  await completeClientToolCalls([{
-                    toolCallId: toolCall.id,
-                    toolName: name,
-                    isError: true,
-                    error: `Client macro not found: ${name}`,
-                  }], false);
-                } catch (err) {
-                  console.error('[useChatFactory] Error persisting macro-not-found error:', err);
-                }
-              }
-            }
-
-            // All client tool results are already persisted by executeMacro via
-            // onClientToolComplete. Now trigger AI continuation with an empty
-            // results array so the server picks up the persisted results and
-            // continues the conversation without duplicating tool result entries.
-            if (hasClientTools) {
-              try {
-                await completeClientToolCalls([], true);
-              } catch (error) {
-                console.error('[useChatFactory] Error triggering AI continuation after client tools:', error);
-              }
-            }
           }
+          await flushClientToolBatchRef.current?.('complete');
         }
       } else if (accumulated.length > 0 && processToolCallsRef.current && !isAutoSSE) {
         // Yield so React flushes the setChatState calls above (content update,
@@ -917,11 +976,177 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  /**
+   * The server paused the turn on an outstanding client-tool result.
+   *
+   * This is the event the client never handled: `useSSE` fell through to its
+   * "unknown event" debug line, so a paused turn delivered no terminal event at
+   * all. `COMPLETE` used to do three things — drain the token/reasoning buffers,
+   * clear the streaming flag, finalise the assistant message — and none of them
+   * ran, leaving the UI "streaming" indefinitely while the server waited.
+   *
+   * The work below is exactly that terminal *UI* work. What is deliberately NOT
+   * done is anything that claims the turn is over: `agentBusy` stays true, no
+   * completion is dispatched, and the paused state is surfaced to the user.
+   * Execution is then driven from this event, not from window focus.
+   */
+  const onAwaitingClientToolReceived = async (event: AwaitingClientToolStreamingEvent) => {
+    const eventSessionId = event.conversationId || event.sessionId;
+    if (!isForActiveSession(eventSessionId)) return;
+
+    const sessionId = chatStateRef.current?.id || eventSessionId || '';
+    const pendingToolCalls = Array.isArray(event.data?.pendingToolCalls)
+      ? event.data.pendingToolCalls
+      : [];
+
+    sessionLogger?.warn(
+      `Turn paused: ${pendingToolCalls.length} client tool result(s) outstanding`,
+      { pendingToolCalls, chatSessionId: sessionId },
+      'useChatFactory',
+    );
+    reactory.log(
+      `[useChatFactory] Turn paused awaiting client tool result(s): ` +
+        `${pendingToolCalls.map((c) => `${c.toolName} (${c.toolCallId})`).join(', ') || '(none listed)'}` +
+        ` — session ${sessionId}`,
+      { pendingToolCalls, chatSessionId: sessionId },
+      'warning',
+    );
+
+    // 1. Drain the debounced buffers synchronously, exactly as COMPLETE did, so
+    //    nothing the model produced before the pause is lost to a timer that
+    //    will never fire.
+    streamingCompleteRef.current = true;
+    if (reasoningFlushTimerRef.current) {
+      clearTimeout(reasoningFlushTimerRef.current);
+      reasoningFlushTimerRef.current = null;
+    }
+    const trailingReasoning = reasoningBufferRef.current;
+    reasoningBufferRef.current = '';
+
+    if (tokenFlushTimerRef.current) {
+      clearTimeout(tokenFlushTimerRef.current);
+      tokenFlushTimerRef.current = null;
+    }
+    const trailingTokens = tokenBufferRef.current;
+    tokenBufferRef.current = '';
+
+    // 2. Finalise the assistant message in place. It keeps whatever was
+    //    produced; the placeholder is cleared so the UI does not sit on
+    //    "Processing..." for the rest of the pull request.
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      const lastIndex = history.length - 1;
+      if (lastIndex < 0) return prevState;
+
+      const lastMessage = history[lastIndex];
+      if (lastMessage?.role !== 'assistant') return prevState;
+
+      const existingContent = typeof lastMessage.content === 'string' ? lastMessage.content : '';
+      const isPlaceholder = existingContent === 'Processing...' || !existingContent;
+      const content = isPlaceholder
+        ? (trailingTokens || '')
+        : `${existingContent}${trailingTokens || ''}`;
+      const thinking = trailingReasoning
+        ? `${lastMessage.thinking || ''}${trailingReasoning}`
+        : lastMessage.thinking;
+
+      history[lastIndex] = {
+        ...lastMessage,
+        content,
+        thinking,
+        timestamp: new Date(),
+      } as UXChatMessage;
+
+      return { ...prevState, history, updated: new Date() };
+    });
+
+    // 3. Stop the "streaming" UI. The turn is paused, so `agentBusy` stays true:
+    //    saying the agent is idle would be the same lie the premature `complete`
+    //    told.
+    setIsStreaming(false);
+    setWaitingForResponse(false);
+
+    // 4. Surface the pause. `waitingClientToolCalls` is now a view of the calls
+    //    the turn is blocked on (it used to be a focus-deferred queue), and it
+    //    drives the "waiting for tool result" status in the chat chrome.
+    const pausedCalls: WaitingClientToolCall[] = pendingToolCalls.map((call) => {
+      const known = waitingClientToolCallsRef.current.find((w) => w.id === call.toolCallId)
+        || Array.from(pendingClientToolBatchRef.current.values()).find((w) => w.id === call.toolCallId);
+      if (known) return known;
+      return {
+        id: call.toolCallId,
+        name: call.toolName,
+        args: undefined,
+        sessionId,
+        calledBy: 'auto',
+        macro: resolveClientMacro(call.toolName) as any,
+        receivedAt: new Date(),
+      };
+    });
+    applyPausedClientToolCalls(pausedCalls);
+
+    // 5. Make sure every announced call is in the execution batch, even if its
+    //    `tool_call` frame never arrived (a dropped frame, or a page that was
+    //    reloaded between receipt and report). `awaiting_client_tool` is the
+    //    server's authoritative list, so it is the better source of truth.
+    //
+    //    `announcedByServer: true` is what admits these calls regardless of
+    //    approval mode: the server is blocked on exactly these ids, so leaving
+    //    them to an approval prompt would stall the turn until the deadline.
+    for (const call of pendingToolCalls) {
+      enqueueClientToolCall({
+        id: call.toolCallId,
+        name: call.toolName,
+        sessionId,
+        announcedByServer: true,
+      });
+    }
+
+    // 6. Execute and report — unconditionally, whatever the window is doing.
+    const answeredIds = (await flushClientToolBatchRef.current?.('awaiting_client_tool')) ?? [];
+
+    // The guard set in step 1 exists only to swallow stale buffer flushes from
+    // THIS turn; those buffers were drained above. Release it so the resumed
+    // turn's tokens are accepted even when there was nothing left to execute.
+    streamingCompleteRef.current = false;
+
+    // 7. Then reconcile against the server. This covers the cases this page
+    //    cannot know about: a result stored by a previous page lifetime, a call
+    //    whose completion never reached the server, a batch already answered by
+    //    another tab.
+    //
+    //    The ids this page just answered are passed as exclusions. The pending
+    //    list is read immediately after the flush, before the server has
+    //    necessarily cleared those rows, so without the exclusion the replay
+    //    would re-submit them from the local result cache — a duplicate the
+    //    server rejects, followed by a second continuation for the same pause.
+    if (sessionId && replayPendingClientToolCallsRef.current) {
+      try {
+        await replayPendingClientToolCallsRef.current(sessionId, {
+          skipToolCallIds: new Set(answeredIds),
+        });
+      } catch (error: any) {
+        sessionLogger?.warn(
+          `Pending client tool reconcile after pause failed: ${error?.message || String(error)}`,
+          { chatSessionId: sessionId },
+          'useChatFactory',
+        );
+      }
+    }
+  };
+
+
   const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
     setAgentBusy(true);
+    // Sending is itself a retry: the terminal transport state is over and the
+    // send path re-establishes the stream, so an error from this attempt must be
+    // reportable again.
+    terminalTransportRef.current = false;
     sessionLogger?.info(`Sending message (${message.length} chars)`, { hasImages: !!images?.length }, 'useChatFactory');
-    // Clear any lingering network error when the user tries sending again
-    if (networkStatus === 'error') {
+    // Clear any lingering network error when the user tries sending again.
+    // `lost` counts too: sending a message is itself a retry, and the send path
+    // re-establishes the transport.
+    if (networkStatus === 'error' || networkStatus === 'lost') {
       setNetworkStatus('idle');
       setNetworkError(null);
     }
@@ -1346,6 +1571,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [networkStatus, setNetworkStatus] = React.useState<NetworkStatus>('idle');
   const [networkError, setNetworkError] = React.useState<string | null>(null);
   const [networkReconnectAttempt, setNetworkReconnectAttempt] = React.useState(0);
+  /**
+   * True once the transport has given up (`lost` is showing) until a stream is
+   * live again.
+   *
+   * A REF, not the committed state, because the two callbacks that produce this
+   * sequence fire on the same tick: `useSSE` calls `onReconnectFailed` and then —
+   * in the same event handler — `onError`. React batches both, so a state read
+   * inside `onError` still sees the pre-batch value and the guard is useless.
+   * The flag is written synchronously by the give-up callbacks, which is what
+   * makes "an error may not downgrade a give-up" true under batching.
+   */
+  const terminalTransportRef = React.useRef(false);
 
   // Latest committed conversation history and id, for recovery code that must
   // merge the authoritative server record into what is on screen.
@@ -1400,6 +1637,81 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // Ref to always access the latest processToolCallsMemoized — assigned after it's defined.
   // This avoids stale closures in onToolCallReceived, which is bound via SSE event listeners.
   const processToolCallsRef = React.useRef<(toolCalls: any[], message: UXChatMessage, depth?: number) => Promise<{ toolResults: any[], toolErrors: any[] }>>(null);
+
+  /**
+   * Resolve a tool name to a macro from the live registry.
+   *
+   * The model names a tool by its macro alias (`side_panel_state`); the server's
+   * lightweight descriptors may only carry `name`. Both lookups are tried so a
+   * client-routed call is recognised instead of being mistaken for a server tool
+   * that has already run.
+   *
+   * The implementation is reached through a ref because `onToolCallReceived` is
+   * a `useCallback` whose deps cannot include the macro registry without being
+   * rebuilt on every macro change. A memoized SSE callback holding an old
+   * resolver would misclassify a freshly registered client macro as a server
+   * tool — the same class of failure this ticket is about.
+   */
+  const resolveClientMacroImplRef = React.useRef<
+    (name?: string) => MacroComponentDefinition<unknown> | null
+  >(() => null);
+  const resolveClientMacro = (name?: string): MacroComponentDefinition<unknown> | null =>
+    resolveClientMacroImplRef.current(name);
+
+  resolveClientMacroImplRef.current = (name?: string) => {
+    if (!name) return null;
+    const byAlias = findMacroByAlias(name);
+    if (byAlias) return byAlias;
+    const byName = (chatState?.macros || []).find(
+      (m: any) => m && (m.name === name || m.alias === name),
+    );
+    return (byName as MacroComponentDefinition<unknown>) ?? null;
+  };
+  /**
+   * Accept a `tool_call` the server is waiting on into the execution batch.
+   *
+   * Enqueueing is not deferral: the batch is flushed by `awaiting_client_tool`
+   * (milliseconds later, for the whole batch) and by a short fallback timer, and
+   * every path flushes regardless of window focus. Batching keeps one paused turn
+   * to one continuation instead of one per tool call.
+   */
+  const enqueueClientToolCall = (call: {
+    id: string;
+    name: string;
+    args?: any;
+    sessionId?: string;
+    /** True only when the caller is handling an `awaiting_client_tool` announcement. */
+    announcedByServer?: boolean;
+  }): void => {
+    if (!call?.id || handledClientToolCallIdsRef.current.has(call.id)) return;
+
+    // The announcement is recorded even for an id already in the batch: it can
+    // arrive after the `tool_call` frame that admitted the call, and it is what
+    // authorises a continuation.
+    if (call.announcedByServer) serverAnnouncedToolCallIdsRef.current.add(call.id);
+
+    if (pendingClientToolBatchRef.current.has(call.id)) return;
+
+    const entry: WaitingClientToolCall = {
+      id: call.id,
+      name: call.name,
+      args: call.args,
+      sessionId: call.sessionId || chatStateRef.current?.id || '',
+      calledBy: 'auto',
+      macro: resolveClientMacro(call.name) as any,
+      receivedAt: new Date(),
+    };
+
+    pendingClientToolBatchRef.current.set(call.id, entry);
+    setWaitingClientToolCalls((prev) => (prev.some((w) => w.id === call.id) ? prev : [...prev, entry]));
+
+    if (clientToolFlushTimerRef.current === null) {
+      clientToolFlushTimerRef.current = setTimeout(() => {
+        clientToolFlushTimerRef.current = null;
+        void flushClientToolBatchRef.current?.('fallback-timeout');
+      }, CLIENT_TOOL_FLUSH_FALLBACK_MS);
+    }
+  };
 
   const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
     const eventSessionId = toolCall.conversationId || toolCall.sessionId;
@@ -1603,6 +1915,59 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // Accumulate the tool_call; actual processing is deferred until the
     // completion event arrives so that ALL tool_calls are processed as a batch.
     pendingToolCallsRef.current = [...pendingToolCallsRef.current, toolCallEntry];
+
+    // ── Client-routed calls: admit only when this session is allowed to run one
+    //    implicitly. ───────────────────────────────────────────────────────────
+    //
+    // A `tool_call` frame is streamed for every tool the model emits, before the
+    // server executes anything and irrespective of approval mode. So the frame
+    // alone does NOT mean the server is waiting on the client, and it does not
+    // mean the user consented to the call.
+    //
+    // `shouldAdmitClientToolCallToBatch` encodes both conditions:
+    //   - the server announced the call as paused (`awaiting_client_tool`), or
+    //   - the session is in AUTO mode, the only mode whose send path forwards
+    //     client tools instead of asking the user.
+    //
+    // In PROMPT / SAFE_AUTO / PLAN the same call must stay on the approval path
+    // (`processToolCallsRef` → `ToolPrompt`). Executing it here would run the
+    // tool without consent and then again when the user approved it — twice for
+    // a side-effecting macro such as `amq`, `login` or `host_field_update`.
+    //
+    // Focus is reported, never obeyed: when the call IS admitted, an unfocused
+    // window still answers it.
+    const macroForCall = resolveClientMacro(toolCall.data.name);
+    const admitted = shouldAdmitClientToolCallToBatch({
+      macro: macroForCall,
+      toolApprovalMode: chatStateRef.current?.toolApprovalMode,
+      // `tool_call` is not an announcement; only `awaiting_client_tool` sets this.
+      announcedByServer: false,
+    });
+
+    if (admitted) {
+      if (!isChatFocused()) {
+        const warning =
+          `Client tool call "${toolCall.data.name}" (callId: ${toolCallId}) arrived while the window was unfocused — ` +
+          `it will be executed and reported regardless (session: ${validSessionId})`;
+        reactory.log(warning, { toolName: toolCall.data.name, toolCallId, chatSessionId: validSessionId }, 'warning');
+        sessionLogger?.warn(warning, { toolName: toolCall.data.name, toolCallId, chatSessionId: validSessionId }, 'useChatFactory');
+      }
+      enqueueClientToolCall({
+        id: toolCallId,
+        name: toolCall.data.name,
+        args: toolCallEntry.function.arguments,
+        sessionId: validSessionId,
+        announcedByServer: false,
+      });
+    } else if (isClientRoutedMacro(macroForCall)) {
+      // Deliberately no execution and no result: this call belongs to the
+      // approval flow, which runs it (once) after the user decides.
+      sessionLogger?.info(
+        `Client tool call "${toolCall.data.name}" (callId: ${toolCallId}) left to the ${chatStateRef.current?.toolApprovalMode || 'unknown'} approval flow`,
+        { toolName: toolCall.data.name, toolCallId, chatSessionId: validSessionId },
+        'useChatFactory',
+      );
+    }
   }, [chatState?.id]);
 
 
@@ -1614,6 +1979,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const eventSessionId = token.conversationId || token.sessionId;
     if (!isForActiveSession(eventSessionId)) return;
     if (streamingCompleteRef.current) return;
+
+    // Content is flowing again, so the pause is over. Without this the chat
+    // chrome would keep advertising "waiting for tool result" for the rest of
+    // the resumed turn.
+    if (waitingClientToolCallsRef.current.length > 0) {
+      applyPausedClientToolCalls([]);
+    }
 
     tokenBufferRef.current += (token.data.delta || token.data.content || "");
 
@@ -1895,6 +2267,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         onWarning: (message, meta) => reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'warning'),
         onInfo: (message, meta) => sessionLogger?.info(message, meta, 'useChatFactory'),
       });
+      // A turn the server still considers in flight may be paused on a
+      // client-tool result this page never reported (the tab was closed, the
+      // completion was lost). Asking what is outstanding is the only durable
+      // answer: the local queue is gone, the server's list is not. Coalesced
+      // and server-authoritative, so this is safe to call on every reconcile.
+      if (outcome.processing) {
+        const activeId = chatStateRef.current?.id ?? activeSessionIdRef.current;
+        if (activeId && replayPendingClientToolCallsRef.current) {
+          void replayPendingClientToolCallsRef.current(activeId);
+        }
+      }
+
       return {
         processing: outcome.processing,
         settled: outcome.settled,
@@ -1908,10 +2292,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // The dead-stream backstop is scoped to a turn: an idle open chat must not
       // reconnect (and re-query) just for being quiet. See `turnActive` in useSSE.
       turnActive: agentBusy,
+      // Optional, host-supplied. Undefined means "derive it from the heartbeat
+      // cadence the server actually beats at", which is the desired default.
+      livenessTimeoutMs: sseLivenessTimeoutMs,
       sessionLogger,
       onToken: onTokenReceived,
       onReasoning: onReasoningReceived,
       onToolCall: onToolCallReceived,
+      onAwaitingClientTool: onAwaitingClientToolReceived,
       onMessage: onSSEMessageReceived,
       onError: (e) => { onError(e); props.onStreamError?.(e); },
       onToolIterationLimit: onToolIterationLimitReceived,
@@ -1932,11 +2320,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         chatShellBus.push(owner, event.data);
       },
       onReconnecting: (attempt, maxAttempts) => {
+        // A retry cycle is in progress, so the transport is no longer terminal.
+        terminalTransportRef.current = false;
         setNetworkStatus('reconnecting');
         setNetworkReconnectAttempt(attempt);
         setNetworkError(null);
       },
       onReconnected: () => {
+        terminalTransportRef.current = false;
         setNetworkStatus('connected');
         setNetworkError(null);
         setNetworkReconnectAttempt(0);
@@ -1955,7 +2346,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         recoveryRef.current?.handleReconnected();
       },
       onReconnectFailed: () => {
-        setNetworkStatus('error');
+        // Terminal, not transient: the transport has given up. `lost` renders a
+        // persistent banner with an explicit reconnect, because a frozen stream
+        // with no indicator is indistinguishable from a hung agent — and the
+        // user must be able to tell the difference and act.
+        // Set the flag FIRST: `useSSE` may fire an error on the same tick and
+        // `onError` consults it synchronously.
+        terminalTransportRef.current = true;
+        setNetworkStatus('lost');
         setNetworkError('Connection lost. The conversation will be refreshed from the server.');
         // A give-up must not leave the transcript silently wrong.
         //
@@ -1969,7 +2367,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // The streaming session behind the URL outlived the server's TTL, so no
         // retry can succeed. Stop, reconcile what actually happened, and ask for
         // a fresh session instead of retrying a dead URL for hours.
-        setNetworkStatus('error');
+        // Terminal until the fresh session actually connects (or the user
+        // reconnects); set the flag before any await, as above.
+        terminalTransportRef.current = true;
+        setNetworkStatus('lost');
         setNetworkError('The live connection expired. Reconnecting to the conversation…');
         recoveryRef.current?.handleReconnectFailed();
         reinitSseRef.current?.();
@@ -1994,6 +2395,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // nothing about whether the model produced content. This is what lets a
         // long silent tool step be told apart from a dead stream.
         recoveryRef.current?.notifyHeartbeat();
+      },
+      onResync: () => {
+        // The server could not replay from the requested `Last-Event-ID` (it
+        // was evicted from its bounded buffer), so resuming from an unknown
+        // point would silently skip whatever the client never saw. Re-fetch the
+        // conversation through the existing reconcile path — a resync is a
+        // recovery reason, not a second recovery mechanism.
+        recoveryRef.current?.handleResyncRequest();
       },
     });
 
@@ -2471,6 +2880,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
     if (type === 'SSE_ERROR' || type === 'PARSE_ERROR' || type === 'SESSION_EXPIRED') {
+      // A give-up is TERMINAL. `lost` is the persistent, non-dismissible
+      // "connection lost / reconnect" state; downgrading it to the dismissible
+      // `error` pill here is what made that state unreachable in production,
+      // because a late PARSE_ERROR (or any other error raised by the dead
+      // stream) would land after `onReconnectFailed` and win as the last write.
+      // Keep the truthful state and its message.
+      if (terminalTransportRef.current) return;
       setNetworkStatus('error');
       setNetworkError(errorMessage);
       return;
@@ -2512,6 +2928,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   /** Clear the network error indicator and allow the user to continue */
   const dismissNetworkError = React.useCallback(() => {
+    // An explicit user action ends the terminal state; only then may a later
+    // error move the pill back to the dismissible form.
+    terminalTransportRef.current = false;
     setNetworkStatus('idle');
     setNetworkError(null);
     setNetworkReconnectAttempt(0);
@@ -2522,16 +2941,33 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * The next sendMessage call will attempt to reconnect automatically.
    */
   const retryConnection = React.useCallback(() => {
-    setNetworkStatus('idle');
     setNetworkError(null);
-    setNetworkReconnectAttempt(0);
     // The banner's only affordance has to actually do something. `rearm()`
     // restarts a stream that gave up (or skips the remaining backoff), which is
     // what the user is asking for when they press Retry after an outage.
     // `sse` is a fresh object every render; depending on it would churn this
     // callback's identity, so depend on the one stable function it uses.
-    sse.rearm();
-  }, [sse.rearm]);
+    const revived = sse.rearm();
+    if (revived) {
+      // `rearm()` already reported attempt 1 through `onReconnecting`; make sure
+      // the banner reflects it even if that callback was not wired. Clearing the
+      // terminal flag here is correct: a new transport is connecting.
+      terminalTransportRef.current = false;
+      setNetworkStatus('reconnecting');
+      setNetworkReconnectAttempt(1);
+      return;
+    }
+    // Nothing was revived. For the terminal `lost` state the banner must stay —
+    // and stay ARMED — because clearing this would return the UI to the silent
+    // frozen look the whole path exists to remove.
+    if (networkStatus === 'lost') {
+      terminalTransportRef.current = true;
+      return;
+    }
+    terminalTransportRef.current = false;
+    setNetworkStatus('idle');
+    setNetworkReconnectAttempt(0);
+  }, [networkStatus, sse.rearm]);
 
   /**
    * Attach a ToolPrompt component to the message that owns the tool_calls.
@@ -2573,17 +3009,241 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }, [chatState.history, chatState.tools, chatState.macros]);
 
+  // ---------------------------------------------------------------------------
+  // Chat history list — ONE filter, ONE request sequence, ONE writer
+  // ---------------------------------------------------------------------------
+  //
+  // `chats` is the list the history panel renders. Every path that refreshes it
+  // (panel open, persona switch, search, delete, chat-data edit) goes through
+  // `runChatListQueryImpl` with the COMMITTED filter below. That is the fix for
+  // the defect where a background refresh called `listChats({})` and silently
+  // dropped the active search term while the field kept displaying it.
+
+  const [chatListFilter, setChatListFilterState] = React.useState<ChatListFilter>(() =>
+    createChatListFilter({
+      personaId: props?.persona?.id,
+      use_case: props?.useCase,
+      edges: props?.edges,
+    }),
+  );
+  const [chatListStatus, setChatListStatus] = React.useState<ChatListStatus>(initialChatListStatus);
+
+  // Mirrors of the newest values. The public controllers below are intentionally
+  // identity-stable (they are handed to `ChatHistoryPanel`, whose memo comparator
+  // uses `Object.is`), so they must read current state through refs instead of
+  // closing over it.
+  const chatListFilterRef = React.useRef<ChatListFilter>(chatListFilter);
+  chatListFilterRef.current = chatListFilter;
+
+  /**
+   * The status the CONTROLLERS read.
+   *
+   * Written together with the state in `applyChatListStatus` — never synced on
+   * render. A guard that only sees `error`/`loading` after React has re-rendered
+   * lets a "Load more" click that lands in the same tick page off the PREVIOUS
+   * window; that is exactly the B1 hazard (append onto the previous query's
+   * rows) re-entering through the back door.
+   */
+  const chatListStatusRef = React.useRef<ChatListStatus>(chatListStatus);
+
+  /** The ONLY writer of the list status: updates the ref and the state together. */
+  const applyChatListStatus = (next: ChatListStatus): ChatListStatus => {
+    chatListStatusRef.current = next;
+    setChatListStatus(next);
+    return next;
+  };
+
+  const chatsRef = React.useRef<any[]>(chats);
+  chatsRef.current = chats;
+
+  /**
+   * Monotonic request sequence. Only the response whose sequence is still the
+   * newest is applied, so a slower earlier query (a prefix of the term the user
+   * has settled on) can never overwrite a newer result. "Last response wins"
+   * was the second half of the search defect.
+   */
+  const chatListRequestSeqRef = React.useRef(0);
+
+  /** Commit a filter patch (no fetch). Returns the filter now in force. */
+  const applyChatListFilterImpl = (patch: ChatListFilterPatch = {}): ChatListFilter => {
+    const next = patchChatListFilter(chatListFilterRef.current, patch);
+    if (chatListFilterKey(next) !== chatListFilterKey(chatListFilterRef.current)) {
+      chatListFilterRef.current = next;
+      setChatListFilterState(next);
+    }
+    return chatListFilterRef.current;
+  };
+
+  /**
+   * Run one list request against the committed filter.
+   *
+   * `offset === 0` replaces the list; `offset > 0` appends and de-duplicates by
+   * conversation id (see `mergeChatListPage`). A failure becomes an error state
+   * with a retry — the rows already on screen are kept, never collapsed to
+   * "No chats found".
+   */
+  const runChatListQueryImpl = async (
+    filter: ChatListFilter,
+    offset: number = 0,
+    pageSizeOverride?: number,
+    mergeOptions: { keep?: number } = {},
+  ): Promise<any[]> => {
+    const requestedOffset = Math.max(0, Math.floor(offset) || 0);
+    const append = requestedOffset > 0;
+    const pageSize = pageSizeOverride && pageSizeOverride > 0 ? pageSizeOverride : filter.pageSize;
+    const requestFilter: ChatListFilter = pageSize === filter.pageSize ? filter : { ...filter, pageSize };
+
+    const seq = chatListRequestSeqRef.current + 1;
+    chatListRequestSeqRef.current = seq;
+
+    applyChatListStatus({
+      ...chatListStatusRef.current,
+      loading: !append,
+      loadingMore: append,
+      error: null,
+      retry: null,
+    });
+
+    try {
+      const page = (await graph.listConversations(buildConversationFilter(requestFilter, requestedOffset))) || [];
+
+      // Superseded: a newer request has been issued since this one started.
+      // Dropping the response is the whole point of the sequence number.
+      if (seq !== chatListRequestSeqRef.current) return [];
+
+      const merged = mergeChatListPage(chatsRef.current || [], page as any[], {
+        offset: requestedOffset,
+        pageSize,
+        maxRows: CHAT_LIST_MAX_ROWS,
+        // Present on a preserve-window re-validation: `pageSize` is `keep + 1`
+        // and the extra row is the sentinel that proves more rows exist.
+        ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
+      });
+
+      chatsRef.current = merged.chats;
+      setChats(merged.chats);
+      applyChatListStatus(merged.status);
+      return merged.chats;
+    } catch (error: any) {
+      if (seq !== chatListRequestSeqRef.current) return [];
+
+      reactory.log(
+        '[useChatFactory] chat history list load failed',
+        { error, filter: requestFilter, offset: requestedOffset },
+        'warning',
+      );
+      // Deliberately NOT `onError`: that pushes a system message into the
+      // conversation transcript, and a history-list failure is not a chat
+      // message. The panel renders this as an inline error with a retry.
+      applyChatListStatus({
+        ...chatListStatusRef.current,
+        loading: false,
+        loadingMore: false,
+        error: error?.message || 'Unable to load conversations',
+        // Remember exactly which window failed. Retry replays it verbatim — a
+        // failed first page must not be retried as an append.
+        retry: {
+          offset: requestedOffset,
+          pageSize,
+          ...(mergeOptions.keep !== undefined ? { keep: mergeOptions.keep } : {}),
+        },
+      });
+      return [];
+    }
+  };
+
+  /**
+   * Refresh the list with the committed filter (optionally patching it first).
+   *
+   * `preserveWindow` re-requests the rows already loaded as one page, so a
+   * background refresh (panel re-open, delete, chat-data edit) leaves the user
+   * looking at the same rows they had. Callers that change the query itself
+   * (search, persona switch) start from page 0 instead.
+   */
+  const refreshChatListImpl = (
+    patch: ChatListFilterPatch = {},
+    options: { preserveWindow?: boolean } = {},
+  ): Promise<any[]> => {
+    const filter = applyChatListFilterImpl(patch);
+    const preserveWindow = options.preserveWindow !== false;
+    const loaded = (chatsRef.current || []).length;
+
+    // Nothing on screen: this is an ordinary first page.
+    if (!preserveWindow || loaded === 0) {
+      return runChatListQueryImpl(filter, 0, filter.pageSize);
+    }
+
+    // Re-validate the visible window WITHOUT changing it.
+    //
+    // Ask for ONE row more than we hold and let the merge treat it as a
+    // sentinel: if it arrives, at least one more conversation exists; if it
+    // does not, the page is short and the list is terminal. Requesting exactly
+    // the rows already loaded instead always comes back FULL, which made
+    // `exhausted`/`capped` false again on every panel re-open (B2) and put a
+    // "Load more" button on a list that could not grow.
+    const keep = Math.min(loaded, CHAT_LIST_MAX_ROWS);
+    // Bounded by the cap: at 500 rows we cannot ask for the 501st, so the merge
+    // reports the cap instead of guessing (see `mergeChatListPage`).
+    const pageSize = Math.min(keep + 1, CHAT_LIST_MAX_ROWS);
+    return runChatListQueryImpl(filter, 0, pageSize, { keep });
+  };
+
+  /**
+   * Commit a search term as list state and reload from the first page.
+   *
+   * Committing the term that is already in force is a no-op: the panel commits
+   * on Enter and again from the typing debounce, so without this guard a settled
+   * term would be fetched twice (and the second response would only ever be a
+   * duplicate of the first). A failed list is retried even for the same term.
+   */
+  const commitChatSearchImpl = (term: string): Promise<any[]> => {
+    const current = chatListFilterRef.current;
+    const nextSearch = typeof term === 'string' ? term.trim() : '';
+    if (nextSearch === (current.search || '') && !chatListStatusRef.current.error) {
+      return Promise.resolve(chatsRef.current || []);
+    }
+    return refreshChatListImpl({ search: nextSearch }, { preserveWindow: false });
+  };
+
+  const loadMoreChatsImpl = (): Promise<any[]> => {
+    const status = chatListStatusRef.current;
+    // `error` blocks paging on purpose. After a FAILED replace the rows on screen
+    // still belong to the PREVIOUS query while `offset` describes the new one, so
+    // appending here would splice two different result sets together — and the
+    // page-one rows of the new query were never fetched. Retry is the only
+    // correct continuation from that state.
+    if (status.loading || status.loadingMore || status.exhausted || status.capped || status.error) {
+      return Promise.resolve(chatsRef.current || []);
+    }
+    return runChatListQueryImpl(chatListFilterRef.current, status.offset);
+  };
+
+  const retryChatListImpl = (): Promise<any[]> => {
+    const status = chatListStatusRef.current;
+    const window = status.retry;
+    return window
+      ? runChatListQueryImpl(chatListFilterRef.current, window.offset, window.pageSize, {
+          keep: window.keep,
+        })
+      : runChatListQueryImpl(chatListFilterRef.current, status.offset);
+  };
+
+  /**
+   * Read-only probe: returns conversations matching `filter` WITHOUT writing the
+   * rendered history list. The list state is owned by the controller above
+   * (`refreshChatList` / `commitChatSearch` / `loadMoreChats`), which always
+   * applies the committed filter — an ad-hoc `listChats(...)` writing `chats` is
+   * exactly the bug this replaced.
+   */
   const fetchConversationsImpl = async (filter: any) => {
     try {
       const list = await graph.listConversations(filter);
-      setChats(list || []);
       return list || [];
     } catch (error) {
       onError(error);
-      setChats([]);
       return [];
     }
-  }
+  };
 
   /**
    * Read-only recency probe: the server sorts by `updated` descending and
@@ -2604,23 +3264,65 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  /**
+   * The conversation a persona should be resumed into, or `null` when it has
+   * none.
+   *
+   * This is the ONLY list input to the auto-resume decision, and it is
+   * deliberately a separate request from the history panel's list:
+   *
+   *   * it never carries `search`, so a committed search term cannot decide which
+   *     conversation is resumed (or whether a new one is created);
+   *   * it is scoped to the persona and the host use case / edges, matching what
+   *     "resume this persona's conversation" actually means;
+   *   * it asks for exactly one row — the server sorts by `updated` descending,
+   *     so only the newest can be a resume target;
+   *   * it is read-only: it does NOT write `chats`, so it cannot disturb the
+   *     (possibly filtered) list the history panel is showing.
+   *
+   * A probe failure resolves to `null`, matching what `listChats` used to
+   * produce (it caught and returned `[]`), so auto-init on a failed request
+   * behaves as it did before this change.
+   */
+  const fetchMostRecentChatImpl = async (personaId: string): Promise<any | null> => {
+    if (!personaId) return null;
+    try {
+      const list = await graph.listConversations({
+        personaId,
+        ...(props?.useCase ? { use_case: props.useCase } : {}),
+        ...(Array.isArray(props?.edges) && props.edges.length > 0 ? { edges: props.edges } : {}),
+        limit: 1,
+        offset: 0,
+      } as any);
+      return (list && list[0]) || null;
+    } catch (error) {
+      reactory.log(
+        '[useChatFactory] failed to probe the most recent conversation for a persona',
+        { error, personaId },
+        'warning',
+      );
+      return null;
+    }
+  };
+
   const deleteChatImpl = async (id: string | string[]) => {
     const deleteId = Array.isArray(id) ? id[0] : id;
     sessionLogger?.info(`Deleting chat session`, { chatSessionId: deleteId }, 'useChatFactory');
     try {
       // Only single id supported by schema
       await graph.deleteChatSession(deleteId);
-      await fetchConversationsImpl({}); // Refresh the chat list after deletion
+      // Refresh with the committed filter, preserving the loaded window: a
+      // delete must not silently un-filter the list or throw away pages.
+      await refreshChatListImpl();
     } catch (error) {
       onError(error);
     }
   };
 
   // Stable wrappers over the latest implementation, for the same reason as
-  // `loadChat`: both are handed to ChatHistoryPanel as props and both appear in
-  // consumer dependency arrays (`handleChatHistoryPanelToggle` lists
-  // `listChats`), so a fresh identity each render defeated every memo
-  // downstream of them.
+  // `loadChat`: the list controllers are handed to ChatHistoryPanel as props
+  // (whose memo comparator is `Object.is`), so a fresh identity each render
+  // defeated every memo downstream of them.
   const fetchConversationsImplRef = React.useRef(fetchConversationsImpl);
   fetchConversationsImplRef.current = fetchConversationsImpl;
   const fetchConversations = React.useCallback(
@@ -2628,10 +3330,40 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     [],
   );
 
+  const refreshChatListImplRef = React.useRef(refreshChatListImpl);
+  refreshChatListImplRef.current = refreshChatListImpl;
+  const refreshChatList = React.useCallback(
+    (patch?: ChatListFilterPatch, options?: { preserveWindow?: boolean }) =>
+      refreshChatListImplRef.current(patch, options),
+    [],
+  );
+
+  const commitChatSearchImplRef = React.useRef(commitChatSearchImpl);
+  commitChatSearchImplRef.current = commitChatSearchImpl;
+  const commitChatSearch = React.useCallback(
+    (term: string) => commitChatSearchImplRef.current(term),
+    [],
+  );
+
+  const loadMoreChatsImplRef = React.useRef(loadMoreChatsImpl);
+  loadMoreChatsImplRef.current = loadMoreChatsImpl;
+  const loadMoreChats = React.useCallback(() => loadMoreChatsImplRef.current(), []);
+
+  const retryChatListImplRef = React.useRef(retryChatListImpl);
+  retryChatListImplRef.current = retryChatListImpl;
+  const retryChatList = React.useCallback(() => retryChatListImplRef.current(), []);
+
   const fetchRecentConversationsImplRef = React.useRef(fetchRecentConversationsImpl);
   fetchRecentConversationsImplRef.current = fetchRecentConversationsImpl;
   const fetchRecentConversations = React.useCallback(
     (limit?: number) => fetchRecentConversationsImplRef.current(limit),
+    [],
+  );
+
+  const fetchMostRecentChatImplRef = React.useRef(fetchMostRecentChatImpl);
+  fetchMostRecentChatImplRef.current = fetchMostRecentChatImpl;
+  const getMostRecentChatForPersona = React.useCallback(
+    (personaId: string) => fetchMostRecentChatImplRef.current(personaId),
     [],
   );
 
@@ -2676,18 +3408,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       // Reconcile the history list with the server. The optimistic patch above
       // gives instant feedback; this makes the list authoritative and picks up
-      // anything else the update may have touched. Scoped to this chat's use
-      // case / edges but deliberately NOT to a persona, because the history
-      // panel lists conversations across agents. A refresh failure must not
-      // fail the edit — the local patch already reflects it.
+      // anything else the update may have touched. It re-uses the COMMITTED
+      // list filter (search term included) and keeps the loaded window, so an
+      // edit never un-filters the panel. A refresh failure must not fail the
+      // edit — the local patch already reflects it.
       try {
-        const refreshFilter: any = {
-          ...(props?.useCase ? { use_case: props.useCase } : {}),
-          ...(Array.isArray(props?.edges) && props.edges.length > 0
-            ? { edges: props.edges }
-            : {}),
-        };
-        await fetchConversationsImpl(refreshFilter);
+        await refreshChatListImpl();
       } catch (refreshError: any) {
         reactory.log(
           `ChatFactory: chat data saved but history refresh failed: ${refreshError?.message}`,
@@ -3934,9 +4660,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }));
       }
       return aiMessage;
-    } catch (error) {
+    } catch (error: any) {
+      // Rethrow on purpose. A rejection here means the server did NOT accept the
+      // results: a duplicate (another tab or an earlier page lifetime already
+      // answered these calls) or a call expired at the turn boundary. Callers
+      // must be able to tell that apart from success — swallowing it left the
+      // replay path convinced the results had landed and dispatching a second
+      // continuation for the same pause.
       reactory.error('Error completing client tool calls', error);
-      return null;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }, [chatState?.id, persona?.id, protocol, reactory, sse, setIsStreaming, setWaitingForResponse, setAgentBusy]);
 
@@ -3978,10 +4710,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * macros" restriction: the risk was never in *recovering* the call, it was in
    * *re-running* it, and a stored result removes the need to run anything.
    */
-  const replayPendingClientToolCalls = React.useCallback(async (
+  const replayPendingClientToolCallsImpl = React.useCallback(async (
     chatSessionId: string,
+    options?: { skipToolCallIds?: Set<string> },
   ): Promise<number> => {
     if (!chatSessionId || !persona?.id) return 0;
+
+    // Ids the caller has *already* answered in this page lifetime (typically the
+    // batch a pause event just flushed). Re-submitting them would be a duplicate
+    // the server rejects, and while that race is unavoidable at the transport
+    // level it is avoidable here: the pending list is read before the server has
+    // had a chance to clear those rows.
+    const skipToolCallIds = options?.skipToolCallIds;
 
     // Macros safe to *re-execute*, used only when no result was cached.
     //
@@ -4014,6 +4754,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         'warning',
       );
       return 0;
+    }
+
+    if (skipToolCallIds && skipToolCallIds.size > 0) {
+      const before = pending.length;
+      pending = pending.filter((call) => !skipToolCallIds.has(call.toolCallId));
+      if (pending.length !== before) {
+        sessionLogger?.info(
+          `Skipping ${before - pending.length} client tool call(s) this page already answered`,
+          { chatSessionId, skipped: Array.from(skipToolCallIds) },
+          'useChatFactory',
+        );
+      }
+      if (pending.length === 0) return 0;
     }
 
     if (pending.length === 0) return 0;
@@ -4112,6 +4865,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
     // Fallback: no stored result, so the tool has to run again for its output to
     // exist at all. Restricted to macros whose repetition is harmless.
+    //
+    // `executeMacro` reports its own result through `onClientToolComplete` (and
+    // caches it before submitting), so nothing is pushed to `results` here. The
+    // old code did both, which submitted the same toolCallId twice — the very
+    // duplicate the server now rejects.
+    let rerunCount = 0;
     for (const call of needRerun) {
       const macro = findMacroByAlias(call.toolName) ?? findMacroByName(call.toolName);
       if (!macro) {
@@ -4125,17 +4884,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
 
       try {
-        const result = await executeMacro(macro, call.args, 'auto', call.toolCallId);
-        results.push({
-          toolCallId: call.toolCallId,
-          toolName: call.toolName,
-          result:
-            result?.content
-            ?? (result != null
-              ? (typeof result === 'string' ? result : JSON.stringify(result))
-              : `Client tool "${call.toolName}" replayed successfully (no content returned).`),
-        });
+        await executeMacro(macro, call.args, 'auto', call.toolCallId);
+        rerunCount += 1;
       } catch (error: any) {
+        // `executeMacro` reports its own failures; this only catches a throw
+        // from the executor itself, which must still be answered.
         results.push({
           toolCallId: call.toolCallId,
           toolName: call.toolName,
@@ -4162,23 +4915,77 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // `continueProcessing: false` — the results are reported first, then a single
     // continuation is requested below. Letting each report continue the loop would
     // drive one provider turn per replayed call.
-    try {
-      await completeClientToolCalls(results, false);
-    } catch (error: any) {
-      reactory.error('ChatFactory: failed to report replayed client tool results', error);
-      return 0;
+    //
+    // The continuation is conditional on purpose. `completeClientToolCalls` now
+    // rethrows a rejection, and a rejection here means the results did not land —
+    // a duplicate (another tab, or an earlier page lifetime) or a call the server
+    // already reconciled at the turn boundary. Continuing in that case resumes a
+    // turn whose result is still outstanding and can duplicate a provider turn,
+    // which is precisely the failure this ticket fixes.
+    let submitted = 0;
+    let submissionRejected = false;
+    if (results.length > 0) {
+      try {
+        await completeClientToolCalls(results, false);
+        submitted = results.length;
+      } catch (error: any) {
+        submissionRejected = true;
+        reactory.log(
+          `ChatFactory: replay of ${results.length} client tool result(s) was rejected — treating as already answered: ${error?.message || String(error)}`,
+          { chatSessionId, toolCallIds: results.map((r) => r.toolCallId) },
+          'warning',
+        );
+      }
     }
 
     // One continuation for the whole batch, so the agent sees the real outputs
-    // and can finish the turn it was interrupted mid-way through.
-    try {
-      await completeClientToolCalls([], true);
-    } catch (error: any) {
-      reactory.error('ChatFactory: failed to continue after client tool replay', error);
+    // and can finish the turn it was interrupted mid-way through. Never for a
+    // rejected submission.
+    if (!submissionRejected && (submitted > 0 || rerunCount > 0)) {
+      try {
+        await completeClientToolCalls([], true);
+      } catch (error: any) {
+        reactory.log(
+          `ChatFactory: failed to continue after client tool replay: ${error?.message || String(error)}`,
+          { chatSessionId },
+          'warning',
+        );
+      }
     }
 
-    return results.length;
+    // Nothing is owed by this page any more: clear the paused view so the UI
+    // does not advertise a pause the server has already left.
+    if (results.length > 0 || rerunCount > 0) {
+      applyPausedClientToolCalls([]);
+    }
+
+    return results.length + rerunCount;
   }, [persona?.id, reactory, sessionLogger, findMacroByAlias, findMacroByName, executeMacro, completeClientToolCalls, cacheScope]);
+
+  /**
+   * Coalescing wrapper — one replay per conversation at a time.
+   *
+   * Replay is now triggered from mount, reconnect, focus-while-paused and
+   * `awaiting_client_tool`, and those frequently coincide. Two overlapping runs
+   * would read the same pending list and both re-run a `RERUN_SAFE` macro, which
+   * is the duplicate-result case the server rejects.
+   */
+  const replayPendingClientToolCalls = React.useCallback(async (
+    chatSessionId: string,
+    options?: { skipToolCallIds?: Set<string> },
+  ): Promise<number> => {
+    if (!chatSessionId) return 0;
+    const inFlight = replayInFlightRef.current;
+    if (inFlight && inFlight.chatSessionId === chatSessionId) return inFlight.promise;
+
+    const promise = replayPendingClientToolCallsImpl(chatSessionId, options);
+    replayInFlightRef.current = { chatSessionId, promise };
+    try {
+      return await promise;
+    } finally {
+      if (replayInFlightRef.current?.promise === promise) replayInFlightRef.current = null;
+    }
+  }, [replayPendingClientToolCallsImpl]);
 
   // Keep the ref in sync so callers defined earlier in the render can reach it.
   replayPendingClientToolCallsRef.current = replayPendingClientToolCalls;
@@ -4785,112 +5592,276 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // Keep the ref in sync so onToolCallReceived always calls the latest version
   processToolCallsRef.current = processToolCallsMemoized;
 
-  // Drain queued client-side tool calls when chat window gains focus
-  const drainWaitingClientToolCalls = React.useCallback(async () => {
-    if (isDrainingClientToolsRef.current || waitingClientToolCallsRef.current.length === 0) return;
-    if (!isChatFocused()) return;
+  /**
+   * Execute and report every client tool call the current turn is paused on.
+   *
+   * This replaces the focus-gated drain. Three properties matter and each one
+   * is load-bearing:
+   *
+   *  1. **Focus is not consulted.** The server is blocked on these results;
+   *     `document.hasFocus()` is an OS-window heuristic and says nothing about
+   *     whether the turn should progress. An unfocused flush is logged at
+   *     warning with the tool names, call ids and session (requirement: a
+   *     deferred/blocked call is auditable).
+   *  2. **Idempotent.** Calls are removed from the batch before execution and
+   *     their ids recorded, so an overlapping `awaiting_client_tool`, a
+   *     replayed `tool_call`, or a late `complete` cannot execute them twice.
+   *  3. **One continuation per batch.** Each result is persisted with
+   *     `continueProcessing: false`; the batch then asks for a single
+   *     continuation. One per call would start a provider turn carrying the
+   *     still-unanswered siblings.
+   */
+  const flushClientToolBatch = React.useCallback(async (reason: string): Promise<string[]> => {
+    if (isDrainingClientToolsRef.current) return [];
+
+    const batch = Array.from(pendingClientToolBatchRef.current.values());
+    if (batch.length === 0) return [];
 
     isDrainingClientToolsRef.current = true;
+    pendingClientToolBatchRef.current.clear();
+    if (clientToolFlushTimerRef.current !== null) {
+      clearTimeout(clientToolFlushTimerRef.current);
+      clientToolFlushTimerRef.current = null;
+    }
+
+    const sessionId =
+      chatStateRef.current?.id || activeSessionIdRef.current || batch[0]?.sessionId || '';
+
+    // Is the server actually paused on this batch?
+    //
+    // `requestContinuation` depends on it: a continuation resumes a paused turn,
+    // and sending one for a turn that was never paused resumes nothing while
+    // potentially driving a duplicate provider turn. The announcement
+    // (`awaiting_client_tool`) is authoritative; AUTO mode is the only mode whose
+    // send path pauses on a client tool by construction, which also covers the
+    // case where the announcement frame was dropped by the transport.
+    const toolApprovalMode = chatStateRef.current?.toolApprovalMode;
+    const announcedByServer = batch.some((call) =>
+      serverAnnouncedToolCallIdsRef.current.has(call.id),
+    );
+    const requestContinuation = shouldResumePausedTurn({ announcedByServer, toolApprovalMode });
+
+    if (!requestContinuation) {
+      // Unreachable given the admission gate (a non-AUTO call is only admitted
+      // by an announcement, which sets the flag). Logged rather than asserted so
+      // an unexpected path reports itself instead of stalling silently.
+      reactory.log(
+        `[useChatFactory] Flushing ${batch.length} client tool call(s) (${reason}) without a continuation — ` +
+          `the server has not paused this turn (mode: ${toolApprovalMode || 'unknown'})`,
+        { chatSessionId: sessionId, toolCallIds: batch.map((c) => c.id) },
+        'warning',
+      );
+    }
+
+    const focused = isChatFocused();
+
+    if (!focused) {
+      const warning =
+        `Executing ${batch.length} client tool call(s) while the window is unfocused (${reason}) — ` +
+        `they are not deferred because the server is waiting on them: ` +
+        `${batch.map((c) => `${c.name} (${c.id})`).join(', ')}` +
+        (sessionId ? ` — session ${sessionId}` : '');
+      reactory.log(`[useChatFactory] ${warning}`, {
+        toolCalls: batch.map((c) => ({ toolName: c.name, toolCallId: c.id })),
+        chatSessionId: sessionId,
+        reason,
+      }, 'warning');
+      sessionLogger?.warn(warning, {
+        toolCalls: batch.map((c) => ({ toolName: c.name, toolCallId: c.id })),
+        chatSessionId: sessionId,
+        reason,
+      }, 'useChatFactory');
+    } else {
+      sessionLogger?.info(
+        `Executing ${batch.length} client tool call(s) (${reason})`,
+        { toolCalls: batch.map((c) => ({ toolName: c.name, toolCallId: c.id })), chatSessionId: sessionId },
+        'useChatFactory',
+      );
+    }
+
     try {
-      const queue = [...waitingClientToolCallsRef.current];
-      setWaitingClientToolCalls([]);
-      waitingClientToolCallsRef.current = [];
+      const summary = await executeClientToolCalls(
+        batch.map((call) => ({
+          toolCallId: call.id,
+          toolName: call.name,
+          args: call.args,
+        })),
+        {
+          // The batch's own macro resolution already happened at receipt; redo
+          // it here because macros can be registered between the two moments.
+          findMacro: (toolName) => resolveClientMacro(toolName) as any,
+          // The batch submits its own results (`reportResult: false`), so the
+          // submission is awaited before the continuation is despatched.
+          executeMacro: (macro, args, calledBy, callId, options) =>
+            executeMacro(macro, args, calledBy, callId, options),
+          reportResults: async (results, continueProcessing) => {
+            const complete = completeClientToolCallsRef.current;
+            if (!complete) {
+              throw new Error(
+                'completeClientToolCalls is not available yet — results not reported',
+              );
+            }
+            return complete(results, continueProcessing);
+          },
+          requestContinuation,
+          isFocused: () => focused,
+          chatSessionId: sessionId,
+          log: {
+            warn: (message, meta) => {
+              reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'warning');
+              sessionLogger?.warn(message, meta, 'useChatFactory');
+            },
+            info: (message, meta) => sessionLogger?.info(message, meta, 'useChatFactory'),
+            error: (message, meta) => {
+              reactory.log(`[useChatFactory] ${message}`, meta ?? {}, 'error');
+              sessionLogger?.error(message, meta, 'useChatFactory');
+            },
+          },
+        },
+      );
 
-      setChatState((prevState) => ({
-        ...prevState,
-        waitingClientToolCalls: [],
-        updated: new Date(),
-      }));
-
-      let hasClientTools = false;
-      for (const toolCall of queue) {
-        const name = toolCall.name;
-        const args = toolCall.args;
-        let macro = toolCall.macro || findMacroByAlias(name);
-        if (!macro) {
-          macro = chatState.macros?.find(
-            (m: any) => m.name === name || m.alias === name
-          ) ?? null;
+      // Remember what has been answered, and drop it from the streaming
+      // accumulator so a later `complete` cannot execute it again.
+      for (const outcome of summary.outcomes) {
+        handledClientToolCallIdsRef.current.add(outcome.toolCallId);
+      }
+      if (handledClientToolCallIdsRef.current.size > 512) {
+        // Bounded: ids are unique per call, this only guards a very long page.
+        handledClientToolCallIdsRef.current.clear();
+        for (const outcome of summary.outcomes) {
+          handledClientToolCallIdsRef.current.add(outcome.toolCallId);
         }
+      }
+      pendingToolCallsRef.current = pendingToolCallsRef.current.filter(
+        (tc: any) => !handledClientToolCallIdsRef.current.has(tc?.id),
+      );
 
-        if (macro) {
-          try {
-            sessionLogger?.info(`Executing queued client tool: ${name} (callId: ${toolCall.id})`, {}, 'useChatFactory');
-            const result = await executeMacro(macro, args, toolCall.calledBy || 'auto', toolCall.id);
-            const resultContent = result?.content
-              || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
-              || `Client tool "${name}" executed successfully (no content returned).`;
-            hasClientTools = true;
-
-            // Update UI: mark tool as success
-            setChatState((prevState) => {
-              const history = [...prevState.history];
-              for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
-                  const tcs = history[i].tool_calls as any[];
-                  const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
-                  if (idx >= 0) {
-                    tcs[idx] = { ...tcs[idx], status: 'success' };
-                    const existingResults = (history[i] as any).tool_results || [];
-                    history[i] = {
-                      ...history[i],
-                      tool_calls: [...tcs],
-                      tool_results: [...existingResults, {
-                        id: toolCall.id,
-                        name,
-                        content: resultContent,
-                        timestamp: new Date(),
-                      }],
-                    };
-                    break;
-                  }
-                }
+      // Reflect the outcome on the transcript: a call answered with an error
+      // must not keep spinning as 'running'.
+      if (summary.outcomes.length > 0) {
+        setChatState((prevState) => {
+          const history = [...prevState.history];
+          for (const outcome of summary.outcomes) {
+            for (let i = history.length - 1; i >= 0; i--) {
+              const message = history[i];
+              if (
+                message.role === 'assistant'
+                && Array.isArray(message.tool_calls)
+                && (message.tool_calls as any[]).some((tc: any) => tc.id === outcome.toolCallId)
+              ) {
+                history[i] = {
+                  ...message,
+                  tool_calls: (message.tool_calls as any[]).map((tc: any) =>
+                    tc.id === outcome.toolCallId ? { ...tc, status: outcome.status } : tc,
+                  ),
+                  timestamp: new Date(),
+                } as UXChatMessage;
+                break;
               }
-              return { ...prevState, history, updated: new Date() };
-            });
-          } catch (error: any) {
-            hasClientTools = true;
-            sessionLogger?.error(`Failed to execute waiting client tool ${name}: ${error?.message || String(error)}`, { toolCallId: toolCall.id }, 'useChatFactory');
-          }
-        } else {
-          hasClientTools = true;
-          if (completeClientToolCallsRef.current) {
-            try {
-              await completeClientToolCallsRef.current([{
-                toolCallId: toolCall.id,
-                toolName: name,
-                isError: true,
-                error: `Client macro not found: ${name}`,
-              }], false);
-            } catch (err) {
-              console.error('[useChatFactory] Error persisting macro-not-found error:', err);
             }
           }
-        }
+          return { ...prevState, history, updated: new Date() };
+        });
       }
 
-      if (hasClientTools && completeClientToolCallsRef.current) {
-        try {
-          await completeClientToolCallsRef.current([], true);
-        } catch (error) {
-          console.error('[useChatFactory] Error triggering AI continuation after draining client tools:', error);
+      // The pause is resolved: results (or explicit errors) are with the
+      // server. Clear the paused view; the continuation streams a new turn.
+      applyPausedClientToolCalls([]);
+
+      // The announcement has been acted on. Dropping the ids keeps this set
+      // bounded and stops a stale announcement from authorising a continuation
+      // for a later batch.
+      for (const call of batch) serverAnnouncedToolCallIdsRef.current.delete(call.id);
+
+      if (summary.continued) {
+        // A resumed turn is a NEW stream: let its tokens/reasoning through. The
+        // guard was set to drop stale buffers from the paused turn.
+        streamingCompleteRef.current = false;
+        setWaitingForResponse(true);
+      }
+
+      sessionLogger?.info(
+        `Client tool batch flushed (${reason})`,
+        { ...summary, chatSessionId: sessionId },
+        'useChatFactory',
+      );
+
+      // Returned so a caller that reconciles immediately afterwards can tell the
+      // replay which ids this page has already answered. The pending list it
+      // reads is not guaranteed to have caught up yet, and re-submitting these
+      // would be a duplicate the server rejects.
+      return batch.map((call) => call.id);
+
+    } catch (error: any) {
+      // `executeClientToolCalls` does not throw, but leave the batch resumable
+      // if something unexpected does.
+      reactory.error('ChatFactory: client tool batch flush failed', error);
+      sessionLogger?.error(
+        `Client tool batch flush failed: ${error?.message || String(error)}`,
+        { chatSessionId: sessionId, reason },
+        'useChatFactory',
+      );
+      for (const call of batch) {
+        if (!pendingClientToolBatchRef.current.has(call.id)) {
+          pendingClientToolBatchRef.current.set(call.id, call);
         }
       }
+      return [];
     } finally {
       isDrainingClientToolsRef.current = false;
     }
-  }, [chatState.macros, executeMacro, findMacroByAlias, isChatFocused, sessionLogger]);
+  }, [executeMacro, isChatFocused, reactory, sessionLogger]);
 
-  // Window focus & visibility listeners to auto-drain waiting client tool calls
+  // Assigned to the ref so callbacks defined earlier in the render (the SSE
+  // handlers) can reach the newest version, same pattern as the other refs.
+  flushClientToolBatchRef.current = flushClientToolBatch;
+
+  /**
+   * Public drain entry point, kept for the hook's consumers.
+   *
+   * It no longer waits for focus: if a result is owed, it is answered. The
+   * server-side pending list is then reconciled, which also covers calls this
+   * page never saw (a reload between receipt and report).
+   */
+  const drainWaitingClientToolCalls = React.useCallback(async () => {
+    const answeredIds = await flushClientToolBatch('manual-drain');
+    const sessionId = chatStateRef.current?.id || activeSessionIdRef.current;
+    if (sessionId && replayPendingClientToolCallsRef.current) {
+      // Same exclusion as the pause path: do not re-submit what this page just
+      // answered, even though the server's pending list may not have cleared yet.
+      await replayPendingClientToolCallsRef.current(sessionId, {
+        skipToolCallIds: new Set(answeredIds),
+      });
+    }
+  }, [flushClientToolBatch]);
+
+  /**
+   * Focus/visibility is a *recovery* trigger, not an execution trigger.
+   *
+   * Returning to the tab is when a result reported from another page lifetime,
+   * or one whose completion never reached the server, is most likely to need
+   * reconciling — so reconcile. Execution is never conditioned on this event.
+   */
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handleFocusOrVisible = () => {
-      if (document.visibilityState === 'visible' && document.hasFocus()) {
-        if (waitingClientToolCallsRef.current.length > 0) {
-          sessionLogger?.info('Chat gained focus, draining waiting client tool calls', { count: waitingClientToolCallsRef.current.length }, 'useChatFactory');
-          void drainWaitingClientToolCalls();
-        }
+      if (document.visibilityState !== 'visible') return;
+      const sessionId = chatStateRef.current?.id || activeSessionIdRef.current;
+
+      if (waitingClientToolCallsRef.current.length > 0 && sessionId && replayPendingClientToolCallsRef.current) {
+        sessionLogger?.info(
+          'Chat regained focus with a paused turn — reconciling client tool results',
+          { count: waitingClientToolCallsRef.current.length, chatSessionId: sessionId },
+          'useChatFactory',
+        );
+        void replayPendingClientToolCallsRef.current(sessionId);
+      }
+
+      // Fallback only: a batch still queued means focus was lost between
+      // receipt and the normal flush. Answer it now.
+      if (pendingClientToolBatchRef.current.size > 0) {
+        void flushClientToolBatch('focus-resume');
       }
     };
 
@@ -4901,7 +5872,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       window.removeEventListener('focus', handleFocusOrVisible);
       document.removeEventListener('visibilitychange', handleFocusOrVisible);
     };
-  }, [drainWaitingClientToolCalls, sessionLogger]);
+  }, [flushClientToolBatch, sessionLogger]);
+
+  // Never let the fallback timer fire into an unmounted tree.
+  useEffect(() => () => {
+    if (clientToolFlushTimerRef.current !== null) {
+      clearTimeout(clientToolFlushTimerRef.current);
+      clientToolFlushTimerRef.current = null;
+    }
+  }, []);
 
   // Stream-recovery timers are owned by `useStreamRecovery`, which clears them
   // on unmount and whenever the turn is no longer busy — no separate effect
@@ -5081,6 +6060,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     fetchConversationMeta,
     listChats: fetchConversations,
     listRecentChats: fetchRecentConversations,
+    getMostRecentChatForPersona,
+    chatListFilter,
+    chatListStatus,
+    refreshChatList,
+    commitChatSearch,
+    loadMoreChats,
+    retryChatList,
     setToolApprovalMode,
     chats,
     setChats,

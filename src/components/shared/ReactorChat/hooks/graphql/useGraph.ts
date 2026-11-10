@@ -43,6 +43,31 @@ import REACTOR_UPDATE_CHAT_DATA from "./mutations/ReactorUpdateChatData.graphql"
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
+/**
+ * The `ReactorConversationFilter` input accepted by `ReactorConversations`.
+ *
+ * It used to be declared with `personaId`/`userId`/`modelId` only, even though
+ * the schema also accepts `search`, `limit`, `offset`, `use_case` and `edges`.
+ * Because the type did not carry the paging window, no caller could send one and
+ * the server silently applied its default (`limit = 50, offset = 0`), which is
+ * what made conversation #51 and older unreachable in the history panel.
+ */
+export interface ReactorConversationFilterInput {
+  personaId?: string;
+  userId?: string;
+  modelId?: string;
+  /** Term matched against the conversation title and message bodies. */
+  search?: string;
+  /** Page size. Always send it — the server default is 50. */
+  limit?: number;
+  /** Rows to skip. `0` is the first page. */
+  offset?: number;
+  /** Restrict to conversations of this use case (host scoping). */
+  use_case?: string;
+  /** Restrict to conversations carrying all of these edges (host scoping). */
+  edges?: { name: string; value: string; edge_type: string }[];
+}
+
 export interface ReactorInitSessionInput {
   personaId: string;
   message?: string;
@@ -382,11 +407,11 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
   };
 
   const listConversations = async (
-    filter: { personaId?: string; userId?: string; modelId?: string }
+    filter: ReactorConversationFilterInput,
   ): Promise<ChatState[]> => {
     const response = await reactory.graphqlQuery<
       { ReactorConversations: ChatState[] },
-      { filter: { personaId?: string; userId?: string; modelId?: string } }
+      { filter: ReactorConversationFilterInput }
     >(REACTOR_CONVERSATIONS_QUERY as any, { filter });
     return response?.data?.ReactorConversations ?? [];
   };

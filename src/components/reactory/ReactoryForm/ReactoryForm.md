@@ -181,6 +181,85 @@ interface IFormUIOptions {
 - Integrates with translation system
 - Provides error recovery mechanisms
 
+### Server-Side Validation Errors (field-level)
+
+A GraphQL mutation that resolves with `errors` (mutations run with Apollo
+`errorPolicy: 'all'`, so a resolver throw resolves rather than rejects) is
+translated into an rjsf `errorSchema` by `DataManagers/graphqlErrorSchema.ts`.
+The form passes it to the engine as `<Form extraErrors={...}>` (v5) or as
+`errorSchema` (legacy fork), so the server's message renders **inline on the
+offending field** as well as in the error list.
+
+Resolution order for each GraphQL error:
+
+1. `extensions.field` (also `fieldPath` / `path` / `argumentName`). If it names
+a schema property it is used directly (an `input.` prefix is tolerated).
+2. `graphql.mutation.<op>.onError.fieldMap` — maps the server's key to a schema
+path. The map is also consulted against the message text, so a resolver that
+throws a plain `Error` (message only, no extension field) still highlights the
+right input.
+3. Form-level `_error`, which surfaces in the error list.
+
+```typescript
+const graphql: Reactory.Forms.IFormGraphDefinition = {
+  mutation: {
+    edit: {
+      name: 'updateClass',
+      text: UPDATE_CLASS,
+      onError: {
+        // Optional: keep the notification/registered-handler behaviour.
+        onErrorMethod: 'function',
+        method: 'function',
+        componentRef: 'classroom.ClassFormErrorHandler@1.0.0',
+        // Server extension key (or message hint) -> schema path.
+        fieldMap: { classCode: 'code' },
+      },
+    },
+  },
+};
+```
+
+With the definition above, a failed save returning
+`{ message: "Class with code '10A' already exists", extensions: { field: 'classCode' } }`
+renders that message on the `code` field — no bespoke component required. The
+mapped `errorSchema` is also handed to registered `onError` handlers
+(`error.errorSchema`) and cleared on the next submit.
+
+#### Type contract for `fieldMap`
+
+`fieldMap` is **not yet part of**
+`Reactory.Forms.IReactoryFormQueryErrorHandlerDefinition`
+(declared in `@reactorynet/reactory-core`, `dist/types/forms/index.d.ts`).
+Two things follow:
+
+- **In this repository** the property is supplied by a local declaration merge
+  in `src/types/reactory-forms.augment.d.ts`, so the definition above compiles
+  as written. `typeTests.ts` (`formDefinitionWithOnErrorFieldMap`) is the
+  compile-time fixture that keeps it honest — remove the augmentation and
+  `tsc` fails with `TS2353: 'fieldMap' does not exist in type
+  'IReactoryFormQueryErrorHandlerDefinition'`.
+- **In any other repository** (for example the classroom form definition in
+  `reactory-express-server`) the property must first be added to
+  `Reactory.Forms.IReactoryFormQueryErrorHandlerDefinition` upstream; until
+  then the definition needs a local cast, e.g.
+
+  ```typescript
+  type MutationErrorHandler =
+    Reactory.Forms.IReactoryFormQueryErrorHandlerDefinition & {
+      fieldMap?: Record<string, string>;
+    };
+
+  const mutationErrorHandler = {
+    onErrorMethod: 'function',
+    method: 'function',
+    componentRef: 'classroom.ClassFormErrorHandler@1.0.0',
+    fieldMap: { classCode: 'code' },
+  } as MutationErrorHandler;
+  ```
+
+  The runtime reads `onError.fieldMap` structurally, so the cast changes
+  nothing at runtime.
+
 ## Plugin System
 
 ### Component Dependencies

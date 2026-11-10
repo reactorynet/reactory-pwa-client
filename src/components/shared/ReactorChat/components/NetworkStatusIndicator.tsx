@@ -47,8 +47,14 @@ const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
     prevStatusRef.current = status;
   }, [status, onDismiss]);
 
-  const visible = status === 'reconnecting' || status === 'error' || showReconnected;
+  const visible = status === 'reconnecting' || status === 'error' || status === 'lost' || showReconnected;
   if (!visible) return null;
+
+  // `lost` is the terminal state after the reconnect budget is exhausted: the
+  // transport has given up and the transcript may be stale. It must stay on
+  // screen with an explicit reconnect — a frozen stream that silently looks like
+  // a hung agent is the actual damage this banner exists to prevent.
+  const isTerminal = status === 'lost';
 
   let bgColor = 'warning.main';
   let textColor = 'warning.contrastText';
@@ -75,16 +81,24 @@ const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
     textColor = 'success.contrastText';
     iconEl = <Icon sx={{ fontSize: 14, mr: 0.75, flexShrink: 0 }}>check_circle</Icon>;
     label = il8n?.t('reactor.network.reconnected', { defaultValue: 'Reconnected' });
-  } else if (status === 'error') {
+  } else if (status === 'error' || isTerminal) {
     bgColor = 'error.main';
     textColor = 'error.contrastText';
     iconEl = <Icon sx={{ fontSize: 14, mr: 0.75, flexShrink: 0 }}>error_outline</Icon>;
     label = il8n?.t('reactor.network.connectionLost', { defaultValue: 'Connection lost' });
+    if (isTerminal) {
+      label = il8n?.t('reactor.network.stale', {
+        defaultValue: 'Connection lost — transcript may be stale',
+      });
+    }
   }
 
   return (
     <Fade in={visible}>
       <Box
+        role="status"
+        aria-live="polite"
+        title={networkError ?? undefined}
         sx={{
           position: 'absolute',
           bottom: 12,
@@ -108,7 +122,7 @@ const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
           {label}
         </Typography>
 
-        {status === 'error' && !showReconnected && (
+        {(status === 'error' || isTerminal) && !showReconnected && (
           <Box
             component="button"
             onClick={onRetry}
@@ -127,11 +141,13 @@ const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
               '&:hover': { opacity: 1 },
             }}
           >
-            {il8n?.t('reactor.network.retry', { defaultValue: 'Retry' })}
+            {isTerminal
+              ? il8n?.t('reactor.network.reconnect', { defaultValue: 'Reconnect' })
+              : il8n?.t('reactor.network.retry', { defaultValue: 'Retry' })}
           </Box>
         )}
 
-        {!showReconnected && (
+        {!showReconnected && !isTerminal && (
           <IconButton
             size="small"
             onClick={onDismiss}

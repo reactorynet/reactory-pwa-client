@@ -103,6 +103,7 @@ import { WorkflowDataViewer, WorkflowLaunch, WorkflowTaskApproval } from './shar
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import FormEditor from './shared/FormEditor';
 import { UserHomeFolder } from './shared/UserHomeFolder';
+import { ServerFileExplorerComponentDefinition } from './shared/ServerFileExplorer';
 import {
   BarChartComponentDefinition,
   LineChartComponentDefinition,
@@ -548,14 +549,6 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     tags: ['help', 'support', 'guidance', 'assistance'],
   },
   
-  {
-    nameSpace: 'core',
-    name: 'ResetPassword',
-    component: () => new Error('Complete core.ResetPassword Migratation to reactory-user plugin'),
-    version: '1.0.0',
-    description: 'A placeholder component indicating that password reset functionality has been migrated to the reactory-user plugin.',
-    tags: ['password', 'reset', 'migration', 'placeholder'],
-  },  
   {
     nameSpace: 'core',
     name: 'DateSelector',
@@ -1118,6 +1111,10 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     description: 'A file management component providing access to the user\'s home folder and file operations.',
     tags: ['file management', 'user', 'folder', 'files'],
   },
+  // core.ServerFileExplorer@1.0.0 - server-side folder picker. Registered so
+  // server modules compiled into client plugins can resolve it through
+  // reactory.getComponents() instead of re-implementing the browser.
+  ServerFileExplorerComponentDefinition,
   {
     nameSpace: 'reactory',
     name: 'FormEditorEnhanced',

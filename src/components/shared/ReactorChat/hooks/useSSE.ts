@@ -13,7 +13,26 @@ export enum StreamingEventType {
   RETRY = 'retry',
   COMPACTION = 'compaction',
   SHELL = 'shell',
+  /**
+   * The server could not replay the requested id: the client asked to resume
+   * from a `Last-Event-ID` that has already been evicted from the server's
+   * bounded replay buffer. The stream is alive, but the gap is unobservable, so
+   * the client must re-fetch conversation state instead of resuming from an
+   * unknown point.
+   */
+  RESYNC = 'resync',
   START= 'start',
+  /**
+   * The turn is PAUSED, not finished: a client-routed tool call was forwarded
+   * and its result is still outstanding.
+   *
+   * Emitted where the server used to emit `COMPLETE` while a client tool was
+   * unanswered. It must do the terminal *UI* work `COMPLETE` did — stop the
+   * streaming indicator, finalise the buffered assistant text — without
+   * claiming the turn is over. The turn resumes when the browser reports the
+   * result through `ReactorCompleteClientToolCalls`.
+   */
+  AWAITING_CLIENT_TOOL = 'awaiting_client_tool',
 }
 
 /**
@@ -170,6 +189,52 @@ export interface CompactionStreamingEvent extends StreamingEventBase {
   };
 }
 
+/**
+ * The turn paused on an outstanding client-tool result.
+ *
+ * Carries the calls the browser owes a result for, so the client resumes exactly
+ * those calls instead of inferring them from the transcript. Shape mirrors the
+ * server's `AwaitingClientToolStreamingEvent`.
+ */
+export interface AwaitingClientToolStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.AWAITING_CLIENT_TOOL;
+  data: {
+    /** The calls the turn is paused on — the browser must run these and report back. */
+    pendingToolCalls: Array<{ toolCallId: string; toolName: string }>;
+  };
+}
+
+/**
+ * The server could not replay the requested id: the client asked to resume from
+ * a `Last-Event-ID` that has already been evicted from the server's bounded
+ * replay buffer. The stream is alive, but the gap is unobservable, so the client
+ * must re-fetch conversation state instead of resuming from an unknown point.
+ */
+export interface ResyncStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.RESYNC;
+  data: {
+    /** Why the server could not resume, e.g. `evicted` / `unknown-id`. */
+    reason?: string;
+    /** The id the client asked to resume from, when the server reports it. */
+    requestedId?: string;
+    /** The oldest id the server can still replay, when the server reports it. */
+    oldestAvailableId?: string;
+  };
+}
+
+/**
+ * Payload carried by a `resync` frame, normalised.
+ *
+ * The frame may be a full streaming-event envelope (`{ type, data }`), a bare
+ * JSON object, or even a plain token — the contract only says "tell the client
+ * to resync", so nothing here should be trusted to have a particular shape.
+ */
+export interface ResyncSignal {
+  reason?: string;
+  requestedId?: string;
+  oldestAvailableId?: string;
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
@@ -183,6 +248,12 @@ export interface UseSSEOptions {
   onCompaction?: (event: CompactionStreamingEvent) => void;
   /** Called for each shell stream event (stdout/stderr/lifecycle from a shell process) */
   onShell?: (event: ShellStreamingEvent) => void;
+  /**
+   * Called when the server pauses the turn on an outstanding client-tool
+   * result. The consumer must execute (or explicitly fail) the listed calls and
+   * report them back; it must not treat the turn as finished.
+   */
+  onAwaitingClientTool?: (event: AwaitingClientToolStreamingEvent) => void;
   /** Called when the SSE connection drops and a reconnect attempt begins */
   onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
   /** Called when a dropped SSE connection is successfully re-established */
@@ -206,6 +277,25 @@ export interface UseSSEOptions {
    *  model produced anything, which is what lets a long silent tool step be
    *  told apart from a dead stream. */
   onHeartbeat?: () => void;
+  /**
+   * Called when the server signals that the stream could not be resumed from
+   * the requested `Last-Event-ID` (the id was evicted from its bounded replay
+   * buffer). The socket is alive but the gap is unobservable: the caller must
+   * re-fetch conversation state rather than resume from an unknown point.
+   *
+   * Wire this to `useStreamRecovery`'s resync path — it is the same reconcile
+   * every other recovery reason uses, not a second recovery mechanism.
+   */
+  onResync?: (signal: ResyncSignal) => void;
+  /**
+   * Operator override for the dead-stream window (ms).
+   *
+   * When omitted the window is derived from the observed heartbeat cadence (see
+   * `deriveLivenessTimeoutMs`), falling back to `SSE_LIVENESS_TIMEOUT_MS` while
+   * no heartbeat has ever been seen. Read at arm time, so a changed override
+   * takes effect on the next frame rather than needing a reconnect.
+   */
+  livenessTimeoutMs?: number;
   /**
    * Whether a turn is currently in flight.
    *
@@ -322,10 +412,117 @@ export const STREAM_SESSION_MAX_AGE_MS = 55 * 60 * 1000;
  * browser never fired `onerror` — the failure mode behind an idle-socket or
  * proxy drop. Any frame (data or keepalive) resets it. This is a backstop, not
  * the primary detector: `onerror` and the recovery hook's server resync usually
- * get there first. A server-side heartbeat would make it exact; until then a
- * genuinely silent stream is recycled at most this often.
+ * get there first.
+ *
+ * When the server sends *named* heartbeats the window is derived from their
+ * measured cadence instead (see `deriveLivenessTimeoutMs`); this value is then
+ * only the fallback used until a cadence has been observed — i.e. exactly the
+ * behaviour of an older server that never sends the named frame. Keeping it at
+ * five minutes matters for that case: without a heartbeat, silence is the only
+ * signal there is, and a shorter guess would recycle healthy-but-quiet streams.
  */
 export const SSE_LIVENESS_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * The server's default heartbeat cadence (`REACTORY_STREAMING_HEARTBEAT_MS`,
+ * 25 s in `StreamingTransportManager`). Documented, not assumed: the client
+ * measures what actually arrives.
+ */
+export const DEFAULT_HEARTBEAT_INTERVAL_MS = 25_000;
+
+/**
+ * How many heartbeat intervals of silence are tolerated before the stream is
+ * presumed dead.
+ *
+ * Three, not two: a single missed heartbeat is a scheduling hiccup, not a dead
+ * socket, and the window must still comfortably exceed a legitimate pause
+ * between tokens. With the default 25 s cadence this yields a 75 s window —
+ * faster than the five-minute guess by a factor of four, and still four times
+ * longer than a 20 s token pause.
+ */
+export const HEARTBEAT_TIMEOUT_MULTIPLIER = 3;
+
+/** Floor for the derived window (ms) — also covers the server's 15 s per-turn
+ *  cadence, where 3× would leave no room for a slow-but-alive token stream. */
+export const SSE_LIVENESS_MIN_TIMEOUT_MS = 60_000;
+
+/** Ceiling for the derived window (ms) — detection latency must stay bounded
+ *  even if the server's configured cadence is very long. */
+export const SSE_LIVENESS_MAX_TIMEOUT_MS = 3 * 60 * 1000;
+
+/** Heartbeat samples below this are frame noise (duplicates), not cadence. */
+export const MIN_OBSERVED_HEARTBEAT_INTERVAL_MS = 1_000;
+
+/** A sample above this is an outage, not the cadence; cap what it can imply. */
+export const MAX_OBSERVED_HEARTBEAT_INTERVAL_MS = 120_000;
+
+/**
+ * Derive the dead-stream window from the cadence the server actually beats at.
+ *
+ * `observedHeartbeatIntervalMs` is the measured gap between two named
+ * heartbeat/keepalive frames. With no measurement there is nothing to derive
+ * from, so the legacy five-minute fallback is returned unchanged — that is what
+ * keeps an older server (comment-only keepalive, invisible to `EventSource`)
+ * degrading gracefully instead of being watchdog-hammered.
+ */
+export const deriveLivenessTimeoutMs = (
+  observedHeartbeatIntervalMs?: number | null,
+): number => {
+  if (
+    typeof observedHeartbeatIntervalMs !== 'number'
+    || !Number.isFinite(observedHeartbeatIntervalMs)
+    || observedHeartbeatIntervalMs <= 0
+  ) {
+    return SSE_LIVENESS_TIMEOUT_MS;
+  }
+  const derived = observedHeartbeatIntervalMs * HEARTBEAT_TIMEOUT_MULTIPLIER;
+  return Math.min(
+    SSE_LIVENESS_MAX_TIMEOUT_MS,
+    Math.max(SSE_LIVENESS_MIN_TIMEOUT_MS, Math.round(derived)),
+  );
+};
+
+/**
+ * Resolve the window actually used to arm the watchdog: an explicit operator
+ * override wins, otherwise the cadence-derived value, otherwise the fallback.
+ */
+export const resolveLivenessTimeoutMs = (
+  overrideMs: number | null | undefined,
+  observedHeartbeatIntervalMs?: number | null,
+): number => {
+  if (typeof overrideMs === 'number' && Number.isFinite(overrideMs) && overrideMs > 0) {
+    return overrideMs;
+  }
+  return deriveLivenessTimeoutMs(observedHeartbeatIntervalMs);
+};
+
+/**
+ * Normalise a `resync` frame into `ResyncSignal`.
+ *
+ * Deliberately tolerant: the frame is a *signal*, and a client that throws
+ * because it could not parse the reason would ignore the one message it must
+ * never ignore.
+ */
+export const parseResyncSignal = (event: MessageEvent): ResyncSignal => {
+  const raw = typeof (event as MessageEvent)?.data === 'string'
+    ? (event as MessageEvent).data
+    : undefined;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    const payload = parsed && typeof parsed === 'object' && parsed.data ? parsed.data : parsed;
+    if (!payload || typeof payload !== 'object') return { reason: String(payload) };
+    return {
+      reason: typeof payload.reason === 'string' ? payload.reason : undefined,
+      requestedId: typeof payload.requestedId === 'string' ? payload.requestedId : undefined,
+      oldestAvailableId: typeof payload.oldestAvailableId === 'string'
+        ? payload.oldestAvailableId
+        : undefined,
+    };
+  } catch {
+    return { reason: raw };
+  }
+};
 
 /**
  * Compute the backoff delay for an attempt (1-based).
@@ -385,12 +582,15 @@ const useSSE = ({
   onRetry,
   onCompaction,
   onShell,
+  onAwaitingClientTool,
   onReconnecting,
   onReconnected,
   onReconnectFailed,
   onSessionExpired,
   onStreamActivity,
   onHeartbeat,
+  onResync,
+  livenessTimeoutMs,
   turnActive,
   sessionLogger,
 }: UseSSEOptions): UseSSEResult => {
@@ -426,6 +626,7 @@ const useSSE = ({
   const onRetryRef = React.useRef(onRetry);
   const onCompactionRef = React.useRef(onCompaction);
   const onShellRef = React.useRef(onShell);
+  const onAwaitingClientToolRef = React.useRef(onAwaitingClientTool);
   const onReconnectingRef = React.useRef(onReconnecting);
   const onReconnectedRef = React.useRef(onReconnected);
   const onReconnectFailedRef = React.useRef(onReconnectFailed);
@@ -440,6 +641,7 @@ const useSSE = ({
   onRetryRef.current = onRetry;
   onCompactionRef.current = onCompaction;
   onShellRef.current = onShell;
+  onAwaitingClientToolRef.current = onAwaitingClientTool;
   const onStreamActivityRef = React.useRef(onStreamActivity);
   onReconnectingRef.current = onReconnecting;
   onReconnectedRef.current = onReconnected;
@@ -447,6 +649,8 @@ const useSSE = ({
   onStreamActivityRef.current = onStreamActivity;
   const onHeartbeatRef = React.useRef(onHeartbeat);
   onHeartbeatRef.current = onHeartbeat;
+  const onResyncRef = React.useRef(onResync);
+  onResyncRef.current = onResync;
   onSessionExpiredRef.current = onSessionExpired;
 
   // Reconnection state refs
@@ -463,8 +667,22 @@ const useSSE = ({
   const streamOpenedAtRef = React.useRef<number | null>(null);
   /** Backstop for a stream that dies without firing `onerror`. */
   const livenessTimerRef = React.useRef<number | null>(null);
-  // Refs to the latest reconnect functions, to break circular deps and prevent
-  // stale closures.
+  /** When the last named heartbeat/keepalive frame arrived (ms since epoch). */
+  const lastHeartbeatAtRef = React.useRef<number | null>(null);
+  /**
+   * Measured gap between two named heartbeat frames, in ms — the "server
+   * cadence" the dead-stream window is derived from. `null` until a cadence
+   * has actually been observed, which is what makes an older server (no named
+   * frame at all) fall back instead of being judged against a guess.
+   */
+  const heartbeatIntervalRef = React.useRef<number | null>(null);
+  /**
+   * Latest operator override. Held in a ref because `noteFrame` is bound into
+   * `noteFrameRef` and into EventSource listeners on the first render: reading
+   * a captured constant would silently ignore a later override.
+   */
+  const livenessTimeoutMsRef = React.useRef<number | undefined>(livenessTimeoutMs);
+  livenessTimeoutMsRef.current = livenessTimeoutMs;
   const reconnectNowRef = React.useRef<() => void>(() => {});
   const attemptReconnectRef = React.useRef<() => void>(() => {});
   const noteFrameRef = React.useRef<() => void>(() => {});
@@ -586,7 +804,16 @@ const useSSE = ({
 
       // Notify consumer of server-side activity for any data-bearing event.
       // This allows the consumer to re-activate busy indicators on reconnect.
-      if (data.type === 'start' || data.type === 'token' || data.type === 'tool_call' || data.type === 'reasoning') {
+      // `awaiting_client_tool` belongs here too: the turn is paused, not ended,
+      // so it is still activity (it keeps the busy indicator honest and stops a
+      // stall timer from treating the pause as silence).
+      if (
+        data.type === 'start'
+        || data.type === 'token'
+        || data.type === 'tool_call'
+        || data.type === 'reasoning'
+        || data.type === 'awaiting_client_tool'
+      ) {
         if (onStreamActivityRef.current) onStreamActivityRef.current();
       }
 
@@ -703,11 +930,72 @@ const useSSE = ({
           }
           break;
         }
+        case 'awaiting_client_tool': {
+          const awaitingEvt = data as AwaitingClientToolStreamingEvent;
+          const pending = awaitingEvt.data?.pendingToolCalls ?? [];
+
+          // A call is blocking the turn: this is not a routine unknown event.
+          sessionLogger?.warn(
+            `SSE awaiting_client_tool: turn paused, ${pending.length} client tool result(s) outstanding`,
+            { pendingToolCalls: pending, sessionId: awaitingEvt.sessionId },
+            'useSSE',
+          );
+          reactory.log(
+            `useSSE: turn paused awaiting client tool result(s): ${pending.map((c) => `${c.toolName} (${c.toolCallId})`).join(', ') || '(none listed)'}`,
+            { pendingToolCalls: pending },
+            'warning',
+          );
+
+          // No `complete` is coming for this turn, so do the terminal UI work
+          // here: stop the streaming indicator and flush any drip-fed content
+          // still queued, so the assistant message reflects everything the
+          // model produced before the pause. `hasCompletedRef` deliberately
+          // stays false — the turn resumes server-side when the result arrives.
+          hasCompletedRef.current = false;
+          setIsStreaming(false);
+
+          if (dripTimerRef.current !== null) {
+            clearTimeout(dripTimerRef.current);
+            dripTimerRef.current = null;
+          }
+          const pendingQueue = tokenQueueRef.current;
+          tokenQueueRef.current = [];
+          for (const entry of pendingQueue) {
+            const remaining = entry.segments.join('');
+            if (remaining && onTokenRef.current) {
+              onTokenRef.current({
+                ...entry.template,
+                data: { ...entry.template.data, content: remaining, delta: remaining },
+              });
+            }
+          }
+          // Any deferred completion is stale: the turn is paused, not complete.
+          pendingCompleteRef.current = null;
+
+          if (onAwaitingClientToolRef.current) {
+            onAwaitingClientToolRef.current(awaitingEvt);
+          }
+          break;
+        }
         case 'heartbeat':
         case 'keepalive': {
           // Transport keepalive: proves the stream is alive without claiming the
           // model produced anything.
+          recordHeartbeatSample();
           if (onHeartbeatRef.current) onHeartbeatRef.current();
+          break;
+        }
+        case 'resync': {
+          // The server could not replay from the requested id. Delivered here
+          // only if it arrived as an unnamed data frame; the named form is
+          // handled by the dedicated listener in `addStreamListeners`.
+          const resyncEvt = data as ResyncStreamingEvent;
+          const signal: ResyncSignal = resyncEvt?.data ?? {};
+          sessionLogger?.warn('SSE resync signalled; conversation state must be re-fetched', {
+            reason: signal.reason,
+            requestedId: signal.requestedId,
+          }, 'useSSE');
+          if (onResyncRef.current) onResyncRef.current(signal);
           break;
         }
         default:
@@ -729,15 +1017,41 @@ const useSSE = ({
   };
 
   /**
+   * Record the cadence of a named heartbeat frame.
+   *
+   * Only the *last* measured gap is kept: a delayed frame inflates it, which
+   * can only lengthen the derived window (a slower recycle), never shorten it —
+   * the safe direction, because a healthy-but-quiet stream must not look dead.
+   * Samples below 1 s are duplicate/noise frames and are ignored; samples above
+   * two minutes are an outage and are capped so they cannot disable the
+   * watchdog for good.
+   */
+  const recordHeartbeatSample = () => {
+    const now = Date.now();
+    const previous = lastHeartbeatAtRef.current;
+    lastHeartbeatAtRef.current = now;
+    if (previous === null) return;
+    const delta = now - previous;
+    if (!Number.isFinite(delta) || delta < MIN_OBSERVED_HEARTBEAT_INTERVAL_MS) return;
+    heartbeatIntervalRef.current = Math.min(delta, MAX_OBSERVED_HEARTBEAT_INTERVAL_MS);
+  };
+
+  /**
    * Note that the transport produced *something* — a content frame, a keepalive,
    * or a connection open — and re-arm the dead-stream backstop.
    *
    * The backstop exists because an SSE connection can die without the browser
    * ever firing `onerror`: an idle socket reaped by a proxy, or a machine that
-   * slept. `SSE_LIVENESS_TIMEOUT_MS` of total silence on a stream we believe is
-   * open is treated as dead — the stream is closed and the reconnect policy
-   * takes over, rather than watching a socket that will never deliver again.
-   * A server-side heartbeat makes this precise; without one it is a backstop.
+   * slept. Total silence on a stream we believe is open is treated as dead —
+   * the stream is closed and the reconnect policy takes over, rather than
+   * watching a socket that will never deliver again.
+   *
+   * The window is *measured*, not guessed: it is derived from the cadence of
+   * the named heartbeat the server sends (3× the observed interval, 60 s floor,
+   * 3 min ceiling), and falls back to `SSE_LIVENESS_TIMEOUT_MS` while no
+   * heartbeat has been seen. The value is resolved at arm time through refs, so
+   * an operator override (`livenessTimeoutMs`) and a newly observed cadence both
+   * take effect on the next frame.
    */
   const noteFrame = () => {
     if (hasCompletedRef.current) return;
@@ -746,10 +1060,17 @@ const useSSE = ({
     // re-establishes its transport before the next message, so silence here is
     // normal rather than suspicious.
     if (!turnActiveRef.current) return;
+    const timeoutMs = resolveLivenessTimeoutMs(
+      livenessTimeoutMsRef.current,
+      heartbeatIntervalRef.current,
+    );
     livenessTimerRef.current = window.setTimeout(() => {
       livenessTimerRef.current = null;
       if (hasCompletedRef.current || !turnActiveRef.current) return;
-      sessionLogger?.warn?.('SSE stream silent; recycling connection', { silenceMs: SSE_LIVENESS_TIMEOUT_MS }, 'useSSE');
+      sessionLogger?.warn?.('SSE stream silent; recycling connection', {
+        silenceMs: timeoutMs,
+        heartbeatIntervalMs: heartbeatIntervalRef.current,
+      }, 'useSSE');
       reactory.log('useSSE: stream silent, recycling connection', 'warning');
       setConnected(false);
       if (eventSourceRef.current) {
@@ -757,7 +1078,7 @@ const useSSE = ({
         eventSourceRef.current = null;
       }
       attemptReconnectRef.current();
-    }, SSE_LIVENESS_TIMEOUT_MS);
+    }, timeoutMs);
   };
   noteFrameRef.current = noteFrame;
 
@@ -790,8 +1111,12 @@ const useSSE = ({
     const expiry = lastConnectOptsRef.current.expiry;
     if (expiry && new Date() >= expiry) {
       sessionLogger?.error('SSE reconnect aborted: session token expired', { attempts: reconnectAttemptsRef.current }, 'useSSE');
+      // `giveUp` is the *only* report for a terminal stop. Firing `onError`
+      // (type SESSION_EXPIRED) after it used to be the last write, and the
+      // caller maps that type to the dismissible `error` pill — so the terminal,
+      // non-dismissible "connection lost / reconnect" state this ticket requires
+      // was overwritten microseconds after being set.
       giveUp(reconnectAttemptsRef.current);
-      if (onErrorRef.current) onErrorRef.current({ message: 'Session token has expired', type: 'SESSION_EXPIRED' });
       return;
     }
 
@@ -815,8 +1140,10 @@ const useSSE = ({
 
     if (elapsedMs >= RECONNECT_MAX_ELAPSED_MS || nextAttempt > RECONNECT_MAX_ATTEMPTS) {
       sessionLogger?.error('SSE reconnect budget exhausted', { attempts: nextAttempt - 1, elapsedMs, budgetMs: RECONNECT_MAX_ELAPSED_MS }, 'useSSE');
+      // Terminal. `onReconnectFailed` is the dedicated signal and the caller
+      // renders it as a persistent stale state; an additional `SSE_ERROR` here
+      // would be the last write and downgrade that to a dismissible pill.
       giveUp(nextAttempt - 1);
-      if (onErrorRef.current) onErrorRef.current({ message: 'Streaming connection error', type: 'SSE_ERROR' });
       return;
     }
 
@@ -854,15 +1181,46 @@ const useSSE = ({
     es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
     es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
     es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
+    // These three are dispatched by `handleMessage` below. Registering them is
+    // what makes an `event: <name>` frame reach that switch at all: the server
+    // sends named SSE events, so a `case` with no listener here is dead code.
+    // `awaiting_client_tool` in particular used to be missing on BOTH sides of
+    // this seam — no listener, no case — which is why a paused turn delivered
+    // no terminal event at all.
+    es.addEventListener('awaiting_client_tool', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('retry', (event) => handleMessage(event as MessageEvent));
+    es.addEventListener('interrupted', (event) => handleMessage(event as MessageEvent));
     // Keepalives are handled directly rather than through `handleMessage`: they
     // may carry a bare token (`ping`, `:keepalive` is invisible to EventSource)
     // and must never be parsed as a streaming event.
     const onKeepalive = () => {
+      // A named keepalive is the only liveness proof `EventSource` surfaces — an
+      // SSE comment (`: heartbeat`) never reaches this handler at all. Measuring
+      // the gap here is what makes the dead-stream window a measurement rather
+      // than a guess; resetting the watchdog is what stops a healthy, quiet turn
+      // from being closed and reopened into a lossy gap.
+      recordHeartbeatSample();
       noteFrame();
       if (onHeartbeatRef.current) onHeartbeatRef.current();
     };
     es.addEventListener('heartbeat', onKeepalive);
     es.addEventListener('keepalive', onKeepalive);
+    // `resync` is a *signal*, not a streaming event: it says the gap cannot be
+    // replayed, so the transcript must be re-fetched from the server. Handled
+    // directly, like keepalives, because it may carry a bare token rather than a
+    // JSON envelope.
+    const onResyncFrame = (event: MessageEvent) => {
+      noteFrame();
+      const signal = parseResyncSignal(event);
+      sessionLogger?.warn('SSE resync signalled; conversation state must be re-fetched', {
+        reason: signal.reason,
+        requestedId: signal.requestedId,
+        oldestAvailableId: signal.oldestAvailableId,
+      }, 'useSSE');
+      reactory.log('useSSE: server signalled resync — re-fetching conversation state', 'warning');
+      if (onResyncRef.current) onResyncRef.current(signal);
+    };
+    es.addEventListener('resync', onResyncFrame);
     es.onmessage = (event) => handleMessage(event);
   };
 
@@ -971,6 +1329,12 @@ const useSSE = ({
     // Every `connect` opens a new streaming session, so the session-age clock
     // restarts here (see STREAM_SESSION_MAX_AGE_MS).
     streamOpenedAtRef.current = Date.now();
+    // ... and a new server connection, so a cadence measured on the previous one
+    // must not be used to judge this one. Until the new stream beats, the
+    // fallback window applies. `reconnectNow` deliberately keeps the measurement:
+    // it re-opens the SAME session against the same server.
+    lastHeartbeatAtRef.current = null;
+    heartbeatIntervalRef.current = null;
 
     // Close previous
     if (eventSourceRef.current) {
@@ -1056,6 +1420,8 @@ const useSSE = ({
     // the previous conversation's events into whatever chat is now on screen.
     lastConnectOptsRef.current = null;
     streamOpenedAtRef.current = null;
+    lastHeartbeatAtRef.current = null;
+    heartbeatIntervalRef.current = null;
     setIsStreaming(false);
     setCurrentStreamingMessage('');
     sessionRef.current = null;

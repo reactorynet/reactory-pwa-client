@@ -15,7 +15,7 @@ jobs:
       # shared demographic form). Without it the directory is empty and both
       # `tsc` and `jest` fail with "Cannot find module .../reactory-core/...".
       # build-smoke-test.yml already checks submodules out for the same reason.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -24,7 +24,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
@@ -43,7 +43,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -52,7 +52,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
@@ -72,7 +72,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -81,7 +81,7 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           # No cache: setup-node keys it on a lockfile, and yarn.lock is not tracked.
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pwa-coverage
           # Not the HTML report: it holds a directory named `file:`, and a colon

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ServerFileExplorerProps, ServerFileItem, ServerFolderItem, ServerSelectedItem, ServerViewMode } from './types';
 import { useServerFiles, useServerNavigation, useServerSelection } from './hooks';
+import { folderItemFromPath } from './utils';
 
 const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
   open,
@@ -9,6 +10,9 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
   serverPath = '${APP_DATA_ROOT}',
   onFileSelection,
   onFolderSelection,
+  showFolderSelectionButton,
+  folderSelectionLabel = 'Select this folder',
+  closeOnFolderSelection = true,
   selectionMode = 'single',
   allowedFileTypes = [],
   title = 'Server File Explorer',
@@ -118,6 +122,13 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
       serverFiles.loadPath(navigation.currentPath);
     }
   }, [open, navigation.currentPath]);
+
+  // Follow a changed root. A registered component is often mounted once and
+  // reopened against a different `serverPath` (for example the last repository
+  // a consumer used), so the navigation state must not keep the first root.
+  useEffect(() => {
+    navigation.reset(serverPath);
+  }, [serverPath, navigation.reset]);
 
   // Handle selection changes
   useEffect(() => {
@@ -315,7 +326,27 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
     }
   }, [allowDelete, deleteConfirmDialog.items, serverFiles, selection, reactory]);
 
+  /**
+   * Select the folder currently being browsed. This is the affordance a path
+   * picker (repository checkout, upload target, ...) needs: clicking a folder
+   * row navigates into it, so without this there is no way to choose a folder.
+   */
+  const handleSelectCurrentFolder = useCallback(() => {
+    if (!onFolderSelection) return;
+
+    onFolderSelection([folderItemFromPath(navigation.currentPath)]);
+    if (closeOnFolderSelection) handleClose();
+  }, [onFolderSelection, navigation.currentPath, closeOnFolderSelection, handleClose]);
+
   // Context menu handlers
+  const handleMenuItemSelectFolder = useCallback(() => {
+    if (contextMenuItem && contextMenuItem.type === 'folder' && onFolderSelection) {
+      onFolderSelection([contextMenuItem as ServerFolderItem]);
+      if (closeOnFolderSelection) handleClose();
+    }
+    handleMenuClose();
+  }, [contextMenuItem, onFolderSelection, closeOnFolderSelection, handleClose]);
+
   const handleMenuItemRename = useCallback(() => {
     if (contextMenuItem) {
       const selectedItem: ServerSelectedItem = {
@@ -593,6 +624,14 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
             <Download fontSize="small" />
           </ListItemIcon>
           <ListItemText>Download</ListItemText>
+        </MenuItem>
+      )}
+      {contextMenuItem?.type === 'folder' && onFolderSelection && (
+        <MenuItem onClick={handleMenuItemSelectFolder}>
+          <ListItemIcon>
+            <FolderOpen fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Select this folder</ListItemText>
         </MenuItem>
       )}
       {allowRename && !readonly && (
@@ -999,6 +1038,11 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
         </Typography>
         
         <Box>
+          {onFolderSelection && showFolderSelectionButton !== false && (
+            <Button onClick={handleSelectCurrentFolder} sx={{ mr: 1 }}>
+              {folderSelectionLabel}
+            </Button>
+          )}
           <Button onClick={handleClose}>
             Cancel
           </Button>
@@ -1023,6 +1067,40 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
       {renderDeleteConfirmDialog()}
     </Dialog>
   );
+};
+
+/**
+ * Co-located registration definition (D3Chart / GraphExplorer pattern) - listed
+ * in src/components/index.tsx componentRegistery.
+ *
+ * FQN: core.ServerFileExplorer@1.0.0
+ *
+ * Why it is registered here and not only imported: components delivered as
+ * server modules are compiled into a client plugin and resolve their
+ * dependencies exclusively through `reactory.getComponents()`. They cannot
+ * import from `@reactory/client-core`, so an unregistered component is
+ * unreachable to them.
+ *
+ * `wrapWithApi: true` makes the registered form self-sufficient: `withReactory`
+ * injects the `reactory` prop, so a consumer only supplies `open`, `onClose`,
+ * `serverPath` and (optionally) `onFolderSelection`.
+ *
+ * Roles mirror the backing resolver: `ReactoryServerFiles` requires ADMIN or
+ * DEVELOPER and returns an error response otherwise, so registering it for
+ * USER would render a picker that can only show an error.
+ */
+export const ServerFileExplorerComponentDefinition: Reactory.IReactoryComponentDefinition<typeof ServerFileExplorer> & { wrapWithApi?: boolean } = {
+  nameSpace: 'core',
+  name: 'ServerFileExplorer',
+  version: '1.0.0',
+  component: ServerFileExplorer,
+  description:
+    'Modal server-side folder/file browser over the ReactoryServerFiles resolver - navigation, breadcrumbs, ' +
+    'search, filtering and "select this folder" actions that report the browsed path (footer) or a folder ' +
+    'row\'s resolver fullPath (context menu). Requires ADMIN or DEVELOPER.',
+  tags: ['file', 'folder', 'explorer', 'browser', 'picker', 'server', 'shared'],
+  roles: ['ADMIN', 'DEVELOPER'],
+  wrapWithApi: true,
 };
 
 export default ServerFileExplorer;

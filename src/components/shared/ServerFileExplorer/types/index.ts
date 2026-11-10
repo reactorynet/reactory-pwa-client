@@ -1,10 +1,29 @@
 export interface ServerFileExplorerProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * Injected by `withReactory` when the component is consumed through the
+   * component registry (`core.ServerFileExplorer@1.0.0`); passed explicitly by
+   * direct importers such as WorkflowDesigner.
+   */
   reactory: Reactory.Client.ReactorySDK;
   serverPath?: string; // Server path like "${APP_DATA_ROOT}/workflows"
   onFileSelection?: (selectedFiles: ServerFileItem[]) => void;
+  /**
+   * Fired with the folder(s) the user chose. Each item's `fullPath` is the path
+   * returned by the `ReactoryServerFiles` resolver and is passed through
+   * verbatim - it is absolute whenever `serverPath` is absolute.
+   */
   onFolderSelection?: (selectedFolders: ServerFolderItem[]) => void;
+  /**
+   * Show the footer action that selects the folder currently being browsed.
+   * Defaults to `true` when `onFolderSelection` is provided.
+   */
+  showFolderSelectionButton?: boolean;
+  /** Label for the current-folder action. Default: 'Select this folder'. */
+  folderSelectionLabel?: string;
+  /** Close the dialog after a folder is selected. Default: true. */
+  closeOnFolderSelection?: boolean;
   selectionMode?: 'single' | 'multi';
   allowedFileTypes?: string[]; // Allowed file extensions/types
   title?: string;
@@ -186,6 +205,8 @@ export interface UseServerNavigationReturn {
   canGoBack: boolean;
   canGoForward: boolean;
   navigate: (path: string) => void;
+  /** Hard-jump to a path and discard history (used when the root prop changes). */
+  reset: (path: string) => void;
   navigateUp: () => void;
   goBack: () => void;
   goForward: () => void;

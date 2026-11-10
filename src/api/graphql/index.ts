@@ -905,10 +905,22 @@ const graphql = {
     Users: {
       createUser: createUserMutation,
       updateUser: updateUserMutation,
+      /**
+       * Switches the signed-in user's active organisation (ORG-014).
+       *
+       * `$organizationId` is non-null on purpose: the server declares
+       * `setActiveOrganization(organizationId: String!)`, so a nullable variable
+       * here would be rejected at validation time. There is no implicit default -
+       * the caller names the organisation it wants.
+       *
+       * Executed through the theme pipeline with `ReactoryApi.graphqlMutation`
+       * (it is a mutation, so `graphqlQuery`, which calls `client.query`, cannot
+       * run it).
+       */
       setActiveOrganization: gql`
-        mutation SetActiveOrganization($organizationId: String) {
+        mutation SetActiveOrganization($organizationId: String!) {
           setActiveOrganization(organizationId: $organizationId){
-            id,
+            id
             name
             logo
           }

@@ -314,7 +314,7 @@ categories:
       
     - name: "ServerFileExplorer"
       path: "./ServerFileExplorer/"
-      description: "Server-side file explorer component"
+      description: "Server-side file explorer and folder picker. Registered as core.ServerFileExplorer@1.0.0 (ADMIN, DEVELOPER) so server modules can resolve it via reactory.getComponents()."
       type: "component"
       
     - name: "UserHomeFolder"

@@ -75,7 +75,45 @@ export const getEnabledModuleDefinitions = (): IModuleDefinition[] => {
 };
 
 /**
+ * Entry points a plugin directory may expose, in resolution order.
+ *
+ * `index.ts(x)` is the convention; the others are accepted so a plugin can ship
+ * a compiled entry point or declare one in its own package.json.
+ */
+const PLUGIN_ENTRY_CANDIDATES = [
+  'index.ts',
+  'index.tsx',
+  'index.js',
+  'index.jsx',
+  'package.json',
+];
+
+/**
+ * True when `pluginDir` contains something importable.
+ *
+ * The generator used to import EVERY directory under `plugins/`, which breaks the
+ * client build the moment a directory has no entry point:
+ *
+ *     error TS2307: Cannot find module './some-dir' or its corresponding type declarations
+ *
+ * That is not hypothetical. `plugins/reactory-core` and (planned)
+ * `plugins/reactory-communicator` are git submodules, so a fresh clone — or a
+ * `git submodule update` that has not been run — leaves an EMPTY directory. The
+ * generator then emits an import for it and the whole client fails to compile with
+ * a message that names neither submodules nor the generator.
+ *
+ * Checking for an entry point makes an uninitialised submodule a no-op instead of
+ * a build failure, and the skip is reported so the cause is visible.
+ */
+const hasPluginEntryPoint = (pluginDir: string): boolean =>
+  PLUGIN_ENTRY_CANDIDATES.some((entry) => fs.existsSync(path.join(pluginDir, entry)));
+
+/**
  * Scan for local plugin directories inside src/components/plugins/
+ *
+ * Directories without an entry point are skipped and reported: an empty one is
+ * almost always an uninitialised submodule, which the operator can fix with
+ * `git submodule update --init --recursive`.
  */
 const getLocalPluginDirectories = (): string[] => {
   const pluginsDir = resolvePluginsFolder();
@@ -86,7 +124,16 @@ const getLocalPluginDirectories = (): string[] => {
     return fs.readdirSync(pluginsDir).filter((entry) => {
       if (excluded.includes(entry)) return false;
       const fullPath = path.join(pluginsDir, entry);
-      return fs.statSync(fullPath).isDirectory();
+      if (!fs.statSync(fullPath).isDirectory()) return false;
+      if (!hasPluginEntryPoint(fullPath)) {
+        console.warn(
+          `[pluginImportFactory] Skipping './${entry}': no entry point ` +
+            `(${PLUGIN_ENTRY_CANDIDATES.join(', ')}). ` +
+            `If this is a plugin submodule, run: git submodule update --init --recursive`,
+        );
+        return false;
+      }
+      return true;
     });
   } catch {
     return [];
