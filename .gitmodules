@@ -4,3 +4,6 @@
 [submodule "src/components/plugins/reactory-communicator"]
 	path = src/components/plugins/reactory-communicator
 	url = ../reactory-communicator-pwa-plugin.git
+[submodule "src/components/plugins/reactory-telemetry"]
+	path = src/components/plugins/reactory-telemetry
+	url = ../reactory-telemetry-pwa-plugin.git
