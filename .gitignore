@@ -73,6 +73,9 @@ src/components/plugins/*
 # reactory-core plugin is a git submodule pointing at
 # git@github.com:reactorynet/reactory-client-core-pwa-plugin.git
 !src/components/plugins/reactory-core/
+# reactory-telemetry plugin is a git submodule pointing at
+# git@github.com:reactorynet/reactory-telemetry-pwa-plugin.git
+!src/components/plugins/reactory-telemetry/
 # reactory-communicator plugin is a git submodule pointing at
 # git@github.com:reactorynet/reactory-communicator-pwa-plugin.git
 !src/components/plugins/reactory-communicator/
