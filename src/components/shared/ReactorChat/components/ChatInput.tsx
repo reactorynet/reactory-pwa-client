@@ -278,7 +278,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ))}
         </Box>
       )}
-      <Grid container spacing={1} alignItems="center">
+      <Grid container spacing={1} sx={{
+        alignItems: "center"
+      }}>
         {/* Tool Approval Mode Button */}
         {onToolApprovalModeChange && (
           <Grid>

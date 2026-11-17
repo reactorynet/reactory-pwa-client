@@ -15,6 +15,14 @@
       }
     }
   },
+  "classroom.ClassFormErrorHandler@1.0.0": {
+    "load": "ok",
+    "components": {
+      "classroom.ClassFormErrorHandler@1.0.0": {
+        "render": "ok"
+      }
+    }
+  },
   "classroom.ClassRoomMarkbook@1.0.0": {
     "load": "ok",
     "components": {
@@ -67,6 +75,14 @@
     "load": "ok",
     "components": {
       "classroom.CourseDetailPanel@1.0.0": {
+        "render": "ok"
+      }
+    }
+  },
+  "classroom.CourseFormErrorHandler@1.0.0": {
+    "load": "ok",
+    "components": {
+      "classroom.CourseFormErrorHandler@1.0.0": {
         "render": "ok"
       }
     }
@@ -566,6 +582,22 @@
     "load": "ok",
     "components": {
       "reactor.ReactorProjectCard@1.0.0": {
+        "render": "ok"
+      }
+    }
+  },
+  "reactor.UsageDashboardWidget@1.0.0": {
+    "load": "ok",
+    "components": {
+      "reactor.UsageDashboardWidget@1.0.0": {
+        "render": "ok"
+      }
+    }
+  },
+  "reactor.UserBudgetAdminWidget@1.0.0": {
+    "load": "ok",
+    "components": {
+      "reactor.UserBudgetAdminWidget@1.0.0": {
         "render": "ok"
       }
     }

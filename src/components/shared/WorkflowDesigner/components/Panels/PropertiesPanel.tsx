@@ -425,7 +425,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
               <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <AccountTree sx={{ color: 'primary.main' }} />
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" sx={{
+                    fontWeight: 600
+                  }}>
                     Workflow Properties
                   </Typography>
                 </Box>
@@ -433,7 +435,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Identity section */}
                 <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Identity</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Identity</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <TextField
@@ -472,7 +476,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Details section */}
                 <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Details</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Details</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <TextField
@@ -504,11 +510,18 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Tags section */}
                 <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Tags</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Tags</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {(definition?.tags || []).length > 0 && (
-                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          flexWrap: "wrap",
+                          gap: 0.5
+                        }}>
                         {(definition?.tags || []).map((tag) => (
                           <Chip
                             key={tag}
@@ -573,14 +586,21 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Roles section */}
                 <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Roles</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Roles</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="caption" color="text.secondary">
                       Roles that are permitted to view or execute this workflow.
                     </Typography>
                     {(definition?.roles || []).length > 0 && (
-                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          flexWrap: "wrap",
+                          gap: 0.5
+                        }}>
                         {(definition?.roles || []).map((role) => (
                           <Chip
                             key={role}
@@ -667,7 +687,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
               <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Info sx={{ color: 'primary.main' }} />
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" sx={{
+                    fontWeight: 600
+                  }}>
                     Workflow Inputs &amp; Outputs
                   </Typography>
                 </Box>
@@ -679,7 +701,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Workflow Inputs */}
                 <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Inputs</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Inputs</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {definition?.variables && definition.variables.filter(v => v.type !== 'output').length > 0 ? (
@@ -713,7 +737,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 {/* Workflow Outputs */}
                 <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
                   <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
-                    <Typography variant="body2" fontWeight={600}>Outputs</Typography>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>Outputs</Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {definition?.variables && definition.variables.filter(v => v.type === 'output').length > 0 ? (

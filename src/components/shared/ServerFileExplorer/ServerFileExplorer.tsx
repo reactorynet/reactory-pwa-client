@@ -489,7 +489,9 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
         }}
       >
         <CloudUpload sx={{ fontSize: 32, color: 'primary.main', mb: 1 }} />
-        <Typography variant="body2" color="primary.main" fontWeight="medium">
+        <Typography variant="body2" color="primary.main" sx={{
+          fontWeight: "medium"
+        }}>
           {isDragging ? 'Drop files here' : 'Click to upload or drag and drop files here'}
         </Typography>
         <Typography variant="caption" color="text.secondary">

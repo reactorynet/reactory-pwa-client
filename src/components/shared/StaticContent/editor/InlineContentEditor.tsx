@@ -806,9 +806,14 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
       <Stack
         direction="row"
         spacing={1.5}
-        alignItems="center"
-        sx={{ mt: 1.5, pt: 1, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}
-      >
+        sx={{
+          alignItems: "center",
+          mt: 1.5,
+          pt: 1,
+          borderTop: 1,
+          borderColor: 'divider',
+          flexWrap: 'wrap'
+        }}>
         <Typography
           variant="caption"
           color={saveState === 'error' ? 'error.main' : 'text.secondary'}
