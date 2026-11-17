@@ -2,7 +2,7 @@ import React from 'react';
 import { compose } from 'redux';
 import { isNil } from 'lodash';
 import {
-  Grid,
+  Grid2 as Grid,
   Typography,
   Paper,
 } from '@mui/material';
@@ -91,11 +91,15 @@ export const CenteredContainer = ( props ) => {
   attrs['children'] = undefined;
   return (
     <Grid container {...attrs}>
-      <Grid item xs={12} lg={12}>
+      <Grid
+        size={{
+          xs: 12,
+          lg: 12
+        }}>
         {props.children}
       </Grid>
     </Grid>
-  )
+  );
 };
 
 export const SingleColumnLayout = CenteredContainer;
@@ -105,14 +109,25 @@ export const TwoColumnGrid = ( props ) => {
   attrs['children'] = undefined;
 
   return (
-    <Grid container {...attrs} alignItems="center">
+    <Grid container {...attrs} sx={[{
+      alignItems: "center"
+    }, ...(Array.isArray(attrs.sx) ? attrs.sx : [attrs.sx])]}>
       {props.children.map(child => {
-        return(<Grid item xs={12} lg={6} alignItems="center">
-          {child}
-        </Grid>)
-      })}      
+        return (
+          <Grid
+            sx={{
+              alignItems: "center"
+            }}
+            size={{
+              xs: 12,
+              lg: 6
+            }}>
+            {child}
+          </Grid>
+        );
+      })}
     </Grid>
-  )
+  );
 };
 
 export const paperStyles = {  

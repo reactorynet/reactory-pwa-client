@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Tooltip, Typography, Stack, Avatar } from '@mui/material';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 
 export interface CommentAnnotationProps {
@@ -132,7 +132,13 @@ export const CommentAnnotation: React.FC<CommentAnnotationProps> = (props) => {
       title={
         <Box sx={{ p: 0.75, maxWidth: 280 }}>
           {author && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                mb: 0.5
+              }}>
               <Avatar
                 src={authorAvatar}
                 alt={author}
@@ -140,21 +146,40 @@ export const CommentAnnotation: React.FC<CommentAnnotationProps> = (props) => {
               >
                 {author.charAt(0).toUpperCase()}
               </Avatar>
-              <Typography variant="caption" fontWeight={700}>
+              <Typography variant="caption" sx={{
+                fontWeight: 700
+              }}>
                 {author}
               </Typography>
             </Stack>
           )}
           {commentPreview ? (
-            <Typography variant="caption" display="block" sx={{ mb: 0.5, fontStyle: 'italic' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mb: 0.5,
+                fontStyle: 'italic'
+              }}>
               "{commentPreview.length > 80 ? `${commentPreview.substring(0, 80)}...` : commentPreview}"
             </Typography>
           ) : (
-            <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mb: 0.5
+              }}>
               Thread ({commentCount} {commentCount === 1 ? 'comment' : 'comments'})
             </Typography>
           )}
-          <Typography variant="caption" color="primary.light" sx={{ fontWeight: 600, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "primary.light",
+              fontWeight: 600,
+              display: 'block'
+            }}>
             Click to view discussion →
           </Typography>
         </Box>

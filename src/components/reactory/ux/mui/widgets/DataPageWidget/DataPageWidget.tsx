@@ -114,18 +114,20 @@ const DataPageWidget = (props: DataPageWidgetProps) => {
         <IconButton onClick={onPrevious} size="large">
           <Icon>chevron_left</Icon>
         </IconButton> : null}
-        <TextField
-          id="filled-number"
-          label="Data Page"
-          type="number"
-          InputLabelProps={{
+      <TextField
+        id="filled-number"
+        label="Data Page"
+        type="number"
+        value={currentPageInput}
+        onChange={onPageNumberChange}
+        onKeyPress={onPageNumberKeyPress}
+        variant="filled"
+        slotProps={{
+          inputLabel: {
             shrink: true,
-          }}
-          value={currentPageInput}
-          onChange={onPageNumberChange}
-          onKeyPress={onPageNumberKeyPress}
-          variant="filled"
-        />
+          }
+        }}
+      />
       <Typography variant={"h6"} style={{ marginLeft: '8px' }}>of {Math.floor(props.formData.total / props.formData.pageSize)}</Typography>
       <IconButton onClick={onNext} size="large">
         <Icon>chevron_right</Icon>

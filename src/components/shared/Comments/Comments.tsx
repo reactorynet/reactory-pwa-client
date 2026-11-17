@@ -26,11 +26,11 @@ import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ReplyIcon from '@mui/icons-material/Reply';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
@@ -233,7 +233,12 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(({
     return (
       <Box sx={{ my: 1, pl: level * 3, opacity: 0.6 }}>
         <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
-          <Typography variant="body2" fontStyle="italic" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              fontStyle: "italic",
+              color: "text.secondary"
+            }}>
             [This comment has been removed]
           </Typography>
         </Paper>
@@ -262,7 +267,9 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(({
           },
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Stack direction="row" spacing={1.5} sx={{
+          alignItems: "flex-start"
+        }}>
           <Avatar
             src={comment.who?.avatar}
             alt={authorName}
@@ -272,11 +279,21 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(({
           </Avatar>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-              <Typography variant="subtitle2" fontWeight={600}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                flexWrap: "wrap"
+              }}>
+              <Typography variant="subtitle2" sx={{
+                fontWeight: 600
+              }}>
                 {authorName}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 {formatCommentDate(comment.when)}
               </Typography>
             </Stack>
@@ -293,10 +310,22 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(({
                   bgcolor: 'action.hover',
                 }}
               >
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600, mb: 0.25 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: 'block',
+                    fontWeight: 600,
+                    mb: 0.25
+                  }}>
                   Annotated text:
                 </Typography>
-                <Typography variant="body2" fontStyle="italic" color="text.primary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontStyle: "italic",
+                    color: "text.primary"
+                  }}>
                   "{comment.quote}"
                 </Typography>
               </Paper>
@@ -307,7 +336,13 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(({
             </Box>
 
             {/* Action Bar */}
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                mt: 1
+              }}>
               {allowReactions && (
                 <Button
                   size="small"
@@ -726,9 +761,17 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
   return (
     <Box sx={{ width: '100%' }}>
       {title && (
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 2
+          }}>
           <ChatBubbleOutlineIcon color="primary" />
-          <Typography variant="h6" fontWeight={600}>
+          <Typography variant="h6" sx={{
+            fontWeight: 600
+          }}>
             {title} ({comments.length})
           </Typography>
         </Stack>
@@ -757,8 +800,15 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
                 bgcolor: 'action.hover',
               }}
             >
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography variant="caption" fontWeight={600} color="primary">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}>
+                <Typography variant="caption" color="primary" sx={{
+                  fontWeight: 600
+                }}>
                   Commenting on highlighted text:
                 </Typography>
                 <Chip
@@ -771,14 +821,25 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
                   }}
                 />
               </Stack>
-              <Typography variant="body2" fontStyle="italic" sx={{ mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontStyle: "italic",
+                  mt: 0.5
+                }}>
                 "{activeQuote}"
               </Typography>
             </Paper>
           )}
 
           {replyingToId && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                mb: 1
+              }}>
               <Chip
                 label="Replying to thread"
                 size="small"
@@ -789,7 +850,13 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
           )}
 
           {editingId && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                mb: 1
+              }}>
               <Chip
                 label="Editing comment"
                 size="small"
@@ -815,7 +882,13 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
             disabled={submitting}
           />
 
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.5 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              justifyContent: "flex-end",
+              mt: 1.5
+            }}>
             {(replyingToId || editingId) && (
               <Button
                 size="small"
@@ -847,7 +920,13 @@ export const Comments: React.FC<ReactoryCommentsProps> = (props) => {
           <CircularProgress size={28} />
         </Box>
       ) : comments.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            py: 2,
+            textAlign: 'center'
+          }}>
           No comments yet. Be the first to start the conversation!
         </Typography>
       ) : (

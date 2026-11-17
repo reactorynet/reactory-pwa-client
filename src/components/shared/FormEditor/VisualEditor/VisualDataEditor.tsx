@@ -115,7 +115,9 @@ export const VisualDataEditor: React.FC<VisualDataEditorProps> = ({
     
     if (!providerKey) return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography color="text.secondary">Select a provider or add a new one.</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>Select a provider or add a new one.</Typography>
         <Button 
           variant="contained" 
           startIcon={<AddIcon />} 
@@ -173,7 +175,9 @@ export const VisualDataEditor: React.FC<VisualDataEditorProps> = ({
           />
         ) : (
           <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Visual editor for <strong>{provider.type}</strong> is not yet implemented.
               You can configure options via the Edit button above.
             </Typography>

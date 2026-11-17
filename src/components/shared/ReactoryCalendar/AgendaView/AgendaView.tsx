@@ -64,7 +64,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           ...sx,
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           {emptyMessage}
         </Typography>
       </Box>
@@ -99,7 +101,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
               >
                 {format(dayDate, DAY_NAME_FULL)}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 {format(dayDate, DATE_FORMAT_FULL)}
               </Typography>
             </Box>

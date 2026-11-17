@@ -359,7 +359,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
     return (
       <Box sx={{ p: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
         <CircularProgress size={40} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Loading workflow instance details...
         </Typography>
       </Box>
@@ -380,7 +382,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
   if (!instance) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           No workflow instance data available.
         </Typography>
       </Box>
@@ -527,7 +531,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
                             {instance.failedStepCount > 0 && (
                               <Chip label={`${instance.failedStepCount} failed`} size="small" color="error" variant="outlined" />
                             )}
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>
                               / {instance.stepCount} total
                             </Typography>
                           </Box>
@@ -591,7 +597,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
                             </Box>
                           </StepLabel>
                           <StepContent>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>
                               {formatDate(pointer.startTime)}
                               {pointer.endTime ? ` → ${formatDate(pointer.endTime)}` : ''}
                               {pointer.duration !== null && pointer.duration !== undefined
@@ -728,7 +736,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
                 {logLoading && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2 }}>
                     <CircularProgress size={20} />
-                    <Typography variant="body2" color="text.secondary">Loading log...</Typography>
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>Loading log...</Typography>
                   </Box>
                 )}
 
@@ -798,7 +808,9 @@ export const WorkflowInstanceInspector: React.FC<WorkflowInstanceInspectorProps>
             rows={4}
             fullWidth
             disabled={signalling}
-            InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.8rem' } }}
+            slotProps={{
+              input: { sx: { fontFamily: 'monospace', fontSize: '0.8rem' } }
+            }}
           />
         </DialogContent>
         <DialogActions>

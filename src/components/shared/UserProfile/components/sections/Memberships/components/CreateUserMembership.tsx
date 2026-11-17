@@ -441,7 +441,13 @@ export const CreateUserMembership: React.FC<CreateUserMembershipProps> = ({
 
             {selectedRoles.length > 0 && (
               <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mr: 1, alignSelf: 'center' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    mr: 1,
+                    alignSelf: 'center'
+                  }}>
                   Selected:
                 </Typography>
                 {selectedRoles.map((role) => (
@@ -461,7 +467,9 @@ export const CreateUserMembership: React.FC<CreateUserMembershipProps> = ({
 
         <Grid size={{ xs: 12 }}>
           <Divider sx={{ my: 1 }} />
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Stack direction="row" spacing={2} sx={{
+            justifyContent: "flex-end"
+          }}>
             {onCancel && (
               <Button variant="outlined" onClick={onCancel} disabled={submitting} startIcon={<Close />}>
                 Cancel

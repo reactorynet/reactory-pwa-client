@@ -84,7 +84,9 @@ export const LinkInsertDialog: React.FC<LinkInsertDialogProps> = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <LinkIcon color="primary" fontSize="small" />
+        <LinkIcon color="primary" sx={{
+          fontSize: "small"
+        }} />
         {isEdit ? 'Edit Link' : 'Insert Link'}
       </DialogTitle>
       <DialogContent dividers>

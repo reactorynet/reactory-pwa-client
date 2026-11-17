@@ -273,7 +273,9 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
         anchor="right"
         open={open && items.length > 0}
         onClose={onClose}
-        PaperProps={{ sx: { width: '100%' } }}
+        slotProps={{
+          paper: { sx: { width: '100%' } }
+        }}
       >
         {panelContent}
       </Drawer>

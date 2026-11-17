@@ -84,7 +84,9 @@ export const MyCommentDetailPanel: React.FC<MyCommentDetailPanelProps> = (props)
   if (!comment) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="text.secondary">No comment data available.</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>No comment data available.</Typography>
       </Box>
     );
   }
@@ -102,28 +104,50 @@ export const MyCommentDetailPanel: React.FC<MyCommentDetailPanelProps> = (props)
       }}
     >
       {/* Header: context, state flags, timestamp */}
-      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 1.5 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          flexWrap: "wrap",
+          mb: 1.5
+        }}>
         <MyCommentContextBadge context={comment.context} />
         {comment.removed && <Chip size="small" color="warning" label="Removed" />}
         {comment.parentId && (
           <Chip size="small" variant="outlined" icon={<ReplyIcon fontSize="small" />} label="Reply" />
         )}
-        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            ml: 'auto'
+          }}>
           {formatCommentDate(comment.when)}
         </Typography>
       </Stack>
 
       {/* Author */}
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+      <Stack
+        direction="row"
+        spacing={1.25}
+        sx={{
+          alignItems: "center",
+          mb: 1.5
+        }}>
         <Avatar src={(comment.who as any)?.avatar} alt={name} sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
           {name.charAt(0).toUpperCase()}
         </Avatar>
         <Box>
-          <Typography variant="subtitle2" fontWeight={600}>
+          <Typography variant="subtitle2" sx={{
+            fontWeight: 600
+          }}>
             {name}
           </Typography>
           {comment.who?.email && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               {comment.who.email}
             </Typography>
           )}
@@ -146,10 +170,19 @@ export const MyCommentDetailPanel: React.FC<MyCommentDetailPanelProps> = (props)
             mb: 1.5,
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600, mb: 0.25 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: 'block',
+              fontWeight: 600,
+              mb: 0.25
+            }}>
             Annotated text
           </Typography>
-          <Typography variant="body2" fontStyle="italic">
+          <Typography variant="body2" sx={{
+            fontStyle: "italic"
+          }}>
             “{comment.quote}”
           </Typography>
         </Box>
@@ -165,19 +198,33 @@ export const MyCommentDetailPanel: React.FC<MyCommentDetailPanelProps> = (props)
       </Typography>
 
       {/* Footer: reactions + the outbound link */}
-      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "center",
+          flexWrap: "wrap"
+        }}>
         {typeof comment.upvotes === 'number' && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
+          <Stack direction="row" spacing={0.5} sx={{
+            alignItems: "center"
+          }}>
             <ThumbUpAltOutlinedIcon fontSize="small" color="disabled" />
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               {comment.upvotes} upvote{comment.upvotes === 1 ? '' : 's'}
             </Typography>
           </Stack>
         )}
         {typeof comment.favorites === 'number' && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
+          <Stack direction="row" spacing={0.5} sx={{
+            alignItems: "center"
+          }}>
             <StarBorderOutlinedIcon fontSize="small" color="disabled" />
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               {comment.favorites} favorite{comment.favorites === 1 ? '' : 's'}
             </Typography>
           </Stack>
@@ -196,7 +243,12 @@ export const MyCommentDetailPanel: React.FC<MyCommentDetailPanelProps> = (props)
             View resource
           </Button>
         ) : (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              ml: 'auto'
+            }}>
             Resource link unavailable
           </Typography>
         )}

@@ -393,7 +393,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                     }}
                     onBlur={commitStepId}
                     onKeyDown={(e) => { if (e.key === 'Enter') commitStepId(); }}
-                    inputProps={{ pattern: '[a-zA-Z0-9_-]+' }}
+                    slotProps={{
+                      htmlInput: { pattern: '[a-zA-Z0-9_-]+' }
+                    }}
                   />
                 </Box>
                 <PropertyForm
@@ -492,7 +494,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                       disabled={readonly}
                       onChange={(e) => setWfAuthor(e.target.value)}
                       onBlur={() => commitWfField('author', wfAuthor)}
-                      InputProps={{ startAdornment: <AccountCircle sx={{ mr: 0.5, color: 'action.active', fontSize: 18 }} /> }}
+                      slotProps={{
+                        input: { startAdornment: <AccountCircle sx={{ mr: 0.5, color: 'action.active', fontSize: 18 }} /> }
+                      }}
                     />
                   </AccordionDetails>
                 </Accordion>

@@ -86,12 +86,21 @@ const LineChartWidget = (props) => {
   const data = chartData;
 
   return (
-    <Box padding={2} sx={{ backgroundColor: 'background.paper' }}>
+    <Box
+      sx={{
+        padding: 2,
+        backgroundColor: 'background.paper'
+      }}>
       {schema?.title && (
         <Typography variant="h6" sx={{ mb: 1 }}>{schema.title}</Typography>
       )}
       {schema?.description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>{schema.description}</Typography>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>{schema.description}</Typography>
       )}
       <ResponsiveContainer height={bounds?.height ?? 400} width="95%">
         <ComposedChart width={bounds?.width ?? 640} height={bounds?.height ?? 400} data={data}>

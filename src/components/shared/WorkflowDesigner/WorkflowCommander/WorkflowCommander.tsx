@@ -341,12 +341,14 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClose={() => setActivePanel(null)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
-            color: mode === 'dark' ? '#ffffff' : 'inherit',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
+              color: mode === 'dark' ? '#ffffff' : 'inherit',
+            },
+          }
         }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Workflow Task Queue</DialogTitle>
@@ -374,12 +376,14 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClose={() => setActivePanel(null)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
-            color: mode === 'dark' ? '#ffffff' : 'inherit',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
+              color: mode === 'dark' ? '#ffffff' : 'inherit',
+            },
+          }
         }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Workflow Executions</DialogTitle>
@@ -411,12 +415,14 @@ export const WorkflowCommander: React.FC<WorkflowCommanderProps> = ({
         onClose={() => setActivePanel(null)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
-            color: mode === 'dark' ? '#ffffff' : 'inherit',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
+              color: mode === 'dark' ? '#ffffff' : 'inherit',
+            },
+          }
         }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Workflow Schedule Manager</DialogTitle>

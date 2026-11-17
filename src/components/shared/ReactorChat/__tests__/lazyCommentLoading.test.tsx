@@ -82,6 +82,7 @@ const mockReactory: any = {
         Icon: (props: any) => <span>{props.children}</span>,
         TextField: (props: any) => <input {...props} />,
         Grid: (props: any) => <div>{props.children}</div>,
+        Grid2: (props: any) => <div>{props.children}</div>,
         Typography: (props: any) => <span>{props.children}</span>,
         Box: React.forwardRef((props: any, ref: any) => <div ref={ref} {...props}>{props.children}</div>),
         List: (props: any) => <div>{props.children}</div>,

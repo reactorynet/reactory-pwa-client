@@ -132,9 +132,10 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1.5}
-        sx={{ mb: 1 }}
-        alignItems={{ xs: 'stretch', sm: 'center' }}
-      >
+        sx={{
+          alignItems: { xs: 'stretch', sm: 'center' },
+          mb: 1
+        }}>
         <TextField
           select
           size="small"
@@ -180,7 +181,12 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
         </Button>
 
         {typeof props.data?.paging?.total === 'number' && (
-          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              whiteSpace: 'nowrap'
+            }}>
             {props.data.paging.total} comment{props.data.paging.total === 1 ? '' : 's'}
           </Typography>
         )}

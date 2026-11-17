@@ -192,8 +192,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 newValue[0] = e.target.value;
                 setFilter(field.field, newValue, 'between');
               }}
-              InputLabelProps={{ shrink: true }}
               sx={{ flex: 1 }}
+              slotProps={{
+                inputLabel: { shrink: true }
+              }}
             />
             <TextField
               size="small"
@@ -205,8 +207,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 newValue[1] = e.target.value;
                 setFilter(field.field, newValue, 'between');
               }}
-              InputLabelProps={{ shrink: true }}
               sx={{ flex: 1 }}
+              slotProps={{
+                inputLabel: { shrink: true }
+              }}
             />
           </Box>
         );
@@ -336,7 +340,9 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                   >
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body2">{preset.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         {preset.filters.length} filter{preset.filters.length > 1 ? 's' : ''}
                       </Typography>
                     </Box>

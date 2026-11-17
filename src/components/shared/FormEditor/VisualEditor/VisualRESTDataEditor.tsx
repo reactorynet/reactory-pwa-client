@@ -46,9 +46,18 @@ const CallCard: React.FC<{
   onMakeDefault?: () => void;
 }> = ({ callKey, call, isDefault, onEdit, onDelete, onMakeDefault }) => (
   <Paper variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-    <Stack direction="row" alignItems="flex-start" spacing={1}>
+    <Stack direction="row" spacing={1} sx={{
+      alignItems: "flex-start"
+    }}>
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5, flexWrap: 'wrap' }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 0.5,
+            flexWrap: 'wrap'
+          }}>
           <Chip label={callKey} size="small" />
           <Chip label={call?.method || 'GET'} size="small" color={methodColor(call?.method || 'GET')} variant="outlined" />
           {isDefault && <Chip label="default" size="small" color="primary" />}
@@ -135,7 +144,12 @@ export const VisualRESTDataEditor: React.FC<VisualRESTDataEditorProps> = ({ data
         />
       ))}
       {queryKeys.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No REST queries configured.</Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontStyle: 'italic'
+          }}>No REST queries configured.</Typography>
       )}
       <AddKeyRow label="New query key" existing={queryKeys} onAdd={(key) => openEditor('queries', key, emptyRestCall())} />
 
@@ -152,7 +166,12 @@ export const VisualRESTDataEditor: React.FC<VisualRESTDataEditorProps> = ({ data
         />
       ))}
       {mutationKeys.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No REST mutations configured.</Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontStyle: 'italic'
+          }}>No REST mutations configured.</Typography>
       )}
       <AddKeyRow label="New mutation key" existing={mutationKeys} onAdd={(key) => openEditor('mutations', key, { ...emptyRestCall(), method: 'POST' })} />
 

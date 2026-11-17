@@ -587,11 +587,13 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           </ListItemIcon>
           <ListItemText
             primary={folder.name === '/' ? 'Home' : folder.name}
-            primaryTypographyProps={{
-              variant: 'body2',
-              fontSize: '0.8rem',
-              noWrap: true,
-              fontWeight: isExpanded ? 600 : 400,
+            slotProps={{
+              primary: {
+                variant: 'body2',
+                fontSize: '0.8rem',
+                noWrap: true,
+                fontWeight: isExpanded ? 600 : 400,
+              }
             }}
           />
           {(onPinFolder || onUnpinFolder) && (
@@ -665,16 +667,18 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         <ListItemText
           primary={file.name}
           secondary={formatSize(file.size)}
-          primaryTypographyProps={{
-            variant: 'body2',
-            fontSize: '0.75rem',
-            noWrap: true,
-          }}
-          secondaryTypographyProps={{
-            variant: 'caption',
-            fontSize: '0.65rem',
-          }}
-        />
+          slotProps={{
+            primary: {
+              variant: 'body2',
+              fontSize: '0.75rem',
+              noWrap: true,
+            },
+
+            secondary: {
+              variant: 'caption',
+              fontSize: '0.65rem',
+            }
+          }} />
         {isWorkspaceFile && (
           <Tooltip
             title={il8n?.t('reactor.client.fileExplorer.openWorkspace', { defaultValue: 'Open workspace' })}
@@ -839,14 +843,16 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
       anchor="right"
       open={Boolean(previewFile)}
       onClose={() => setPreviewFile(null)}
-      PaperProps={{
-        sx: {
-          width: isNarrowScreen ? '95vw' : previewWidth,
-          maxWidth: '95vw',
-          display: 'flex',
-          flexDirection: 'row',
-          overflow: 'hidden',
-        },
+      slotProps={{
+        paper: {
+          sx: {
+            width: isNarrowScreen ? '95vw' : previewWidth,
+            maxWidth: '95vw',
+            display: 'flex',
+            flexDirection: 'row',
+            overflow: 'hidden',
+          },
+        }
       }}
     >
       {!isNarrowScreen && (
@@ -936,7 +942,9 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           anchor={dock}
           open={open}
           onClose={onClose}
-          PaperProps={{ sx: { width: '85vw', maxWidth: 400, ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark') } }}
+          slotProps={{
+            paper: { sx: { width: '85vw', maxWidth: 400, ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark') } }
+          }}
         >
           {sidebarContent}
         </Drawer>

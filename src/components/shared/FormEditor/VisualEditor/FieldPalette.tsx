@@ -32,7 +32,13 @@ const FieldPalette = () => {
           <Typography variant="h6" gutterBottom>
             Field Types
           </Typography>
-          <Typography variant="caption" display="block" sx={{ mb: 2, color: 'text.secondary' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mb: 2,
+              color: 'text.secondary'
+            }}>
             Drag fields to the canvas
           </Typography>
           

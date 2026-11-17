@@ -128,10 +128,19 @@ const RouteInspector: React.FC<RouteInspectorProps> = ({
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        PaperProps={{ sx: { width: { xs: '100%', sm: 420 }, p: 2 } }}
+        slotProps={{
+          paper: { sx: { width: { xs: '100%', sm: 420 }, p: 2 } }
+        }}
       >
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+          <Stack direction="row" spacing={1} sx={{
+            alignItems: "center"
+          }}>
             <AltRouteIcon fontSize="small" />
             <Typography variant="h6">Route Inspector</Typography>
           </Stack>
@@ -139,7 +148,13 @@ const RouteInspector: React.FC<RouteInspectorProps> = ({
             <CloseIcon />
           </IconButton>
         </Stack>
-        <Stack direction="row" spacing={1} sx={{ my: 1 }} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            my: 1
+          }}>
           <Chip size="small" label={status} color={statusColor(status)} />
           <Typography variant="caption">{Math.round(elapsedMs / 100) / 10}s</Typography>
         </Stack>
@@ -179,7 +194,9 @@ const RouteInspector: React.FC<RouteInspectorProps> = ({
           </Box>
         )}
         <Divider sx={{ my: 2 }} />
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} useFlexGap sx={{
+          flexWrap: "wrap"
+        }}>
           <Button size="small" onClick={() => copyText(routeDef.componentFqn || '')}>
             Copy FQN
           </Button>

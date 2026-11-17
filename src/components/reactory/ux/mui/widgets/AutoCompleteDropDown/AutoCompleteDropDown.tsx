@@ -345,16 +345,21 @@ function AutoCompleteDropDown<
                     return 'outlined';
                 };
 
-                return (<TextField
-                    {...params}
-                    InputLabelProps={inputLabelProps}
-                    variant={resolveVariant()}
-                    label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
-                    inputProps={{
-                        ...params.inputProps,
-                        // autoComplete: 'new-password', // disable autocomplete and autofill
-                        value: filter && filter.length > 0 ? filter : displayText
-                    }} />);
+                return (
+                    <TextField
+                        {...params}
+                        variant={resolveVariant()}
+                        label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
+                        slotProps={{
+                            inputLabel: inputLabelProps,
+
+                            htmlInput: {
+                                ...params.inputProps,
+                                // autoComplete: 'new-password', // disable autocomplete and autofill
+                                value: filter && filter.length > 0 ? filter : displayText
+                            }
+                        }} />
+                );
             }} />
     );
 }

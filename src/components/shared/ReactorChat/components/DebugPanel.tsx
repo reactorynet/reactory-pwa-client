@@ -320,7 +320,9 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                   fullWidth
                   value={promptDraft}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPromptDraft(e.target.value)}
-                  InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.75rem' } }}
+                  slotProps={{
+                    input: { sx: { fontFamily: 'monospace', fontSize: '0.75rem' } }
+                  }}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
                   <Button

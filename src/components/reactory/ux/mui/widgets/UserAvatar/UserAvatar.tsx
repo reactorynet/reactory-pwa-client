@@ -565,10 +565,12 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
         onClose={handleDialogClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            height: '80vh',
-            maxHeight: '800px',
+        slotProps={{
+          paper: {
+            sx: {
+              height: '80vh',
+              maxHeight: '800px',
+            }
           }
         }}
       >

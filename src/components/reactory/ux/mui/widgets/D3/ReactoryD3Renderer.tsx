@@ -44,18 +44,14 @@ const ReactoryD3Renderer = (props: ReactoryD3RendererProps<any, any>) => {
 
   const {
     MaterialCore,
-    MaterialStyles
   } = Material;
 
   const {
-    Grid,
+    Grid2: Grid,
     Paper,
     Typography
   } = MaterialCore;
 
-  const {
-    makeStyles
-  } = MaterialStyles;
 
   // const useStyles = makeStyles((theme: any) => ({
   //   root: {
@@ -86,16 +82,24 @@ const ReactoryD3Renderer = (props: ReactoryD3RendererProps<any, any>) => {
 
   return (
     <Grid container>
-      <Grid item xs={12} lg={12}>
+      <Grid
+        size={{
+          xs: 12,
+          lg: 12
+        }}>
         <Typography variant="h3">{schema.title}</Typography>      
       </Grid>
-      <Grid item xs={12} lg={12}>
+      <Grid
+        size={{
+          xs: 12,
+          lg: 12
+        }}>
       <div ref={(canv) => {
         canvas.current = canv
       }}></div> 
       </Grid>
     </Grid>
-  )
+  );
 };
 
 export default ReactoryD3Renderer;

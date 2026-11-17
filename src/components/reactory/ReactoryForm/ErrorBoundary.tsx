@@ -347,7 +347,12 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
         <CardContent>
           <Stack spacing={2}>
             {/* Error Header */}
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               {this.renderErrorIcon()}
               <Typography variant="h6" color="error">
                 Form Error
@@ -366,7 +371,12 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
             </Alert>
 
             {/* Retry Section */}
-            <Box display="flex" alignItems="center" gap={2}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2
+              }}>
               <Button
                 variant="contained"
                 onClick={this.handleRetry}
@@ -376,7 +386,9 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
                 {isRetrying ? 'Retrying...' : 'Retry'}
               </Button>
               {retryCount > 0 && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   Attempt {retryCount} of {maxRetries}
                 </Typography>
               )}
@@ -394,11 +406,19 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
                 </Button>
                 
                 <Collapse in={isExpanded}>
-                  <Box mt={2} p={2} bgcolor="grey.50" borderRadius={1}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      bgcolor: "grey.50",
+                      borderRadius: 1
+                    }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Technical Error:
                     </Typography>
-                    <Typography variant="body2" fontFamily="monospace" color="error">
+                    <Typography variant="body2" color="error" sx={{
+                      fontFamily: "monospace"
+                    }}>
                       {technicalMessage}
                     </Typography>
                     
@@ -407,7 +427,12 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
                         <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
                           Component Stack:
                         </Typography>
-                        <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            fontSize: "0.8rem"
+                          }}>
                           {errorInfo.componentStack}
                         </Typography>
                       </>
@@ -423,7 +448,12 @@ export class ReactoryFormErrorBoundary extends Component<ErrorBoundaryProps, Err
                 <Typography variant="subtitle2" gutterBottom>
                   Error Context:
                 </Typography>
-                <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: "0.8rem"
+                  }}>
                   {JSON.stringify(this.state.errorContext, null, 2)}
                 </Typography>
               </Box>

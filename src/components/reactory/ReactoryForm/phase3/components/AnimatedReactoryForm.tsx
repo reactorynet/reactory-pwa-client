@@ -336,10 +336,17 @@ export const AnimatedReactoryForm: React.FC<AnimatedReactoryFormProps> = ({
       >
         <Box sx={{ width: '100%', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mr: 1
+              }}>
               Loading form...
             </Typography>
-            <Typography variant="body2" color="text.primary">
+            <Typography variant="body2" sx={{
+              color: "text.primary"
+            }}>
               {progress}%
             </Typography>
           </Box>

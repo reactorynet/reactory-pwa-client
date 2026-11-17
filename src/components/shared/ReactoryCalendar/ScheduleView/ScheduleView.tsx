@@ -226,7 +226,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   borderLeft: `1px solid ${theme.palette.divider}`,
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {format(slotTime, "h a")}
                 </Typography>
               </Box>

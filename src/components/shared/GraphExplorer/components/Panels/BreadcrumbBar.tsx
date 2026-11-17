@@ -55,7 +55,9 @@ export default function BreadcrumbBar(props: BreadcrumbBarProps) {
             {crumb.name}
           </Link>
         ))}
-        <Typography variant="caption" color="text.primary">
+        <Typography variant="caption" sx={{
+          color: "text.primary"
+        }}>
           {node.name}
         </Typography>
       </Breadcrumbs>

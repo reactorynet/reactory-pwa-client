@@ -209,26 +209,28 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             placeholder={il8n?.t('reactor.client.persona.search.placeholder', { defaultValue: 'Search agents by name...' })}
             value={searchQuery}
             onChange={(e: any) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" sx={{ color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchQuery('')} aria-label="Clear search">
-                    <Clear fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            }}
             sx={{
               bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               borderRadius: 1,
               '& .MuiOutlinedInput-notchedOutline': {
                 borderColor: 'divider',
               },
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }
             }}
           />
         </Box>

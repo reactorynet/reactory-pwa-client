@@ -152,7 +152,13 @@ export const ImageInsertDialog: React.FC<ImageInsertDialogProps> = ({
                 </Button>
               </label>
               {src.startsWith('data:') && (
-                <Typography variant="caption" display="block" color="success.main" sx={{ mt: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    color: "success.main",
+                    mt: 1
+                  }}>
                   Image loaded successfully!
                 </Typography>
               )}

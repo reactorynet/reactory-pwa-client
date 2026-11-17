@@ -34,8 +34,10 @@ export function ReactoryWrapIfAdditionalTemplate(
         defaultValue={label}
         onBlur={(event) => onKeyChange(event.target.value)}
         disabled={readonly || disabled}
-        inputProps={{ 'aria-label': 'Property key' }}
         sx={{ maxWidth: 240 }}
+        slotProps={{
+          htmlInput: { 'aria-label': 'Property key' }
+        }}
       />
       <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
       <IconButton

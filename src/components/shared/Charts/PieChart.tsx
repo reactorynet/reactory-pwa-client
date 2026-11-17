@@ -109,7 +109,12 @@ const PieChart: React.FC<PieChartProps> = ({
         </Typography>
       )}
       {description && (
-        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography
+          variant={descriptionVariant}
+          sx={{
+            color: "text.secondary",
+            mb: 1.5
+          }}>
           {description}
         </Typography>
       )}

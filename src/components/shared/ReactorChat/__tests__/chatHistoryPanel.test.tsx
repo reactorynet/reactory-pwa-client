@@ -66,26 +66,31 @@ const TextField = ({
   onKeyDown,
   InputProps,
   inputProps,
+  slotProps,
   multiline,
   fullWidth,
   size,
   sx,
   ...rest
-}: any) => (
-  <div>
-    {InputProps?.startAdornment}
-    <input
-      aria-label={label || inputProps?.['aria-label']}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      {...inputProps}
-      {...rest}
-    />
-    {InputProps?.endAdornment}
-  </div>
-);
+}: any) => {
+  const input = slotProps?.input ?? InputProps;
+  const htmlInput = slotProps?.htmlInput ?? inputProps;
+  return (
+    <div>
+      {input?.startAdornment}
+      <input
+        aria-label={label || htmlInput?.['aria-label']}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        {...htmlInput}
+        {...rest}
+      />
+      {input?.endAdornment}
+    </div>
+  );
+};
 
 const Alert = ({ children, action, severity, sx }: any) => (
   <div role="alert">

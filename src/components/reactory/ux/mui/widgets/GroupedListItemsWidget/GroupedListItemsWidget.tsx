@@ -6,6 +6,7 @@ import { styled } from '@mui/material/styles';
 import {  
   List,
   ListItem,
+  ListItemButton,
   ListItemAvatar,
   ListItemIcon,
   FormControl,
@@ -90,7 +91,7 @@ export default GroupListItemWidgetComponent
                     if(exclude === true) return null;
                                                           
                     return (
-                      <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf  } dense button key={uid}>
+                      <ListItemButton selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf  } dense key={uid}>
                         <Avatar alt={displayText} src={getAvatar(user)} onClick={ raiseUserSelected } />
                         <ListItemText primary={ user.__isnew ? 'NEW' : displayText} onClick={ raiseUserSelected } secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
                         { multiSelect === true ? 
@@ -103,7 +104,7 @@ export default GroupListItemWidgetComponent
                         { isFunction(secondaryAction) === true ? 
                           secondaryAction(user) : 
                           secondaryAction }
-                      </ListItem>
+                      </ListItemButton>
                     )
                   })
                 }

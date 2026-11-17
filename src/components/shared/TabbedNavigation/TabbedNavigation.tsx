@@ -107,7 +107,9 @@ function TabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      <Box p={3}>{children}</Box>
+      <Box sx={{
+        p: 3
+      }}>{children}</Box>
     </Typography>
   );
 }

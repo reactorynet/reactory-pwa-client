@@ -135,12 +135,19 @@ export const UserListItemDetailed: React.FC<UserListItemDetailedProps> = ({
         }
         secondary={
           <Box sx={{ mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               {user.email}
             </Typography>
 
             {showBusinessUnit && (user.businessUnit as any)?.name && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mt: 0.5
+                }}>
                 {(user.businessUnit as any).name}
               </Typography>
             )}
@@ -160,7 +167,13 @@ export const UserListItemDetailed: React.FC<UserListItemDetailedProps> = ({
             )}
 
             {showLastLogin && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  mt: 0.5,
+                  display: 'block'
+                }}>
                 Last login: {formatLastLogin()}
               </Typography>
             )}

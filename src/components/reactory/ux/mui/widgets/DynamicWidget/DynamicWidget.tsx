@@ -74,7 +74,9 @@ const LoadingIndicator: React.FC<{
     aria-live="polite"
   >
     <CircularProgress size={16} />
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" sx={{
+      color: "text.secondary"
+    }}>
       {text}
     </Typography>
   </Box>
@@ -295,7 +297,9 @@ export const DynamicWidget: React.FC<DynamicWidgetProps> = (props) => {
           className={className}
           sx={containerStyles}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             No component specified
           </Typography>
         </Box>

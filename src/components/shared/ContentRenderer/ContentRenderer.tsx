@@ -18,7 +18,7 @@ import {
   Theme,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlined';
 import AddCommentIcon from '@mui/icons-material/AddComment';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -244,7 +244,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
         Material: Reactory.Client.Web.IMaterialModule;
       }>(["material-ui.Material"])
     : {} as any;
-  const { MaterialStyles } = Material || {};
 
   const contentBodyRef = useRef<HTMLDivElement>(null);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
@@ -263,21 +262,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
     };
   }, [props.style, containerProps?.style]);
 
-  const jssClassName = useMemo(() => {
-    if (!effectiveStyle || Object.keys(effectiveStyle).length === 0) return '';
-    try {
-      if (MaterialStyles?.makeStyles) {
-        const useStyles = MaterialStyles.makeStyles(() => ({
-          containerRoot: effectiveStyle,
-        }));
-        const classes = useStyles();
-        return classes?.containerRoot || '';
-      }
-    } catch (e) {
-      // fallback
-    }
-    return '';
-  }, [MaterialStyles, effectiveStyle]);
+  // The container style used to be turned into a class through
+  // MaterialStyles.makeStyles, which the registry has never provided since
+  // MUI 5; it always resolved to no class.
+  const jssClassName = '';
 
   // Floating comment button position for text selections
   const [selectionButtonPos, setSelectionButtonPos] = useState<{ top: number; left: number } | null>(null);
@@ -495,9 +483,13 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
               onChange={(_, expanded) => setAccordionExpanded(expanded)}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                <Stack direction="row" spacing={1.5} sx={{
+                  alignItems: "center"
+                }}>
                   <ChatBubbleOutlineIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" sx={{
+                    fontWeight: 600
+                  }}>
                     {mergedCommentsProps.title || 'Comments'} ({loadedComments.length})
                   </Typography>
                 </Stack>
@@ -534,16 +526,26 @@ export const ContentRenderer: React.FC<ContentRendererProps> = (props) => {
               anchor="right"
               open={drawerOpen}
               onClose={() => setDrawerOpen(false)}
-              PaperProps={{
-                sx: {
-                  width: { xs: '100%', sm: 480 },
-                  p: 3,
-                  bgcolor: 'background.paper',
-                },
+              slotProps={{
+                paper: {
+                  sx: {
+                    width: { xs: '100%', sm: 480 },
+                    p: 3,
+                    bgcolor: 'background.paper',
+                  },
+                }
               }}
             >
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <Typography variant="h6" fontWeight={600}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 2
+                }}>
+                <Typography variant="h6" sx={{
+                  fontWeight: 600
+                }}>
                   Content Discussion
                 </Typography>
                 <IconButton size="small" onClick={() => setDrawerOpen(false)}>

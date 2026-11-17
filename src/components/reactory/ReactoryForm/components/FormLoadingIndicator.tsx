@@ -9,9 +9,9 @@ import {
   alpha,
 } from '@mui/material';
 import {
-  CheckCircleOutline as CompleteIcon,
+  CheckCircleOutlined as CompleteIcon,
   RadioButtonUnchecked as PendingIcon,
-  ErrorOutline as ErrorIcon,
+  ErrorOutlined as ErrorIcon,
   MoreHoriz as ActiveIcon,
   Refresh as RetryIcon,
 } from '@mui/icons-material';

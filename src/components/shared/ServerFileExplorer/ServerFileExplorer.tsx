@@ -770,8 +770,10 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{
-        sx: { height: '80vh', display: 'flex', flexDirection: 'column' }
+      slotProps={{
+        paper: {
+          sx: { height: '80vh', display: 'flex', flexDirection: 'column' }
+        }
       }}
     >
       <DialogTitle>
@@ -927,18 +929,20 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
               placeholder="Search files and folders..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-                endAdornment: searchQuery && (
-                  <IconButton
-                    size="small"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <Clear />
-                  </IconButton>
-                )
-              }}
               sx={{ flex: 1 }}
+              slotProps={{
+                input: {
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                  endAdornment: searchQuery && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <Clear />
+                    </IconButton>
+                  )
+                }
+              }}
             />
 
             <Button

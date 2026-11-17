@@ -345,7 +345,9 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
               }   
             });
           })}
-          <Grid size={{ xs: 12, sm: 12, md: 12 }} justifyContent={'center'}>
+          <Grid size={{ xs: 12, sm: 12, md: 12 }} sx={{
+            justifyContent: 'center'
+          }}>
             {!formData || (formData && formData.length === 0) && uiOptions?.allowAdd !== false ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
           </Grid>
         </Grid>)

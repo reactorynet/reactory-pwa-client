@@ -722,7 +722,7 @@ export const InlineContentEditor: React.FC<InlineContentEditorProps> = ({
 
       {isTranslating && (
         <Box sx={{ mb: 1.5 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
             <Typography variant="caption" color="text.secondary">
               Translating from {languageLabel(draft.locale)} into {languageLabel(editTarget.lang)}
             </Typography>

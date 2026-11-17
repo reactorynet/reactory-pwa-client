@@ -56,10 +56,14 @@ export const ComponentComparison: Story = {
           <Typography variant="h2">Heading 2</Typography>
           <Typography variant="h3">Heading 3</Typography>
           <Typography variant="body1">This is body text with primary color.</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             This is secondary body text.
           </Typography>
-          <Typography variant="caption" color="text.disabled">
+          <Typography variant="caption" sx={{
+            color: "text.disabled"
+          }}>
             This is disabled caption text.
           </Typography>
         </CardContent>
@@ -132,19 +136,25 @@ export const ComponentComparison: Story = {
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Paper sx={{ p: 2, minWidth: 200 }}>
               <Typography variant="subtitle1">Paper Surface</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 This is content on a paper surface
               </Typography>
             </Paper>
             <Paper sx={{ p: 2, minWidth: 200 }} elevation={3}>
               <Typography variant="subtitle1">Elevated Paper</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 This paper has elevation
               </Typography>
             </Paper>
             <Paper sx={{ p: 2, minWidth: 200 }} elevation={8}>
               <Typography variant="subtitle1">High Elevation</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 This paper has high elevation
               </Typography>
             </Paper>

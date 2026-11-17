@@ -50,7 +50,13 @@ export default function NodeDataDialog(props: NodeDataDialogProps) {
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle>Edit node data — {node?.name ?? ''}</DialogTitle>
       <DialogContent>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: 'block',
+            mb: 1
+          }}>
           Free-form JSON stored on the node (`data`). Paths and repo locations are managed by the indexer and
           are redacted here.
         </Typography>
@@ -66,7 +72,9 @@ export default function NodeDataDialog(props: NodeDataDialogProps) {
           }}
           error={Boolean(error)}
           helperText={error ?? ' '}
-          InputProps={{ sx: { fontFamily: 'monospace', fontSize: 13 } }}
+          slotProps={{
+            input: { sx: { fontFamily: 'monospace', fontSize: 13 } }
+          }}
         />
       </DialogContent>
       <DialogActions>

@@ -131,7 +131,14 @@ export const WorkflowLaunch: React.FC<WorkflowLaunchProps> = (props) => {
       </Alert>
 
       <Paper variant="outlined" sx={{ p: 2, mb: 2.5 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 600,
+            display: 'block',
+            mb: 0.5
+          }}>
           Workflow ID
         </Typography>
         <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
@@ -151,7 +158,9 @@ export const WorkflowLaunch: React.FC<WorkflowLaunchProps> = (props) => {
           onChange={(e) => setInputData(e.target.value)}
           placeholder='{\n  "key": "value"\n}'
           variant="outlined"
-          InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.85rem' } }}
+          slotProps={{
+            input: { sx: { fontFamily: 'monospace', fontSize: '0.85rem' } }
+          }}
         />
       </Box>
 
@@ -172,7 +181,9 @@ export const WorkflowLaunch: React.FC<WorkflowLaunchProps> = (props) => {
           }
         >
           <Typography variant="subtitle2">Workflow Started</Typography>
-          <Typography variant="caption" display="block">
+          <Typography variant="caption" sx={{
+            display: "block"
+          }}>
             Instance ID: {result.id} • Status: {result.status}
           </Typography>
         </Alert>

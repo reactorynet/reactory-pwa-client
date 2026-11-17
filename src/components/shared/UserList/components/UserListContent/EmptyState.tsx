@@ -30,10 +30,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <Box sx={styles.contentEmpty}>
       <PersonOff sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
-      <Typography variant="h6" color="text.secondary">
+      <Typography variant="h6" sx={{
+        color: "text.secondary"
+      }}>
         {message}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mt: 1
+        }}>
         Try adjusting your search or filters
       </Typography>
     </Box>
