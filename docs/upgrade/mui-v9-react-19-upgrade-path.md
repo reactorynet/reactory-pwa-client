@@ -171,7 +171,7 @@ Phase 4 can start in parallel with Phases 2 and 3 on a branch, if staffing allow
   - **Refresh:** after an intended change, run `UPDATE_PLUGIN_BASELINE=1 yarn test:plugins`.
 - Exit: Node 24 green in CI, baselines recorded, harness green on the feature branch.
 
-#### Phase 0 record (2026-11-17, Node 24.22.1 locally, MUI 6.5 / React 17.0.2)
+#### Phase 0 record (2026-11-17, Node 24.22.3, MUI 6.5 / React 17.0.2)
 
 | Baseline | Result |
 |---|---|
@@ -179,13 +179,30 @@ Phase 4 can start in parallel with Phases 2 and 3 on a branch, if staffing allow
 | `tsc --noEmit -p tsconfig.json` | 0 errors |
 | MaterialTableWidget suites | 8 suites, 215 tests passing |
 | Plugin smoke harness | 106 / 106 plugins load. 64 / 106 components render; 38 fail on generic props; 4 are non-components and are skipped. A deliberately broken `Typography` in the registry made 29 of them fail, which confirms the ratchet catches regressions. |
+| Visual baselines (`yarn test:visual`) | 10 screens recorded with no uncaught page errors. Repeated runs matched them exactly. |
+
+The 10 screens are: `login`, `home`, `organizations-list`, `support-open-tickets`, `support-request-form`, `my-comments`, `workflow-registry`, `ai-models-admin`, `profile-form` and `app-menu-open`.
+
+**Running the visual baselines**
+
+- **Stack:** Mongo, Postgres, Redis and Meilisearch containers; the API on :4000; the client on :3000 (`bin/start.sh reactory local`).
+- **Login:** set `VISUAL_USER_EMAIL` / `VISUAL_USER_PASSWORD` to a local test account with a membership on the `reactory` client. Without them only `login` runs.
+- **Pinned rendering:** 1440x900, 1x scale, `en-US`, UTC, light theme and reduced motion. The browser clock is frozen at 2026-11-17T08:00Z, so relative dates do not drift.
+- **Masked regions:** emails, Mongo ids, the client build hash and cache size, and `<time>`. Masking keeps the screenshots stable, and keeps personal data out of this public repository.
+- **Page errors fail the run.** An uncaught page error fails that screen, so the webpack error overlay can never become a baseline.
+- **The screenshots depend on the local dataset.** Do not change those records between phases, or re-record with a reviewed diff.
+
+**Local stack notes** found while bringing it up:
+
+- **Install the pinned Node before pulling a branch that changes `.nvmrc`.** The server rebuilds runtime plugins on demand by running `nvm use` in `reactory-data/plugins/__runtime__`, and `.nvmrc` is part of every plugin's checksum. Bumping the pin therefore triggers a rebuild of every plugin. On a machine without that Node version, each rebuild fails.
+- **Pre-existing server bug.** A failed rebuild writes an error stub with the compiler message unescaped inside a string. That stub is invalid JS, and the page throws `SyntaxError: missing ) after argument list`. The bug is in `ReactoryModuleCompilerService.ts` around line 657; fix it in Phase 1.
+- **Recovering broken bundles.** Install the Node version, then restart the API. Bundles still broken after that can be rebuilt with `./build.sh rollup.<fqn>.js` from `__runtime__`.
+- **Node 24 needs `corepack enable`** before `bin/start.sh`, because `scripts/start.ts` spawns `yarn`. Run it with `node_modules/.bin` on `PATH`, or through `yarn exec`.
+- **The anonymous account must match.** `REACT_APP_ANONUSER_EMAIL` / `PASSWORD` in the client's local `config/env/<key>/.env.local` must match the anonymous account the server seeds for that client. Otherwise every boot-time login gets `user_not_found` and the app shows "System Unavailable".
 
 Open Phase 0 items:
 
-- **Visual baselines (Playwright).** Run with `yarn test:visual` against a running stack: the API on :4000 and `bin/start.sh reactory local` on :3000. Baselines are stored under `e2e/visual/__screenshots__/`. Rendering is pinned: 1440x900 viewport, 1x scale, `en-US`, UTC, light theme, reduced motion.
-  - The signed-out `login` baseline is recorded and stable across two runs.
-  - The 9 signed-in screens need `VISUAL_USER_EMAIL` / `VISUAL_USER_PASSWORD` for a local test account with a membership on the `reactory` client. They skip until those are set.
-- **Harness in CI.** The client CI job needs a checkout of `reactorynet/reactory-data` next to the client.
+- **Harness and visual baselines in CI.** The client CI job needs a checkout of `reactorynet/reactory-data` next to the client. The visual baselines also need a seeded stack.
 - **Server form widgets.** Widgets under `reactory-express-server/src/modules/*/forms/**/Widgets` are not covered yet, except where they are also built as runtime plugins.
 - **Plugin fixtures.** Adding per-plugin fixture props would raise the 64 / 106 coverage.
 
