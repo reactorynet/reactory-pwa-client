@@ -233,12 +233,14 @@ Done on `feature/mui-v9-react-19-phase-1` in the client, the client plugin repos
 - **Recast reprints whole files.** The MUI codemods rewrite every file they parse, including files with no MUI in them (extra parens around `await`, dropped trailing commas). Only widget sources were kept; reprint-only changes in services, CLIs and tests were reverted.
 - **Gates.** Client tsc 0, lint clean, jest unchanged at 255 suites / 3581 tests. Plugin smoke 112 / 112 with no regressions. `reactory-core` plugin suite 834 / 834. Visual baselines pixel-identical at zero tolerance, after both the client changes and the module changes plus a full runtime plugin recompile (174 forms, 113 bundles, 0 broken). Module jest suites, run before and after: no new failures (classroom 315 tests, reactor 3270, socialeyes 143).
 - **Deferred to Phase 2** (no replacement exists in 6.5): 17 `inputProps` on `Checkbox` / `Switch` / `InputBase`, and Autocomplete `renderTags` to `renderValue`.
-- **Not yet done:**
-  - The `reactory-core` server module (34 widget files).
-  - The Froala `uiSchema` changes, alias removal and `froala_key` CLI prompts.
-  - The compile-stub escaping fix.
-
-  All of these live in the server root repository, which needs to be clean and current with upstream before its phase branch is cut.
+- **Server root and `reactory-core` module** (branch cut from master after it was fast-forwarded to reactorynet):
+  - Widgets migrated with the same transforms (21 files). Module jest: no new failures (2713 tests).
+  - Froala removed. The five `uiSchema`s now name `RichEditorWidget`, the dead `froalaOptions` blocks and `ReactoryContentCapture/froala` are gone, and the support ticket description no longer sends partner keys to the client.
+  - The `froala_key` prompt is removed from both copies of the client config CLI.
+  - The `FroalaWidget` alias is removed from both client widget maps. Client jest: 3580 tests; the one fewer is the per-key validity case for the alias.
+  - The compile-failure stub now escapes compiler messages, with a regression test.
+  - After an API restart and a full recompile, all 113 bundles were healthy, the smoke harness passed 112 / 112, and the visual baselines were pixel-identical at zero tolerance.
+- **Open: the server types widgets against `@mui/material` 5.6.1.** At runtime the registry hands widgets the client's MUI, but the server typecheck uses its own copy, which has no `Grid2` and no `TextField` `slotProps`. Every Phase 1 widget file that gained a type error did so for that reason, so the typecheck ratchet fails on them. Fix: bump the server's `@mui/material` / `@mui/icons-material` to the client's version in each phase. MUI is type-only in the server (widget typings, one `ThemeOptions` import, one `@mui/lab` type import), so the bump has no runtime effect. Do it in Phase 1, before merging into the feature branch.
 - **Enterprise-only modules** (no reactorynet remote) get the same transforms on the enterprise path, after the upstream sync.
 - **Pre-existing, out of scope:** `ReactoryColorPicker` reads `MaterialStyles` / `MaterialUIColor`, which the registry no longer provides, so it is broken today.
 - **Local stack notes.** Server jest holds open handles. Run it with `--forceExit`, or it never exits after writing results.
