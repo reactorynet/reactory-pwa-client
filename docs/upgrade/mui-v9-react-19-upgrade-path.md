@@ -182,7 +182,9 @@ Phase 4 can start in parallel with Phases 2 and 3 on a branch, if staffing allow
 
 Open Phase 0 items:
 
-- **Visual baselines (Playwright).** These need the full stack running: the API plus Postgres and Mongo. `playwright.config.ts` deliberately has no `webServer`.
+- **Visual baselines (Playwright).** Run with `yarn test:visual` against a running stack: the API on :4000 and `bin/start.sh reactory local` on :3000. Baselines are stored under `e2e/visual/__screenshots__/`. Rendering is pinned: 1440x900 viewport, 1x scale, `en-US`, UTC, light theme, reduced motion.
+  - The signed-out `login` baseline is recorded and stable across two runs.
+  - The 9 signed-in screens need `VISUAL_USER_EMAIL` / `VISUAL_USER_PASSWORD` for a local test account with a membership on the `reactory` client. They skip until those are set.
 - **Harness in CI.** The client CI job needs a checkout of `reactorynet/reactory-data` next to the client.
 - **Server form widgets.** Widgets under `reactory-express-server/src/modules/*/forms/**/Widgets` are not covered yet, except where they are also built as runtime plugins.
 - **Plugin fixtures.** Adding per-plugin fixture props would raise the 64 / 106 coverage.

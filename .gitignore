@@ -76,3 +76,7 @@ src/components/plugins/*
 # reactory-communicator plugin is a git submodule pointing at
 # git@github.com:reactorynet/reactory-communicator-pwa-plugin.git
 !src/components/plugins/reactory-communicator/
+
+# Playwright visual baseline run output (baselines themselves are committed)
+e2e/visual/.results/
+e2e/visual/.report/
