@@ -56,28 +56,30 @@ function StepSearchInner({ searchTerm, onSearchChange, onClear }: StepSearchProp
       value={searchTerm}
       onChange={handleInputChange}
       onKeyDown={handleKeyDown}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <Search />
-          </InputAdornment>
-        ),
-        endAdornment: searchTerm && (
-          <InputAdornment position="end">
-            <IconButton
-              aria-label="clear search"
-              onClick={handleClear}
-              edge="end"
-              size="small"
-            >
-              <Clear />
-            </IconButton>
-          </InputAdornment>
-        )
-      }}
       sx={{
         '& .MuiOutlinedInput-root': {
           backgroundColor: 'background.default'
+        }
+      }}
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search />
+            </InputAdornment>
+          ),
+          endAdornment: searchTerm && (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="clear search"
+                onClick={handleClear}
+                edge="end"
+                size="small"
+              >
+                <Clear />
+              </IconButton>
+            </InputAdornment>
+          )
         }
       }}
     />

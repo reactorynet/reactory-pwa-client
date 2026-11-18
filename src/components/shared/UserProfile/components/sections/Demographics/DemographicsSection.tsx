@@ -126,7 +126,12 @@ export const DemographicsSection: React.FC<DemographicsSectionProps> = ({
       {header}
 
       {selectedMembership?.organization?.name && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           {selectedMembership.organization.name}
         </Typography>
       )}
@@ -168,7 +173,9 @@ export const DemographicsSection: React.FC<DemographicsSectionProps> = ({
           sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 2 }}
         >
           <CircularProgress size={20} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Loading your demographics…
           </Typography>
         </Box>
@@ -190,7 +197,9 @@ export const DemographicsSection: React.FC<DemographicsSectionProps> = ({
             emptyState={
               <Box data-testid="demographics-empty">
                 <Typography variant="body2">No demographic fields are configured.</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   This organization has not set up any demographic fields yet, so there is
                   nothing to complete.
                 </Typography>

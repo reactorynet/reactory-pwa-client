@@ -4,7 +4,7 @@ import moment from 'moment';
 import { map } from 'lodash';
 import {
   Paper,
-  Grid
+  Grid2 as Grid
 } from '@mui/material';
 import { safeCDNUrl } from '../utils/safeUrl';
 
@@ -169,12 +169,18 @@ export const CenteredContainer = (props) => {
   attrs['children'] = undefined;
 
   return (
-    <Grid container {...attrs} alignItems="center">
-      <Grid item xs={12} lg={12}>
+    <Grid container {...attrs} sx={[{
+      alignItems: "center"
+    }, ...(Array.isArray(attrs.sx) ? attrs.sx : [attrs.sx])]}>
+      <Grid
+        size={{
+          xs: 12,
+          lg: 12
+        }}>
         {props.children}
       </Grid>
     </Grid>
-  )
+  );
 };
 
 export const BasicContainer = (props) => {

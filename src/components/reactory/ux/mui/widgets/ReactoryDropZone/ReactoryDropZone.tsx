@@ -132,7 +132,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
       sx={{ ...style }}
     >
       <input {...inputProps} />
-      
+
       <Icon 
         sx={{ 
           fontSize: 64, 
@@ -143,7 +143,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
       >
         {isDragActive ? 'cloud_download' : iconProps?.icon || 'cloud_upload'}
       </Icon>
-      
+
       <Typography 
         variant="h6" 
         gutterBottom
@@ -156,8 +156,10 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
           : text || 'Drag & drop files here, or click to browse'
         }
       </Typography>
-      
-      <Typography variant="body2" color="text.secondary">
+
+      <Typography variant="body2" sx={{
+        color: "text.secondary"
+      }}>
         {isDragActive 
           ? 'Release to upload'
           : 'Supported formats: Images, PDFs, Documents'
@@ -172,7 +174,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
         </Box>
       )}
     </DropZoneContainer>
-  )
+  );
 }
 
 const ReactoryDropZone = (props: any) => {
@@ -400,7 +402,12 @@ const ReactoryDropZone = (props: any) => {
             sx={{ mb: 2, height: 8, borderRadius: 4 }}
           />
           
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 2
+            }}>
             {Math.round(uploadProgress)}% complete
           </Typography>
 
@@ -425,9 +432,11 @@ const ReactoryDropZone = (props: any) => {
                         </ListItemIcon>
                         <ListItemText 
                           primary={fileName}
-                          primaryTypographyProps={{ 
-                            variant: 'body2',
-                            sx: { color: 'success.main' }
+                          slotProps={{
+                            primary: { 
+                              variant: 'body2',
+                              sx: { color: 'success.main' }
+                            }
                           }}
                         />
                       </ListItem>
@@ -452,17 +461,19 @@ const ReactoryDropZone = (props: any) => {
                             close
                           </Icon>
                         </ListItemIcon>
-                        <ListItemText 
+                        <ListItemText
                           primary={file.name}
                           secondary={file.error}
-                          primaryTypographyProps={{ 
-                            variant: 'body2',
-                            sx: { color: 'error.main' }
-                          }}
-                          secondaryTypographyProps={{
-                            variant: 'caption'
-                          }}
-                        />
+                          slotProps={{
+                            primary: { 
+                              variant: 'body2',
+                              sx: { color: 'error.main' }
+                            },
+
+                            secondary: {
+                              variant: 'caption'
+                            }
+                          }} />
                       </ListItem>
                     ))}
                   </List>

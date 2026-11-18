@@ -2,7 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export interface PluginEntry {
-  /** Stable key, relative to the plugins root: `src/<plugin>@<version>/<file>`. */
+  /**
+   * Stable key: the plugin's directory, `<namespace>.<name>@<version>`. The
+   * entry file inside it is not stable, because the server regenerates these
+   * sources (and their rollup configs) from the form modules it compiles.
+   */
   key: string;
   /** Absolute path of the source entry rollup builds. */
   file: string;
@@ -31,10 +35,10 @@ export function discoverPlugins(root: string = pluginsDir()): PluginEntry[] {
     if (!match) continue;
     const srcIndex = match[1].lastIndexOf('/src/');
     if (srcIndex < 0) continue;
-    const key = match[1].slice(srcIndex + 1);
-    const file = path.join(root, key);
+    const relative = match[1].slice(srcIndex + 1);
+    const file = path.join(root, relative);
     if (!fs.existsSync(file)) continue;
-    entries.push({ key, file, rollupConfig: name });
+    entries.push({ key: relative.split('/')[1], file, rollupConfig: name });
   }
   return entries;
 }

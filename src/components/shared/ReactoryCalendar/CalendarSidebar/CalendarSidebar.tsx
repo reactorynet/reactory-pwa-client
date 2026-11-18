@@ -56,7 +56,9 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
       <Divider />
 
       <Box sx={{ px: 2, pt: 2, pb: 1 }}>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" sx={{
+          color: "text.secondary"
+        }}>
           My calendars
         </Typography>
       </Box>

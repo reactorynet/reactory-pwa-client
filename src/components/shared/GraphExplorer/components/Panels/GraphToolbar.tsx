@@ -84,11 +84,16 @@ export default function GraphToolbar(props: GraphToolbarProps) {
     <Stack
       direction="row"
       spacing={0.5}
-      alignItems="center"
       useFlexGap
-      flexWrap="wrap"
-      sx={{ px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
-    >
+      sx={{
+        alignItems: "center",
+        flexWrap: "wrap",
+        px: 1,
+        py: 0.5,
+        borderBottom: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper'
+      }}>
       <Tooltip title="Toggle panel">
         <IconButton size="small" onClick={onToggleLeftPanel}>
           <Icon fontSize="small">menu</Icon>
@@ -203,7 +208,14 @@ export default function GraphToolbar(props: GraphToolbarProps) {
         </Tooltip>
       )}
 
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto', pr: 1 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          ml: 'auto',
+          pr: 1
+        }}>
         {truncated && (
           <Tooltip title="The server limited this neighbourhood — expand nodes to load more.">
             <Chip

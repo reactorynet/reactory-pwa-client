@@ -302,31 +302,33 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
             sx={{ mb: 1 }}
-            inputProps={{
-              'aria-label': il8n?.t('reactor.client.chat.history.searchPlaceholder', {
-                defaultValue: 'Search conversations...',
-              }),
-              'data-testid': 'chat-history-search',
-            }}
-            InputProps={{
-              startAdornment: (
-                <IconButton disabled size="small" sx={{ p: 0, mr: 1 }}>
-                  <Material.MaterialIcons.Search sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
-                </IconButton>
-              ),
-              endAdornment: searchInput || committedTerm ? (
-                <IconButton
-                  size="small"
-                  onClick={handleClearSearch}
-                  aria-label={il8n?.t('reactor.client.chat.history.clearSearch', {
-                    defaultValue: 'Clear search',
-                  })}
-                >
-                  <Material.MaterialIcons.Clear sx={{ fontSize: '1rem' }} />
-                </IconButton>
-              ) : null,
-            }}
-          />
+            slotProps={{
+              htmlInput: {
+                'aria-label': il8n?.t('reactor.client.chat.history.searchPlaceholder', {
+                  defaultValue: 'Search conversations...',
+                }),
+                'data-testid': 'chat-history-search',
+              },
+
+              input: {
+                startAdornment: (
+                  <IconButton disabled size="small" sx={{ p: 0, mr: 1 }}>
+                    <Material.MaterialIcons.Search sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
+                  </IconButton>
+                ),
+                endAdornment: searchInput || committedTerm ? (
+                  <IconButton
+                    size="small"
+                    onClick={handleClearSearch}
+                    aria-label={il8n?.t('reactor.client.chat.history.clearSearch', {
+                      defaultValue: 'Clear search',
+                    })}
+                  >
+                    <Material.MaterialIcons.Clear sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                ) : null,
+              }
+            }} />
 
           {/* Active filter: the committed term, the match count and a reset. */}
           {isSearchActive && (

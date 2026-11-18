@@ -170,8 +170,10 @@ const ChatDataEditorDialog: React.FC<ChatDataEditorDialogProps> = ({
           size="small"
           margin="dense"
           placeholder="Short, specific title"
-          inputProps={{ maxLength: 120 }}
           helperText="Overrides the auto-generated title."
+          slotProps={{
+            htmlInput: { maxLength: 120 }
+          }}
         />
 
         <TextField
@@ -250,8 +252,10 @@ const ChatDataEditorDialog: React.FC<ChatDataEditorDialogProps> = ({
             margin="dense"
             placeholder="e.g. check_circle"
             sx={{ flex: 1 }}
-            InputProps={{
-              endAdornment: statusPreview,
+            slotProps={{
+              input: {
+                endAdornment: statusPreview,
+              }
             }}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>

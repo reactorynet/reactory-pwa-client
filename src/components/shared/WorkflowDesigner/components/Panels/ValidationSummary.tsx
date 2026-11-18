@@ -201,8 +201,10 @@ export default function ValidationSummary(props: ValidationSummaryProps) {
                         {error.path && ` | Path: ${error.path}`}
                       </Box>
                     }
-                    primaryTypographyProps={{
-                      sx: { color: getSeverityColor('error') }
+                    slotProps={{
+                      primary: {
+                        sx: { color: getSeverityColor('error') }
+                      }
                     }}
                   />
                 </ListItem>
@@ -221,8 +223,10 @@ export default function ValidationSummary(props: ValidationSummaryProps) {
                         {warning.path && ` | Path: ${warning.path}`}
                       </Box>
                     }
-                    primaryTypographyProps={{
-                      sx: { color: getSeverityColor('warning') }
+                    slotProps={{
+                      primary: {
+                        sx: { color: getSeverityColor('warning') }
+                      }
                     }}
                   />
                 </ListItem>
@@ -261,8 +265,10 @@ export default function ValidationSummary(props: ValidationSummaryProps) {
                       </ListItemIcon>
                       <ListItemText
                         primary={error.message}
-                        primaryTypographyProps={{
-                          sx: { color: getSeverityColor('error') }
+                        slotProps={{
+                          primary: {
+                            sx: { color: getSeverityColor('error') }
+                          }
                         }}
                       />
                     </ListItem>
@@ -288,8 +294,10 @@ export default function ValidationSummary(props: ValidationSummaryProps) {
                         {error.path && ` | Path: ${error.path}`}
                       </Box>
                     }
-                    primaryTypographyProps={{
-                      sx: { color: getSeverityColor('error') }
+                    slotProps={{
+                      primary: {
+                        sx: { color: getSeverityColor('error') }
+                      }
                     }}
                   />
                 </ListItem>
@@ -308,8 +316,10 @@ export default function ValidationSummary(props: ValidationSummaryProps) {
                         {warning.path && ` | Path: ${warning.path}`}
                       </Box>
                     }
-                    primaryTypographyProps={{
-                      sx: { color: getSeverityColor('warning') }
+                    slotProps={{
+                      primary: {
+                        sx: { color: getSeverityColor('warning') }
+                      }
                     }}
                   />
                 </ListItem>

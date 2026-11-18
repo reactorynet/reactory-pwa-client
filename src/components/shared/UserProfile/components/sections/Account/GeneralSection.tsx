@@ -181,7 +181,9 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
                   >
                     Upload Photo
                   </Button>
-                  <Typography variant="caption" color="text.secondary" align="center">
+                  <Typography variant="caption" align="center" sx={{
+                    color: "text.secondary"
+                  }}>
                     Recommended: Square image, max 2MB
                   </Typography>
                 </>
@@ -280,14 +282,20 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
                 flexDirection: { xs: 'column', sm: 'row' },
                 gap: 2
               }}>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   <strong>ID:</strong> {profile.id}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   <strong>Provider:</strong> {profile.authProvider || 'LOCAL'}
                 </Typography>
                 {profile.createdAt && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     <strong>Created:</strong> {reactory.utils.moment(profile.createdAt).format('MMM D, YYYY')}
                   </Typography>
                 )}

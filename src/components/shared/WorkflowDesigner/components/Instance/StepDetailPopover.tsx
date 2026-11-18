@@ -144,7 +144,9 @@ const StepDetailPopover: React.FC<StepDetailPopoverProps> = ({ reactory, stepLab
                 fullWidth
                 size="small"
                 disabled={signalling}
-                InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.72rem' } }}
+                slotProps={{
+                  input: { sx: { fontFamily: 'monospace', fontSize: '0.72rem' } }
+                }}
               />
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
                 <Button

@@ -156,21 +156,23 @@ export const JsonEditorWidget: React.FC<JsonEditorWidgetProps> = (props) => {
         error={Boolean(error)}
         required={required}
         disabled={disabled}
-        // Read-only keeps the value selectable/copyable rather than greying it out.
-        InputProps={{ readOnly: isReadOnly && !disabled }}
         helperText={resolvedHelper}
-        FormHelperTextProps={error ? { error: true } : undefined}
-        inputProps={{
-          spellCheck: false,
-          autoComplete: 'off',
-          placeholder: typeof options.placeholder === 'string' ? options.placeholder : undefined,
-          style: {
-            fontFamily: 'monospace, SFMono-Regular, Consolas, Menlo, monospace',
-            fontSize: '0.85rem',
-            lineHeight: 1.5,
+        slotProps={{
+          input: { readOnly: isReadOnly && !disabled },
+
+          htmlInput: {
+            spellCheck: false,
+            autoComplete: 'off',
+            placeholder: typeof options.placeholder === 'string' ? options.placeholder : undefined,
+            style: {
+              fontFamily: 'monospace, SFMono-Regular, Consolas, Menlo, monospace',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            },
           },
-        }}
-      />
+
+          formHelperText: error ? { error: true } : undefined
+        }} />
       {!isReadOnly && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
           <Tooltip title="Format JSON">

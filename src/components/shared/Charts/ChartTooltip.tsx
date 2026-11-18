@@ -19,7 +19,13 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, for
   return (
     <Paper square variant="outlined" sx={{ p: 1, minWidth: 120 }}>
       {label && (
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: "block",
+            mb: 0.5
+          }}>
           {label}
         </Typography>
       )}

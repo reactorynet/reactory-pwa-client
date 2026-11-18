@@ -33,13 +33,25 @@ export const OrganigramSection: React.FC<OrgangramSectionProps> = ({
       </Alert>
 
       <Box sx={{ mt: 3, p: 2, borderRadius: 1 }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           <strong>Peers:</strong> {profile.peers?.peers?.length || 0} found
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 1
+          }}>
           <strong>Organization:</strong> {selectedMembership?.organization?.name || 'None'}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 1
+          }}>
           <strong>Confirmed:</strong> {profile.peers?.confirmedAt ? 'Yes' : 'No'}
         </Typography>
       </Box>

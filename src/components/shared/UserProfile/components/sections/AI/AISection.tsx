@@ -176,7 +176,12 @@ export const AISection: React.FC<AISectionProps> = ({
         Linked AI Agents
       </Typography>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 3
+        }}>
         Link AI agents to your profile and configure your expectations. These specialized agents 
         will run automated tasks, analyze code, or assist you across the platform based on your preferences.
       </Typography>
@@ -234,7 +239,9 @@ export const AISection: React.FC<AISectionProps> = ({
                       <SmartToy />
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle1" fontWeight="bold" noWrap>
+                      <Typography variant="subtitle1" noWrap sx={{
+                        fontWeight: "bold"
+                      }}>
                         {persona.name}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
@@ -248,13 +255,24 @@ export const AISection: React.FC<AISectionProps> = ({
                   </Box>
 
                   <CardContent sx={{ flex: 1, pt: 0 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                        mb: 1.5
+                      }}>
                       {persona.description || 'No system description available.'}
                     </Typography>
 
                     {linked && (
                       <Box sx={{ mt: 2, p: 1.5, bgcolor: 'action.selected', borderRadius: 1 }}>
-                        <Typography variant="caption" color="primary" fontWeight="bold" display="block">
+                        <Typography
+                          variant="caption"
+                          color="primary"
+                          sx={{
+                            fontWeight: "bold",
+                            display: "block"
+                          }}>
                           Your Expectations & Scope:
                         </Typography>
                         <Typography variant="body2" sx={{ fontStyle: 'italic', mt: 0.5 }}>
@@ -315,7 +333,12 @@ export const AISection: React.FC<AISectionProps> = ({
           Configure Linked Agent: {selectedPersona?.name}
         </DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 3
+            }}>
             Define what you expect this agent to perform on your behalf. This gives the agent 
             its context and scope when acting on your profile.
           </Typography>

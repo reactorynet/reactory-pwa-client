@@ -731,7 +731,7 @@ const ChatList = (props: {
     IconButton,
     Icon,
     TextField,
-    Grid,
+    Grid2: Grid,
     Typography,
     Box,
     List,
@@ -1272,7 +1272,7 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar
                         sx={{
                           width: 28,
@@ -1286,7 +1286,10 @@ const ChatList = (props: {
                         <Icon sx={{ fontSize: '1rem', color: 'text.secondary' }}>psychology</Icon>
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                           <Icon sx={{ fontSize: '0.9rem', color: 'text.secondary', opacity: 0.85 }}>psychology</Icon>
@@ -1410,7 +1413,7 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar
                         sx={{ bgcolor: 'secondary.main' }}
                         sizes='small'
@@ -1422,7 +1425,10 @@ const ChatList = (props: {
                         )}
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
                         {[0, 1, 2].map((i) => (
                           <Box
@@ -1490,7 +1496,7 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar
                         sx={{ bgcolor: 'warning.main' }}
                         sizes='small'
@@ -1499,7 +1505,10 @@ const ChatList = (props: {
                         <Icon>{mainToolIcon}</Icon>
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
                         {/* Header row */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1744,7 +1753,7 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar
                         sx={{ bgcolor: 'secondary.main' }}
                         sizes='small'
@@ -1756,7 +1765,10 @@ const ChatList = (props: {
                         )}
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <AssistantMessageBody
                         message={message}
                         messageText={typeof message.content === 'string' ? message.content : getMessageText(message)}
@@ -1974,12 +1986,15 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar sx={{ bgcolor: 'info.main' }} sizes='small' aria-label="activity">
                         <Icon>tune</Icon>
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
                         <Typography
                           variant="body2"
@@ -2019,12 +2034,15 @@ const ChatList = (props: {
                   }}
                 >
                   <Grid container spacing={1}>
-                    <Grid item>
+                    <Grid>
                       <Avatar sx={{ bgcolor: 'error.main' }} sizes='small' aria-label="error">
                         <Icon>error_outline</Icon>
                       </Avatar>
                     </Grid>
-                    <Grid item xs>
+                    <Grid
+                      size={{
+                        xs: 'grow'
+                      }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>error</Icon>
@@ -2120,7 +2138,7 @@ const ChatList = (props: {
                 }}
               >
                 <Grid container spacing={1}>
-                  <Grid item>
+                  <Grid>
                     <Avatar
                       sx={{ bgcolor: getMessageAvatarColor(message) }}
                       sizes='small'
@@ -2132,7 +2150,10 @@ const ChatList = (props: {
                       )}
                     </Avatar>
                   </Grid>
-                  <Grid item xs>
+                  <Grid
+                    size={{
+                      xs: 'grow'
+                    }}>
                     <Typography variant="body1">
                       {memoizedRenderContent(getMessageText(message))}
                     </Typography>
@@ -2215,18 +2236,20 @@ const ChatList = (props: {
           onClose={() => setMaximizedToolResult(null)}
           maxWidth="lg"
           fullWidth
-          PaperProps={{
-            sx: {
-              height: '85vh',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              bgcolor: 'background.paper',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              boxShadow: 24,
-            },
+          slotProps={{
+            paper: {
+              sx: {
+                height: '85vh',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'background.paper',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: 24,
+              },
+            }
           }}
         >
           <DialogTitle
@@ -2385,16 +2408,20 @@ const ChatList = (props: {
           anchor="right"
           open={Boolean(openCommentsMessageId)}
           onClose={() => setOpenCommentsMessageId(null)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: 480 },
-              p: 3,
-              bgcolor: 'background.paper',
-            },
+          slotProps={{
+            paper: {
+              sx: {
+                width: { xs: '100%', sm: 480 },
+                p: 3,
+                bgcolor: 'background.paper',
+              },
+            }
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6" fontWeight={600}>
+            <Typography variant="h6" sx={{
+              fontWeight: 600
+            }}>
               Message Comments
             </Typography>
             <IconButton size="small" onClick={() => setOpenCommentsMessageId(null)}>

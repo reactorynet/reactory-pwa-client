@@ -1114,9 +1114,10 @@ const D3Chart: React.FC<D3ChartProps> = ({
       {description && (
         <Typography
           variant={styling?.descriptionVariant ?? 'subtitle2'}
-          color="text.secondary"
-          sx={{ mb: 1.5 }}
-        >
+          sx={{
+            color: "text.secondary",
+            mb: 1.5
+          }}>
           {description}
         </Typography>
       )}

@@ -60,7 +60,9 @@ export const RESTCallEditor: React.FC<RESTCallEditorProps> = ({ value, onChange 
             helperText="Supports lodash template syntax against formData / formContext"
             sx={{ '& input': { fontFamily: 'monospace', fontSize: '0.82rem' } }}
           />
-          <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Stack direction="row" spacing={1} sx={{
+            flexWrap: "wrap"
+          }}>
             <TextField select size="small" label="Method" value={method} onChange={(e) => set({ method: e.target.value })} sx={{ width: 120 }}>
               {REST_METHODS.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
             </TextField>

@@ -108,7 +108,12 @@ const ComposedChartWidget: React.FC<ComposedChartWidgetProps> = (props) => {
         <Typography variant="h6" sx={{ mb: 1 }}>{schema.title}</Typography>
       )}
       {schema?.description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>{schema.description}</Typography>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>{schema.description}</Typography>
       )}
       <ResponsiveContainer height={bounds?.height ?? 400} width="95%">
         <ComposedChart 

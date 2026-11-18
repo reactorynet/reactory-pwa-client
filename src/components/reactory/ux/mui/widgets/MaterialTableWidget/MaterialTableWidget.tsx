@@ -2479,7 +2479,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             }}
           >
             <Icon sx={{ color: 'warning.main', fontSize: 18 }}>warning_amber</Icon>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               <strong>Notice:</strong> This table is currently using client-side pagination ({clientPagedTotal} total records). Consider updating the GraphQL query and resolver to support server-side pagination for optimal performance.
             </Typography>
           </Box>
@@ -2487,7 +2489,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         {getPagination()}
         {confirmDialog}
       </>
-    )
+    );
   } catch (err) {
     reactory.log(`Error rendering MaterialTable:\n${err.message}`, { error: err });
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>

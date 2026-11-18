@@ -112,8 +112,10 @@ const SubmissionQueryBuilder: React.FC<SubmissionQueryBuilderProps> = ({
         error={error !== null}
         helperText={error || schema?.description}
         onChange={(event) => apply(event.target.value)}
-        InputProps={{
-          sx: { fontFamily: 'monospace', fontSize: '0.82rem' },
+        slotProps={{
+          input: {
+            sx: { fontFamily: 'monospace', fontSize: '0.82rem' },
+          }
         }}
       />
 
@@ -146,15 +148,21 @@ const SubmissionQueryBuilder: React.FC<SubmissionQueryBuilderProps> = ({
 
       <Collapse in={showHelp}>
         <Box sx={{ mt: 1, p: 1, backgroundColor: 'action.hover', borderRadius: 1 }}>
-          <Typography variant="caption" display="block" gutterBottom>
+          <Typography variant="caption" gutterBottom sx={{
+            display: "block"
+          }}>
             A predicate is <code>{'{ path, op, value, valueType }'}</code>. Paths address the
             submitted document, e.g. <code>address.country</code> or <code>lines[0].sku</code>.
             Group predicates with <code>and</code>, <code>or</code> or <code>not</code>.
           </Typography>
-          <Typography variant="caption" display="block" gutterBottom>
+          <Typography variant="caption" gutterBottom sx={{
+            display: "block"
+          }}>
             <strong>Operators:</strong> {OPERATORS.join(', ')}
           </Typography>
-          <Typography variant="caption" display="block">
+          <Typography variant="caption" sx={{
+            display: "block"
+          }}>
             <strong>valueType:</strong> string (default), number, boolean, date. Numeric and date
             comparisons need the matching valueType - dates compare as ISO-8601 strings.
           </Typography>

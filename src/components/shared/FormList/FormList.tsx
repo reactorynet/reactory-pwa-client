@@ -119,7 +119,7 @@ const FormList: React.FC<FormListProps> = ({
     Card,
     CardContent,
     CardActions,
-    Grid,
+    Grid2: Grid,
     List,
     ListItem,
     ListItemText,
@@ -662,24 +662,26 @@ const FormList: React.FC<FormListProps> = ({
                 applySearch(searchInput);
               }
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-              endAdornment: searchInput && (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => {
-                    setSearchInput('');
-                    applySearch('');
-                  }} size="small">
-                    <Close />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
             sx={{ flexGrow: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+                endAdornment: searchInput && (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => {
+                      setSearchInput('');
+                      applySearch('');
+                    }} size="small">
+                      <Close />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }
+            }}
           />
           
           <ToggleButtonGroup
@@ -755,7 +757,14 @@ const FormList: React.FC<FormListProps> = ({
       {viewMode === 'grid' && (
         <Grid container spacing={3}>
           {forms.map((form) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={form.id}>
+            <Grid
+              key={form.id}
+              size={{
+                xs: 12,
+                sm: 6,
+                md: 4,
+                lg: 3
+              }}>
               <FormCard form={form} />
             </Grid>
           ))}

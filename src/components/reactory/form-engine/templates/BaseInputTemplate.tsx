@@ -132,10 +132,12 @@ export function ReactoryBaseInputTemplate(props: BaseInputTemplateProps): React.
       onChange={handleChange}
       onBlur={(event) => onBlur?.(id, event.target.value)}
       onFocus={(event) => onFocus?.(id, event.target.value)}
-      inputProps={{
-        'aria-describedby': describedBy,
-        'aria-required': required === true ? true : undefined,
-        ...(uiOptions.inputProps ?? {}),
+      slotProps={{
+        htmlInput: {
+          'aria-describedby': describedBy,
+          'aria-required': required === true ? true : undefined,
+          ...(uiOptions.inputProps ?? {}),
+        }
       }}
     />
   );

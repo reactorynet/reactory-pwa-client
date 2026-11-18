@@ -397,7 +397,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     Box,
     Typography,
     IconButton,
-    Grid,
+    Grid2: Grid,
     Switch,
     LinearProgress,
     Checkbox,
@@ -845,8 +845,10 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                   handleCommitMaxIterations();
                 }
               }}
-              inputProps={{ min: 1, max: 500 }}
               sx={{ width: 120 }}
+              slotProps={{
+                htmlInput: { min: 1, max: 500 }
+              }}
             />
             <Button
               variant="outlined"
@@ -1081,7 +1083,13 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                               const isEnabled = toolName ? enabledTools.has(toolName) : false;
 
                               return (
-                                <Grid item xs={12} sm={6} md={4} key={toolName ?? JSON.stringify(tool)}>
+                                <Grid
+                                  key={toolName ?? JSON.stringify(tool)}
+                                  size={{
+                                    xs: 12,
+                                    sm: 6,
+                                    md: 4
+                                  }}>
                                   <Paper
                                     sx={{
                                       p: 2,

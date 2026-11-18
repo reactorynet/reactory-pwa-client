@@ -104,7 +104,13 @@ export const MembershipRoles: React.FC<MembershipRolesProps> = ({
       </Grid>
 
       {loading && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            mt: 1,
+            display: 'block'
+          }}>
           Updating roles...
         </Typography>
       )}

@@ -16,7 +16,7 @@ const ReactorChatButtonExample: React.FC = () => {
   const { 
     Box, 
     Typography, 
-    Grid, 
+    Grid2: Grid, 
     Paper,
     Divider
   } = Material.MaterialCore;
@@ -26,14 +26,18 @@ const ReactorChatButtonExample: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         ReactorChatButton Examples
       </Typography>
-      
+
       <Typography variant="body1" sx={{ mb: 3 }}>
         Different configurations of the ReactorChatButton component
       </Typography>
 
       <Grid container spacing={3}>
         {/* Standard Button Examples */}
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Standard Buttons
@@ -68,7 +72,11 @@ const ReactorChatButtonExample: React.FC = () => {
         </Grid>
 
         {/* FAB Examples */}
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Floating Action Buttons
@@ -109,7 +117,10 @@ const ReactorChatButtonExample: React.FC = () => {
         </Grid>
 
         {/* Custom Styling */}
-        <Grid item xs={12}>
+        <Grid
+          size={{
+            xs: 12
+          }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Custom Styling
@@ -145,13 +156,16 @@ const ReactorChatButtonExample: React.FC = () => {
         </Grid>
 
         {/* Usage Instructions */}
-        <Grid item xs={12}>
+        <Grid
+          size={{
+            xs: 12
+          }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Usage Instructions
             </Typography>
             
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ marginBottom: '16px' }}>
               The ReactorChatButton component provides a convenient way to integrate the ReactorChat 
               functionality into your application with a slide-out panel interface.
             </Typography>

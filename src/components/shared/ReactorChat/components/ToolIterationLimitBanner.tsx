@@ -71,8 +71,10 @@ const ToolIterationLimitBanner: React.FC<ToolIterationLimitBannerProps> = ({
             const val = parseInt(e.target.value, 10);
             if (val >= 1) setNewMax(val);
           }}
-          inputProps={{ min: 1, max: 1000 }}
           sx={{ width: 120 }}
+          slotProps={{
+            htmlInput: { min: 1, max: 1000 }
+          }}
         />
         <Button
           variant="contained"

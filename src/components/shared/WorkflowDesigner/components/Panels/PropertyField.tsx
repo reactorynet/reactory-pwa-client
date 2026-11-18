@@ -145,8 +145,10 @@ export default function PropertyField(props: PropertyFieldProps) {
             error={hasError}
             color={hasWarning ? "warning" : "primary"}
             helperText={helperText}
-            InputProps={{
-              sx: { fontFamily: 'monospace', fontSize: '0.875rem' }
+            slotProps={{
+              input: {
+                sx: { fontFamily: 'monospace', fontSize: '0.875rem' }
+              }
             }}
           />
         );

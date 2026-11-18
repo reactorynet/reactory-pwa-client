@@ -185,7 +185,12 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
       <DialogContent sx={{ minHeight: 160 }}>
         {loading && <CircularProgress size={22} sx={{ display: 'block', mx: 'auto', my: 2 }} />}
         {!loading && perspectives.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              py: 2
+            }}>
             No saved perspectives yet. Arrange the graph and use Save.
           </Typography>
         )}
@@ -230,7 +235,9 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
                   ) : (
                     <ListItemText
                       primary={
-                        <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Stack direction="row" spacing={0.5} sx={{
+                          alignItems: "center"
+                        }}>
                           <span>{perspective.name}</span>
                           {perspective.isDefault && <Chip size="small" label="default" />}
                           {perspective.share && <Chip size="small" variant="outlined" label={perspective.isOwner ? 'shared' : 'shared with you'} />}
@@ -240,9 +247,10 @@ export function PerspectiveManagerDialog(props: PerspectiveManagerDialogProps) {
                         </Stack>
                       }
                       secondary={describe(perspective)}
-                      primaryTypographyProps={{ variant: 'body2', component: 'div' }}
-                      secondaryTypographyProps={{ variant: 'caption' }}
-                    />
+                      slotProps={{
+                        primary: { variant: 'body2', component: 'div' },
+                        secondary: { variant: 'caption' }
+                      }} />
                   )}
                 </ListItemButton>
               </ListItem>

@@ -42,9 +42,18 @@ const ElementCard: React.FC<{
   onDelete: () => void;
 }> = ({ keyLabel, keyColor, element, onEdit, onDelete }) => (
   <Paper variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-    <Stack direction="row" alignItems="flex-start" spacing={1}>
+    <Stack direction="row" spacing={1} sx={{
+      alignItems: "flex-start"
+    }}>
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5, flexWrap: 'wrap' }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 0.5,
+            flexWrap: 'wrap'
+          }}>
           {keyLabel && <Chip label={keyLabel} size="small" color={keyColor} />}
           <Typography variant="subtitle2">{element?.name || '(unnamed)'}</Typography>
           {element?.variables && Object.keys(element.variables).length > 0 && (
@@ -120,7 +129,13 @@ export const VisualGraphQLDataEditor: React.FC<VisualGraphQLDataEditorProps> = (
   return (
     <Box>
       {/* ── Primary query ─────────────────────────────────────────────── */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1
+        }}>
         <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Storage color="primary" fontSize="small" /> Primary query
         </Typography>
@@ -138,7 +153,12 @@ export const VisualGraphQLDataEditor: React.FC<VisualGraphQLDataEditorProps> = (
           onDelete={() => removeQuery('primary')}
         />
       ) : (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           No primary query. The primary query loads the form's data.
         </Typography>
       )}
@@ -159,7 +179,13 @@ export const VisualGraphQLDataEditor: React.FC<VisualGraphQLDataEditorProps> = (
 
       {/* ── Mutations ─────────────────────────────────────────────────── */}
       <Divider sx={{ my: 2 }} />
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1
+        }}>
         <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FlashOn color="secondary" fontSize="small" /> Mutations
         </Typography>
@@ -182,7 +208,12 @@ export const VisualGraphQLDataEditor: React.FC<VisualGraphQLDataEditorProps> = (
         />
       ))}
       {mutationKeys.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No mutations configured.</Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontStyle: 'italic'
+          }}>No mutations configured.</Typography>
       )}
       <AddKeyRow label="Custom mutation key" existing={mutationKeys} onAdd={(key) => openEditor('mutation', key, emptyMutation(`${key}Mutation`))} />
 

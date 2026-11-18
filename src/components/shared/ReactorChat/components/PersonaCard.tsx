@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IAIPersona } from '../types';
 import PersonaDetailsDialog from './PersonaDetailsDialog';
 import { Icon, IconButton } from '@mui/material';
-import { Star, StarOutline } from '@mui/icons-material';
+import { Star, StarOutlined } from '@mui/icons-material';
 
 interface PersonaCardProps {
   persona: IAIPersona;
@@ -95,7 +95,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               setIsFavourite(!isFavourite);
             }}
           >
-            {isFavourite ? <Star /> : <StarOutline />}
+            {isFavourite ? <Star /> : <StarOutlined />}
           </IconButton>
         </Box>
         

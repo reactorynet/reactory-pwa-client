@@ -73,7 +73,7 @@ import {
   Dialog,
   Toolbar,
   Typography,
-  Grid,
+  Grid2 as Grid,
   Icon,
   IconButton,
   Button,
@@ -320,14 +320,19 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
     BackNavigation = () => {
       return (
         <div className={classes.backNavContainer} style={containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {}}>
-          <Grid container spacing={1} alignItems="center">
-            <Grid item>
+          <Grid container spacing={1} sx={{
+            alignItems: "center"
+          }}>
+            <Grid>
               <div style={{ display: 'flex', cursor: 'pointer' }} onClick={handleClose}>
                 <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
                 <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
               </div>
             </Grid>
-            <Grid item xs>
+            <Grid
+              size={{
+                xs: 'grow'
+              }}>
               <div className={classes.linkContainer}>
                 {backNavigationItems.map((navItem, ind) => (
                   <React.Fragment key={`nav-item-${ind}`}>
@@ -342,7 +347,7 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
               </div>
             </Grid>
             {backNavComponent && (
-              <Grid item>
+              <Grid>
                 <div className={classes.backNavComponent}>
                   {backNavComponent}
                 </div>

@@ -216,12 +216,21 @@ export const GoogleAuthUrlWidget: React.FC<any> = (props: any) => {
   return (
     <Box sx={{ py: 0.5 }} data-testid="google-auth-url-widget">
       {options.showStatus && (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, minHeight: 24 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 1,
+            minHeight: 24
+          }}>
           {statusLoading ? (
             <CircularProgress size={14} />
           ) : (
             <>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 Google Workspace
               </Typography>
               <Chip
@@ -231,7 +240,9 @@ export const GoogleAuthUrlWidget: React.FC<any> = (props: any) => {
                 variant={statusColor(connection?.status) === 'default' ? 'outlined' : 'filled'}
               />
               {connection?.email && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {connection.email}
                 </Typography>
               )}
@@ -252,7 +263,13 @@ export const GoogleAuthUrlWidget: React.FC<any> = (props: any) => {
       </Button>
 
       {(options.helperText || schema?.description) && !error && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: 'block',
+            mt: 0.75
+          }}>
           {options.helperText || schema.description}
         </Typography>
       )}

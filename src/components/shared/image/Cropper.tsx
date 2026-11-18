@@ -8,7 +8,7 @@ import {
   Paper,
   Typography,
   Toolbar,
-  Grid,
+  Grid2 as Grid,
 } from '@mui/material';
 import "react-image-crop/dist/ReactCrop.css";
 import ReactoryApi, { useReactory } from "@reactory/client-core/api";
@@ -136,11 +136,27 @@ const Cropper = (props: ICropProps) => {
 
         <Grid container spacing={0}>
 
-          <Grid item container direction="row">
-            <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+          <Grid container direction="row">
+            <Grid
+              style={{ display: 'flex', justifyContent: 'center' }}
+              size={{
+                xs: 12,
+                sm: 12,
+                md: 12,
+                lg: 12,
+                xl: 12
+              }}>
               <StaticContent slug={`profile-image-cropper-info`} />
             </Grid>
-              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+              <Grid
+                style={{ display: 'flex', justifyContent: 'center' }}
+                size={{
+                  xs: 12,
+                  sm: 12,
+                  md: 12,
+                  lg: 12,
+                  xl: 12
+                }}>
               {src && (
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <ReactCrop                  
@@ -158,7 +174,15 @@ const Cropper = (props: ICropProps) => {
               )}
               {(src === null || src === undefined) && (<Typography>No Image Data Available</Typography>)}
             </Grid>
-              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+              <Grid
+                style={{ display: 'flex', justifyContent: 'center' }}
+                size={{
+                  xs: 12,
+                  sm: 12,
+                  md: 12,
+                  lg: 12,
+                  xl: 12
+                }}>
                 <Toolbar>
                   <ButtonGroup variant="contained">
                     <Button color="primary" onClick={acceptCrop}><Icon>check</Icon></Button>

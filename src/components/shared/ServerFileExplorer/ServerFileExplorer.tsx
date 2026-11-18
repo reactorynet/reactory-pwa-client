@@ -489,7 +489,9 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
         }}
       >
         <CloudUpload sx={{ fontSize: 32, color: 'primary.main', mb: 1 }} />
-        <Typography variant="body2" color="primary.main" fontWeight="medium">
+        <Typography variant="body2" color="primary.main" sx={{
+          fontWeight: "medium"
+        }}>
           {isDragging ? 'Drop files here' : 'Click to upload or drag and drop files here'}
         </Typography>
         <Typography variant="caption" color="text.secondary">
@@ -770,8 +772,10 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{
-        sx: { height: '80vh', display: 'flex', flexDirection: 'column' }
+      slotProps={{
+        paper: {
+          sx: { height: '80vh', display: 'flex', flexDirection: 'column' }
+        }
       }}
     >
       <DialogTitle>
@@ -927,18 +931,20 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
               placeholder="Search files and folders..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-                endAdornment: searchQuery && (
-                  <IconButton
-                    size="small"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <Clear />
-                  </IconButton>
-                )
-              }}
               sx={{ flex: 1 }}
+              slotProps={{
+                input: {
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                  endAdornment: searchQuery && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <Clear />
+                    </IconButton>
+                  )
+                }
+              }}
             />
 
             <Button

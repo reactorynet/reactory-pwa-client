@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
-import { Grid } from '@mui/material';
+import { Grid2 as Grid } from '@mui/material';
 import FieldPalette from './FieldPalette';
 import SchemaCanvas from './SchemaCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
@@ -212,10 +212,18 @@ const VisualSchemaEditor: React.FC<VisualSchemaEditorProps> = ({ schema, onChang
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
         <Grid container spacing={2} sx={{ height: '100%' }}>
-          <Grid item xs={12} md={3}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 3
+            }}>
             <FieldPalette />
           </Grid>
-          <Grid item xs={12} md={9}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 9
+            }}>
             <SchemaCanvas
               schema={schema}
               onChange={onChange}

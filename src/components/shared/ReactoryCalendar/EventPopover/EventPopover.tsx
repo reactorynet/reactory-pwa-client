@@ -74,7 +74,9 @@ export const EventPopover: React.FC<EventPopoverProps> = ({
       <Box sx={{ px: 2, pb: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
           <AccessTimeIcon fontSize="small" color="action" />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             {event.isAllDay
               ? format(event.start, "MMM d, yyyy")
               : `${format(event.start, "MMM d, yyyy h:mm a")} – ${format(event.end, "h:mm a")}`}
@@ -84,7 +86,9 @@ export const EventPopover: React.FC<EventPopoverProps> = ({
         {event.location && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
             <LocationOnIcon fontSize="small" color="action" />
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               {event.location}
             </Typography>
           </Box>

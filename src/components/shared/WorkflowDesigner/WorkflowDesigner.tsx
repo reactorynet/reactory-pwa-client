@@ -1261,8 +1261,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             autoFocus
             fullWidth
             sx={{ flexGrow: 1, mr: 1 }}
-            InputProps={{
-              style: { fontSize: '1.25rem', fontWeight: 500 }
+            slotProps={{
+              input: {
+                style: { fontSize: '1.25rem', fontWeight: 500 }
+              }
             }}
           />
         ) : (
@@ -1766,8 +1768,6 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         readonly={true}
         il8n={undefined}
       />
-
-    
 
       {/* Save notification */}
       <Snackbar

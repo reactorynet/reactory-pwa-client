@@ -168,7 +168,9 @@ const MaterialTabbedField = (props) => {
       <Box key={index} role="tabpanel"
         hidden={value !== index}
         id={`full-width-tabpanel-${index}`}
-        aria-labelledby={`full-width-tab-${index}`} p={1}>
+        aria-labelledby={`full-width-tab-${index}`} sx={{
+        p: 1
+      }}>
         {children}
       </Box>
     );
@@ -281,30 +283,34 @@ const MaterialTabbedField = (props) => {
 
         if (tabFieldNames.length > 0 && tindex === value) {
 
-          return (<Box key={tindex} role="tabpanel"
+          return (
+            <Box key={tindex} role="tabpanel"
 
-            id={`full-width-tabpanel-${tindex}`}
-            aria-labelledby={`full-width-tab-${tindex}`} p={1}>
+              id={`full-width-tabpanel-${tindex}`}
+              aria-labelledby={`full-width-tab-${tindex}`} sx={{
+              p: 1
+            }}>
 
-            {tabFieldNames.map((fieldName) => (
-              <SchemaField
-                key={fieldName}
-                name={fieldName}
-                required={isRequired(fieldName)}
-                schema={schema.properties[fieldName]}
-                uiSchema={uiSchema[fieldName]}
-                errorSchema={errorSchema && errorSchema[fieldName]}
-                idSchema={idSchema[fieldName]}
-                formData={formData?.[fieldName]}
-                formContext={formContext}
-                onChange={onPropertyChange(fieldName)}
-                onBlur={onBlur}
-                registry={props.registry}
-                disabled={disabled}
-                readonly={readonly} />
-            ))}
+              {tabFieldNames.map((fieldName) => (
+                <SchemaField
+                  key={fieldName}
+                  name={fieldName}
+                  required={isRequired(fieldName)}
+                  schema={schema.properties[fieldName]}
+                  uiSchema={uiSchema[fieldName]}
+                  errorSchema={errorSchema && errorSchema[fieldName]}
+                  idSchema={idSchema[fieldName]}
+                  formData={formData?.[fieldName]}
+                  formContext={formContext}
+                  onChange={onPropertyChange(fieldName)}
+                  onBlur={onBlur}
+                  registry={props.registry}
+                  disabled={disabled}
+                  readonly={readonly} />
+              ))}
 
-          </Box>)
+            </Box>
+          );
 
         }
         

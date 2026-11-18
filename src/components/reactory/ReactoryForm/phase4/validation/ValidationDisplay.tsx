@@ -351,7 +351,9 @@ export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({
         exit={enableAnimations ? { opacity: 0 } : undefined}
       >
         <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+          <Typography variant="body2" gutterBottom sx={{
+            color: "text.secondary"
+          }}>
             Validating...
           </Typography>
           <LinearProgress />

@@ -251,7 +251,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
     CircularProgress,
     Button,
     TextField,
-    Grid,
+    Grid2: Grid,
     Card,
     CardContent,
     CardActions,
@@ -759,13 +759,15 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
       anchor="right"
       open={Boolean(previewFile)}
       onClose={() => setPreviewFile(null)}
-      PaperProps={{
-        sx: {
-          width: FILE_PREVIEW_WIDTH,
-          maxWidth: '95vw',
-          display: 'flex',
-          flexDirection: 'column',
-        },
+      slotProps={{
+        paper: {
+          sx: {
+            width: FILE_PREVIEW_WIDTH,
+            maxWidth: '95vw',
+            display: 'flex',
+            flexDirection: 'column',
+          },
+        }
       }}
     >
       <Box
@@ -806,459 +808,468 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
 
   return (
     <>
-    <Paper
-      elevation={3}
-      sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        transform: open ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.3s ease-in-out',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 2,
-        backdropFilter: 'blur(10px) saturate(120%)'
-      }}
-    >
-      {/* Header */}
-      <UserHomeFolderHeader
-        open={open}
-        reactory={reactory}
-        loading={loading}
-        mobileView={mobileView}
-        currentPath={folderState.currentPath}
-        onClose={onClose}
-        onRefresh={handleRefresh}
-        onMobileBack={() => setMobileView('folders')}
-        il8n={il8n}
-      />
-      {/* Content */}
-      <Box sx={{
-        display: 'flex',
-        flex: 1,
-        overflow: 'hidden',
-        flexDirection: { xs: 'column', md: 'row' }
-      }}>
-        {/* Left Panel - Folder List & Navigation */}
-        <Box sx={{
-          width: { xs: '100%', md: '40%' },
-          height: { xs: '100%', md: 'auto' },
-          borderRight: { xs: 0, md: 1 },
-          borderBottom: { xs: 1, md: 0 },
-          borderColor: 'divider',
-          display: {
-            xs: mobileView === 'folders' ? 'flex' : 'none',
-            md: 'flex'
-          },
-          flexDirection: 'column'
-        }}>
-          {/* Navigation & Controls */}
-          <Box sx={{
-            p: { xs: 1.5, md: 1.5 },
-            borderBottom: 1,
-            borderColor: 'divider'
-          }}>
-            {/* Breadcrumb Navigation */}
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton
-                onClick={() => folderState.setCurrentPath(rootPath)}
-                size="small"
-                disabled={folderState.currentPath === rootPath}
-              >
-                <Home />
-              </IconButton>
-              <IconButton
-                onClick={navigateUp}
-                size="small"
-                disabled={folderState.currentPath === rootPath}
-              >
-                <ArrowBack />
-              </IconButton>
-              <Typography variant="body2" sx={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {folderState.currentPath}
-              </Typography>
-              <Tooltip title="Close dialog">
-                <IconButton
-                  onClick={onClose}
-                  size="small"
-                  color="default"
-                  sx={{ ml: 1 }}
-                >
-                  <Close />
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            {/* Multi-select Toggle */}
-            {allowMultiSelect && (
-              <Box sx={{ mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={multiSelectEnabled}
-                    onChange={(e) => setMultiSelectEnabled(e.target.checked)}
-                    size="small"
-                  />
-                }
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{
-                      fontSize: { xs: '0.75rem', md: '0.875rem' },
-                      fontWeight: 'medium'
-                    }}>
-                      Multi-select
-                    </Typography>
-                    <Chip
-                      label={multiSelectEnabled ? 'Multi' : 'Single'}
-                      size="small"
-                      color={multiSelectEnabled ? 'primary' : 'default'}
-                      variant="outlined"
-                      sx={{ fontSize: '0.6rem', height: 16 }}
-                    />
-                  </Box>
-                }
-                sx={{
-                  m: 0,
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: { xs: '0.75rem', md: '0.875rem' }
-                  }
-                }}
-              />
-              <Typography variant="caption" color="text.secondary" sx={{
-                fontSize: { xs: '0.6rem', md: '0.7rem' },
-                display: 'block',
-                mt: 0.5,
-                ml: 4
-              }}>
-                {multiSelectEnabled 
-                  ? 'Select multiple files and folders' 
-                  : 'Click files to select and auto-close panel'
-                }
-              </Typography>
-            </Box>)}
-            {/* Upload Area */}
-            <UploadArea />
-          </Box>
-
-          {/* Folder List */}
-          <FolderList />
-        </Box>
-
-        {/* Right Panel - File List with Different Views */}
-        <Box sx={{
-          flex: 1,
-          display: {
-            xs: mobileView === 'files' ? 'flex' : 'none',
-            md: 'flex'
-          },
+      <Paper
+        elevation={3}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: open ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease-in-out',
+          overflow: 'hidden',
+          display: 'flex',
           flexDirection: 'column',
-          width: { xs: '100%', md: 'auto' },
-          height: { xs: '100%', md: 'auto' }
+          zIndex: 2,
+          backdropFilter: 'blur(10px) saturate(120%)'
+        }}
+      >
+        {/* Header */}
+        <UserHomeFolderHeader
+          open={open}
+          reactory={reactory}
+          loading={loading}
+          mobileView={mobileView}
+          currentPath={folderState.currentPath}
+          onClose={onClose}
+          onRefresh={handleRefresh}
+          onMobileBack={() => setMobileView('folders')}
+          il8n={il8n}
+        />
+        {/* Content */}
+        <Box sx={{
+          display: 'flex',
+          flex: 1,
+          overflow: 'hidden',
+          flexDirection: { xs: 'column', md: 'row' }
         }}>
-          {/* File List Header with View Controls */}
+          {/* Left Panel - Folder List & Navigation */}
           <Box sx={{
-            p: { xs: 1.5, md: 2 },
-            borderBottom: 1,
-            borderColor: 'divider'
+            width: { xs: '100%', md: '40%' },
+            height: { xs: '100%', md: 'auto' },
+            borderRight: { xs: 0, md: 1 },
+            borderBottom: { xs: 1, md: 0 },
+            borderColor: 'divider',
+            display: {
+              xs: mobileView === 'folders' ? 'flex' : 'none',
+              md: 'flex'
+            },
+            flexDirection: 'column'
           }}>
-            {/* Title and File Count */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              mb: 2
+            {/* Navigation & Controls */}
+            <Box sx={{
+              p: { xs: 1.5, md: 1.5 },
+              borderBottom: 1,
+              borderColor: 'divider'
             }}>
-              <Typography variant="subtitle2" sx={{ 
-                fontWeight: 'bold',
-                fontSize: { xs: '0.875rem', md: '1rem' }
-              }}>
-                {il8n?.t('reactor.client.files.list', { defaultValue: 'Files & Folders' })} ({currentPathItems.length}{searchQuery ? ` of ${files.length + folders.length}` : ''})
-              </Typography>
-            </Box>
+              {/* Breadcrumb Navigation */}
+              <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton
+                  onClick={() => folderState.setCurrentPath(rootPath)}
+                  size="small"
+                  disabled={folderState.currentPath === rootPath}
+                >
+                  <Home />
+                </IconButton>
+                <IconButton
+                  onClick={navigateUp}
+                  size="small"
+                  disabled={folderState.currentPath === rootPath}
+                >
+                  <ArrowBack />
+                </IconButton>
+                <Typography variant="body2" sx={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {folderState.currentPath}
+                </Typography>
+                <Tooltip title="Close dialog">
+                  <IconButton
+                    onClick={onClose}
+                    size="small"
+                    color="default"
+                    sx={{ ml: 1 }}
+                  >
+                    <Close />
+                  </IconButton>
+                </Tooltip>
+              </Box>
 
-            {/* Search Input */}
-            <Box sx={{ mb: 2 }}>
-              <TextField
-                size="small"
-                placeholder={il8n?.t('reactor.client.files.search', { defaultValue: 'Search files...' })}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <Search sx={{ mr: 1, color: 'text.secondary' }} />
-                  ),
-                  endAdornment: searchQuery && (
-                    <IconButton
+              {/* Multi-select Toggle */}
+              {allowMultiSelect && (
+                <Box sx={{ mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={multiSelectEnabled}
+                      onChange={(e) => setMultiSelectEnabled(e.target.checked)}
                       size="small"
-                      onClick={() => setSearchQuery('')}
-                      sx={{ p: 0.5 }}
-                    >
-                      <Clear fontSize="small" />
-                    </IconButton>
-                  )
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'background.paper'
-                  }
-                }}
-              />
-            </Box>
-
-            {/* View Mode Controls */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                {selectedItems.length > 0 && (
-                  <>
-                    <Chip
-                      label={`${selectedItems.length} selected`}
-                      size="small"
-                      color="primary"
-                      onDelete={handleClearSelection}
                     />
-                  </>
-                )}
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                <Tooltip title="Grid view">
-                  <IconButton
-                    onClick={() => setViewMode('grid')}
-                    size="small"
-                    color={viewMode === 'grid' ? 'primary' : 'default'}
-                  >
-                    <ViewModule />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="List view">
-                  <IconButton
-                    onClick={() => setViewMode('list')}
-                    size="small"
-                    color={viewMode === 'list' ? 'primary' : 'default'}
-                  >
-                    <ViewList />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Table view">
-                  <IconButton
-                    onClick={() => setViewMode('table')}
-                    size="small"
-                    color={viewMode === 'table' ? 'primary' : 'default'}
-                  >
-                    <TableChart />
-                  </IconButton>
-                </Tooltip>
-
-                {multiSelectEnabled && currentPathItems.length > 0 && (
-                  <Tooltip title="Select all">
-                    <IconButton
-                      onClick={() => handleSelectAll(folders, files)}
-                      size="small"
-                    >
-                      <SelectAll />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontWeight: 'medium'
+                      }}>
+                        Multi-select
+                      </Typography>
+                      <Chip
+                        label={multiSelectEnabled ? 'Multi' : 'Single'}
+                        size="small"
+                        color={multiSelectEnabled ? 'primary' : 'default'}
+                        variant="outlined"
+                        sx={{ fontSize: '0.6rem', height: 16 }}
+                      />
+                    </Box>
+                  }
+                  sx={{
+                    m: 0,
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: { xs: '0.75rem', md: '0.875rem' }
+                    }
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{
+                  fontSize: { xs: '0.6rem', md: '0.7rem' },
+                  display: 'block',
+                  mt: 0.5,
+                  ml: 4
+                }}>
+                  {multiSelectEnabled 
+                    ? 'Select multiple files and folders' 
+                    : 'Click files to select and auto-close panel'
+                  }
+                </Typography>
+              </Box>)}
+              {/* Upload Area */}
+              <UploadArea />
             </Box>
+
+            {/* Folder List */}
+            <FolderList />
           </Box>
 
-          {/* File Content Area */}
-          <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1, md: 1.5 } }}>
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                <CircularProgress />
-              </Box>
-            ) : currentPathItems.length > 0 ? (
-              viewMode === 'grid' ? (
-                // Grid View
-                (<Grid container spacing={2}>
-                  {currentPathItems.map((item) => (
-                    <Grid item xs={6} sm={4} md={3} lg={2} key={getItemKey(item)}>
-                      <Card
-                        sx={{
-                          cursor: 'pointer',
-                          border: isCurrentItemSelected(item) ? 2 : 1,
-                          borderColor: isCurrentItemSelected(item) ? 'primary.main' : 'divider',
-                          '&:hover': {
-                            boxShadow: 3
-                          }
-                        }}
-                        onClick={() => {
-                          if (item.displayType === 'file') {
-                            // Any file click opens the live preview drawer.
-                            setPreviewFile(item as FileItem);
-                          }
-                          if (!multiSelectEnabled && item.displayType === 'file') {
-                            // In single mode, clicking a file also selects it
-                            // (which will close the picker panel).
-                            handleEnhancedItemSelection(item, true);
-                          } else if (multiSelectEnabled) {
-                            // In multi mode, toggle selection
-                            handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
-                          } else {
-                            // In single mode, clicking a folder navigates into it
-                            setMobileView('files');
-                          }
-                        }}
-                      >
-                        <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
-                          {multiSelectEnabled && (
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                              <IconButton
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
-                                }}
-                                size="small"
-                              >
-                                {isCurrentItemSelected(item) ? <CheckBox /> : <CheckBoxOutlineBlank />}
-                              </IconButton>
-                            </Box>
-                          )}
-                          <Avatar sx={{ mx: 'auto', mb: 1, bgcolor: 'primary.main' }}>
-                            {item.displayType === 'folder' ? (
-                              <Folder />
-                            ) : (
-                              <FilePreview file={item} reactory={reactory} />
-                            )}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'medium' }}>
-                            {item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {item.displayType === 'folder' ? '' : formatFileSize(item.size)}
-                          </Typography>
-                        </CardContent>
-                        <CardActions sx={{ p: 1, justifyContent: 'center' }}>
-                          <IconButton
-                            onClick={(e) => handleMenuOpen(e, item)}
-                            size="small"
-                            sx={{
-                              position: 'relative', // Ensure proper positioning context
-                              zIndex: 1 // Ensure it's above other elements
-                            }}
-                          >
-                            <MoreVert fontSize="small" />
-                          </IconButton>
-                        </CardActions>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>)
-              ) : (
-                // List and table views would go here - simplified for now
-                (<Box sx={{ textAlign: 'center', p: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    List and table views are available in the full implementation
-                  </Typography>
-                </Box>)
-              )
-            ) : (
+          {/* Right Panel - File List with Different Views */}
+          <Box sx={{
+            flex: 1,
+            display: {
+              xs: mobileView === 'files' ? 'flex' : 'none',
+              md: 'flex'
+            },
+            flexDirection: 'column',
+            width: { xs: '100%', md: 'auto' },
+            height: { xs: '100%', md: 'auto' }
+          }}>
+            {/* File List Header with View Controls */}
+            <Box sx={{
+              p: { xs: 1.5, md: 2 },
+              borderBottom: 1,
+              borderColor: 'divider'
+            }}>
+              {/* Title and File Count */}
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                justifyContent: 'center',
-                p: { xs: 2, md: 3 },
-                minHeight: 200
+                justifyContent: 'space-between',
+                mb: 2
               }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <InsertDriveFile sx={{
-                    fontSize: { xs: 48, md: 64 },
-                    color: 'text.secondary',
-                    mb: 2
-                  }} />
-                  <Typography variant="h6" color="text.secondary" sx={{
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.25rem' }
-                  }}>
-                    {il8n?.t('reactor.client.files.empty', { defaultValue: 'No files or folders in this location' })}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    maxWidth: { xs: 280, md: 400 },
-                    mx: 'auto'
-                  }}>
-                    {il8n?.t('reactor.client.files.emptyDescription', { 
-                      defaultValue: 'Upload files or create folders to see them here'
-                    })}
-                  </Typography>
+                <Typography variant="subtitle2" sx={{ 
+                  fontWeight: 'bold',
+                  fontSize: { xs: '0.875rem', md: '1rem' }
+                }}>
+                  {il8n?.t('reactor.client.files.list', { defaultValue: 'Files & Folders' })} ({currentPathItems.length}{searchQuery ? ` of ${files.length + folders.length}` : ''})
+                </Typography>
+              </Box>
+
+              {/* Search Input */}
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder={il8n?.t('reactor.client.files.search', { defaultValue: 'Search files...' })}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'background.paper'
+                    }
+                  }}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <Search sx={{ mr: 1, color: 'text.secondary' }} />
+                      ),
+                      endAdornment: searchQuery && (
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchQuery('')}
+                          sx={{ p: 0.5 }}
+                        >
+                          <Clear fontSize="small" />
+                        </IconButton>
+                      )
+                    }
+                  }}
+                />
+              </Box>
+
+              {/* View Mode Controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {selectedItems.length > 0 && (
+                    <>
+                      <Chip
+                        label={`${selectedItems.length} selected`}
+                        size="small"
+                        color="primary"
+                        onDelete={handleClearSelection}
+                      />
+                    </>
+                  )}
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Tooltip title="Grid view">
+                    <IconButton
+                      onClick={() => setViewMode('grid')}
+                      size="small"
+                      color={viewMode === 'grid' ? 'primary' : 'default'}
+                    >
+                      <ViewModule />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="List view">
+                    <IconButton
+                      onClick={() => setViewMode('list')}
+                      size="small"
+                      color={viewMode === 'list' ? 'primary' : 'default'}
+                    >
+                      <ViewList />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Table view">
+                    <IconButton
+                      onClick={() => setViewMode('table')}
+                      size="small"
+                      color={viewMode === 'table' ? 'primary' : 'default'}
+                    >
+                      <TableChart />
+                    </IconButton>
+                  </Tooltip>
+
+                  {multiSelectEnabled && currentPathItems.length > 0 && (
+                    <Tooltip title="Select all">
+                      <IconButton
+                        onClick={() => handleSelectAll(folders, files)}
+                        size="small"
+                      >
+                        <SelectAll />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Box>
               </Box>
-            )}
-          </Box>
-        </Box>
+            </Box>
 
-        <ItemContextMenu
-          anchorEl={anchorEl}
-          item={menuItem}
-          onClose={handleMenuClose}
-          onRenameFile={fileOperations.handleRenameFile}
-          onDownloadFile={fileOperations.handleDownloadFile}
-          onMoveItem={fileOperations.handleMoveItem}
-          onDeleteFile={fileOperations.handleDeleteFile}
-          onDeleteFolder={fileOperations.handleDeleteFolder}
+            {/* File Content Area */}
+            <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1, md: 1.5 } }}>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : currentPathItems.length > 0 ? (
+                viewMode === 'grid' ? (
+                  // Grid View
+                  (<Grid container spacing={2}>
+                    {currentPathItems.map((item) => (
+                      <Grid
+                        key={getItemKey(item)}
+                        size={{
+                          xs: 6,
+                          sm: 4,
+                          md: 3,
+                          lg: 2
+                        }}>
+                        <Card
+                          sx={{
+                            cursor: 'pointer',
+                            border: isCurrentItemSelected(item) ? 2 : 1,
+                            borderColor: isCurrentItemSelected(item) ? 'primary.main' : 'divider',
+                            '&:hover': {
+                              boxShadow: 3
+                            }
+                          }}
+                          onClick={() => {
+                            if (item.displayType === 'file') {
+                              // Any file click opens the live preview drawer.
+                              setPreviewFile(item as FileItem);
+                            }
+                            if (!multiSelectEnabled && item.displayType === 'file') {
+                              // In single mode, clicking a file also selects it
+                              // (which will close the picker panel).
+                              handleEnhancedItemSelection(item, true);
+                            } else if (multiSelectEnabled) {
+                              // In multi mode, toggle selection
+                              handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
+                            } else {
+                              // In single mode, clicking a folder navigates into it
+                              setMobileView('files');
+                            }
+                          }}
+                        >
+                          <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
+                            {multiSelectEnabled && (
+                              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <IconButton
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
+                                  }}
+                                  size="small"
+                                >
+                                  {isCurrentItemSelected(item) ? <CheckBox /> : <CheckBoxOutlineBlank />}
+                                </IconButton>
+                              </Box>
+                            )}
+                            <Avatar sx={{ mx: 'auto', mb: 1, bgcolor: 'primary.main' }}>
+                              {item.displayType === 'folder' ? (
+                                <Folder />
+                              ) : (
+                                <FilePreview file={item} reactory={reactory} />
+                              )}
+                            </Avatar>
+                            <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'medium' }}>
+                              {item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {item.displayType === 'folder' ? '' : formatFileSize(item.size)}
+                            </Typography>
+                          </CardContent>
+                          <CardActions sx={{ p: 1, justifyContent: 'center' }}>
+                            <IconButton
+                              onClick={(e) => handleMenuOpen(e, item)}
+                              size="small"
+                              sx={{
+                                position: 'relative', // Ensure proper positioning context
+                                zIndex: 1 // Ensure it's above other elements
+                              }}
+                            >
+                              <MoreVert fontSize="small" />
+                            </IconButton>
+                          </CardActions>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>)
+                ) : (
+                  // List and table views would go here - simplified for now
+                  (<Box sx={{ textAlign: 'center', p: 3 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      List and table views are available in the full implementation
+                    </Typography>
+                  </Box>)
+                )
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  p: { xs: 2, md: 3 },
+                  minHeight: 200
+                }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <InsertDriveFile sx={{
+                      fontSize: { xs: 48, md: 64 },
+                      color: 'text.secondary',
+                      mb: 2
+                    }} />
+                    <Typography variant="h6" color="text.secondary" sx={{
+                      mb: 1,
+                      fontSize: { xs: '1rem', md: '1.25rem' }
+                    }}>
+                      {il8n?.t('reactor.client.files.empty', { defaultValue: 'No files or folders in this location' })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{
+                      fontSize: { xs: '0.8rem', md: '0.875rem' },
+                      maxWidth: { xs: 280, md: 400 },
+                      mx: 'auto'
+                    }}>
+                      {il8n?.t('reactor.client.files.emptyDescription', { 
+                        defaultValue: 'Upload files or create folders to see them here'
+                      })}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          <ItemContextMenu
+            anchorEl={anchorEl}
+            item={menuItem}
+            onClose={handleMenuClose}
+            onRenameFile={fileOperations.handleRenameFile}
+            onDownloadFile={fileOperations.handleDownloadFile}
+            onMoveItem={fileOperations.handleMoveItem}
+            onDeleteFile={fileOperations.handleDeleteFile}
+            onDeleteFolder={fileOperations.handleDeleteFolder}
+            il8n={il8n}
+            reactory={reactory}
+          />
+          
+          {/* Debug info for menu positioning - DISABLED */}
+          {false && anchorEl && (
+            <Box sx={{
+              position: 'fixed',
+              top: 10,
+              right: 10,
+              bgcolor: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              p: 1,
+              borderRadius: 1,
+              fontSize: '12px',
+              zIndex: 9999,
+              maxWidth: 300
+            }}>
+              <div>Menu Anchor Debug:</div>
+              <div>Tag: {anchorEl.tagName}</div>
+              <div>Class: {anchorEl.className}</div>
+              <div>Position: {JSON.stringify(anchorEl.getBoundingClientRect())}</div>
+              <div>Item: {menuItem?.name} ({menuItem?.type})</div>
+              <div>Menu Open: {Boolean(anchorEl)}</div>
+            </Box>
+          )}
+        </Box>
+        {/* Mobile FABs */}
+        <MobileFabs
+          mobileView={mobileView}
+          onFileUpload={fileOperations.handleFileUpload}
+          onToggleView={() => setMobileView(mobileView === 'folders' ? 'files' : 'folders')}
+          reactory={reactory}
+        />
+        {/* Dialogs and Menus */}
+        <RenameDialog
+          open={fileOperations.renameDialog.open}
+          fileId={fileOperations.renameDialog.fileId}
+          currentName={fileOperations.renameDialog.currentName}
+          newName={fileOperations.renameDialog.newName}
+          onClose={fileOperations.handleRenameCancel}
+          onConfirm={fileOperations.handleRenameConfirm}
+          onNameChange={(newName) => fileOperations.setRenameDialog(prev => ({ ...prev, newName }))}
           il8n={il8n}
           reactory={reactory}
         />
-        
-        {/* Debug info for menu positioning - DISABLED */}
-        {false && anchorEl && (
-          <Box sx={{
-            position: 'fixed',
-            top: 10,
-            right: 10,
-            bgcolor: 'rgba(0,0,0,0.8)',
-            color: 'white',
-            p: 1,
-            borderRadius: 1,
-            fontSize: '12px',
-            zIndex: 9999,
-            maxWidth: 300
-          }}>
-            <div>Menu Anchor Debug:</div>
-            <div>Tag: {anchorEl.tagName}</div>
-            <div>Class: {anchorEl.className}</div>
-            <div>Position: {JSON.stringify(anchorEl.getBoundingClientRect())}</div>
-            <div>Item: {menuItem?.name} ({menuItem?.type})</div>
-            <div>Menu Open: {Boolean(anchorEl)}</div>
-          </Box>
-        )}
-      </Box>
-      {/* Mobile FABs */}
-      <MobileFabs
-        mobileView={mobileView}
-        onFileUpload={fileOperations.handleFileUpload}
-        onToggleView={() => setMobileView(mobileView === 'folders' ? 'files' : 'folders')}
-        reactory={reactory}
-      />
-      {/* Dialogs and Menus */}
-      <RenameDialog
-        open={fileOperations.renameDialog.open}
-        fileId={fileOperations.renameDialog.fileId}
-        currentName={fileOperations.renameDialog.currentName}
-        newName={fileOperations.renameDialog.newName}
-        onClose={fileOperations.handleRenameCancel}
-        onConfirm={fileOperations.handleRenameConfirm}
-        onNameChange={(newName) => fileOperations.setRenameDialog(prev => ({ ...prev, newName }))}
-        il8n={il8n}
-        reactory={reactory}
-      />
-      <CreateFolderDialog
-        open={fileOperations.createFolderDialog.open}
-        folderName={fileOperations.createFolderDialog.folderName}
-        onClose={() => fileOperations.setCreateFolderDialog({ open: false, folderName: '' })}
-        onConfirm={fileOperations.handleCreateFolder}
-        onNameChange={(folderName) => fileOperations.setCreateFolderDialog(prev => ({ ...prev, folderName }))}
-        il8n={il8n}
-        reactory={reactory}
-      />
-    </Paper>
-    {previewDrawer}
+        <CreateFolderDialog
+          open={fileOperations.createFolderDialog.open}
+          folderName={fileOperations.createFolderDialog.folderName}
+          onClose={() => fileOperations.setCreateFolderDialog({ open: false, folderName: '' })}
+          onConfirm={fileOperations.handleCreateFolder}
+          onNameChange={(folderName) => fileOperations.setCreateFolderDialog(prev => ({ ...prev, folderName }))}
+          il8n={il8n}
+          reactory={reactory}
+        />
+      </Paper>
+      {previewDrawer}
     </>
   );
 };

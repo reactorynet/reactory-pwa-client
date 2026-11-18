@@ -22,14 +22,14 @@ import {
   Button,
   Dialog,
 } from '@mui/material';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutlined';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HistoryIcon from '@mui/icons-material/History';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -245,7 +245,9 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
             <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
               <AccountTreeIcon sx={{ fontSize: 40, opacity: 0.4, mb: 1 }} />
               <Typography variant="body2">No active workflows currently running.</Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 Switch to Execution History to view completed workflows.
               </Typography>
             </Box>
@@ -291,11 +293,15 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
                               variant="outlined"
                               sx={{ height: 18, fontSize: '0.65rem' }}
                             />
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>
                               ID: {instance.id.substring(0, 8)}...
                             </Typography>
                             {instance.startTime && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" sx={{
+                                color: "text.secondary"
+                              }}>
                                 Started: {moment(instance.startTime).fromNow()}
                               </Typography>
                             )}
@@ -365,14 +371,16 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
             placeholder="Search executions by workflow name or instance ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-            }}
             sx={{ mb: 0.5 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              }
+            }}
           />
 
           {filteredGroups.length === 0 ? (
@@ -403,7 +411,9 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {group.workflowDefinitionId}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>
                           Latest: {moment(group.latestRun.createTime).fromNow()}
                         </Typography>
                       </Box>
@@ -463,12 +473,16 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
                                       sx={{ height: 16, fontSize: '0.62rem' }}
                                     />
                                     {durationSeconds && (
-                                      <Typography variant="caption" color="text.secondary">
+                                      <Typography variant="caption" sx={{
+                                        color: "text.secondary"
+                                      }}>
                                         {durationSeconds}
                                       </Typography>
                                     )}
                                   </Box>
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography variant="caption" sx={{
+                                    color: "text.secondary"
+                                  }}>
                                     {moment(item.createTime).format('MMM D, YYYY HH:mm:ss')} • {item.completedStepCount}/{item.stepCount} steps
                                   </Typography>
                                 </Box>
@@ -524,13 +538,15 @@ export const ActiveWorkflowsPanel: React.FC<ActiveWorkflowsPanelProps> = ({
         onClose={() => setInspectingInstanceId(null)}
         maxWidth="lg"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            height: '80vh',
-            bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
-            color: mode === 'dark' ? '#ffffff' : 'inherit',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              height: '80vh',
+              bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
+              color: mode === 'dark' ? '#ffffff' : 'inherit',
+            },
+          }
         }}
       >
         {inspectingInstanceId && (

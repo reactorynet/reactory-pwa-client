@@ -68,7 +68,7 @@ Plugins are built in other repos and type against `Reactory.Client.Web.IMaterial
 | Codebase | Source files | Notes |
 |---|---|---|
 | `reactory-pwa-client/src` | 1,578 | |
-| `reactory-data/plugins/__runtime__/src` | 116 (106 plugins) | Built with rollup. Receives `React` and `Material` by DI. |
+| `reactory-data/plugins/__runtime__/src` | 116 (106 plugins) | **Generated and gitignored.** The server compiles these from widget sources in its modules (`src/modules/*/forms/**`), then rollup bundles them. They receive `React` and `Material` by DI. Migrate the server module sources, never these copies. |
 | `reactory-data/plugins/reactory-client-core/src` | 71 | Legacy. Imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Probably partly dead, see section 8. |
 | `reactory-express-server/src/modules/*/forms` | about 90 widget files using MUI | 78 form files configure `MaterialTableWidget`. |
 
@@ -203,7 +203,7 @@ The 10 screens are: `login`, `home`, `organizations-list`, `support-open-tickets
 Open Phase 0 items:
 
 - **Harness and visual baselines in CI.** The client CI job needs a checkout of `reactorynet/reactory-data` next to the client. The visual baselines also need a seeded stack.
-- **Server form widgets.** Widgets under `reactory-express-server/src/modules/*/forms/**/Widgets` are not covered yet, except where they are also built as runtime plugins.
+- **The harness already covers the server form widgets.** The runtime plugins it loads are the compiled server widgets, so this is no longer an open item. After changing widget source, restart the API and resolve `ReactoryForms { uiResources }` so the bundles are rebuilt.
 - **Plugin fixtures.** Adding per-plugin fixture props would raise the 64 / 106 coverage.
 
 Pre-existing plugin bug found by the harness, and left out of scope here: 9 plugins return JSX in an early "no data" guard **before** they destructure `React` from the registry. Those plugins are the `core.SupportTicket*` panels and the `socialeyes.*DetailPanel`s. That path throws in production too.
@@ -222,8 +222,32 @@ Every v9 removal has a replacement that already works in v6. Doing this on 6.5 m
   - Then remove the `FroalaWidget` alias from both widget maps and their tests.
   - Remove the `froala_key` / `REACT_APP_FROALA_KEY` prompts from the reactor config CLI.
   - Remove `components/Froala/*` and its use in `EmailTemplateEditor` from the `reactory-client-core` plugin, or retire that plugin (section 8).
-- Run all of the above over the client, `__runtime__` plugins, the client-core plugin and the server form widgets. Rebuild the plugins.
+- Run all of the above over the client, the client plugin repos (`src/components/plugins/*`) and the server module widget sources. Then rebuild the runtime plugins: restart the API and resolve `ReactoryForms { uiResources }`.
 - Exit: scan rows marked v7/v9 in 2.2 at zero, except `Grid2`. Tests, tsc ratchet and plugin harness green. Visual diffs reviewed.
+
+#### Phase 1 record (2026-11-17, in progress)
+
+Done on `feature/mui-v9-react-19-phase-1` in the client, the client plugin repos (`reactory-core`, `reactory-communicator`, `reactory-telemetry`) and the server modules `reactory-classroom`, `reactory-reactor` and `reactory-socialeyes`.
+
+- **Tooling.** `@mui/codemod@6.5.0 deprecations/all`, then three local transforms that bind by element name, so they also catch components destructured from the registry's `MaterialCore`: legacy `Grid` to `Grid2` (`size` / `offset`), `*Props` to `slotProps` (only slots that exist in 6.5), and system props to `sx`.
+- **Recast reprints whole files.** The MUI codemods rewrite every file they parse, including files with no MUI in them (extra parens around `await`, dropped trailing commas). Only widget sources were kept; reprint-only changes in services, CLIs and tests were reverted.
+- **Gates.** Client tsc 0, lint clean, jest unchanged at 255 suites / 3581 tests. Plugin smoke 112 / 112 with no regressions. `reactory-core` plugin suite 834 / 834. Visual baselines pixel-identical at zero tolerance, after both the client changes and the module changes plus a full runtime plugin recompile (174 forms, 113 bundles, 0 broken). Module jest suites, run before and after: no new failures (classroom 315 tests, reactor 3270, socialeyes 143).
+- **Deferred to Phase 2** (no replacement exists in 6.5): 17 `inputProps` on `Checkbox` / `Switch` / `InputBase`, and Autocomplete `renderTags` to `renderValue`.
+- **Server root and `reactory-core` module** (branch cut from master after it was fast-forwarded to reactorynet):
+  - Widgets migrated with the same transforms (21 files). Module jest: no new failures (2713 tests).
+  - Froala removed. The five `uiSchema`s now name `RichEditorWidget`, the dead `froalaOptions` blocks and `ReactoryContentCapture/froala` are gone, and the support ticket description no longer sends partner keys to the client.
+  - The `froala_key` prompt is removed from both copies of the client config CLI.
+  - The `FroalaWidget` alias is removed from both client widget maps. Client jest: 3580 tests; the one fewer is the per-key validity case for the alias.
+  - The compile-failure stub now escapes compiler messages, with a regression test.
+  - After an API restart and a full recompile, all 113 bundles were healthy, the smoke harness passed 112 / 112, and the visual baselines were pixel-identical at zero tolerance.
+- **The server types widgets against its own MUI.** At runtime the registry hands widgets the client's MUI, but the server typecheck used `@mui/material` 5.6.1, which has no `Grid2` and no `TextField` `slotProps`. The server's `@mui/material` / `@mui/icons-material` are now 6.5.0, matching the client. MUI is type-only in the server (widget typings, one `ThemeOptions` import, one `@mui/lab` type import), so the bump has no runtime effect.
+  - **Every later phase bumps the server's MUI together with the client's.**
+  - Against MUI 6.5 types, no Phase 1 file is over its ratchet baseline except one whose errors predate Phase 1. No file got worse from the bump, and 34 improved.
+  - Generate the server lockfile change in a clean checkout of the branch, so that it only records the workspaces upstream has. A lock produced in a workspace that also holds the gitignored module repos picks up thousands of unrelated entries.
+- **Multi-line props escape single-line scans.** A `<ListItem` whose `button` prop sat on its own line passed the Appendix A scan and only surfaced in the typecheck. Re-run the removal scans with a multi-line matcher in every phase.
+- **Enterprise-only modules** (no reactorynet remote) get the same transforms on the enterprise path, after the upstream sync.
+- **Pre-existing, out of scope:** `ReactoryColorPicker` reads `MaterialStyles` / `MaterialUIColor`, which the registry no longer provides, so it is broken today.
+- **Local stack notes.** Server jest holds open handles. Run it with `--forceExit`, or it never exits after writing results.
 
 ### Phase 2: MUI 7.3 and MUI X v9
 

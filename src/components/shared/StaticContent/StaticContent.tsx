@@ -299,7 +299,9 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
 
     if (loadState === 'error') {
       return (
-        <Stack spacing={1} alignItems="flex-start">
+        <Stack spacing={1} sx={{
+          alignItems: "flex-start"
+        }}>
           <Typography variant="body2" color="error">
             {error || 'This content could not be loaded.'}
           </Typography>
@@ -318,8 +320,12 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
       }
 
       return (
-        <Stack spacing={1} alignItems="flex-start">
-          <Typography variant="body2" color="text.secondary">
+        <Stack spacing={1} sx={{
+          alignItems: "flex-start"
+        }}>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             No content exists for <code>{activeSlug}</code> yet.
           </Typography>
           <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={openEditor}>
@@ -421,7 +427,9 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
           open
           onClose={closeEditor}
           ModalProps={{ BackdropProps: { invisible: true } }}
-          PaperProps={{ sx: { width: { xs: '100%', sm: 640, md: 760 }, p: 2 } }}
+          slotProps={{
+            paper: { sx: { width: { xs: '100%', sm: 640, md: 760 }, p: 2 } }
+          }}
         >
           {editorElement}
         </Drawer>

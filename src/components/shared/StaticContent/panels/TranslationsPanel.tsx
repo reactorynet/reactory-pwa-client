@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import EditIcon from '@mui/icons-material/Edit';
 import TranslateIcon from '@mui/icons-material/Translate';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -111,11 +111,15 @@ export const TranslationsPanel: React.FC<TranslationsPanelProps> = ({
       <Stack spacing={1.5}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <TranslateIcon fontSize="small" color="primary" />
-          <Typography variant="subtitle2" fontWeight={600}>
+          <Typography variant="subtitle2" sx={{
+            fontWeight: 600
+          }}>
             Languages
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             {translations.length + 1} total
           </Typography>
         </Box>
@@ -146,7 +150,9 @@ export const TranslationsPanel: React.FC<TranslationsPanelProps> = ({
             <ListItemText
               primary={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography variant="body2" sx={{
+                    fontWeight: 600
+                  }}>
                     {languageLabel(sourceLocale)}
                   </Typography>
                   <Chip label="Source" size="small" color="primary" variant="outlined" />
@@ -172,7 +178,9 @@ export const TranslationsPanel: React.FC<TranslationsPanelProps> = ({
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" sx={{
+                        fontWeight: 600
+                      }}>
                         {languageLabel(translation.lang)}
                       </Typography>
                       {translation.stale && (
@@ -220,7 +228,9 @@ export const TranslationsPanel: React.FC<TranslationsPanelProps> = ({
         <Divider />
 
         {adding ? (
-          <Stack direction="row" spacing={1} alignItems="flex-start">
+          <Stack direction="row" spacing={1} sx={{
+            alignItems: "flex-start"
+          }}>
             <Autocomplete
               size="small"
               sx={{ flexGrow: 1 }}

@@ -300,9 +300,11 @@ export const ModernFormField: React.FC<ModernFormFieldProps> = ({
     return (
       <Typography
         variant="caption"
-        color="text.secondary"
-        sx={{ mt: 0.5, textAlign: 'right' }}
-      >
+        sx={{
+          color: "text.secondary",
+          mt: 0.5,
+          textAlign: 'right'
+        }}>
         {characterCount}
         {maxLength && ` / ${maxLength}`}
       </Typography>
@@ -382,11 +384,6 @@ export const ModernFormField: React.FC<ModernFormFieldProps> = ({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
-          InputProps={{
-            readOnly,
-            startAdornment,
-            endAdornment: renderEndAdornment(),
-          }}
           size={size}
           variant={variant}
           error={!!localError}
@@ -401,6 +398,13 @@ export const ModernFormField: React.FC<ModernFormFieldProps> = ({
             '& .MuiOutlinedInput-root.Mui-focused': {
               transform: 'translateY(-2px)',
             },
+          }}
+          slotProps={{
+            input: {
+              readOnly,
+              startAdornment,
+              endAdornment: renderEndAdornment(),
+            }
           }}
         />
       </motion.div>

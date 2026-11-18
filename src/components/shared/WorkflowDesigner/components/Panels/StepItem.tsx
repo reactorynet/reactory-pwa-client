@@ -237,7 +237,9 @@ function StepItemInner({ step, category, onDragStart, onClick }: StepItemProps) 
                 </Typography>
                 {step.tags && step.tags.length > 0 && (
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" display="block" gutterBottom>
+                    <Typography variant="caption" gutterBottom sx={{
+                      display: "block"
+                    }}>
                       Tags:
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

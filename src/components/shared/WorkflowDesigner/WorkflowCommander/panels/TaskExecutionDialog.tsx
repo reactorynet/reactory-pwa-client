@@ -78,12 +78,14 @@ export const TaskExecutionDialog: React.FC<TaskExecutionDialogProps> = ({
       onClose={() => !submitting && onClose()}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          bgcolor: mode === 'dark' ? '#1a2234' : '#ffffff',
-          color: mode === 'dark' ? '#ffffff' : 'inherit',
-        },
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 2,
+            bgcolor: mode === 'dark' ? '#1a2234' : '#ffffff',
+            color: mode === 'dark' ? '#ffffff' : 'inherit',
+          },
+        }
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -117,7 +119,12 @@ export const TaskExecutionDialog: React.FC<TaskExecutionDialogProps> = ({
         )}
 
         {task.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 2
+            }}>
             {task.description}
           </Typography>
         )}

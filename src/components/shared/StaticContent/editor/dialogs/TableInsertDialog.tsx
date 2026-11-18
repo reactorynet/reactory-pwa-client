@@ -7,7 +7,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  Grid,
+  Grid2 as Grid,
   Stack,
   TextField,
   Typography,
@@ -56,26 +56,36 @@ export const TableInsertDialog: React.FC<TableInsertDialogProps> = ({
       <DialogContent dividers>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid
+              size={{
+                xs: 6
+              }}>
               <TextField
                 label="Rows"
                 type="number"
                 size="small"
                 value={rows}
                 onChange={(e) => setRows(parseInt(e.target.value, 10) || 1)}
-                inputProps={{ min: 1, max: 30 }}
                 fullWidth
+                slotProps={{
+                  htmlInput: { min: 1, max: 30 }
+                }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid
+              size={{
+                xs: 6
+              }}>
               <TextField
                 label="Columns"
                 type="number"
                 size="small"
                 value={cols}
                 onChange={(e) => setCols(parseInt(e.target.value, 10) || 1)}
-                inputProps={{ min: 1, max: 15 }}
                 fullWidth
+                slotProps={{
+                  htmlInput: { min: 1, max: 15 }
+                }}
               />
             </Grid>
           </Grid>

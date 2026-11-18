@@ -111,14 +111,24 @@ const SchemaCanvas: React.FC<SchemaCanvasProps> = ({
                         }}
                       >
                         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                          <Stack direction="row" alignItems="center" spacing={1.5}>
+                          <Stack direction="row" spacing={1.5} sx={{
+                            alignItems: "center"
+                          }}>
                             <Box sx={{ cursor: 'grab', color: 'text.disabled', display: 'flex' }}>
                               <DragIndicator fontSize="small" />
                             </Box>
 
                             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                              <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-                                <Typography variant="body2" fontWeight="bold" noWrap>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{
+                                  alignItems: "center",
+                                  flexWrap: "wrap"
+                                }}>
+                                <Typography variant="body2" noWrap sx={{
+                                  fontWeight: "bold"
+                                }}>
                                   {row.field?.title || row.displayKey}
                                 </Typography>
                                 <Chip
@@ -135,12 +145,16 @@ const SchemaCanvas: React.FC<SchemaCanvasProps> = ({
                                   <Chip label="Required" size="small" color="error" variant="outlined" sx={{ height: 20 }} />
                                 )}
                                 {row.isContainer && !hasChildren(row) && (
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography variant="caption" sx={{
+                                    color: "text.secondary"
+                                  }}>
                                     — drop a field here to nest
                                   </Typography>
                                 )}
                               </Stack>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" sx={{
+                                color: "text.secondary"
+                              }}>
                                 Key: {row.path}
                               </Typography>
                             </Box>
