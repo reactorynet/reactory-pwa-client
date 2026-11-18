@@ -33,7 +33,7 @@ const { __renderCounts: renderCounts } = jest.requireMock('../../reactory');
 // default); the assertions below cover the JSON editor surface, so switch the
 // panel's "Visual Editor" toggle off before querying it.
 const showJsonEditor = (panel: HTMLElement) => {
-  fireEvent.click(within(panel).getByRole('checkbox', { name: /visual editor/i }));
+  fireEvent.click(within(panel).getByRole('switch', { name: /visual editor/i }));
 };
 
 // Mock the JsonSchemaEditor component. The real module is a *default* export

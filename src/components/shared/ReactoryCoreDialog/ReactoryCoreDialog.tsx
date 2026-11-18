@@ -73,7 +73,7 @@ import {
   Dialog,
   Toolbar,
   Typography,
-  Grid2 as Grid,
+  Grid,
   Icon,
   IconButton,
   Button,

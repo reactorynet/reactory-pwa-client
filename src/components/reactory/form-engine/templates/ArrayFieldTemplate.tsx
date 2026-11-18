@@ -12,7 +12,7 @@
  *      'Stack' | 'FormControl' | 'div' | 'section' | 'article' | 'p'); a
  *      component is used directly. `containerProps` is spread onto it.
  *   2. `ui:options.itemsContainer` / `ui:options.itemsContainerProps` — applied
- *      **per item**. `'Grid'` wraps each item in a MUI `<Grid2 {...props}>`, so
+ *      **per item**. `'Grid'` wraps each item in a MUI `<Grid {...props}>`, so
  *      a form can express a responsive card grid (
  *      `itemsContainerProps.size = { md: 6, lg: 4, xl: 4 }`).
  *   3. Otherwise the default markup is used: a `<section>` wrapping an
@@ -31,7 +31,7 @@ import {
   Box,
   Card,
   FormControl,
-  Grid2,
+  Grid,
   Icon,
   Paper,
   Stack,
@@ -45,7 +45,7 @@ import type { ArrayFieldTemplateProps } from '@rjsf/utils';
  * the default markup rather than rendering nothing.
  */
 const STRING_CONTAINERS: Record<string, React.ComponentType<any>> = {
-  Grid: Grid2 as unknown as React.ComponentType<any>,
+  Grid: Grid as unknown as React.ComponentType<any>,
   Paper: Paper as unknown as React.ComponentType<any>,
   Box: Box as unknown as React.ComponentType<any>,
   Card: Card as unknown as React.ComponentType<any>,
@@ -191,7 +191,7 @@ export function ReactoryArrayFieldTemplate(props: ArrayFieldTemplateProps): Reac
   );
 
   // `ui:options.itemsContainer` is applied PER ITEM. `'Grid'` wraps each item in
-  // a responsive <Grid2 size={{...}} item>, which is what expresses the column
+  // a responsive <Grid size={{...}} item>, which is what expresses the column
   // sizes (e.g. md:6 / lg:4 / xl:4 → a 3-up card grid).
   const itemsNode = ItemsContainer
     ? items.map((item) => (

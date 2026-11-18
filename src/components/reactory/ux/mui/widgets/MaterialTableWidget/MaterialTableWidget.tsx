@@ -3,7 +3,7 @@ import { styled } from '@mui/material/styles';
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
 
-  Grid2 as Grid,
+  Grid,
   Typography,
   Button,
   IconButton,

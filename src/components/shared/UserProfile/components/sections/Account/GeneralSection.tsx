@@ -7,7 +7,7 @@ import {
   Button,
   Avatar,
   Tooltip,
-  Grid2 as Grid,
+  Grid,
   Alert,
   useTheme
 } from '@mui/material';

@@ -4,7 +4,7 @@ import moment from 'moment';
 import { map } from 'lodash';
 import {
   Paper,
-  Grid2 as Grid
+  Grid
 } from '@mui/material';
 import { safeCDNUrl } from '../utils/safeUrl';
 

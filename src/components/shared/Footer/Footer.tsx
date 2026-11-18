@@ -12,7 +12,7 @@ const classes = {
   text: `${PREFIX}-text`,
 };
 
-const StyledGrid = styled(MaterialCore.Grid2)(({ theme }) => ({
+const StyledGrid = styled(MaterialCore.Grid)(({ theme }) => ({
   [`&.${classes.footer_container}`]: {
     position: 'fixed',
     bottom: 0,

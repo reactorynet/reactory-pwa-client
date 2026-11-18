@@ -82,7 +82,6 @@ export const mockMaterial = {
     Paper: Passthrough,
     Chip: PassthroughChip,
     Grid: Passthrough,
-    Grid2: Passthrough,
     Card: Passthrough,
     CardContent: Passthrough,
     CardActions: Passthrough,

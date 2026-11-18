@@ -16,7 +16,7 @@ const ReactorChatButtonExample: React.FC = () => {
   const { 
     Box, 
     Typography, 
-    Grid2: Grid, 
+    Grid, 
     Paper,
     Divider
   } = Material.MaterialCore;

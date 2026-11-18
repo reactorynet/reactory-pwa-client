@@ -268,9 +268,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               value={draft.roles}
               freeSolo
               onChange={(_, value) => onChange({ roles: value as string[] })}
-              renderTags={(value, getTagProps) =>
+              renderValue={(value, getItemProps) =>
                 value.map((role, index) => (
-                  <Chip size="small" label={role} {...getTagProps({ index })} key={role} />
+                  <Chip size="small" label={role} {...getItemProps({ index })} key={role} />
                 ))
               }
               renderInput={(params) => (

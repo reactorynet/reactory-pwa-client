@@ -6,7 +6,7 @@ import {
   Typography,
   Card,
   Box,
-  Grid2,
+  Grid,
   Paper,
   Toolbar,
   Tooltip,
@@ -388,15 +388,15 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         </>
     );
 
-    // For grid layouts, wrap in Grid2 and apply drag providers at the Grid2 level
+    // For grid layouts, wrap in Grid and apply drag providers at the Grid level
     if (options.itemsContainer === 'Grid') {
       const gridItem = (
-        <Grid2 {...gridProps}>
+        <Grid {...gridProps}>
           {content}
-        </Grid2>
+        </Grid>
       );
 
-      // Apply drag providers if available - modify the Grid2 props instead of wrapping
+      // Apply drag providers if available - modify the Grid props instead of wrapping
       if (dragProvided) {
         const dragGridProps = {
           ...gridProps,
@@ -414,9 +414,9 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         };
         
         return (
-          <Grid2 {...dragGridProps}>
+          <Grid {...dragGridProps}>
             {content}
-          </Grid2>
+          </Grid>
         );
       }
 
@@ -446,7 +446,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
       case 'Accordion': return Accordion;
       case 'Box': return Box;
       case 'Fragment': return Fragment;
-      case 'Grid': return Grid2;
+      case 'Grid': return Grid;
       case 'Paper': return Paper;
       case 'Card': return Card;
       case 'List': return List;
@@ -470,8 +470,8 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     : (options.container as React.ComponentType<any>) || Paper;
     
   const ItemsContainer: React.ComponentType<any> = typeof options.itemsContainer === 'string'
-    ? (getComponentFromString(options.itemsContainer as string) || Grid2)
-    : (options.itemsContainer as React.ComponentType<any>) || Grid2;
+    ? (getComponentFromString(options.itemsContainer as string) || Grid)
+    : (options.itemsContainer as React.ComponentType<any>) || Grid;
   // Render title and description
   const title = (options.showTitle !== false && schema.title && schema.title.length > 0) ? (
     <TitleField 
@@ -607,7 +607,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
             {...((options.itemsContainerProps as any) || {})}
             sx={{
               ...((options.itemsContainerProps as any)?.sx || {}),
-              // Ensure Grid2 container properties are preserved during drag
+              // Ensure Grid container properties are preserved during drag
               minHeight: snapshot.isDraggingOver ? '100px' : 'auto',
             }}
           >

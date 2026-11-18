@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid2 as Grid, Paper, Typography } from '@mui/material'
+import { Grid, Paper, Typography } from '@mui/material'
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactorynet/reactory-core';
@@ -113,7 +113,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
     gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options'] };
   }
 
-  // MUI's Grid spaces the items *within* a container (Grid2 emits a CSS `gap`),
+  // MUI's Grid spaces the items *within* a container (Grid emits a CSS `gap`),
   // so the things a grid field stacks vertically had no gap between them at
   // all: the title, the description and every `ui:grid-layout` row are separate
   // elements, and each row is its own Grid container. A section therefore read

@@ -59,9 +59,9 @@ export default function EdgeEditorDialog(props: EdgeEditorDialogProps) {
             value={types}
             onChange={(_, value) => setTypes(value as GraphLinkType[])}
             getOptionLabel={(option) => option.toLowerCase()}
-            renderTags={(value, getTagProps) =>
+            renderValue={(value, getItemProps) =>
               value.map((option, index) => (
-                <Chip {...getTagProps({ index })} key={option} size="small" label={option.toLowerCase()} />
+                <Chip {...getItemProps({ index })} key={option} size="small" label={option.toLowerCase()} />
               ))
             }
             renderInput={(params) => <TextField {...params} label="Types" />}
