@@ -10,7 +10,7 @@ import {
   Skeleton,
   Typography,
   Paper,
-  Grid2 as Grid,
+  Grid,
   Chip,
   Avatar,
   LinearProgress,

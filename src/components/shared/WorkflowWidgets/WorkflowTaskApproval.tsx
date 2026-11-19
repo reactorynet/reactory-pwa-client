@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid2 as Grid,
+  Grid,
   Avatar,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';

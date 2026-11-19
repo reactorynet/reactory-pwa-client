@@ -10,11 +10,11 @@ import * as d3cloud from "d3-cloud";
 import * as d3color from "d3-color";
 import * as d3delaunay from "d3-delaunay";
 
-import * as MaterialCore from '@mui/material'
 import * as MaterialIcons from '@mui/icons-material'
 import * as MaterialLab from '@mui/lab'
 import * as MaterialDates from '@mui/x-date-pickers';
 import * as MaterialGrid from '@mui/x-data-grid';
+import { MaterialCoreCompat } from './materialCompat';
 
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router';
@@ -668,7 +668,7 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     nameSpace: 'material-ui',
     name: 'MaterialCore',
     version: '1.0.0',
-    component: MaterialCore,
+    component: MaterialCoreCompat,
     description: 'The core Material-UI library providing fundamental components and utilities for building Material Design interfaces.',
     tags: ['material-ui', 'core', 'components', 'design'],
   },
@@ -717,7 +717,7 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     name: 'Material',
     version: '1.0.0',
     component: {      
-      MaterialCore,
+      MaterialCore: MaterialCoreCompat,
       MaterialIcons,      
       MaterialPickers: MaterialDates,
       MaterialTable: MaterialGrid,

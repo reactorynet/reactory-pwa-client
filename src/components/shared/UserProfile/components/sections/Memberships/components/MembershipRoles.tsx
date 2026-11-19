@@ -4,7 +4,7 @@ import {
   Typography,
   FormControlLabel,
   Switch,
-  Grid2 as Grid,
+  Grid,
   Alert
 } from '@mui/material';
 import { useMembershipRoles } from '../hooks';

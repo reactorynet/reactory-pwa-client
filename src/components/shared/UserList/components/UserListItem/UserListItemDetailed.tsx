@@ -101,9 +101,9 @@ export const UserListItemDetailed: React.FC<UserListItemDetailedProps> = ({
           checked={selected}
           onChange={handleCheckboxChange}
           onClick={(e) => e.stopPropagation()}
-          inputProps={{
+          slotProps={{ input: {
             'aria-label': `Select ${user.fullName}`,
-          }}
+          } }}
         />
       )}
 

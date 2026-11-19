@@ -47,7 +47,7 @@ const ReactoryD3Renderer = (props: ReactoryD3RendererProps<any, any>) => {
   } = Material;
 
   const {
-    Grid2: Grid,
+    Grid,
     Paper,
     Typography
   } = MaterialCore;

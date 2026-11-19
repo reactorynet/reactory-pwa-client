@@ -8,7 +8,7 @@ import {
   CardContent,
   CardActions,
   Avatar,
-  Grid2 as Grid,
+  Grid,
   Alert,
   CircularProgress,
   Chip,

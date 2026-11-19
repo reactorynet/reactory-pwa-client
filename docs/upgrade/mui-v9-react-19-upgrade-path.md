@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted, Phase 0 in progress (2026-11-17). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0 and 1 merged into the feature branch; Phase 2 in progress (2026-11-18). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -264,6 +264,47 @@ Done on `feature/mui-v9-react-19-phase-1` in the client, the client plugin repos
   - X v8+ imports CSS. Add a `moduleNameMapper` entry for `@mui/x-*` CSS in `jest.config.ts` if needed.
 - Update `reactory-core` (`IMaterialModule` types, `@mui/*` devDeps), publish it, and bump it in the client and plugins.
 - Exit: tests, harness and visual diffs green, then release.
+
+#### Phase 2 record (2026-11-18, in progress)
+
+Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` client plugin, `reactory-core` (types), the server root and the server modules `reactory-classroom`, `reactory-reactor` and `reactory-socialeyes`. The reactor branch merges `reactorynet/master` (one commit behind).
+
+- **Versions.**
+  - Client: `@mui/material`, `system`, `utils` and `icons-material` 7.3.11. `@mui/x-date-pickers` and `@mui/x-data-grid` 9.18.0. `@mui/lab` 7.0.1-beta.25. `@mui/types` 7.4.12.
+  - `resolutions: { "react-is": "17.0.2" }` added.
+  - Server MUI types 7.3.11 (lockfile generated in a clean worktree). The server keeps `@mui/lab` 5.0.0-alpha.77 for one type-only import.
+  - `reactory-core` devDependencies match the client. **No `reactory-core` publish is needed for this phase**: `IMaterialModule` is `typeof import('@mui/...')`, so the published 1.1.10 types already resolve against whatever MUI the consumer installs.
+- **Section 8 decisions 2 and 4 are still open.** `@mui/x-data-grid` and `@mui/lab` were upgraded rather than removed, so external plugins that reach them through the registry keep working. Removing either is still possible in Phase 3.
+- **`Grid2` is gone in MUI 7, not just renamed.** `@mui/material` 7 has no `Grid2` export, so a plugin that destructures `Grid2` from `MaterialCore` gets `undefined` and crashes on render.
+  - Every `Grid2` in the client, the plugin and the module widgets is now `Grid`. That covers 55 files, mostly `Grid2 as Grid` and `Grid2: Grid`.
+  - The registry's `material-ui.MaterialCore` (and `Material.MaterialCore`) is wrapped in a proxy that resolves `Grid2` to `Grid` and warns once (`src/components/materialCompat.ts`). Remove it in Phase 3.
+  - The plugin smoke harness passed 112 / 112 against the Phase 1 runtime builds, which still destructure `Grid2`. That proves the alias works.
+- **A legacy `Grid` that Phase 1 missed.** `ClassRoomMarkbook` destructures `Grid = 'div'` with a default value, which the Phase 1 transform did not bind. Its 9 `<Grid item xs>` were silently ignored by the v7 `Grid`. They are now `size={{ ... }}`. A multi-line scan over all trees now finds no `item` / breakpoint props on any `Grid`.
+- **Deferred Phase 1 items are done**, because 7.3 has the replacements:
+  - 17 `inputProps` on `Checkbox` / `Switch` / `InputBase` are now `slotProps={{ input: ... }}`.
+  - 6 Autocomplete `renderTags` are now `renderValue` (and `getTagProps` is now `getItemProps`).
+- **Breakages the codemods did not cover:**
+  - `import { Menu } from "@mui/material/"`: the trailing slash fails webpack against the v7 `exports` map. Neither tsc nor jest catches it; only the dev build does.
+  - `@mui/x-data-grid` 9 calls `new TextEncoder()` at import. `src/setupTests.ts` now polyfills it from `util`, which the plugin harness needs.
+  - Stricter `SxProps`: `ConditionalIconComponent` and `SpeedDialWidget` pass `CSSProperties`-typed objects to `sx`. They are cast at the boundary. Only the dev-server checker (full tsconfig) reports these, not the scoped CI tsc.
+  - Tests that hard-coded v6 DOM:
+    - `MuiGrid2-*` class names
+    - `Switch` now exposes `role="switch"`, not `checkbox`
+    - the `Drawer` paper now has `role="dialog"`, so dialog queries must be scoped by name
+- **No-ops:** the `v7.0.0` and MUI X `v7` / `v8` / `v9` pickers codemods changed nothing (`DateSelector` and `App.tsx` were already compatible). No `InputLabel size="normal"`, no lab-removed components and no `cssVariables` theme, so the `palette.mode` concern does not apply.
+- **Gates so far:**
+  - Client tsc 0, lint clean, jest 256 suites / 3583 tests (3 new, for the alias).
+  - The dev build compiles with no type issues.
+  - Plugin smoke 112 / 112.
+  - Server tsc: no upstream file changed its error count. Module jest suites that render the changed widgets: no new failures. The one failing classroom suite fails identically without this phase.
+  - Runtime plugins recompiled from the Phase 2 sources (173 forms, 187 resources, 0 errors, no compile-failure stubs, no `Grid2` left in the runtime copies). Plugin smoke 112 / 112 again against those builds, with no `Grid2` deprecation warnings.
+  - **Visual baselines (strict, zero tolerance), 9 signed-in screens.** The local API answered the PWA's anonymous sign-in with `user_not_found` on 2026-11-18, so a fresh browser stops at "System Unavailable". That is local database state, not this phase: neither the client's anonymous-login code nor the server's auth and seed code changed. The run was seeded instead with a real user token, injected into `localStorage` before the app boots, with tracing off so the token is not persisted.
+    - 5 screens are pixel-identical: `home`, `support-request-form`, `ai-models-admin`, `profile-form`, `app-menu-open`.
+    - 4 differ only in Chip label text: `organizations-list`, `support-open-tickets`, `my-comments`, `workflow-registry`. MUI 7.3 adds `lineHeight: 1.5` to the Chip root, which moves the label by a sub-pixel amount. Whether a given chip changes depends on where its row sits on the pixel grid. No layout, row height or other element moved. Those 4 baselines were refreshed to MUI 7, and a strict re-run passed 9 / 9.
+    - **`login` was not re-checked**, because it needs the anonymous session. Re-run it once the local anonymous account is restored.
+- **Enterprise-only module.** It still uses legacy `<Grid item xs>`, which is a type error against the v7 types (19 new errors in 5 widget files) and silently ignored at runtime. It must get the same conversion on the enterprise path before that module moves to this branch.
+- **Local stack.** Every server `yarn install` in this workspace re-resolves `@temporalio/*` to 1.26 (breaking `protobufjs/ext/protojson`) unless `reactory-temporal` is temporarily pinned to 1.23.0. Pin it, install, then revert the pin and restore the committed lock.
+
 
 ### Phase 3: MUI 9 (the MUI goal)
 

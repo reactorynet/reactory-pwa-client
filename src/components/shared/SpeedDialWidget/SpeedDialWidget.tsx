@@ -353,7 +353,7 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
       transform: 'translateY(-80px) rotate(15deg) !important',
     },
     ...sx,
-  }), [getPositionStyles, size, elevation, isHovered, disabled, sx]);
+  }) as SxProps<Theme>, [getPositionStyles, size, elevation, isHovered, disabled, sx]);
 
   // Mouse click handler (desktop)
   const handleClick = (evt: React.MouseEvent) => {

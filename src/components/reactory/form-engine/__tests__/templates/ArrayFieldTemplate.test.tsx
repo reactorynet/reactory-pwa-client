@@ -152,8 +152,8 @@ describe('ReactoryArrayFieldTemplate', () => {
       const items = container.querySelectorAll('.array-field-item');
       expect(items.length).toBe(2);
       items.forEach((item) => {
-        expect(item.className).toContain('MuiGrid2-grid-md-6');
-        expect(item.className).toContain('MuiGrid2-grid-lg-4');
+        expect(item.className).toContain('MuiGrid-grid-md-6');
+        expect(item.className).toContain('MuiGrid-grid-lg-4');
       });
     });
 
@@ -163,7 +163,7 @@ describe('ReactoryArrayFieldTemplate', () => {
       );
 
       // The Grid *container* is what makes the per-item `size` props lay out as a row.
-      const gridContainer = container.querySelector('.MuiGrid2-container');
+      const gridContainer = container.querySelector('.MuiGrid-container');
       expect(gridContainer).not.toBeNull();
       expect(gridContainer).toHaveAttribute('data-array-id', 'root_tags');
     });
@@ -172,7 +172,7 @@ describe('ReactoryArrayFieldTemplate', () => {
       const { container } = render(<ReactoryArrayFieldTemplate {...baseProps()} />);
 
       expect(container.querySelector('ol.array-field-items')).not.toBeNull();
-      expect(container.querySelector('.MuiGrid2-container')).toBeNull();
+      expect(container.querySelector('.MuiGrid-container')).toBeNull();
     });
 
     it('suppresses the title when ui:options.showTitle is false', () => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { compose } from 'redux';
 import { isNil } from 'lodash';
 import {
-  Grid2 as Grid,
+  Grid,
   Typography,
   Paper,
 } from '@mui/material';

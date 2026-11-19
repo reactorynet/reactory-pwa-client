@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
-import { Grid2 as Grid } from '@mui/material';
+import { Grid } from '@mui/material';
 import FieldPalette from './FieldPalette';
 import SchemaCanvas from './SchemaCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';

@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import PropTypes from 'prop-types';
 import {
-  Grid2 as Grid,
+  Grid,
   Typography,
   Icon,
   Theme

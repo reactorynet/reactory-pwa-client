@@ -10,7 +10,7 @@ import {
   IconButton,
   Typography,
   Card,
-  Grid2 as Grid,  
+  Grid,  
   Paper,
   Toolbar,  
 } from '@mui/material'

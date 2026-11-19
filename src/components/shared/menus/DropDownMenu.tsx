@@ -7,7 +7,7 @@ import { isNil } from "lodash";
 import { useTheme } from "@mui/material/styles";
 import { Theme, Tooltip } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
-import { Menu, MenuItem } from "@mui/material/";
+import { Menu, MenuItem } from "@mui/material";
 import Icon from "@mui/material/Icon";
 import { ListItemIcon } from "@mui/material";
 

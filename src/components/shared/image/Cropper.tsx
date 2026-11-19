@@ -8,7 +8,7 @@ import {
   Paper,
   Typography,
   Toolbar,
-  Grid2 as Grid,
+  Grid,
 } from '@mui/material';
 import "react-image-crop/dist/ReactCrop.css";
 import ReactoryApi, { useReactory } from "@reactory/client-core/api";

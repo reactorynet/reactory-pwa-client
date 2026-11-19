@@ -28,7 +28,6 @@ const mockReactory: any = {
         Icon: (props: any) => <span>{props.children}</span>,
         TextField: (props: any) => <input {...props} />,
         Grid: (props: any) => <div {...props} />,
-        Grid2: (props: any) => <div {...props} />,
         Typography: (props: any) => <span {...props} />,
         // Forward props so role/aria-label/onClick reach the DOM in tests.
         Box: ({ sx, ...rest }: any) => <div {...rest} />,

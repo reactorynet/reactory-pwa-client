@@ -91,7 +91,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const {
     TextField,
     IconButton,
-    Grid2: Grid,
+    Grid,
     Box,
     Paper,
     Menu,

@@ -731,7 +731,7 @@ const ChatList = (props: {
     IconButton,
     Icon,
     TextField,
-    Grid2: Grid,
+    Grid,
     Typography,
     Box,
     List,

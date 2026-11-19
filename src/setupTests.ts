@@ -3,6 +3,13 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// jsdom lacks TextEncoder; @mui/x-data-grid 9 (via @mui/x-internals) calls it
+// at module load, so any test that imports the component registry needs it.
+if (typeof globalThis.TextEncoder === 'undefined') {
+  Object.assign(globalThis, { TextEncoder, TextDecoder });
+}
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

@@ -78,9 +78,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onChange={handleChange}
         onKeyDown={handleKeyPress}
         sx={styles.searchInput}
-        inputProps={{
+        slotProps={{ input: {
           'aria-label': 'search users',
-        }}
+        } }}
         endAdornment={
           inputValue && (
             <IconButton

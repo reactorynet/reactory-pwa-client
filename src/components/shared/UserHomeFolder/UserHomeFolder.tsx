@@ -251,7 +251,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
     CircularProgress,
     Button,
     TextField,
-    Grid2: Grid,
+    Grid,
     Card,
     CardContent,
     CardActions,

@@ -12,7 +12,7 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Grid2 as Grid,
+  Grid,
   Paper,
   Chip,
   Divider,

@@ -397,7 +397,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     Box,
     Typography,
     IconButton,
-    Grid2: Grid,
+    Grid,
     Switch,
     LinearProgress,
     Checkbox,

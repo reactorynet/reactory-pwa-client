@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { Icon, Tooltip, IconButton } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, SxProps, Theme } from '@mui/material/styles';
 import { styled } from '@mui/material/styles';
 
 // Styled components for modern styling approach
@@ -88,7 +88,7 @@ const ConditionalIconComponent: React.FC<ConditionalIconComponentProps> = memo((
     
     return {
       style: matchingCondition.style ? { ...style, ...matchingCondition.style } : style,
-      sx: matchingCondition.sx
+      sx: matchingCondition.sx as SxProps<Theme> | undefined
     };
   }, [matchingCondition, style]);
 

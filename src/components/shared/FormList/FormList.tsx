@@ -119,7 +119,7 @@ const FormList: React.FC<FormListProps> = ({
     Card,
     CardContent,
     CardActions,
-    Grid2: Grid,
+    Grid,
     List,
     ListItem,
     ListItemText,
