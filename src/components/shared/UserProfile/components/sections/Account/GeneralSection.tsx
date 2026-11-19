@@ -108,7 +108,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   const textFieldProps = {
     fullWidth: true,
     variant: 'outlined' as const,
-    InputLabelProps: { shrink: true },
+    slotProps: { inputLabel: { shrink: true } },
     sx: { mb: 2 }
   };
 

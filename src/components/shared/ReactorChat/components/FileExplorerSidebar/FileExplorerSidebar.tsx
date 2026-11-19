@@ -590,9 +590,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             slotProps={{
               primary: {
                 variant: 'body2',
-                fontSize: '0.8rem',
                 noWrap: true,
-                fontWeight: isExpanded ? 600 : 400,
+                sx: { fontSize: '0.8rem', fontWeight: isExpanded ? 600 : 400 }
               }
             }}
           />
@@ -670,13 +669,13 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           slotProps={{
             primary: {
               variant: 'body2',
-              fontSize: '0.75rem',
               noWrap: true,
+              sx: { fontSize: '0.75rem' }
             },
 
             secondary: {
               variant: 'caption',
-              fontSize: '0.65rem',
+              sx: { fontSize: '0.65rem' }
             }
           }} />
         {isWorkspaceFile && (

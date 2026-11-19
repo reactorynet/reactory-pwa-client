@@ -116,8 +116,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
               primary="Reset to persona default"
               secondary={personaModelId || 'Default'}
               slotProps={{
-                primary: { fontSize: '0.85rem' },
-                secondary: { fontSize: '0.75rem' }
+                primary: { sx: { fontSize: '0.85rem' } },
+                secondary: { sx: { fontSize: '0.75rem' } }
               }} />
           </MenuItem>
         )}
@@ -148,8 +148,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                       : undefined
                   }
                   slotProps={{
-                    primary: { fontSize: '0.85rem' },
-                    secondary: { fontSize: '0.7rem' }
+                    primary: { sx: { fontSize: '0.85rem' } },
+                    secondary: { sx: { fontSize: '0.7rem' } }
                   }} />
                 {model.supportsStreaming && (
                   <Chip label="stream" size="small" variant="outlined" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} />

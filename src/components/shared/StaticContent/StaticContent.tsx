@@ -426,8 +426,8 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props) => {
           anchor="right"
           open
           onClose={closeEditor}
-          ModalProps={{ BackdropProps: { invisible: true } }}
           slotProps={{
+            backdrop: { invisible: true },
             paper: { sx: { width: { xs: '100%', sm: 640, md: 760 }, p: 2 } }
           }}
         >

@@ -111,7 +111,7 @@ function StepCategoryListInner({
               slotProps={{
                 primary: {
                   variant: 'body2',
-                  fontWeight: !selectedCategory ? 'bold' : 'normal'
+                  sx: { fontWeight: !selectedCategory ? 'bold' : 'normal' }
                 }
               }}
             />
@@ -182,8 +182,8 @@ function StepCategoryListInner({
                     slotProps={{
                       primary: {
                         variant: 'body2',
-                        fontWeight: isSelected ? 'bold' : 'normal',
-                        noWrap: true
+                        noWrap: true,
+                        sx: { fontWeight: isSelected ? 'bold' : 'normal' }
                       }
                     }}
                   />

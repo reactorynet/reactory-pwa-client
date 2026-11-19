@@ -37,6 +37,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { toGridProps } from '@reactory/client-core/components/gridCompat';
 import type { ArrayFieldTemplateProps } from '@rjsf/utils';
 
 /**
@@ -100,7 +101,8 @@ export function ReactoryArrayFieldTemplate(props: ArrayFieldTemplateProps): Reac
   const Container = resolveContainerSpec(uiOptions.container);
   const ItemsContainer = resolveContainerSpec(uiOptions.itemsContainer);
   const containerProps = (uiOptions.containerProps as Record<string, unknown> | undefined) ?? {};
-  const itemsContainerProps = (uiOptions.itemsContainerProps as Record<string, unknown> | undefined) ?? {};
+  const rawItemsContainerProps = (uiOptions.itemsContainerProps as Record<string, unknown> | undefined) ?? {};
+  const itemsContainerProps = ItemsContainer === STRING_CONTAINERS.Grid ? toGridProps(rawItemsContainerProps) : rawItemsContainerProps;
 
   const titleNode = showTitle ? (
     <Typography
@@ -191,7 +193,7 @@ export function ReactoryArrayFieldTemplate(props: ArrayFieldTemplateProps): Reac
   );
 
   // `ui:options.itemsContainer` is applied PER ITEM. `'Grid'` wraps each item in
-  // a responsive <Grid size={{...}} item>, which is what expresses the column
+  // a responsive <Grid size={{...}}>, which is what expresses the column
   // sizes (e.g. md:6 / lg:4 / xl:4 → a 3-up card grid).
   const itemsNode = ItemsContainer
     ? items.map((item) => (

@@ -9,19 +9,16 @@ import {
 
 import { useTheme } from '@mui/material/styles';
 import { Theme } from '@mui/material';
+import { toGridProps } from '@reactory/client-core/components/gridCompat';
 import { withReactory } from '../../api/ApiProvider'
 
 
 const defaultLayout = {
   main: {
     container: true,
-    md: 12,
-    sm: 12,    
     children: {
       rowMain: {
-        item: true,
-        md: 12,
-        sm: 12,
+        size: { sm: 12, md: 12 },
         component: (<p>Empty Component</p>),        
       }
     },
@@ -43,9 +40,7 @@ const Layout = (props: any) => {
     const layoutDef = layout;
     const components = Object.keys(layoutDef).map(( key ) => {
       const containerDef = layoutDef[key]
-      const gridProps = {
-        ...containerDef
-      } 
+      const gridProps = toGridProps({ ...containerDef });
       if(gridProps.args) {
         delete gridProps.args
       }

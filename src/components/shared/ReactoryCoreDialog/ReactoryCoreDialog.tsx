@@ -42,7 +42,7 @@
  *   closeOnEvents={['form:submitted', 'form:cancelled']}
  *   appBarProps={{ color: 'primary' }}
  *   containerProps={{
- *     PaperProps: { style: { borderRadius: 16 } }
+ *     slotProps: { paper: { style: { borderRadius: 16 } } }
  *   }}
  *   onClose={() => setIsOpen(false)}
  * >
@@ -377,7 +377,7 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
       if (reason === 'escapeKeyDown' && disableEscapeKeyDown) return;
       handleClose();
     },
-    TransitionComponent: Transition,
+    slots: { transition: Transition },
     ...containerProps,
     style: {
       overflowX: 'hidden' as const
