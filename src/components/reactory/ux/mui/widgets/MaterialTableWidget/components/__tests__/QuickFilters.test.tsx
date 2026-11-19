@@ -225,7 +225,7 @@ describe('QuickFilters', () => {
       render(<QuickFilters {...defaultProps} />);
       
       const urgentButton = screen.getByRole('button', { name: /Urgent/i });
-      expect(urgentButton).toHaveClass('MuiButton-containedError');
+      expect(urgentButton).toHaveClass('MuiButton-contained', 'MuiButton-colorError');
     });
   });
 

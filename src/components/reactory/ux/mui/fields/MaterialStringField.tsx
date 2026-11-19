@@ -219,12 +219,11 @@ const MaterialStringFieldWidget = (props) => {
 
       let componentProps: Partial<TextFieldProps> = {
         variant: activeVariant,
-        InputProps: inputProps,
         label: `${schema.title}${required ? ' *' : ''}`,
         value: localValue,
         fullWidth: true,
         key: props.key || idSchema.$id || id,
-        InputLabelProps: inputLabelProps,
+        slotProps: { input: inputProps, inputLabel: inputLabelProps },
       }
 
       if (uiOptions.componentProps) {

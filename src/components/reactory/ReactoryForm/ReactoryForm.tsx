@@ -19,6 +19,7 @@ import {
   LinearProgress,
   Breakpoint
 } from '@mui/material';
+import { toGridProps } from '@reactory/client-core/components/gridCompat';
 
 import IntersectionVisible from '@reactory/client-core/components/utility/IntersectionVisible';
 import ErrorList from '@reactory/client-core/components/reactory/form/components/ErrorList';
@@ -420,7 +421,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             break;
           }
           case 'grid': {
-            renderedComponent = <Grid {...componentProps}>{formChildren}</Grid>
+            renderedComponent = <Grid {...toGridProps(componentProps)}>{formChildren}</Grid>
             debug(`${SIGN}:render - Grid`);
             break;
           }

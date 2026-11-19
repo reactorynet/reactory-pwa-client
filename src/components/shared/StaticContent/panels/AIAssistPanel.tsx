@@ -176,8 +176,8 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
       // re-renders on every keystroke. Profiling a typing session showed that
       // costing ~133ms of each ~145ms commit while the panel was closed. With
       // this off, MUI renders nothing until the panel is first opened.
-      ModalProps={{ BackdropProps: { invisible: true } }}
       slotProps={{
+        backdrop: { invisible: true },
         paper: {
           sx: { width: { xs: '100%', sm: PANEL_WIDTH }, display: 'flex', flexDirection: 'column' },
         }

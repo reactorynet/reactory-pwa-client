@@ -269,8 +269,8 @@ function AutoCompleteDropDown<
                 //@ts-ignore
                 return (<Box key={props.key}>{label || 'No Label'}</Box>)
             }}            
-            renderTags={(value, getTagProps) => {
-                return value.map((option, index) => {
+            renderValue={$props.multiSelect === true ? (value, getItemProps) => {
+                return (value as any[]).map((option, index) => {
                     const onDeleteItem = () => {
                         let newArray: TData[] = [];
                         for (const elem of (formData as TData[])) {
@@ -279,9 +279,9 @@ function AutoCompleteDropDown<
                         }
                         props.onChange(newArray as any);
                     };
-                    return (<Chip variant="outlined" size="small" label={option[$props.labelField]} {...getTagProps({ index })} onDelete={onDeleteItem} />);
+                    return (<Chip variant="outlined" size="small" label={option[$props.labelField]} {...getItemProps({ index })} onDelete={onDeleteItem} />);
                 });
-            }}
+            } : undefined}
             filterSelectedOptions={$props.filterSelectedOptions === true}
 
             renderInput={(params) => {
@@ -351,10 +351,11 @@ function AutoCompleteDropDown<
                         variant={resolveVariant()}
                         label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
                         slotProps={{
-                            inputLabel: inputLabelProps,
+                            ...params.slotProps,
+                            inputLabel: { ...params.slotProps.inputLabel, ...inputLabelProps },
 
                             htmlInput: {
-                                ...params.inputProps,
+                                ...params.slotProps.htmlInput,
                                 // autoComplete: 'new-password', // disable autocomplete and autofill
                                 value: filter && filter.length > 0 ? filter : displayText
                             }

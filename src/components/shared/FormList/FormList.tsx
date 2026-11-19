@@ -900,7 +900,7 @@ const FormList: React.FC<FormListProps> = ({
           <SpeedDialAction
             key={action.name}
             icon={action.icon}
-            tooltipTitle={action.name}
+            slotProps={{ tooltip: { title: action.name } }}
             onClick={action.onClick}
           />
         ))}
