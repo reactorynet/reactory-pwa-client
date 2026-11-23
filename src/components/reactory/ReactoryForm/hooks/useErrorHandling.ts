@@ -159,8 +159,8 @@ export const useErrorHandling = (options: ErrorHandlingOptions = {}): ErrorHandl
   });
 
   // Refs
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
-  const recoveryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const recoveryTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // ============================================================================
   // ERROR ANALYSIS METHODS

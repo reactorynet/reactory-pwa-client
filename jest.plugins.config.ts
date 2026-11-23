@@ -27,7 +27,7 @@ export default async (): Promise<JestConfigWithTsJest> => {
     },
     // The base list plus the ESM-only packages the full registry imports.
     transformIgnorePatterns: [
-      '/node_modules/(?!(d3|d3-[\\w.@-]+|delaunator|robust-predicates|internmap|marked|three)/)',
+      '/node_modules/(?!(d3|d3-[\\w.@-]+|delaunator|robust-predicates|internmap|marked|react-quill-new|quill|parchment|lodash-es|three)/)',
     ],
     testMatch: ['<rootDir>/test/plugin-smoke/**/*.smoke.test.{ts,tsx}'],
     coverageThreshold: undefined,

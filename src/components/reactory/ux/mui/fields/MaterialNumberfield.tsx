@@ -8,7 +8,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { fieldHasValue } from '../utils/fieldValuePresence';
 
-const MaterialNumberfield = (props: any, context: any) => {
+const MaterialNumberfield = (props: any) => {
   const theme = useTheme();
   const { uiSchema, registry, onChange, schema, required, formData } = props;
   const uiOptions = uiSchema?.['ui:options'] || { readOnly: false, format: 'int', precision: 8 };

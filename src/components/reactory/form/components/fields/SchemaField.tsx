@@ -1,5 +1,6 @@
   import { ADDITIONAL_PROPERTY_FLAG } from "../../utils";
 import React from "react";
+import { applyDefaultProps } from "@reactory/client-core/components/applyDefaultProps";
 import PropTypes from "prop-types";
 
 import {
@@ -108,7 +109,8 @@ function ErrorList(props) {
   );
 }
 
-function DefaultTemplate(props) {
+function DefaultTemplate(rawProps) {
+  const props = applyDefaultProps(rawProps, defaultTemplateDefaultProps);
   const {
     id,
     classNames,
@@ -171,7 +173,8 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-DefaultTemplate.defaultProps = {
+// React 19 ignores defaultProps on function components.
+const defaultTemplateDefaultProps = {
   hidden: false,
   readonly: false,
   required: false,

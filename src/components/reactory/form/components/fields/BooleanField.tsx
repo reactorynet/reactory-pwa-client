@@ -1,4 +1,5 @@
 import React from "react";
+import { applyDefaultProps } from "@reactory/client-core/components/applyDefaultProps";
 import PropTypes from "prop-types";
 
 import {
@@ -8,7 +9,8 @@ import {
   getDefaultRegistry,
 } from "../../utils";
 
-function BooleanField(props) {
+function BooleanField(rawProps) {
+  const props = applyDefaultProps(rawProps, booleanFieldDefaultProps);
   const {
     schema,
     name,
@@ -79,7 +81,8 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-BooleanField.defaultProps = {
+// React 19 ignores defaultProps on function components.
+const booleanFieldDefaultProps = {
   uiSchema: {},
   disabled: false,
   readonly: false,

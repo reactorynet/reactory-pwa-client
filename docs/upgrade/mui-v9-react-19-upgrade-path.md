@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) complete on its phase branch, awaiting review (2026-11-23). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) complete on its phase branch, awaiting review (2026-11-23). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -469,6 +469,38 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
   - `FormClass.tsx` `UNSAFE_componentWillReceiveProps` is forms-engine WP-B6. Convert it to `componentDidUpdate` if the fork has not been retired by then.
   - `reactory-core` types move from global `JSX.Element` to `React.JSX.Element`. Republish and bump.
 - Exit: the same gates, then release.
+
+#### Phase 5 record (2026-11-23)
+
+- **Versions:**
+  - `react` and `react-dom` are 19.3.1. `@types/react` and `@types/react-dom` 19.3.0 stay pinned through `resolutions` to one copy, and so does `react-is` (19.3.1), so every library resolves the same one.
+  - `@types/react-redux` is removed; `react-redux` 9 ships its own types.
+  - The server's `react`, `react-dom` and React types follow. The server lock was generated in a clean worktree and only the React entries changed. Server tsc is unchanged (3394), with no file different: the server widgets use none of the removed types.
+  - `reactory-core` dev React is 19. Its types use `React.JSX.Element` instead of the removed global `JSX`, and `Array<React.ReactNode>` instead of the removed `React.ReactNodeArray`. Its tsc matches the React 18 baseline exactly (556, all pre-existing). The client still reads the published 1.1.10 types, whose `JSX.Element` resolves to nothing under `skipLibCheck`, until a new version is published.
+- **Library replacements:**
+  - `react-beautiful-dnd` 13 became `@hello-pangea/dnd` 18.0.1. Only the import path changed; the registry still exports `DragDropContext`, `Droppable` and `Draggable` under the same names.
+  - `react-quill` 2 (which calls `findDOMNode`) became `react-quill-new` 3.8.3, which brings Quill 2 and Parchment 3. The custom style attributors looked for Parchment 1's `Attributor.Style` and silently registered nothing on Quill 2, so alignment and font size would have fallen back to Quill's CSS classes. They now use `StyleAttributor`. A new test loads content through a real Quill instance and checks that alignment, colour, image attributes, rules, tables and component tags survive; the alignment case fails without the fix. `quill-delta` 5.1.0 is added for the editor's peer, and the Quill stack is in both jest transform lists.
+  - `react-big-calendar` 1.13 (which calls `findDOMNode`) became 1.20.0. `core.Calendar` built its localizer from `Calendar.momentLocalizer`, which the 1.x API does not have, so it threw on every render before this phase too. It now uses the named `momentLocalizer` export; a new render test fails without the fix.
+  - `react-image-crop` 11.1.2.
+  - `RadialFab`'s `CSSTransition` items pass `nodeRef`; without it `react-transition-group` falls back to `findDOMNode`. `react-draggable` is imported by `MaterialArrayTemplate` but never rendered, so it is left at 4.4.6.
+  - `react-measure` has no `findDOMNode` use and is unchanged. `react-prism` is unchanged; its React 15–16 peer range was already violated.
+- **Code:**
+  - Ten `useRef<T>()` calls now pass `undefined`; `MaterialTableWidget` uses `React.JSX.Element` and the D3 renderer imports `JSX` from `react`; `IntersectionVisible`'s ref callback no longer returns a value; `MaterialNumberfield` drops its unused legacy-context parameter.
+  - The legacy fork's four function-component `defaultProps` (`StringField`, `BooleanField`, `NumberField`, `SchemaField`'s `DefaultTemplate`) now go through `applyDefaultProps`, as listed for this phase. Without it, `uiSchema` reaches those fields as `undefined` on React 19. The class components' static `defaultProps` still work and are unchanged.
+  - `FormClass`'s `UNSAFE_componentWillReceiveProps` still works on React 19 and is left for forms-engine WP-B6.
+  - `propTypes` are ignored by React 19 and are left in place; removing them changes no behaviour.
+  - No string refs, legacy context, `element.ref` reads, `ReactDOM.render` or `findDOMNode` remain in the client, the plugins or the server widgets.
+- **Legacy plugin (`reactory-client-core`):** its rollup build bundles React 17, and three components created their elements with that copy. React 19 rejects elements from another React (`Objects are not valid as a React child`). `ReactoryBusinessUnitSelector`, `ReactoryClientSelector` and `ReactoryUserProfileGeneral` now render with the registry's React. The rebuilt bundle creates no elements with its own copy; the two class components still extend its `Component`, which React 19 accepts.
+- **Tests:**
+  - React 19 calls function components with `(props, undefined)`, so four tests that expected a second argument now assert on the props alone.
+  - Two chat comment tests read the comment count before the mocked fetch's state update landed. They now wait for it.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 260 suites / 3599 tests, the dev build reports no issues.
+  - `act` warnings went from 12 to 20. The 8 new ones are MUI `Tooltip` timers in `lazyCommentLoading.test.tsx` that fire after the test ends.
+  - Plugin smoke 112 / 112 (69 / 111 render), the same as Phase 4. The server form sources did not change, and runtime builds use the registry's React, so they were not recompiled.
+  - Server module jest for the widgets and the module compiler: 13 suites / 120 tests. `reactory-core` 7 / 7 tests.
+  - **Strict visuals 9 / 9 (twice), pixel-identical to the React 17 baselines, with no baseline refreshed.**
+  - In the browser, signed in: the static content editor opens on Quill 2 with its toolbar and takes input, and the application Menus panel renders its `@hello-pangea/dnd` list. Neither logged a React 19 error. The console still shows the DOM-nesting, key and unknown-prop warnings that React 18 reported.
 
 ## 5. Plugin rules for every phase
 

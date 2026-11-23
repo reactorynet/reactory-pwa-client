@@ -258,10 +258,10 @@ export interface ColumnHeaderConfiguration {
 export interface MaterialTableColumn<TRow> {
   field: string,
   title: string,
-  renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => JSX.Element
-  renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
-  renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
-  renderCell?: (cellData: any, cellIndex: number, rowData: TRow[], rowIndex: number) => JSX.Element,
+  renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => React.JSX.Element
+  renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => React.JSX.Element
+  renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => React.JSX.Element
+  renderCell?: (cellData: any, cellIndex: number, rowData: TRow[], rowIndex: number) => React.JSX.Element,
   footerProps?: any,
   headerProps?: any,
   rowProps?: any,
@@ -611,7 +611,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   let ToolbarComponent = null;
   let components: { [key: string]: React.ComponentType<any> } = {};
-  let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
+  let detailsPanel: (props: MaterialTableDetailPanelProps) => React.JSX.Element = null;
 
   // Track component loading state to avoid repeated polling
   const [componentsLoaded, setComponentsLoaded] = useState<{
@@ -1494,7 +1494,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }, [reactory, idSchema.$id]);
 
   const getHeader = () => {
-    let $headers: JSX.Element[] = [];
+    let $headers: React.JSX.Element[] = [];
 
     if (options.toolbar === false) return null;
 
@@ -1696,7 +1696,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return rowActions;
   }
 
-  const getRow = (row, rid: number, rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = []): JSX.Element[] => {
+  const getRow = (row, rid: number, rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = []): React.JSX.Element[] => {
     const $rState: IRowState = rowsState[rid] || { dirty: false, editing: false, expanded: false, hover: false, saving: false, selected: false }
 
     const {
@@ -1771,7 +1771,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
 
-    let rowComponents: JSX.Element[] = [(<TableRow key={rid} sx={row.sx}>
+    let rowComponents: React.JSX.Element[] = [(<TableRow key={rid} sx={row.sx}>
       {$cols}
     </TableRow>)];
 

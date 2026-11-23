@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   Box,
   Paper,
@@ -25,7 +25,7 @@ const typeColor = (type: string): 'primary' | 'secondary' | 'default' =>
 
 /**
  * SchemaCanvas renders the schema as a single flat, depth-indented list inside
- * ONE Droppable. Nesting is performed with react-beautiful-dnd's `combine`
+ * ONE Droppable. Nesting is performed with @hello-pangea/dnd's `combine`
  * (drop a field directly ONTO a container card) rather than nested Droppables,
  * which rbd cannot resolve reliably. See ./schemaTree.ts for the rationale.
  */
@@ -100,7 +100,7 @@ const SchemaCanvas: React.FC<SchemaCanvasProps> = ({
                           bgcolor: 'background.paper',
                           boxShadow: dragSnapshot.isDragging ? 3 : 0,
                           // Highlight when a dragged field can nest into this
-                          // container card (react-beautiful-dnd "combine").
+                          // container card (@hello-pangea/dnd "combine").
                           borderColor: dragSnapshot.combineTargetFor
                             ? 'primary.main'
                             : row.isContainer

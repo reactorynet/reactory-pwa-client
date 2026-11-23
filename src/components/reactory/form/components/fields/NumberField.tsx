@@ -1,9 +1,11 @@
 import React from "react";
+import { applyDefaultProps } from "@reactory/client-core/components/applyDefaultProps";
 import PropTypes from "prop-types";
 
 import { asNumber } from "../../utils";
 
-function NumberField(props) {
+function NumberField(rawProps) {
+  const props = applyDefaultProps(rawProps, numberFieldDefaultProps);
   const { StringField } = props.registry.fields;
   return (
     <StringField
@@ -25,7 +27,8 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-NumberField.defaultProps = {
+// React 19 ignores defaultProps on function components.
+const numberFieldDefaultProps = {
   uiSchema: {},
 };
 

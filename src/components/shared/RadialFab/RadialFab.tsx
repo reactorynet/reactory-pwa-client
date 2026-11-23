@@ -177,6 +177,13 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const [fabCenter, setFabCenter] = useState<{ x: number, y: number } | null>(null);
   
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
+  // CSSTransition needs a ref to each action's node: without `nodeRef` it
+  // falls back to `findDOMNode`, which React 19 removed.
+  const actionNodeRefs = useRef<Record<number, React.RefObject<HTMLButtonElement | null>>>({});
+  const getActionNodeRef = (index: number) => {
+    if (!actionNodeRefs.current[index]) actionNodeRefs.current[index] = React.createRef<HTMLButtonElement>();
+    return actionNodeRefs.current[index];
+  };
   const isMobile = useRef(false);
   const mainFabRef = useRef<HTMLButtonElement>(null);
 
@@ -367,10 +374,12 @@ const RadialFab: React.FC<RadialFabProps> = ({
         {isOpen && actions.map((action, index) => {
           const pos = getSpiralPosition(index, isOpen, radius, actions.length, position, fabCenter);
           const dockScale = getDockScale(index, hoveredAction);
+          const nodeRef = getActionNodeRef(index);
 
           return (
             <CSSTransition
               key={index}
+              nodeRef={nodeRef}
               timeout={500}
               classNames="radial-action"
               unmountOnExit
@@ -381,6 +390,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
                 {...action.tooltipProps}
               >
                 <Fab
+                  ref={nodeRef}
                   color={action.color || 'default'}
                   size={action.size || mainSize}
                   onClick={handleActionClick(action)}

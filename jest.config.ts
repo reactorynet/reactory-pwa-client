@@ -14,7 +14,8 @@ import * as os from 'os';
  *     full module graph (MUI 6 + Apollo + Mermaid + chart libs ≈ 3 GB
  *     RSS each). Override with `JEST_MAX_WORKERS=4` etc. when needed.
  *   - `transformIgnorePatterns` allows only the d3 micro-packages through
- *     (real physics needed by GraphExplorer layout tests); for other
+ *     (real physics needed by GraphExplorer layout tests) and the ESM-only
+ *     Quill 2 stack (react-quill-new, quill, parchment, lodash-es); for other
  *     ESM-incompatible packages the per-package moduleNameMapper stubs
  *     (mermaid, apollo-upload-client) remain the right tool.
  *   - `cacheDirectory` explicit so first cold run primes a stable cache
@@ -68,7 +69,7 @@ export default async (): Promise<JestConfigWithTsJest> => {
     // `robust-predicates` and `internmap` are its ESM-only transitive deps, which
     // are pulled in by that import and would otherwise fail to parse.
     transformIgnorePatterns: [
-      '/node_modules/(?!(d3|d3-[\\w.@-]+|delaunator|robust-predicates|internmap|marked)/)',
+      '/node_modules/(?!(d3|d3-[\\w.@-]+|delaunator|robust-predicates|internmap|marked|react-quill-new|quill|parchment|lodash-es)/)',
     ],
     moduleNameMapper: {
       // Path aliases

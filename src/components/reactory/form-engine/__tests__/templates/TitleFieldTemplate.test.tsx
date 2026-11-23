@@ -88,7 +88,7 @@ describe('ReactoryTitleFieldTemplate', () => {
   });
 
   it('passes title and fieldOptions to the resolved component', () => {
-    const MarkerTitle = jest.fn(() => null);
+    const MarkerTitle = jest.fn((_props: Record<string, unknown>) => null);
     const registry = baseRegistry({
       resolveFqn: () => MarkerTitle,
     });
@@ -102,10 +102,9 @@ describe('ReactoryTitleFieldTemplate', () => {
         })}
       />,
     );
-    expect(MarkerTitle).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Custom', extra: 'val' }),
-      expect.anything(),
-    );
+    // React 19 calls function components with (props, undefined); check the props.
+    expect(MarkerTitle).toHaveBeenCalled();
+    expect(MarkerTitle.mock.calls[0][0]).toEqual(expect.objectContaining({ title: 'Custom', extra: 'val' }));
   });
 
   it('falls back to default h5 when field resolves to null', () => {

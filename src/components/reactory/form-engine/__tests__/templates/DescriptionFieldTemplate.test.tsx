@@ -85,7 +85,7 @@ describe('ReactoryDescriptionFieldTemplate', () => {
   });
 
   it('passes description and fieldOptions to the resolved component', () => {
-    const MarkerDesc = jest.fn(() => null);
+    const MarkerDesc = jest.fn((_props: Record<string, unknown>) => null);
     const registry = baseRegistry({ resolveFqn: () => MarkerDesc });
     render(
       <ReactoryDescriptionFieldTemplate
@@ -101,10 +101,9 @@ describe('ReactoryDescriptionFieldTemplate', () => {
         })}
       />,
     );
-    expect(MarkerDesc).toHaveBeenCalledWith(
-      expect.objectContaining({ description: 'Custom', extra: 42 }),
-      expect.anything(),
-    );
+    // React 19 calls function components with (props, undefined); check the props.
+    expect(MarkerDesc).toHaveBeenCalled();
+    expect(MarkerDesc.mock.calls[0][0]).toEqual(expect.objectContaining({ description: 'Custom', extra: 42 }));
   });
 
   it('falls back to default p when field resolves to null', () => {

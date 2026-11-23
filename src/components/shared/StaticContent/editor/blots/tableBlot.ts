@@ -1,4 +1,4 @@
-import { Quill } from 'react-quill';
+import { Quill } from 'react-quill-new';
 
 export const TABLE_EMBED_CLASS = 'reactory-table-embed';
 export const TABLE_EMBED_BLOT = 'table-embed';
