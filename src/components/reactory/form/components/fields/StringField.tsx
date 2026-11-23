@@ -1,4 +1,3 @@
-import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React from "react";
 import PropTypes from "prop-types";
 
@@ -10,8 +9,7 @@ import {
   getDefaultRegistry,
 } from "../../utils";
 
-function StringField(rawProps) {
-  const props = applyDefaultProps(rawProps, stringFieldDefaultProps);
+function StringField(props) {
   const {
     schema,
     name,
@@ -85,7 +83,7 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-const stringFieldDefaultProps = {
+StringField.defaultProps = {
   uiSchema: {},
   disabled: false,
   readonly: false,

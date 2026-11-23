@@ -126,7 +126,7 @@ const LineChart: React.FC<LineChartProps> = ({
           {description}
         </Typography>
       )}
-      <ResponsiveContainer width={width} height={height}>
+      <ResponsiveContainer width={width as number | `${number}%`} height={height}>
         <RechartsLineChart data={chartData} margin={margin}>
           {showGrid && <CartesianGrid strokeDasharray={gridDasharray} stroke={gridColor} />}
           <XAxis dataKey={xAxisKey} tick={axisTickStyle} {...xAxisProps} />

@@ -166,7 +166,6 @@ export default async () => {
     fetch: fetch
   });
 
-  let clientTypeDefs: string[] = [];
   let resolvers: Resolvers[] = [];
 
   const ws_client = createClient({
@@ -198,7 +197,6 @@ export default async () => {
         errorPolicy: 'all',
       },
     },
-    typeDefs: clientTypeDefs,
     resolvers: resolvers,
     assumeImmutableResults: false,
   });

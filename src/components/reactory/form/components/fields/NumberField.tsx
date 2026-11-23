@@ -1,11 +1,9 @@
-import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React from "react";
 import PropTypes from "prop-types";
 
 import { asNumber } from "../../utils";
 
-function NumberField(rawProps) {
-  const props = applyDefaultProps(rawProps, numberFieldDefaultProps);
+function NumberField(props) {
   const { StringField } = props.registry.fields;
   return (
     <StringField
@@ -27,7 +25,7 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-const numberFieldDefaultProps = {
+NumberField.defaultProps = {
   uiSchema: {},
 };
 

@@ -138,6 +138,33 @@ describe('ReactoryObjectField: ui:widget on object schemas (v5 engine)', () => {
     expect(screen.getAllByLabelText('Application name').length).toBe(2);
   });
 
+  it('binds a widget that registers after the render but before its effects run', () => {
+    // React 18 defers passive effects (and StrictMode runs them twice), so a
+    // plugin can register between the field's render and its binding effect
+    // without the field ever seeing a registration event.
+    const fqn = 'core.LateApplicationCard@1.0.0';
+    const reactory = createMockReactorySDK({ components: {} });
+    const RegisterAfterCommit: React.FC = () => {
+      React.useLayoutEffect(() => {
+        reactory.registerComponent(fqn, ApplicationCard);
+      }, []);
+      return null;
+    };
+    render(
+      <>
+        <EngineDispatchedForm
+          schema={schema}
+          uiSchema={uiSchema(fqn)}
+          formData={formData}
+          formContext={{ reactory }}
+          formDef={{}}
+        />
+        <RegisterAfterCommit />
+      </>,
+    );
+    expect(screen.getAllByTestId('application-card')).toHaveLength(2);
+  });
+
   it('falls back to the properties instead of failing when the widget cannot be resolved', () => {
     renderV5(uiSchema('core.DoesNotExist@1.0.0'));
     expect(screen.queryByTestId('application-card')).toBeNull();

@@ -118,7 +118,7 @@ const PieChart: React.FC<PieChartProps> = ({
           {description}
         </Typography>
       )}
-      <ResponsiveContainer width={width} height={height}>
+      <ResponsiveContainer width={width as number | `${number}%`} height={height}>
         <RechartsPieChart margin={margin}>
           <Pie
             data={data}

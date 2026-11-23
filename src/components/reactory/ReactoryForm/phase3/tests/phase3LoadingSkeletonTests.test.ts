@@ -58,7 +58,7 @@ describe('Phase 3.3: LoadingSkeleton Component', () => {
     test('should use Framer Motion', () => {
       // This test validates that the component imports Framer Motion
       expect(() => {
-        require('framer-motion');
+        require('motion/react');
       }).not.toThrow();
     });
   });
@@ -74,7 +74,7 @@ describe('Phase 3.3: LoadingSkeleton Component', () => {
       const content = fs.readFileSync(componentPath, 'utf8');
       expect(content).toContain('LoadingSkeleton');
       expect(content).toContain('React.FC');
-      expect(content).toContain('framer-motion');
+      expect(content).toContain('motion/react');
       expect(content).toContain('@mui/material');
     });
   });

@@ -1,4 +1,3 @@
-import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React from "react";
 import PropTypes from "prop-types";
 
@@ -9,8 +8,7 @@ import {
   getDefaultRegistry,
 } from "../../utils";
 
-function BooleanField(rawProps) {
-  const props = applyDefaultProps(rawProps, booleanFieldDefaultProps);
+function BooleanField(props) {
   const {
     schema,
     name,
@@ -81,7 +79,7 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-const booleanFieldDefaultProps = {
+BooleanField.defaultProps = {
   uiSchema: {},
   disabled: false,
   readonly: false,

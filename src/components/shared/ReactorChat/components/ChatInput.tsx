@@ -111,7 +111,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState<string>(initialPrompt || speechTranscript || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
-  const isFirstRenderRef = useRef<boolean>(true);
   const prevTranscriptRef = useRef<string | undefined>(speechTranscript);
 
   // Seed the composer whenever the host supplies a new prompt. Only a
@@ -125,11 +124,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // Sync with speech transcript when speech services produce results, or clear input when transcript is reset/cleared
   useEffect(() => {
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      prevTranscriptRef.current = speechTranscript;
-      return;
-    }
+    // Act on changes only (prevTranscriptRef starts at the mount value), which also
+    // holds when StrictMode runs this effect twice on mount.
+    if (prevTranscriptRef.current === speechTranscript) return;
 
     if (speechTranscript !== undefined) {
       if (speechTranscript !== '') {

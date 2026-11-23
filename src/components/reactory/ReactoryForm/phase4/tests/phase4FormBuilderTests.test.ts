@@ -559,7 +559,7 @@ describe('Phase 4.3: Form Builder', () => {
     test('should have proper imports and dependencies', () => {
       expect(() => {
         require('uuid');
-        require('framer-motion');
+        require('motion/react');
         require('@mui/material');
         require('@mui/icons-material');
       }).not.toThrow();
@@ -575,7 +575,7 @@ describe('Phase 4.3: Form Builder', () => {
     });
 
     test('should support Framer Motion animations', () => {
-      const { motion, AnimatePresence } = require('framer-motion');
+      const { motion, AnimatePresence } = require('motion/react');
       expect(motion).toBeDefined();
       expect(AnimatePresence).toBeDefined();
     });
