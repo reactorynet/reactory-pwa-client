@@ -1,5 +1,5 @@
 # Pinned: nginx 1.30.7 (stable) carries the CVE fix; don't float on :alpine.
-FROM docker.io/library/nginx:1.30.7-alpine
+FROM docker.io/library/nginx:1.31.9-alpine
 
 ARG REACTORY_CONFIG_ID=booktutor
 ARG REACTORY_ENV_ID=podman
