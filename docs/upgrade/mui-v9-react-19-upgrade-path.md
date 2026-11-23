@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted. Phases 0 and 1 merged into the feature branch; Phase 2 in progress (2026-11-18). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0, 1 and 2 merged into the feature branch; Phase 3 (MUI 9) complete on its phase branch, awaiting review (2026-11-19). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -265,7 +265,7 @@ Done on `feature/mui-v9-react-19-phase-1` in the client, the client plugin repos
 - Update `reactory-core` (`IMaterialModule` types, `@mui/*` devDeps), publish it, and bump it in the client and plugins.
 - Exit: tests, harness and visual diffs green, then release.
 
-#### Phase 2 record (2026-11-18, in progress)
+#### Phase 2 record (2026-11-18, merged 2026-11-19)
 
 Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` client plugin, `reactory-core` (types), the server root and the server modules `reactory-classroom`, `reactory-reactor` and `reactory-socialeyes`. The reactor branch merges `reactorynet/master` (one commit behind).
 
@@ -321,6 +321,50 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
 - Remove the `Grid2` registry alias.
 - Browserslist: align with MUI's floor or accept the risk (section 8).
 - Exit: the same gates, then release. **MUI v9 is done at this point, still on React 17.**
+
+#### Phase 3 record (2026-11-19)
+
+- **Versions:** `@mui/material`, `system`, `icons-material`, `utils` and `types` 9.5.0; `@mui/lab` 9.0.0-beta.10; MUI X stays on 9.18.0 (it already peers on `^7.3 || ^9`). React stays on 17.0.2: MUI 9 peers on `^17 || ^18 || ^19`, and the `react-is` 17.0.2 resolution still holds. Every MUI package resolves to a single 9.5.0 copy. The server's type-only `@mui/material` and `@mui/icons-material` are pinned to 9.5.0, and the `reactory-core` devDependencies follow.
+- **Codemods.** `deprecations/all` and `v9.0.0/system-props` were not run this phase. Instead every tree was scanned for each removed prop, removed class key and system prop listed in the v9 migration guide, including multi-line JSX tags, `React.createElement` calls and props passed as object literals. The scanners cover the client, its plugin submodules, the server module widgets and the legacy `reactory-client-core` plugin.
+- **The `Grid2` registry alias is removed.** The only remaining consumer was the legacy `reactory-client-core` plugin's `LoginCard`, which renders `/login`. It now uses `Grid`.
+- **Autocomplete `renderInput` params are `slotProps`-only in v9.** `params.InputProps`, `params.inputProps` and `params.InputLabelProps` no longer exist. A `renderInput` that sets its own `slotProps` without spreading `params.slotProps` drops the input's ref and handlers, which breaks the field. Four were fixed: `AutoCompleteDropDown`, `QuickLaunchDialog` and the two demographic widgets. The other 12 spread `params` and set no `slotProps`, so they are unaffected. `AutoCompleteDropDown`'s `renderTags` became `renderValue`, passed only when `multiSelect` is on, because in v9 `renderValue` also applies to single selections.
+- **`MenuItem`, `Tab` and `StepButton` now throw outside their parents** (`MUI: MenuListContext is missing` / `RovingTabIndexContext is missing`). A nesting scan found one case: `TabbedNavigation` rendered `MenuItem`s inside a `Popover`. It is now a `Menu`.
+- **Legacy `Grid` props reach the DOM in v9.** MUI 7 ignored `item` and `xs`/`md`; MUI 9 no longer strips them, so they become invalid DOM attributes. Changes:
+  - Breakpoint props in `MaterialArrayTemplate` and the `item` flag in `MaterialDefaultArrayField` are now `size`.
+  - Props that reach a `Grid` from uiSchema data or layout objects go through `toGridProps` (`src/components/gridCompat.ts`), which drops `item` and folds `xs`…`xl` into `size`: `ArrayFieldTemplate` / `MaterialDefaultArrayField` `itemsContainerProps`, `Layout`, the `MaterialGridField` render branch and `ReactoryForm`'s `grid` container.
+  - Phase 2 misses fixed: `reactor.UserBudgetAdminWidget` built 17 legacy `Grid` items with `createElement`, which the JSX scans could not see. The `item: true` in the Applications uiSchema was also removed.
+- **Removed props fixed:**
+  - `Dialog` `TransitionComponent` (`ReactoryCoreDialog`) → `slots.transition`
+  - `Drawer` `ModalProps.BackdropProps` → `slotProps.backdrop`
+  - `SpeedDialAction` `tooltipTitle` → `slotProps.tooltip.title`
+  - `TextField` `InputProps` / `InputLabelProps` (`MaterialStringField`, `GeneralSection`) → `slotProps.input` / `inputLabel`
+  - `Select` `MenuProps.PaperProps` → `MenuProps.slotProps.paper`
+  - `disableEscapeKeyDown` removed from the three socialeyes dialogs, whose `onClose` already ignores closing while submitting
+- **Typography system props in `slotProps`.** `ListItemText` `slotProps.primary` / `secondary` objects that set `fontWeight` / `fontSize` / `fontFamily` directly now put them in `sx`: 10 in the client and 4 in the core workflow bulk-action widgets. A `Box`-based `core.TimelineOppositeContent` call passed `color=` as a prop; it is now in `sx`.
+- **Legacy `reactory-client-core` plugin (section 8, decision 5).** It is still the only provider of `core.Login`, `core.Register`, `core.ForgotPassword`, `core.TwoFactorAuth` and `core.Logout`, and it takes MUI from the registry. It was therefore migrated in place rather than retired. Changes:
+  - `Grid2` → `Grid`
+  - 25 legacy `<Grid item xs>` and 2 `item: true` objects → `size`
+  - 13 `TextField` `InputProps` / `inputProps` / `InputLabelProps` / `FormHelperTextProps` → `slotProps`
+  - 13 system props → `sx`
+  
+  The bundle (`lib/`, built locally and not tracked) builds with the same 14 pre-existing TypeScript parse diagnostics as before. Its `OrganizationSelector` still calls `makeStyles` from an unregistered `material-ui.MaterialStyles`; that was already broken before this phase and is out of scope.
+- **Test changes:** the v9 `Button` no longer emits the compound `MuiButton-containedError` class (`QuickFilters` test now checks `MuiButton-contained` + `MuiButton-colorError`). 5 new tests cover `toGridProps`; the 3 alias tests were removed with the alias.
+- **No hits** for: removed theme `styleOverrides` keys, removed or compound class selectors in app code, `Divider light`, `Typography paragraph`, `Grid direction="column"`, `GridLegacy`, `MuiTouchRipple`, `*Outline` icons, Slider `onMouseDown`. `nativeButton` warnings only fire for non-string `component`s that render a `<button>`; none appeared in tests.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 256 suites / 3585 tests.
+  - The jest warning set matches the Phase 2 code on MUI 9, minus the `BackdropProps` and `item` warnings this phase removes.
+  - Plugin smoke 112 / 112 (69 / 111 render) against the existing runtime builds. That confirms already-built plugins survive the MUI 9 host and the alias removal.
+  - Server tsc: no upstream file changed its error count.
+  - `reactory-core` type errors: the 556 pre-existing ones only, none new.
+- **Runtime plugins recompiled** from the Phase 3 sources: 173 forms, 187 resources, 0 errors, no compile-failure stubs. The 13 changed widgets were rebuilt, and none still carries a removed prop. Plugin smoke against those builds: 112 / 112 (69 / 111 render). Three legacy-prop warnings remain:
+  - 2 come from local builds whose sources were deleted upstream (`core.ApplicationOrganizationsToolbar`, `reactory.ApplicationOverviewPanel`, both July builds). They are stale artifacts in the gitignored `__runtime__`.
+  - 1 is the enterprise-only module.
+- **Visual baselines (strict, zero tolerance), 9 signed-in screens, seeded sign-in as in Phase 2.**
+  - 8 are pixel-identical to the MUI 7 baselines.
+  - `app-menu-open` differs only in the menu label positions: MUI 9 changed the `ListItemIcon` default min-width from 56px to 36px. Decision (2026-11-19): accept MUI's default rather than pin 56px in the theme. The baseline was refreshed, and a strict re-run passed 9 / 9.
+  - `login` is still unchecked; it needs the local anonymous account.
+- **Browser floor (section 8, decision 3).** Decision (2026-11-19): align with MUI. The production `browserslist` is now `chrome >= 117`, `edge >= 121`, `firefox >= 121`, `safari >= 17` and `ios_saf >= 17`. The development list is unchanged.
+- **Enterprise-only module.** Against the v9 types it gains 7 errors in 5 widget files (`TextField` `InputLabelProps` / `inputProps`). Those props also stop working at runtime. Convert them on the enterprise path, with the Phase 2 `Grid` items.
 
 ### Phase 4: React 18.3
 
@@ -404,9 +448,9 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
 
 1. **Order.** MUI first (recommended above) or React 18 first. Both work, because MUI 9 supports 17.
 2. **`@mui/x-data-grid`.** Upgrade to 9 and keep it only as a registry export, or remove it. Nothing in these repos renders it. Keeping it costs bundle size and a codemod chain for unknown external plugins.
-3. **Browser floor.** MUI 9 targets Safari 17, Chrome 117 and Firefox 121. Accept that and update browserslist, or keep `>0.2%, not dead` and test the older browsers ourselves.
+3. **Browser floor.** MUI 9 targets Safari 17, Chrome 117 and Firefox 121. Accept that and update browserslist, or keep `>0.2%, not dead` and test the older browsers ourselves. **Decided 2026-11-19: aligned with MUI's floor (Phase 3).**
 4. **`@mui/lab`.** Keep it (Timeline, Masonry, TabContext) on the beta, or drop it from the registry. Nothing in the client imports it directly.
-5. **Legacy `reactory-client-core` plugin.** It imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Either retire it or migrate it as part of Phase 1.
+5. **Legacy `reactory-client-core` plugin.** It imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Either retire it or migrate it as part of Phase 1. **Phase 3 migrated it in place**, because it is still the only provider of the login, registration and password-reset screens. Retiring it is still open.
 
 ## Appendix A: scan patterns
 

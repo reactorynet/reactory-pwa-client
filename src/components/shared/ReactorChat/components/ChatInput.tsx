@@ -325,7 +325,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     primary={opt.label}
                     secondary={opt.description}
                     slotProps={{
-                      primary: { variant: 'body2', fontWeight: opt.mode === toolApprovalMode ? 'bold' : 'normal' },
+                      primary: { variant: 'body2', sx: { fontWeight: opt.mode === toolApprovalMode ? 'bold' : 'normal' } },
                       secondary: { variant: 'caption' }
                     }} />
                 </MenuItem>

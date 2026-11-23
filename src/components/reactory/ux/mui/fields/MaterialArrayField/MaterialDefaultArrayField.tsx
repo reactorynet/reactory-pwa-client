@@ -15,6 +15,7 @@ import {
   ListItem,
   Stack,
 } from '@mui/material'
+import { toGridProps } from '@reactory/client-core/components/gridCompat';
 
 import {
   Div,
@@ -378,7 +379,6 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         flexDirection: 'column',
         height: '100%',
       },
-      item: true,
     };
 
     const content = (
@@ -604,7 +604,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
             {...provided.droppableProps} 
             ref={provided.innerRef}
             key={`array-item-list-${props.idSchema.$id}`}
-            {...((options.itemsContainerProps as any) || {})}
+            {...(ItemsContainer === Grid ? toGridProps(options.itemsContainerProps as any) : ((options.itemsContainerProps as any) || {}))}
             sx={{
               ...((options.itemsContainerProps as any)?.sx || {}),
               // Ensure Grid container properties are preserved during drag

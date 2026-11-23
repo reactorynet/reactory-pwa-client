@@ -393,12 +393,13 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               size="small"
               required
               slotProps={{
+                ...params.slotProps,
                 input: {
-                  ...params.InputProps,
+                  ...params.slotProps.input,
                   endAdornment: (
                     <>
                       {loadingWorkflows ? <CircularProgress color="inherit" size={18} /> : null}
-                      {params.InputProps.endAdornment}
+                      {params.slotProps.input.endAdornment}
                     </>
                   ),
                 }

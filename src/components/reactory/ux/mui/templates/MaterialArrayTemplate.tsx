@@ -250,12 +250,13 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
 
     const gridProps: any = {
       key: index,
-      item: true,
-      xs: itemUiOptions?.size?.xs || 12,
-      sm: itemUiOptions?.size?.sm || 12,
-      md: itemUiOptions?.size?.md || 6,
-      lg: itemUiOptions?.size?.lg || 3,
-      xl: itemUiOptions?.size?.xl || 3,      
+      size: {
+        xs: itemUiOptions?.size?.xs || 12,
+        sm: itemUiOptions?.size?.sm || 12,
+        md: itemUiOptions?.size?.md || 6,
+        lg: itemUiOptions?.size?.lg || 3,
+        xl: itemUiOptions?.size?.xl || 3,
+      },
     };
     
     return (      

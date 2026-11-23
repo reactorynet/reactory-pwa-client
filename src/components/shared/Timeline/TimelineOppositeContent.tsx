@@ -13,7 +13,7 @@ export interface TimelineOppositeContentProps extends Omit<BoxProps, 'position'>
  * Typically used for timestamps or secondary information.
  * 
  * @example
- * <TimelineOppositeContent color="text.secondary">
+ * <TimelineOppositeContent sx={{ color: 'text.secondary' }}>
  *   <Typography variant="caption">9:30 am</Typography>
  * </TimelineOppositeContent>
  */
