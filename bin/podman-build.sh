@@ -33,9 +33,15 @@ if podman images | grep -q $IMAGE_TAG; then
   podman rmi $IMAGE_TAG
 fi
 echo "💿 Building Image $IMAGE_TAG"
+# NGINX_BASE_IMAGE (optional, e.g. from $BUILD_OPTIONS) overrides the Dockerfile's
+# default base image, so an environment can pull from its own approved registry.
+if [ -n "$NGINX_BASE_IMAGE" ]; then
+  echo "🧱 Base image override: $NGINX_BASE_IMAGE"
+fi
 podman build \
   --build-arg REACTORY_CONFIG_ID=${REACTORY_CONFIG_ID} \
   --build-arg REACTORY_ENV_ID=${REACTORY_ENV_ID} \
+  ${NGINX_BASE_IMAGE:+--build-arg NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}} \
   -t $IMAGE_TAG \
   -f ./config/env/${1:-reactory}/${3:-Dockerfile} .
 

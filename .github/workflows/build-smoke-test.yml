@@ -89,3 +89,16 @@ jobs:
       # builds in this job; on its own it had no bundle to copy.
       - name: Build client image
         run: docker build -f config/env/reactory/Dockerfile -t reactory-pwa-client:ci .
+
+      # The image runs nginx as a non-root user on 8080; check it actually serves.
+      - name: Serve smoke test
+        run: |
+          docker run -d --name pwa-smoke -p 8080:8080 reactory-pwa-client:ci
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/some/spa/route || true)
+            [ "$code" = "200" ] && exit 0
+            sleep 1
+          done
+          docker logs pwa-smoke
+          echo "::error::container did not serve the SPA on :8080 (last HTTP code: $code)"
+          exit 1
