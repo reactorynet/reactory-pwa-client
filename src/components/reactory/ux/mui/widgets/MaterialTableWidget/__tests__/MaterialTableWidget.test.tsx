@@ -740,6 +740,26 @@ describe('MaterialTableWidget', () => {
         expect(mockReactoryInstance.graphqlQuery).toHaveBeenCalled();
       });
     });
+
+    it('shows remote rows under StrictMode', async () => {
+      // StrictMode mounts, unmounts and remounts in development. A mounted flag
+      // cleared only on unmount dropped every query result (React 18).
+      mockReactoryInstance.graphqlQuery.mockResolvedValue({
+        data: {
+          items: {
+            data: [{ id: 'r1', name: 'Remote Row', status: 'active' }],
+            paging: { page: 1, pageSize: 10, total: 1, hasNext: false },
+          },
+        },
+      });
+      render(
+        <React.StrictMode>
+          <MaterialTableWidget {...propsWithRemoteData} formData={[]} />
+        </React.StrictMode>,
+      );
+
+      expect(await screen.findByText('Remote Row')).toBeInTheDocument();
+    });
   });
 
   describe('refresh events', () => {

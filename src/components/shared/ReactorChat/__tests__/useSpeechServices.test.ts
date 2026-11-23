@@ -3,7 +3,7 @@
  * @module ReactorChat/hooks/__tests__/useSpeechServices
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useSpeechServices, { cleanTextForSpeech, clearAudioCache } from '../hooks/useSpeechServices';
 
 // Mock useGraph

@@ -9,10 +9,11 @@ jest.mock('./App', () => ({
   ),
 }));
 
-// Mock ReactDOM.render
+// Mock createRoot(...).render
 const mockRender = jest.fn();
-jest.mock('react-dom', () => ({
-  render: mockRender,
+const mockCreateRoot = jest.fn(() => ({ render: mockRender, unmount: jest.fn() }));
+jest.mock('react-dom/client', () => ({
+  createRoot: mockCreateRoot,
 }));
 
 // Mock registerServiceWorker
@@ -140,7 +141,7 @@ describe('index.tsx', () => {
       jest.resetModules();
       require('./index');
 
-      // Verify ReactDOM.render was called
+      // Verify createRoot(...).render was called
       expect(mockRender).toHaveBeenCalled();
       
       // Verify getTheme was called to get theme

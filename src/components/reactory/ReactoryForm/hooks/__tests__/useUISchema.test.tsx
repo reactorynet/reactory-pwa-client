@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useUISchema } from '../useUISchema';
 import Reactory from '@reactorynet/reactory-core';
 

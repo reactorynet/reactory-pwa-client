@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 'use strict';
 /**
  * ReactoryCoreDialog Component
@@ -234,7 +235,8 @@ const Transition = React.forwardRef(function Transition(props: any, ref) {
  * @param props - Component props
  * @returns React component
  */
-const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
+const FullScreenDialog = (rawProps: IReactoryCoreDialogProps) => {
+  const props = applyDefaultProps(rawProps, fullScreenDialogDefaultProps);
   const theme = useTheme();
 
   const {    
@@ -511,7 +513,7 @@ FullScreenDialog.propTypes = {
   disableEscapeKeyDown: PropTypes.bool,
 };
 
-FullScreenDialog.defaultProps = {
+const fullScreenDialogDefaultProps = {
   open: false,
   showAppBar: true,
   slide: 'up',

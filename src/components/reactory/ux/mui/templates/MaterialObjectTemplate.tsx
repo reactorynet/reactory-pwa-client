@@ -137,7 +137,7 @@ const MaterialObjectTemplate = (props) => {
     return (<Widget {..._props} />)
   }
 
-  let ContainerComponent = Paper;
+  let ContainerComponent: React.ElementType = Paper;
   let ContainerStyles = {};
 
   // `ui:options.variant: 'section'` renders the object as a padded, outlined

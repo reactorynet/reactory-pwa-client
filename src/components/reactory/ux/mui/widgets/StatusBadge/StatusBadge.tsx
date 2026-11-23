@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { useMemo } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import { Chip, Icon, Tooltip } from '@mui/material';
@@ -146,7 +147,8 @@ interface StatusBadgeProps {
  *   }
  * }
  */
-const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
+const StatusBadge: React.FC<StatusBadgeProps> = (rawProps) => {
+  const props = applyDefaultProps(rawProps, statusBadgeDefaultProps);
   const theme = useTheme();
   const {
     value,
@@ -339,7 +341,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
   return chipElement;
 };
 
-StatusBadge.defaultProps = {
+const statusBadgeDefaultProps = {
   value: '',
   formData: '',
 };

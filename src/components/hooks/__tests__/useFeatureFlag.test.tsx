@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useFeatureFlag, useSimpleFeatureFlag, useMemoryFeatureFlag } from '../useFeatureFlag';
 import { FeatureFlagConfiguration } from '../../../featureflags/models/FeatureFlagConfiguration';
 
@@ -6,14 +6,14 @@ describe('useFeatureFlag', () => {
   it('does not cause an infinite re-render loop when options are omitted or passed inline', async () => {
     let renderCount = 0;
 
-    const { result, waitForNextUpdate } = renderHook(() => {
+    const { result } = renderHook(() => {
       renderCount++;
       return useFeatureFlag({
         featureId: 'test-feature',
       });
     });
 
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(renderCount).toBeLessThan(5);
     expect(result.current.loading).toBe(false);
@@ -22,12 +22,12 @@ describe('useFeatureFlag', () => {
   it('does not re-render endlessly when using useSimpleFeatureFlag', async () => {
     let renderCount = 0;
 
-    const { result, waitForNextUpdate } = renderHook(() => {
+    const { result } = renderHook(() => {
       renderCount++;
       return useSimpleFeatureFlag('simple-feature');
     });
 
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(renderCount).toBeLessThan(5);
     expect(result.current.loading).toBe(false);
@@ -38,11 +38,11 @@ describe('useFeatureFlag', () => {
       new FeatureFlagConfiguration('flag-1', true),
     ];
 
-    const { result, waitForNextUpdate } = renderHook(() =>
+    const { result } = renderHook(() =>
       useMemoryFeatureFlag('flag-1', staticFlags)
     );
 
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.isEnabled).toBe(true);
     expect(result.current.loading).toBe(false);

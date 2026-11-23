@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useStreamRecovery, {
   DEFAULT_STALL_TIMEOUT_MS,
   UseStreamRecoveryOptions,

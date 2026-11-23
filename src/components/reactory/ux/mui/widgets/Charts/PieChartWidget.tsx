@@ -44,8 +44,7 @@ const renderSimpleActiveShape = (props: any, value: number) => (
 
 const renderNoDataPie = (cx: string, cy: string, innerRadius: number, outerRadius: number) => (
   <Pie
-    activeIndex={0}
-    activeShape={props => renderSimpleActiveShape(props, 0)}
+    shape={(sector: any) => sector.index === 0 ? renderSimpleActiveShape(sector, 0) : <Sector {...sector} />}
     data={[{name: 'data', value: 100}]}
     dataKey="value"
     stroke="none"
@@ -207,7 +206,7 @@ const PieChartWidget: React.FC<PieChartWidgetProps> = (props) => {
     // Apply sector-specific positioning for all text elements
     const labelX = ex + sectorOffset.x;
     const labelY = ey + sectorOffset.y;
-    const labelAnchor = sectorOffset.anchor;
+    const labelAnchor = sectorOffset.anchor as 'start' | 'middle' | 'end';
 
     return (
       <g>
@@ -279,8 +278,8 @@ const PieChartWidget: React.FC<PieChartWidgetProps> = (props) => {
             nameKey={pieProps.nameKey}
             data={pieProps.data}
             onMouseEnter={pieProps.onMouseEnter}
-            activeIndex={pieProps.activeIndex}
-            activeShape={pieProps.activeShape}
+            // recharts 3 removed `activeIndex`; draw the active sector from our own state.
+            shape={(sector: any) => sector.index === pieProps.activeIndex ? pieProps.activeShape(sector) : <Sector {...sector} />}
           >
             {pieProps.data.map((entry: any, index: number) => (
               <Cell                

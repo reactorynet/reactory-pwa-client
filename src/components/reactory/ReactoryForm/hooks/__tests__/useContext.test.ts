@@ -2,7 +2,7 @@
  * Tests for the useFormContext hook.
  * Verifies that the hook builds a complete IReactoryFormContext object.
  */
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useFormContext } from '../useContext';
 import { createMockReactorySDK, createMockFormDefinition } from '../../__tests__/mockReactory';
 

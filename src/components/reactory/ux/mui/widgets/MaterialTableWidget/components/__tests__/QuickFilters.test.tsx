@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QuickFilters, QuickFiltersProps } from '../QuickFilters';
 import { QuickFilterDefinition } from '../../hooks/useQuickFilters';
@@ -276,7 +276,7 @@ describe('QuickFilters', () => {
       render(<QuickFilters {...defaultProps} />);
       
       const activeButton = screen.getByRole('button', { name: /Active/i });
-      activeButton.focus();
+      act(() => { activeButton.focus(); });
       
       expect(document.activeElement).toBe(activeButton);
     });

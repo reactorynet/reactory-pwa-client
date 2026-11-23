@@ -3,7 +3,7 @@
  * @module UserList/hooks/__tests__/useUserQuery
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { waitFor } from '@testing-library/react';
 import { useUserQuery } from '../useUserQuery';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';

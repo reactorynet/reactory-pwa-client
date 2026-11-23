@@ -2,7 +2,7 @@
  * Tests for the useRESTDataManager hook.
  * Verifies REST API data fetching, submission, and error handling.
  */
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useRESTDataManager } from '../useRESTDataManager';
 import { createMockReactorySDK, createMockFormDefinition } from '../../__tests__/mockReactory';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ChatList from '../hooks/useScrollToBottom';
 import { UXChatMessage } from '../types';
 import { getChatMessageCommentContextId, applyDomHighlights, ChatCommentHighlightItem } from '../utils';
@@ -296,7 +296,9 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
       expect(addedHandler).toBeDefined();
 
       mockReactory.graphqlQuery.mockClear();
-      addedHandler({ contextId: 'reactor_chat_session-test-1_msg-assistant-1' });
+      await act(async () => {
+        addedHandler({ contextId: 'reactor_chat_session-test-1_msg-assistant-1' });
+      });
 
       expect(mockReactory.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining('GetCommentsByContext'),

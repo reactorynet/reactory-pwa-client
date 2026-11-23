@@ -3,7 +3,7 @@
  */
 import * as React from 'react';
 import { render, act } from '@testing-library/react';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useFormTelemetry, digestValue } from '../../hooks/useFormTelemetry';
 import { createMockReactorySDK } from '../../testing/mockReactorySDK';
 

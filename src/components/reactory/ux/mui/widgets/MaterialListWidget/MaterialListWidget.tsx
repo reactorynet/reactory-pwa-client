@@ -661,7 +661,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
                 let componentToRender = (
                   <IconButton onClick={actionClick} size="large">
-                    <Icon>{iconKey}</Icon>
+                    <Icon>{iconKey as string}</Icon>
                   </IconButton>
                 )
 

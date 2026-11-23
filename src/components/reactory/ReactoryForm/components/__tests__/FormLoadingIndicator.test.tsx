@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, cleanup, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { FormLoadingIndicator } from '../FormLoadingIndicator';
 import { FormLoadingStage } from '../../hooks/useFormLoadingState';
@@ -41,7 +41,7 @@ describe('FormLoadingIndicator error state', () => {
     expect(retry).toHaveAttribute('type', 'button');
 
     // It participates in the tab order and receives focus like any real button.
-    retry.focus();
+    act(() => { retry.focus(); });
     expect(retry).toHaveFocus();
 
     fireEvent.click(retry);

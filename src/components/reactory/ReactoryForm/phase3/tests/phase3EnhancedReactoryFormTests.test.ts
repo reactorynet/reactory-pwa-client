@@ -96,7 +96,7 @@ describe('Phase 3.4: AnimatedReactoryForm Component', () => {
     test('should use Framer Motion', () => {
       // This test validates that the component imports Framer Motion
       expect(() => {
-        require('framer-motion');
+        require('motion/react');
       }).not.toThrow();
     });
   });
@@ -112,7 +112,7 @@ describe('Phase 3.4: AnimatedReactoryForm Component', () => {
       const content = fs.readFileSync(componentPath, 'utf8');
       expect(content).toContain('AnimatedReactoryForm');
       expect(content).toContain('React.FC');
-      expect(content).toContain('framer-motion');
+      expect(content).toContain('motion/react');
       expect(content).toContain('@mui/material');
       expect(content).toContain('ModernFormField');
       expect(content).toContain('LoadingSkeleton');

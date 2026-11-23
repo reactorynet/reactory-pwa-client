@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 
 const createStreamingSessionMock = jest.fn();
 jest.mock('../components/Shell/shellApi', () => ({
@@ -76,10 +76,13 @@ const settle = async () => {
   });
 };
 
+// Counts hook renders (@testing-library/react has no `result.all`).
+let hubRenders = 0;
+
 const renderHub = (initialProps: { active: string; status?: any; chats?: ChatState[] }) =>
   renderHook(
     ({ active, status, chats: chatList }: any) =>
-      useSessionStreamHub({
+      (hubRenders++, useSessionStreamHub({
         reactory,
         activeSessionId: active,
         activePersonaId: 'p1',
@@ -87,7 +90,7 @@ const renderHub = (initialProps: { active: string; status?: any; chats?: ChatSta
         subAgents: [],
         getPersona: () => null,
         activeSessionStatus: status ?? 'idle',
-      }),
+      })),
     { initialProps },
   );
 
@@ -519,14 +522,14 @@ describe('useSessionStreamHub update coalescing', () => {
     const stream = backgroundStreamFor('session-a');
     // First token moves idle -> streaming, which flushes immediately.
     act(() => { stream.emit('token', { content: 'a' }); });
-    const rendersAfterFirstToken = result.all.length;
+    const rendersAfterFirstToken = hubRenders;
 
     // 40 further tokens change nothing a user perceives.
     act(() => {
       for (let i = 0; i < 40; i++) stream.emit('token', { content: 'x' });
     });
 
-    expect(result.all.length).toBe(rendersAfterFirstToken);
+    expect(hubRenders).toBe(rendersAfterFirstToken);
     expect(result.current.backgroundSessions[0].status).toBe('streaming');
   });
 

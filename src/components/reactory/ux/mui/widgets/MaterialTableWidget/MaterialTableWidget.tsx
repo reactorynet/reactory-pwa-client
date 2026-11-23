@@ -600,6 +600,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const isMountedRef = useRef(true);
   React.useEffect(() => {
+    // Set on every mount: StrictMode mounts, unmounts and remounts in development,
+    // and a ref only cleared here would drop every later result.
+    isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
   }, []);
 

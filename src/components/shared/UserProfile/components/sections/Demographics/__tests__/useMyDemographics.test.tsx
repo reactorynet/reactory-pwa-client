@@ -8,7 +8,7 @@
  * organization, an empty payload, a failed policy read, and the failure shapes
  * the server returns from `MySaveDemographics`.
  */
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook } from '@testing-library/react';
 
 import type { DemographicDefinition } from '../../../../../../plugins/reactory-core/demographic-form';
 import { readSelfServicePolicy, useMyDemographics } from '../hooks/useMyDemographics';

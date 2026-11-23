@@ -110,7 +110,7 @@ const FunnelChart: React.FC<FunnelChartProps> = ({
           {description}
         </Typography>
       )}
-      <ResponsiveContainer width={width} height={height}>
+      <ResponsiveContainer width={width as number | `${number}%`} height={height}>
         <RechartsFunnelChart>
           <Tooltip content={<ChartTooltip formatter={tooltipFormatter} />} />
           <Funnel

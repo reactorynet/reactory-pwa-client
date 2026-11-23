@@ -35,7 +35,8 @@ import { useReactory } from '@reactory/client-core/api';
 interface ReportComponents {
   FullScreenModal: React.FC<{ 
     open: boolean,
-    onClose: () => void 
+    onClose: () => void,
+    children?: React.ReactNode
   }>;
   DropDownMenu: React.FC<{ 
     menus: any[],

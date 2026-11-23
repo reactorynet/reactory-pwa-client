@@ -3,7 +3,7 @@
  * @module MaterialTableWidget/hooks/__tests__/useAdvancedFilters
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useAdvancedFilters, AdvancedFilterField } from '../useAdvancedFilters';
 
 const mockFields: AdvancedFilterField[] = [

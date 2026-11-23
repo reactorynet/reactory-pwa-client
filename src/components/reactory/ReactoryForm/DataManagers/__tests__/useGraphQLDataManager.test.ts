@@ -6,7 +6,7 @@
  * validation message (e.g. a duplicate class code) could only be shown as a
  * notification - never inline on the offending field.
  */
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useGraphQLDataManager } from '../useGraphQLDataManager';
 import { createMockReactorySDK, createMockFormDefinition } from '../../__tests__/mockReactory';
 

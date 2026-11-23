@@ -3,7 +3,7 @@
  * @module MaterialTableWidget/hooks/__tests__/useDebounce
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useDebounce, useDebouncedSearch } from '../useDebounce';
 
 describe('useDebounce', () => {

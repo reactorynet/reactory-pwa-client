@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
@@ -5,7 +6,8 @@ import { Calendar as BigCalendar } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import moment from 'moment';
 
-const Calendar = (props: any) => {
+const Calendar = (rawProps: any) => {
+  const props = applyDefaultProps(rawProps, calendarDefaultProps);
   const [selected, setSelected] = useState(null);
 
   const onDoubleClick = (eventObj, e) => {
@@ -44,7 +46,7 @@ Calendar.propTypes = {
   onItemDoubleClick: PropTypes.func,
 }
 
-Calendar.defaultProps = {
+const calendarDefaultProps = {
   startAccessor: 'startDate',
   endAccessor: 'endDate',
   calendarItems: [],

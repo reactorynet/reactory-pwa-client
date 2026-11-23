@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { useState } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
@@ -41,7 +42,8 @@ const Root = styled('div')(({ theme }) => ({
  * Renders an array of string items as chips with add/delete functionality.
  * Supports read-only mode, custom placeholders, and chip hiding when allowAdd is false.
  */
-const ChipArray = (props: any) => {
+const ChipArray = (rawProps: any) => {
+  const props = applyDefaultProps(rawProps, chipArrayDefaultProps);
   const theme = useTheme();
   const {
     formData = [],
@@ -284,7 +286,7 @@ ChipArray.propTypes = {
   uiSchema: PropTypes.object,
 };
 
-ChipArray.defaultProps = {
+const chipArrayDefaultProps = {
   formData: [],
   readOnly: false,
 };

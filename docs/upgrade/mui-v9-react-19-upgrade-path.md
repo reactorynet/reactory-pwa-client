@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted. Phases 0, 1 and 2 merged into the feature branch; Phase 3 (MUI 9) complete on its phase branch, awaiting review (2026-11-19). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) complete on its phase branch, awaiting review (2026-11-23). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -395,6 +395,64 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
 - rjsf: `@rjsf/core` 5.24.13 accepts React 17 or later. We do not use `@rjsf/mui` (ADR-0004), so no rjsf change is forced. Revisit ADR-0008 (the rjsf 6 move) as its own decision, not as part of this phase.
 - Run on 18.3 and fix every React 19 deprecation warning in the console and in tests. That list is the Phase 5 worklist.
 - Exit: the same gates, with zero React 19 deprecation warnings in the test run. Then release.
+
+#### Phase 4 record (2026-11-23)
+
+- **Versions:**
+  - `react` and `react-dom` are 18.3.1.
+  - `@types/react` 18.3.31 and `@types/react-dom` 18.3.7 are pinned through `resolutions` to one copy.
+  - The `react-is` resolution is 18.3.1.
+  - The server's `react`, `react-dom` and React types follow, so server widget sources typecheck against what they run on. The server lock was generated in a clean worktree and only the React entries changed.
+  - `reactory-core`'s React peer is widened to `^17.0.2 || ^18.0.0 || ^19.0.0`. It is pinned to `17.0.2` in the published 1.1.10, which causes the client's only new peer warning. That warning stays until a new version is published.
+- **Entry and mounting:**
+  - `index.tsx` renders through `createRoot`.
+  - `reactory.mountComponent`, `reactory.unmountComponent` and `attachComponent` keep their node-addressed, plugin-facing signatures. They now use a per-node root registry (`src/api/domRoots.tsx`, 3 tests).
+  - `unmountComponent(node)` still returns whether something was mounted, and the render callback still fires after commit.
+  - The pre-existing no-op `theme = true` branch of `mountComponent` is unchanged.
+- **Test stack:**
+  - `@testing-library/react` is 16.3.3. `@testing-library/react-hooks` is removed, and its 45 test files now use `renderHook` from `@testing-library/react`.
+  - Only two files needed more than the import change:
+    - `waitForNextUpdate` became `waitFor`.
+    - `result.all` became a render counter.
+  - `act` warnings in the test run went from 178 on React 17 to 12. The rest are 10 asynchronous `App` initialisation updates that land after those tests end, and 2 MUI focus-ripple animations.
+- **Types:** 12 React 18 type errors in the client, all from narrower types:
+  - `ErrorInfo`.
+  - No implicit `children` on `FC`.
+  - `ReactNode` no longer accepts `{}`, functions or `unknown`.
+  - SVG `textAnchor`.
+
+  Three server widgets had the same kind of error and were cast where the value is a string at runtime. Server tsc: no file got worse, and two improved (3394 errors, was 3396).
+- **React 19 deprecations in our code:**
+  - `defaultProps` on 11 function components now goes through `applyDefaultProps` (`src/components/applyDefaultProps.ts`, 2 tests). Like React, it fills only `undefined` props.
+  - The 4 in the legacy form fork (`src/components/reactory/form/`) were left as they are, because `AGENTS.md` forbids changing the fork. They go with the fork's retirement, or in Phase 5.
+  - No other removed API is used (string refs, legacy context, `findDOMNode`, `react-dom/test-utils`).
+- **StrictMode bugs found on React 18.** These surfaced in development only: StrictMode now mounts, unmounts and remounts every component, and React 18 runs passive effects later than React 17 did.
+  - **Lists were empty.** `MaterialTableWidget` cleared `isMountedRef` on unmount and never set it back, so every query result was dropped after the StrictMode remount. Fixed; a StrictMode regression test fails without the fix.
+  - **Object widgets did not bind.** `ObjectWidgetField` (for example `core.ApplicationCard` on the home page) skipped re-rendering when its widget registered between the render and the binding effect. Seen on a third warm load of `/`. Fixed; a regression test fails without the fix.
+  - **Two first-run guards** (`MyCommentsToolbar` search debounce, `ChatInput` speech transcript) now compare with the previous value instead of a "first run" flag.
+- **Dependencies:**
+  - `react-router` / `react-router-dom` 6.30.6. The v7 future-flag warnings stay until the Router 7 move, because `v7_relativeSplatPath` changes link resolution in server-configured splat routes.
+  - `react-redux` 9.3.1.
+  - `@apollo/client` 3.14.1. Its dev build warned about the `typeDefs` option, which is removed for 4.0. It was always an empty array and is dropped.
+  - `react-markdown` 10.1.0. No removed props are used, and it brings unified 11, which `remark-gfm` 4 expects.
+  - `motion` 14.14.0 replaces `framer-motion` 10. Imports and test requires now use `motion/react`.
+  - `react-dropzone` 20.2.1. Our use (`onDrop` only, no `accept` / `maxFiles`) avoids the 15–19 behaviour changes.
+  - `recharts` 3.11.0:
+    - `PieChartWidget`'s `activeIndex` is removed in 3.x. The widget now draws its active sector from its own state through `Pie`'s `shape` renderer.
+    - `ResponsiveContainer` `width` is narrower in 3.x and is cast at the shared chart wrappers.
+    - The usage dashboard's line and bar charts were checked in the browser. The pie widget's active sector was not exercised on any page.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 258 suites / 3592 tests.
+  - The dev build reports no issues.
+  - Plugin smoke 112 / 112 (69 / 111 render) against builds recompiled from these sources (173 forms, 0 errors).
+  - Server module jest for the changed widgets: 10 suites / 104 tests.
+  - `reactory-core` 7 / 7 tests, tsc unchanged.
+  - **Strict visuals 9 / 9 (twice), pixel-identical to the React 17 baselines, with no baseline refreshed.**
+- **Phase 5 worklist (React 19 deprecations still in the test run, all third-party):**
+  - `react-quill` calls `findDOMNode`.
+  - `react-beautiful-dnd`'s `Droppable` uses memo `defaultProps`.
+  - `@rjsf/core` 5's `TextareaWidget` uses function `defaultProps` (ADR-0008, the rjsf 6 move).
+  - Also: the legacy fork's 4 `defaultProps`, `FormClass`'s `UNSAFE_` lifecycle, and a `reactory-core` publish with the widened peer range.
 
 ### Phase 5: React 19
 
