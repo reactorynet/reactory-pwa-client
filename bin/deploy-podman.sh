@@ -73,7 +73,7 @@ podman run -d \
   --name "${CONTAINER_NAME}" \
   --network "${NETWORK_NAME}" \
   --restart unless-stopped \
-  -p "${PORT}":80 \
+  -p "${PORT}":8080 \
   -v "${BUILD_DIR}":/usr/share/nginx/html:z \
   "localhost/reactory/${CONFIG_ID}-pwa-client:${BUILD_VERSION}"
 
