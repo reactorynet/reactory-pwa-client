@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { useMemo } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import { Badge, Icon, Typography, Box, Tooltip } from '@mui/material';
@@ -159,7 +160,8 @@ interface CountBadgeProps {
  *   }
  * }
  */
-const CountBadge: React.FC<CountBadgeProps> = (props) => {
+const CountBadge: React.FC<CountBadgeProps> = (rawProps) => {
+  const props = applyDefaultProps(rawProps, countBadgeDefaultProps);
   const theme = useTheme();
   const {
     count: countProp,
@@ -327,7 +329,7 @@ const CountBadge: React.FC<CountBadgeProps> = (props) => {
   return badgeElement;
 };
 
-CountBadge.defaultProps = {
+const countBadgeDefaultProps = {
   count: 0,
   formData: 0,
   value: 0,

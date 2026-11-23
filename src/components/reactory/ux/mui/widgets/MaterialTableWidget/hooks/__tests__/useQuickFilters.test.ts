@@ -3,7 +3,7 @@
  * @module MaterialTableWidget/hooks/__tests__/useQuickFilters
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useQuickFilters, QuickFilterDefinition } from '../useQuickFilters';
 
 const mockFilters: QuickFilterDefinition[] = [

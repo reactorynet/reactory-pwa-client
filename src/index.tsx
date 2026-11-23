@@ -1,6 +1,6 @@
 // import "@babel/polyfill";
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import * as themes from './themes';
 import './index.css';
 import { ReactoryHOC } from './App';
@@ -41,7 +41,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const rootElement = document.getElementById('root')
 if(rootElement?.classList.contains('loading')) rootElement?.classList.remove('loading')
-ReactDOM.render(<ReactoryHOC {...props} /> as any, rootElement as HTMLElement);
+createRoot(rootElement as HTMLElement).render(<ReactoryHOC {...props} /> as any);
 registerServiceWorker();
 document.title = process.env.REACT_APP_TITLE || 'Reactory Client';
 

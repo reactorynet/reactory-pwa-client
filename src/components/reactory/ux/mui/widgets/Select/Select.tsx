@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { Fragment } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
@@ -41,7 +42,8 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   }
 }));
 
-const SelectWidget = (props: SelectWidgetProps) => {
+const SelectWidget = (rawProps: SelectWidgetProps) => {
+  const props = applyDefaultProps(rawProps, selectWidgetDefaultProps);
   const theme = useTheme();
 
     let elements = null
@@ -200,7 +202,7 @@ SelectWidget.propTypes = {
   schema: PropTypes.object,
   uiSchema: PropTypes.object
 }
-SelectWidget.defaultProps = {
+const selectWidgetDefaultProps = {
   formData: [],
   readOnly: false
 }

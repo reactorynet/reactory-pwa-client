@@ -4,7 +4,7 @@
  * @module UserList/hooks/__tests__/useUserFilters
  */
 
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useUserFilters } from '../useUserFilters';
 import type { QuickFilterDefinition, AdvancedFilterField } from '../../types';
 

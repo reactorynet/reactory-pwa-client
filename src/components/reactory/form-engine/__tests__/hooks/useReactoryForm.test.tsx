@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useReactoryForm, type UseReactoryFormArgs } from '../../hooks/useReactoryForm';
 import { createMockReactorySDK } from '../../testing/mockReactorySDK';
 

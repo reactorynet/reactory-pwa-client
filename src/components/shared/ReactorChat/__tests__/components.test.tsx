@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import ChatStatusIndicator from '../components/ChatStatusIndicator';
 import PendingToolCallsBanner from '../components/PendingToolCallsBanner';
 import ToolIterationLimitBanner from '../components/ToolIterationLimitBanner';
@@ -258,7 +258,9 @@ describe('NetworkStatusIndicator', () => {
         il8n={mockIl8n}
       />
     );
-    jest.advanceTimersByTime(2000);
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
     expect(onDismiss).toHaveBeenCalled();
   });
 });

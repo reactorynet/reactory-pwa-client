@@ -747,7 +747,9 @@ describe('ReactoryHOC (App)', () => {
       });
 
       // Advance timers to trigger the retry logic
-      jest.advanceTimersByTime(500);
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
       await act(async () => {
         await Promise.resolve();
       });

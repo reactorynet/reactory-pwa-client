@@ -11,7 +11,7 @@
  * raw ID / Avatar / Logo / URL inputs instead of cards.
  */
 import * as React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { EngineDispatchedForm } from '../../integration/EngineDispatchedForm';
 import { createMockReactorySDK } from '../../testing/mockReactorySDK';
@@ -126,7 +126,7 @@ describe('ReactoryObjectField: ui:widget on object schemas (v5 engine)', () => {
     catalogueMock = { ApplicationCard: CatalogueApplicationCard };
     renderV5(uiSchema('ApplicationCard'), {}, onChange);
 
-    screen.getAllByText('touch')[1].click();
+    fireEvent.click(screen.getAllByText('touch')[1]);
     const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
     expect(lastCall.formData.applications[1].title).toBe('BookTutor!');
     expect(lastCall.formData.applications[0].title).toBe('Reactory Management Client');

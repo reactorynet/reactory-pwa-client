@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useReactoryForm, mergeExtraErrors, type UseReactoryFormArgs } from '../../hooks/useReactoryForm';
 import { createMockReactorySDK } from '../../testing/mockReactorySDK';
 

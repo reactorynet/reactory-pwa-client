@@ -207,7 +207,7 @@ const PieChartWidget: React.FC<PieChartWidgetProps> = (props) => {
     // Apply sector-specific positioning for all text elements
     const labelX = ex + sectorOffset.x;
     const labelY = ey + sectorOffset.y;
-    const labelAnchor = sectorOffset.anchor;
+    const labelAnchor = sectorOffset.anchor as 'start' | 'middle' | 'end';
 
     return (
       <g>

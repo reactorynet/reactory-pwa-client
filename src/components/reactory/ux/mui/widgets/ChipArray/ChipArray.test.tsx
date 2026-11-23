@@ -8,7 +8,7 @@
  * notified on Enter or on delete.
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ChipArray from './ChipArray';
 
@@ -31,7 +31,7 @@ describe('ChipArray', () => {
     const { onChange } = setup();
 
     const input = screen.getByPlaceholderText(PLACEHOLDER);
-    input.focus();
+    act(() => { input.focus(); });
     expect(document.activeElement).toBe(input);
 
     fireEvent.change(input, { target: { value: 'D' } });

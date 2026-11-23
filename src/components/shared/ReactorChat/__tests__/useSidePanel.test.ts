@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useSidePanel from '../hooks/useSidePanel';
 import { SidePanelItem } from '../types';
 

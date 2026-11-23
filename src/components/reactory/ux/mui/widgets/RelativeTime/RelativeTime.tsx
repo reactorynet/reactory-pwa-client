@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { useState, useEffect, useMemo } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import { Typography, Tooltip } from '@mui/material';
@@ -137,7 +138,8 @@ interface RelativeTimeProps {
  *   }
  * }
  */
-const RelativeTime: React.FC<RelativeTimeProps> = (props) => {
+const RelativeTime: React.FC<RelativeTimeProps> = (rawProps) => {
+  const props = applyDefaultProps(rawProps, relativeTimeDefaultProps);
   const theme = useTheme();
   const {
     date: dateProp,
@@ -281,7 +283,7 @@ const RelativeTime: React.FC<RelativeTimeProps> = (props) => {
   return timeElement;
 };
 
-RelativeTime.defaultProps = {
+const relativeTimeDefaultProps = {
   date: null,
   formData: null,
   value: null,

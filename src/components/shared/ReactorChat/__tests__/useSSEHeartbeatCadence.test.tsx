@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useSSE, {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MULTIPLIER,

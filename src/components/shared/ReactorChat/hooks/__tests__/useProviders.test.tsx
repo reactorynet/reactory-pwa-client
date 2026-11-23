@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 
 // Mock @apollo/client before importing the hook.
 jest.mock('@apollo/client', () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { WorkflowTaskApproval } from '../WorkflowTaskApproval';
 
@@ -22,7 +22,9 @@ describe('WorkflowTaskApproval', () => {
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
 
     const approveButton = screen.getByRole('button', { name: /Approve/i });
-    fireEvent.click(approveButton);
+    await act(async () => {
+      fireEvent.click(approveButton);
+    });
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -62,7 +64,9 @@ describe('WorkflowTaskApproval', () => {
     expect(screen.getByText('shell')).toBeInTheDocument();
 
     const resumeBtn = screen.getByRole('button', { name: /Approve & Resume/i });
-    fireEvent.click(resumeBtn);
+    await act(async () => {
+      fireEvent.click(resumeBtn);
+    });
 
     expect(onContinue).toHaveBeenCalled();
     expect(onComplete).toHaveBeenCalledWith(

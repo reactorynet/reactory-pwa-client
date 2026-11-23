@@ -121,7 +121,7 @@ export const UserListItemDetailed: React.FC<UserListItemDetailedProps> = ({
         primary={
           <Box>
             <Typography variant="h6" component="span">
-              {user.fullName || `${user.firstName} ${user.lastName}`}
+              {(user.fullName as unknown as string) || `${user.firstName} ${user.lastName}`}
             </Typography>
             {user.deleted && (
               <Chip

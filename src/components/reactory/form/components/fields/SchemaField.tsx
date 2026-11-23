@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
   import { ADDITIONAL_PROPERTY_FLAG } from "../../utils";
 import React from "react";
 import PropTypes from "prop-types";
@@ -108,7 +109,8 @@ function ErrorList(props) {
   );
 }
 
-function DefaultTemplate(props) {
+function DefaultTemplate(rawProps) {
+  const props = applyDefaultProps(rawProps, defaultTemplateDefaultProps);
   const {
     id,
     classNames,
@@ -171,7 +173,7 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-DefaultTemplate.defaultProps = {
+const defaultTemplateDefaultProps = {
   hidden: false,
   readonly: false,
   required: false,

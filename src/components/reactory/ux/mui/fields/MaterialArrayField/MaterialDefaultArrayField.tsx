@@ -183,7 +183,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
       const onRaiseCommand = (evt) => {
         if (reactory) reactory.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
       }
-      return <Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
+      return <Tooltip key={button.id} title={(button.tooltip || button.id) as string}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
     });
   }
 

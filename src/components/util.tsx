@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { renderIntoNode } from '@reactory/client-core/api/domRoots';
 import moment from 'moment';
 import { map } from 'lodash';
 import {
@@ -112,10 +112,10 @@ export const getElement = (elementName, id, append = true) => {
 export const attachComponent = (ComponentToMount, props, element) => {  
   if (element instanceof Array) {
     element.map(e => {
-      ReactDOM.render(<ComponentToMount {...props} /> as any, e as HTMLElement)
+      renderIntoNode(e as HTMLElement, <ComponentToMount {...props} />)
     })
   } else {
-     ReactDOM.render(<ComponentToMount /> as any, element as HTMLElement);
+     renderIntoNode(element as HTMLElement, <ComponentToMount />);
   }
 };
 

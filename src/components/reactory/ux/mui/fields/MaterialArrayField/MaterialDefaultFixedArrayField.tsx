@@ -15,7 +15,7 @@ const MaterialDefaultFixedArrayField: MaterialArrayFieldType = (props) => {
     formData,
     uiSchema,
     onAddClick,
-  } = props;
+  } = props as typeof props & { children?: React.ReactNode };
   // @ts-ignore
   const {
     TitleField,

@@ -5,7 +5,7 @@
  * React 17 + renderHook interaction that hangs `act`. Each test waits a
  * deterministic interval longer than the configured debounce.
  */
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useAsyncValidation, type AsyncValidator } from '../../hooks/useAsyncValidation';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
