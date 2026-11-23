@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch: {}
 
+# Optional GitHub App for private submodules (see "Submodule checkout token").
+# Set the SUBMODULE_APP_CLIENT_ID and SUBMODULE_APP_PRIVATE_KEY secrets to enable it.
+env:
+  SUBMODULE_APP_CLIENT_ID: ${{ secrets.SUBMODULE_APP_CLIENT_ID }}
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
@@ -15,9 +20,28 @@ jobs:
       # shared demographic form). Without it the directory is empty and both
       # `tsc` and `jest` fail with "Cannot find module .../reactory-core/...".
       # build-smoke-test.yml already checks submodules out for the same reason.
+      # GITHUB_TOKEN only reads this repo, so a clone whose submodules resolve to
+      # private repos can't check them out with it. When the app secrets are set,
+      # mint a read-only token scoped to this repo and the plugin submodules;
+      # otherwise skip this and check out with the default token.
+      - name: Submodule checkout token
+        id: submodule-token
+        if: env.SUBMODULE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ env.SUBMODULE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ${{ github.event.repository.name }}
+            reactory-client-core-pwa-plugin
+            reactory-communicator-pwa-plugin
+          permission-contents: read
+
       - uses: actions/checkout@v7
         with:
           submodules: true
+          token: ${{ steps.submodule-token.outputs.token || github.token }}
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -43,9 +67,28 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      # GITHUB_TOKEN only reads this repo, so a clone whose submodules resolve to
+      # private repos can't check them out with it. When the app secrets are set,
+      # mint a read-only token scoped to this repo and the plugin submodules;
+      # otherwise skip this and check out with the default token.
+      - name: Submodule checkout token
+        id: submodule-token
+        if: env.SUBMODULE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ env.SUBMODULE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ${{ github.event.repository.name }}
+            reactory-client-core-pwa-plugin
+            reactory-communicator-pwa-plugin
+          permission-contents: read
+
       - uses: actions/checkout@v7
         with:
           submodules: true
+          token: ${{ steps.submodule-token.outputs.token || github.token }}
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -72,9 +115,28 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # GITHUB_TOKEN only reads this repo, so a clone whose submodules resolve to
+      # private repos can't check them out with it. When the app secrets are set,
+      # mint a read-only token scoped to this repo and the plugin submodules;
+      # otherwise skip this and check out with the default token.
+      - name: Submodule checkout token
+        id: submodule-token
+        if: env.SUBMODULE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ env.SUBMODULE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ${{ github.event.repository.name }}
+            reactory-client-core-pwa-plugin
+            reactory-communicator-pwa-plugin
+          permission-contents: read
+
       - uses: actions/checkout@v7
         with:
           submodules: true
+          token: ${{ steps.submodule-token.outputs.token || github.token }}
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
