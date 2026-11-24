@@ -41,3 +41,22 @@ Runs all unit tests (there aren't many at this stage, we're working on)
 
 ## analyze.sh
 Analyzes the built output (experimental)
+
+## podman-build.sh / deploy-podman.sh
+
+`bin/podman-build.sh <config-id> <env-id>` builds the nginx container image from
+`config/env/<config-id>/Dockerfile`. `bin/deploy-podman.sh` builds and runs it,
+mapping the host port to the container's port **8080**.
+
+The image runs nginx as a non-root user (uid 101) on port 8080. Its base image is
+the `NGINX_BASE_IMAGE` build arg, which defaults to
+`public.ecr.aws/nginx/nginx-unprivileged:1.30.7-alpine`. To use another registry
+for an environment, such as an organisation's approved mirror, set it in
+`config/env/<config-id>/.env.build.<env-id>`:
+
+```
+NGINX_BASE_IMAGE=<registry>/nginx-unprivileged:<tag>
+```
+
+Any replacement image has to keep the unprivileged image's layout: non-root nginx,
+port 8080, and config in `/etc/nginx/conf.d`.
