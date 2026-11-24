@@ -34,14 +34,38 @@ on:
       - ".github/workflows/build-smoke-test.yml"
   workflow_dispatch: {}
 
+# Optional GitHub App for private submodules (see "Submodule checkout token").
+# Set the SUBMODULE_APP_CLIENT_ID and SUBMODULE_APP_PRIVATE_KEY secrets to enable it.
+env:
+  SUBMODULE_APP_CLIENT_ID: ${{ secrets.SUBMODULE_APP_CLIENT_ID }}
+
 jobs:
   build-static:
     runs-on: ubuntu-latest
     steps:
+      # GITHUB_TOKEN only reads this repo, so a clone whose submodules resolve to
+      # private repos can't check them out with it. When the app secrets are set,
+      # mint a read-only token scoped to this repo and the plugin submodules;
+      # otherwise skip this and check out with the default token.
+      - name: Submodule checkout token
+        id: submodule-token
+        if: env.SUBMODULE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ env.SUBMODULE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ${{ github.event.repository.name }}
+            reactory-client-core-pwa-plugin
+            reactory-communicator-pwa-plugin
+          permission-contents: read
+
       - uses: actions/checkout@v7
         with:
           # src/components/plugins/reactory-core is a submodule the bundle imports.
           submodules: true
+          token: ${{ steps.submodule-token.outputs.token || github.token }}
 
       # Corepack first: setup-node's Yarn cache lookup runs `yarn`, and the
       # runner's global Yarn 1 refuses this repo's packageManager (yarn@4).
@@ -89,3 +113,16 @@ jobs:
       # builds in this job; on its own it had no bundle to copy.
       - name: Build client image
         run: docker build -f config/env/reactory/Dockerfile -t reactory-pwa-client:ci .
+
+      # The image runs nginx as a non-root user on 8080; check it actually serves.
+      - name: Serve smoke test
+        run: |
+          docker run -d --name pwa-smoke -p 8080:8080 reactory-pwa-client:ci
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/some/spa/route || true)
+            [ "$code" = "200" ] && exit 0
+            sleep 1
+          done
+          docker logs pwa-smoke
+          echo "::error::container did not serve the SPA on :8080 (last HTTP code: $code)"
+          exit 1
