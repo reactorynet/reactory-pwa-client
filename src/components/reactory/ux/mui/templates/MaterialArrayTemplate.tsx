@@ -76,8 +76,8 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
   const [selected, setSelected] = useState<boolean[]>([]);
   const [onChangeTimer, setOnChangeTimer] = useState<any>(null);
 
-  const registry = useRef<Reactory.Forms.IReactoryFormUtilitiesRegistry>();
-  const utils = useRef<ReactoryFormUtilities>();
+  const registry = useRef<Reactory.Forms.IReactoryFormUtilitiesRegistry | undefined>(undefined);
+  const utils = useRef<ReactoryFormUtilities | undefined>(undefined);
 
   useEffect(() => {
     if(props.formContext.reactory.utils.lodash.isArray(props.formData) === true) {

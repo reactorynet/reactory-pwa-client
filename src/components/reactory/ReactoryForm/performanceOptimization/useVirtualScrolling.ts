@@ -73,7 +73,7 @@ export const useVirtualScrolling = <T = any>(
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const itemHeightsRef = useRef<Map<number, number>>(new Map());
   const lastScrollTopRef = useRef<number>(0);
 

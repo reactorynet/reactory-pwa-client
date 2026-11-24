@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import ReactQuill from 'react-quill';
+import ReactQuill from 'react-quill-new';
 // @ts-ignore - CSS imports don't have type declarations
-import 'react-quill/dist/quill.snow.css'; // Import base styles
+import 'react-quill-new/dist/quill.snow.css'; // Import base styles
 // @ts-ignore - CSS imports don't have type declarations
-import 'react-quill/dist/quill.bubble.css'; // Import bubble theme
+import 'react-quill-new/dist/quill.bubble.css'; // Import bubble theme
 // @ts-ignore - CSS imports don't have type declarations
 import 'highlight.js/styles/atom-one-dark.css'; // Syntax highlighting theme
 import hljs from 'highlight.js/lib/core';

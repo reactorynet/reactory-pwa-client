@@ -1,6 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill-new';
 import {
   fullToContentHtml,
   fullToEditorHtml,
@@ -17,7 +17,7 @@ import { LinkInsertDialog, LinkConfig } from './dialogs/LinkInsertDialog';
 
 // Stylesheet imports
 // @ts-ignore - stylesheet import has no type declaration
-import 'react-quill/dist/quill.bubble.css';
+import 'react-quill-new/dist/quill.bubble.css';
 
 // Inject custom toolbar icons for table and horizontal rule
 if (Quill) {

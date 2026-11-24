@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
-import ReactQuill from 'react-quill';
+import ReactQuill from 'react-quill-new';
 import hljs from 'highlight.js';
-import 'react-quill/dist/quill.snow.css';
+import 'react-quill-new/dist/quill.snow.css';
 import { 
   FormControl, 
   InputLabel, 

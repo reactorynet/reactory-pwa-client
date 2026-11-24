@@ -1,5 +1,6 @@
 // Reactory component that is used to render a D3 graph
 
+import type { JSX } from "react";
 import Reactory from "@reactorynet/reactory-core";
 import { useReactory } from "@reactory/client-core/api";
 

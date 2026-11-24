@@ -21,7 +21,7 @@ import * as ReactRouter from 'react-router';
 import * as ReactRouterDom from 'react-router-dom';
 import * as ReactBigCalendar from 'react-big-calendar';
 
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import IntersectionVisible from './utility/IntersectionVisible';
 
 import Loading from './shared/Loading';

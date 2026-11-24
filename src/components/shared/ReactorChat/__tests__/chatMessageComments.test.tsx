@@ -219,7 +219,7 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
       });
 
       // The button has aria-label="Comments (1)"
-      const commentBtn = screen.getByLabelText(/Comments \(1\)/i);
+      const commentBtn = await screen.findByLabelText(/Comments \(1\)/i);
       expect(commentBtn).toBeInTheDocument();
     });
 
@@ -318,7 +318,10 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
         />
       );
 
-      // Wait for comments to finish loading and DOM highlights to apply
+      // Wait for comments to finish loading and DOM highlights to apply. The
+      // highlight pass replaces text nodes, so the selection below must be
+      // taken from the DOM as it is after the comments arrive.
+      await screen.findByLabelText(/Comments \(1\)/i);
       await waitFor(() => {
         expect(container.querySelector('.reactory-chat-message-body')).toBeInTheDocument();
       });

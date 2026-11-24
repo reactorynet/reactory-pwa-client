@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Grid } from '@mui/material';
 import FieldPalette from './FieldPalette';
 import SchemaCanvas from './SchemaCanvas';
@@ -34,7 +34,7 @@ const VisualSchemaEditor: React.FC<VisualSchemaEditorProps> = ({ schema, onChang
 
     // ── Nesting via combine ────────────────────────────────────────────────
     // A "combine" happens when a field is dropped directly ONTO a container
-    // card. This is the only reliable way to nest with react-beautiful-dnd (it
+    // card. This is the only reliable way to nest with @hello-pangea/dnd (it
     // cannot resolve nested Droppables). combine results have no `destination`,
     // so this must run before the `!destination` guard.
     if (combine) {

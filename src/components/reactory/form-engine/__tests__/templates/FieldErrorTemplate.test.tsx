@@ -82,7 +82,7 @@ describe('ReactoryFieldErrorTemplate', () => {
   });
 
   it('passes errors and fieldOptions to the resolved component', () => {
-    const MarkerError = jest.fn(() => null);
+    const MarkerError = jest.fn((_props: Record<string, unknown>) => null);
     const registry = baseRegistry({ resolveFqn: () => MarkerError });
     const errors = ['err1'];
     render(
@@ -94,10 +94,9 @@ describe('ReactoryFieldErrorTemplate', () => {
         })}
       />,
     );
-    expect(MarkerError).toHaveBeenCalledWith(
-      expect.objectContaining({ errors, detail: true }),
-      expect.anything(),
-    );
+    // React 19 calls function components with (props, undefined); check the props.
+    expect(MarkerError).toHaveBeenCalled();
+    expect(MarkerError.mock.calls[0][0]).toEqual(expect.objectContaining({ errors, detail: true }));
   });
 
   it('falls back to default ul when field resolves to null', () => {

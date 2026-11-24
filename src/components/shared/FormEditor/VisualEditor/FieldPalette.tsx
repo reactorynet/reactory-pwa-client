@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Box, Paper, Typography, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
 import {
   TextFields,

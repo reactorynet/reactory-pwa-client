@@ -124,7 +124,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
   const definitionRef = useRef(definition);
   const viewportRef = useRef(viewport);
   const selectionRef = useRef(selection);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const lastSavedDefinitionRef = useRef<WorkflowDefinition>(cloneDefinition(definition));
 
   // Update refs when definition changes

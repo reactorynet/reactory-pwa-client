@@ -22,7 +22,7 @@ import {
   DragIndicator,
   ViewQuilt as LayoutIcon
 } from '@mui/icons-material';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { UIFieldSettingsDialog } from './UIFieldSettingsDialog';
 import { LayoutDesignerDialog } from './LayoutDesignerDialog';
 import { LayoutPatch } from './layoutConfig';

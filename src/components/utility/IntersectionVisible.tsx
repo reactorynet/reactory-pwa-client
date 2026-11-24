@@ -160,7 +160,7 @@ export default class IntersectionVisible extends Component<any, any> {
     const {
       className
     } = this.props;
-    return <div className={className} ref={node => this.node = node}>
+    return <div className={className} ref={node => { this.node = node; }}>
       {this.props.children}
     </div>;
   }
