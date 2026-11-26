@@ -2531,6 +2531,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   private async loadPlugins() {
+    // Plugin scripts install themselves against window.reactory.api as soon as
+    // they run. The app publishes this instance there only after init()
+    // completes, then refreshes the status, which brings us back here.
+    if (typeof window !== 'undefined' && window.reactory && window.reactory.api !== this) {
+      this.debug('Plugins wait until the API is published on window.reactory.api');
+      return;
+    }
     if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
       this.emitProgress('plugins', 'active', 'Loading plugins', undefined, `${this.$user.plugins.length} plugin(s) to load`);
       const failedPlugins: Array<{ plugin: Reactory.Platform.IReactoryApplicationPlugin; error: string }> = [];

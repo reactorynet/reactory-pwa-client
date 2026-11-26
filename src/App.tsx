@@ -191,6 +191,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   );
   const loadingStartTime = React.useRef<number>(Date.now());
   const initProgressRef = React.useRef<((evt: InitProgressEvent) => void) | null>(null);
+  // Plugins install themselves against window.reactory.api, which is only
+  // published once init() completes. Until then a status refresh must not mark
+  // the app ready: it would load plugins that install against null.
+  const initCompletedRef = React.useRef<boolean>(false);
+  const restartInitRef = React.useRef<(() => void) | null>(null);
   // Postal subscription for ORG-014's core.OrganizationUpdatedEvent. Kept in a
   // ref so willUnmount can unsubscribe the exact same subscription.
   const organizationUpdatedSubRef = React.useRef<{ unsubscribe?: () => void } | null>(null);
@@ -251,6 +256,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   const getApiStatus = async (emitLogin = true): Promise<void> => {
+    if (initCompletedRef.current === false) {
+      // Reached from the unavailable screen after init() gave up (for example
+      // the anonymous login failed): run init() again rather than only
+      // refreshing the status.
+      restartInitRef.current?.();
+      return;
+    }
 
     try {
       const apiStatus = await reactory.status({ emitLogin, forceLogout: false });
@@ -793,6 +805,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.objectToQueryString = queryString.stringify;
 
         window.reactory.api = reactory;
+        initCompletedRef.current = true;
 
 
         if (query.auth_token) {
@@ -838,6 +851,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         }
       });
     }
+
+    restartInitRef.current = () => {
+      failedCount = 0;
+      void doInit();
+    };
 
     void doInit();
 

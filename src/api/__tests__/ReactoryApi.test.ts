@@ -1398,6 +1398,35 @@ describe('injectPlugin', () => {
   });
 });
 
+describe('plugin loading on a status update', () => {
+  const plugin: any = {
+    id: 'test-plugin',
+    name: 'TestPlugin',
+    nameSpace: 'test',
+    version: '1.0.0',
+    uri: 'http://localhost/plugin.js',
+    mimeType: 'application/javascript',
+    enabled: true,
+  };
+
+  it('waits until the app publishes the instance on window.reactory.api', async () => {
+    const api = await createApi();
+    api.$user = { plugins: [plugin] } as any;
+    const inject = jest.spyOn(api, 'injectPlugin').mockImplementation(() => undefined);
+
+    // Plugin scripts install against window.reactory.api; before init() has
+    // published it they would install against null.
+    api.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OK' });
+    await Promise.resolve();
+    expect(inject).not.toHaveBeenCalled();
+
+    (window as any).reactory.api = api;
+    api.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OK' });
+    await Promise.resolve();
+    expect(inject).toHaveBeenCalledWith(plugin);
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 25. Resource injection
 // ═══════════════════════════════════════════════════════════════════════════
