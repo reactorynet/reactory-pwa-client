@@ -5092,7 +5092,7 @@ __metadata:
     html-webpack-plugin: "npm:5.6.3"
     human-date: "npm:1.4.0"
     human-number: "npm:2.0.4"
-    i18next: "npm:23.11.5"
+    i18next: "npm:26.3.4"
     i18next-browser-languagedetector: "npm:8.0.0"
     identity-obj-proxy: "npm:^3.0.0"
     image-size: "npm:1.1.1"
@@ -15520,12 +15520,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:23.11.5":
-  version: 23.11.5
-  resolution: "i18next@npm:23.11.5"
-  dependencies:
-    "@babel/runtime": "npm:^7.23.2"
-  checksum: 10c0/b0bec64250a3e529d4c51e2fc511406a85c5dde3d005d3aabe919551ca31dfc0a8f5490bf6e44649822e895a1fa91a58092d112367669cd11b2eb89e6ba90d1a
+"i18next@npm:26.3.4":
+  version: 26.3.4
+  resolution: "i18next@npm:26.3.4"
+  peerDependencies:
+    typescript: ^5 || ^6
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 10c0/09b2e578660b1cdcb284ed00e1f1c8559871fa66cbf85e58f9b78bf782e3b575341f0668ca7230fc80d30104bec42f8ac3ac221096d0f6e6bfbf18255dcccc94
   languageName: node
   linkType: hard
 
