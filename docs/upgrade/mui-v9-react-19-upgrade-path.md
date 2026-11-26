@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) complete on its phase branch, awaiting review (2026-11-23). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) merged (2026-11-24). All phases are merged; the wrap-up to `master` is in progress (see "Wrap-up" at the end of section 4). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -29,7 +29,10 @@ reactorynet/master ──┬──────────────(merge mas
    - Run the full gate on the feature branch: tests, the tsc ratchet, the plugin smoke harness and the visual baselines.
    - Pin the tested combination of all repository SHAs with `bin/reactory-repos lock`.
    - Open the feature → `master` PR on `reactorynet` in every repository.
-   - Merge them together. The workspace default for feature PRs is squash. A merge commit keeps the per-phase history; decide which before merging.
+   - Merge them together as **merge commits**, not squash (decided 2026-11-25). The workspace default for feature PRs is squash, so choose the merge commit explicitly.
+     - Squashing drops the `master` commits that the feature branch has merged, so `master` and the feature branch conflict again.
+     - The client's submodule pointers name plugin commits. Once a squashed plugin branch is deleted, those commits are on no branch.
+   - The same applies to any PR into the feature branch that carries a `master` merge or moves a submodule pointer. A single-commit PR into the feature branch can be squashed.
 6. **Then the enterprise mirrors.** Only after `reactorynet/master` is green, with everything working, bring each enterprise mirror level:
    - `bin/reactory-repos sync --to <enterprise> -n`, then `--pr`
    - Sync PRs must land as a **merge commit**, never squash or rebase, so the two organisations keep a common ancestor.
@@ -403,7 +406,7 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
   - `@types/react` 18.3.31 and `@types/react-dom` 18.3.7 are pinned through `resolutions` to one copy.
   - The `react-is` resolution is 18.3.1.
   - The server's `react`, `react-dom` and React types follow, so server widget sources typecheck against what they run on. The server lock was generated in a clean worktree and only the React entries changed.
-  - `reactory-core`'s React peer is widened to `^17.0.2 || ^18.0.0 || ^19.0.0`. It is pinned to `17.0.2` in the published 1.1.10, which causes the client's only new peer warning. That warning stays until a new version is published.
+  - `reactory-core`'s React peer is widened to `^17.0.2 || ^18.0.0 || ^19.0.0`. It is pinned to `17.0.2` in the published 1.1.10, which causes the client's only new peer warning. 1.2.0, published in the wrap-up, removes it.
 - **Entry and mounting:**
   - `index.tsx` renders through `createRoot`.
   - `reactory.mountComponent`, `reactory.unmountComponent` and `attachComponent` keep their node-addressed, plugin-facing signatures. They now use a per-node root registry (`src/api/domRoots.tsx`, 3 tests).
@@ -476,7 +479,7 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
   - `react` and `react-dom` are 19.3.1. `@types/react` and `@types/react-dom` 19.3.0 stay pinned through `resolutions` to one copy, and so does `react-is` (19.3.1), so every library resolves the same one.
   - `@types/react-redux` is removed; `react-redux` 9 ships its own types.
   - The server's `react`, `react-dom` and React types follow. The server lock was generated in a clean worktree and only the React entries changed. Server tsc is unchanged (3394), with no file different: the server widgets use none of the removed types.
-  - `reactory-core` dev React is 19. Its types use `React.JSX.Element` instead of the removed global `JSX`, and `Array<React.ReactNode>` instead of the removed `React.ReactNodeArray`. Its tsc matches the React 18 baseline exactly (556, all pre-existing). The client still reads the published 1.1.10 types, whose `JSX.Element` resolves to nothing under `skipLibCheck`, until a new version is published.
+  - `reactory-core` dev React is 19. Its types use `React.JSX.Element` instead of the removed global `JSX`, and `Array<React.ReactNode>` instead of the removed `React.ReactNodeArray`. Its tsc matches the React 18 baseline exactly (556, all pre-existing). Until 1.2.0 was published in the wrap-up, the client read the 1.1.10 types, whose `JSX.Element` resolves to nothing under `skipLibCheck`.
 - **Library replacements:**
   - `react-beautiful-dnd` 13 became `@hello-pangea/dnd` 18.0.1. Only the import path changed; the registry still exports `DragDropContext`, `Droppable` and `Draggable` under the same names.
   - `react-quill` 2 (which calls `findDOMNode`) became `react-quill-new` 3.8.3, which brings Quill 2 and Parchment 3. The custom style attributors looked for Parchment 1's `Attributor.Style` and silently registered nothing on Quill 2, so alignment and font size would have fallen back to Quill's CSS classes. They now use `StyleAttributor`. A new test loads content through a real Quill instance and checks that alignment, colour, image attributes, rules, tables and component tags survive; the alignment case fails without the fix. `quill-delta` 5.1.0 is added for the editor's peer, and the Quill stack is in both jest transform lists.
@@ -501,6 +504,55 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
   - Server module jest for the widgets and the module compiler: 13 suites / 120 tests. `reactory-core` 7 / 7 tests.
   - **Strict visuals 9 / 9 (twice), pixel-identical to the React 17 baselines, with no baseline refreshed.**
   - In the browser, signed in: the static content editor opens on Quill 2 with its toolbar and takes input, and the application Menus panel renders its `@hello-pangea/dnd` list. Neither logged a React 19 error. The console still shows the DOM-nesting, key and unknown-prop warnings that React 18 reported.
+
+### Wrap-up: feature branch to `master`
+
+All five phases are merged into the feature branches. Section 0, steps 5 and 6, finish the migration.
+
+#### Wrap-up record
+
+- **`master` merged into the feature branch (2026-11-24).** The server, the client and Reactor were behind `master`. Their Phase 4 `master` merges had been squashed, so the feature branches held copies of `master`'s files without its commits.
+  - Server #150: history only. No file changed.
+  - Client #90: brings in the nginx base-image build argument and the private submodule checkout. `Dockerfile`, `config/env/reactory/Dockerfile` and `nginx/default.conf` conflicted. The feature-branch copies were byte-identical to an older `master` commit, and no phase had changed them, so `master`'s versions were taken.
+  - Reactor #87: brings in the ProcessAITicket workflow changes. Two files conflicted for the same reason and were resolved the same way. The workflow suites pass on the merge: 12 suites, 551 tests.
+  - All three landed as merge commits. Every feature branch is now level with `master`.
+- **`reactory-core` 1.2.0 (published 2026-11-24).**
+  - A minor release for the React 19 types (`React.JSX.Element`, `Array<React.ReactNode>`) and the widened React peer. The runtime bundle is unchanged since 1.1.10.
+  - `.version` is now `1.2.${buildNumber}` (`reactory-core` #21). `build:clean` no longer fails under zsh when there are no `.tgz` files to remove (`reactory-core` #22).
+  - Publish with `yarn publish:current`. It neither increments the version nor runs `prepublishOnly`. `publish:patch` and a plain `npm publish` run the version script twice, so the published version would not match the commit.
+- **The client and server use 1.2.0 (#91 and server #151, 2026-11-26).**
+  - Only `package.json` and the one lock entry changed. The server lock was generated in a clean worktree.
+  - Client tsc reports 0 errors and lint is clean.
+  - Server tsc reports the same 3394 errors as with 1.1.10, identical by file, line and code.
+
+#### Remaining steps
+
+1. Run the full gate on the feature tips:
+   - Client: tsc, lint, jest and plugin smoke.
+   - Server: the tsc ratchet and module jest.
+   - `reactory-core` tests.
+   - Strict visuals.
+2. Pin the tested SHAs with `bin/reactory-repos lock`.
+3. Open feature → `master` PRs in every repository that has the feature branch:
+   - the client, the server, `reactory-core` and `reactory-data`
+   - the four client plugins: core, the legacy core plugin, communicator and telemetry
+   - the classroom, Reactor and socialeyes modules
+
+   Merge them together, as merge commits (section 0, step 5).
+4. Release the client and the server. Send a release note for plugins outside these repositories (section 5, rule 5). It should cover:
+   - `Grid2` is gone.
+   - `*Props` moved to `slotProps`.
+   - Function-component `defaultProps` are ignored.
+   - A plugin that creates elements with its own bundled React crashes on React 19.
+5. Delete the feature and phase branches. Close or rebase the dependency PRs against `master` that the merge supersedes.
+6. Bring the enterprise mirrors level (section 0, step 6). Enterprise-only modules migrate on the enterprise side after the sync.
+
+**Deferred, not blocking:**
+- The `login` visual baseline, which needs the local anonymous account.
+- `FormClass`'s `UNSAFE_componentWillReceiveProps`, planned for forms-engine WP-B6.
+- Removing `propTypes`.
+- The MUI `Tooltip` `act` warnings in `lazyCommentLoading.test.tsx`.
+- Retiring the legacy plugin (section 8, decision 5).
 
 ## 5. Plugin rules for every phase
 
@@ -537,9 +589,9 @@ Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` cli
 ## 8. Decisions needed
 
 1. **Order.** MUI first (recommended above) or React 18 first. Both work, because MUI 9 supports 17.
-2. **`@mui/x-data-grid`.** Upgrade to 9 and keep it only as a registry export, or remove it. Nothing in these repos renders it. Keeping it costs bundle size and a codemod chain for unknown external plugins.
+2. **`@mui/x-data-grid`.** Upgrade to 9 and keep it only as a registry export, or remove it. Nothing in these repos renders it. Keeping it costs bundle size and a codemod chain for unknown external plugins. **Settled in Phases 2 and 3: upgraded to 9.18.0 and kept as a registry export.** Removing it is a separate change after the migration.
 3. **Browser floor.** MUI 9 targets Safari 17, Chrome 117 and Firefox 121. Accept that and update browserslist, or keep `>0.2%, not dead` and test the older browsers ourselves. **Decided 2026-11-19: aligned with MUI's floor (Phase 3).**
-4. **`@mui/lab`.** Keep it (Timeline, Masonry, TabContext) on the beta, or drop it from the registry. Nothing in the client imports it directly.
+4. **`@mui/lab`.** Keep it (Timeline, Masonry, TabContext) on the beta, or drop it from the registry. Nothing in the client imports it directly. **Settled in Phases 2 and 3: kept on `9.0.0-beta.10` as a registry export.** Dropping it is a separate change after the migration.
 5. **Legacy `reactory-client-core` plugin.** It imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Either retire it or migrate it as part of Phase 1. **Phase 3 migrated it in place**, because it is still the only provider of the login, registration and password-reset screens. Retiring it is still open.
 
 ## Appendix A: scan patterns
