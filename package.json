@@ -20,7 +20,7 @@
     }
   ],
   "dependencies": {
-    "@apollo/client": "3.14.1",
+    "@apollo/client": "4.3.8",
     "@date-io/moment": "3.0.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
