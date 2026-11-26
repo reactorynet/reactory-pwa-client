@@ -401,9 +401,9 @@ export const selectVisible = (
 
 export function useGraphStore(): UseGraphStoreReturn {
   const [state, dispatch] = useReducer(graphReducer, undefined, initialGraphState);
-  const positionsRef = useRef<PositionStore>();
+  const positionsRef = useRef<PositionStore | undefined>(undefined);
   if (!positionsRef.current) positionsRef.current = createPositionStore();
-  const animatorRef = useRef<PositionAnimator>();
+  const animatorRef = useRef<PositionAnimator | undefined>(undefined);
   if (!animatorRef.current) animatorRef.current = createPositionAnimator();
 
   const { visibleNodes, visibleEdges } = useMemo(

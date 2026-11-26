@@ -56,9 +56,9 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
   const [context, setContext] = useState<string>(filter.context || '');
   const [stats, setStats] = useState<CommentContextStat[]>([]);
 
-  // Skip the debounce effect on first render so the toolbar does not trigger a
-  // redundant query immediately after the grid's own initial fetch.
-  const firstRunRef = useRef(true);
+  // Emit only when the search text changes, so mounting (twice under StrictMode)
+  // does not trigger a redundant query right after the grid's own initial fetch.
+  const lastSearchRef = useRef(searchInput);
 
   const emitQuery = useCallback(
     (next: { searchString?: string; context?: string; resetPage?: boolean }) => {
@@ -82,10 +82,8 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
 
   // Debounced search.
   useEffect(() => {
-    if (firstRunRef.current) {
-      firstRunRef.current = false;
-      return undefined;
-    }
+    if (lastSearchRef.current === searchInput) return undefined;
+    lastSearchRef.current = searchInput;
     const handle = setTimeout(() => {
       emitQuery({ searchString: searchInput, resetPage: true });
     }, SEARCH_DEBOUNCE_MS);
@@ -132,9 +130,10 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1.5}
-        sx={{ mb: 1 }}
-        alignItems={{ xs: 'stretch', sm: 'center' }}
-      >
+        sx={{
+          alignItems: { xs: 'stretch', sm: 'center' },
+          mb: 1
+        }}>
         <TextField
           select
           size="small"
@@ -180,7 +179,12 @@ export const MyCommentsToolbar: React.FC<MyCommentsToolbarProps> = (props) => {
         </Button>
 
         {typeof props.data?.paging?.total === 'number' && (
-          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              whiteSpace: 'nowrap'
+            }}>
             {props.data.paging.total} comment{props.data.paging.total === 1 ? '' : 's'}
           </Typography>
         )}

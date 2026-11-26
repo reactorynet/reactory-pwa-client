@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useSSE, { ResyncSignal } from '../hooks/useSSE';
 import useStreamRecovery from '../hooks/useStreamRecovery';
 

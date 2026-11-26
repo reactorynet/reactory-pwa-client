@@ -122,8 +122,10 @@ const JsonSchemaEditorTest: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         JSON Schema Editor Test
       </Typography>
-      
-      <Typography variant="body1" paragraph>
+
+      <Typography variant="body1" sx={{
+        marginBottom: "16px"
+      }}>
         Test the JsonSchemaEditor component with real-time validation and formatting.
       </Typography>
 
@@ -136,14 +138,20 @@ const JsonSchemaEditorTest: React.FC = () => {
           Load Complex Sample
         </Button>
         
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Schema Valid: {validationState.schema.isValid ? '✅' : '❌'} | 
           UI Schema Valid: {validationState.uiSchema.isValid ? '✅' : '❌'}
         </Typography>
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <JsonSchemaEditor
               value={schemaValue}
@@ -158,7 +166,11 @@ const JsonSchemaEditorTest: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <JsonSchemaEditor
               value={uiSchemaValue}
@@ -180,9 +192,15 @@ const JsonSchemaEditorTest: React.FC = () => {
         </Typography>
         
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6
+            }}>
             <Paper elevation={1} sx={{ p: 2, maxHeight: 200, overflow: 'auto' }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 Schema JSON:
               </Typography>
               <pre style={{ fontSize: '12px', margin: 0 }}>
@@ -191,9 +209,15 @@ const JsonSchemaEditorTest: React.FC = () => {
             </Paper>
           </Grid>
           
-          <Grid item xs={12} md={6}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6
+            }}>
             <Paper elevation={1} sx={{ p: 2, maxHeight: 200, overflow: 'auto' }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 UI Schema JSON:
               </Typography>
               <pre style={{ fontSize: '12px', margin: 0 }}>

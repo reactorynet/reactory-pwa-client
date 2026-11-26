@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Box, Paper, Typography, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
 import {
   TextFields,
@@ -32,7 +32,13 @@ const FieldPalette = () => {
           <Typography variant="h6" gutterBottom>
             Field Types
           </Typography>
-          <Typography variant="caption" display="block" sx={{ mb: 2, color: 'text.secondary' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mb: 2,
+              color: 'text.secondary'
+            }}>
             Drag fields to the canvas
           </Typography>
           

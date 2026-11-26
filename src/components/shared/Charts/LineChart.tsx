@@ -117,11 +117,16 @@ const LineChart: React.FC<LineChartProps> = ({
         </Typography>
       )}
       {description && (
-        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography
+          variant={descriptionVariant}
+          sx={{
+            color: "text.secondary",
+            mb: 1.5
+          }}>
           {description}
         </Typography>
       )}
-      <ResponsiveContainer width={width} height={height}>
+      <ResponsiveContainer width={width as number | `${number}%`} height={height}>
         <RechartsLineChart data={chartData} margin={margin}>
           {showGrid && <CartesianGrid strokeDasharray={gridDasharray} stroke={gridColor} />}
           <XAxis dataKey={xAxisKey} tick={axisTickStyle} {...xAxisProps} />

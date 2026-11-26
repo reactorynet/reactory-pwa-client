@@ -8,6 +8,7 @@ import { registerMomentLocale, setLocaleProvider } from './formatters';
 // divergent path. The server removed its detector for the same reason — one
 // detection path per side.
 import ReactDOM from 'react-dom';
+import { renderIntoNode, unmountNode } from './domRoots';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
@@ -2163,8 +2164,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       // @ts-ignore
       ReactDOM.createPortal(<ComponentToMount {...props} />, domNode);
     } else {
-      // @ts-ignore
-      ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
+      renderIntoNode(domNode, <ComponentToMount {...props} />, callback);
     }
   }
 
@@ -2199,7 +2199,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   unmountComponent(node) {
-    return ReactDOM.unmountComponentAtNode(node);
+    return unmountNode(node);
   }
 
   isLoggingOut = false;
@@ -2531,6 +2531,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   private async loadPlugins() {
+    // Plugin scripts install themselves against window.reactory.api as soon as
+    // they run. The app publishes this instance there only after init()
+    // completes, then refreshes the status, which brings us back here.
+    if (typeof window !== 'undefined' && window.reactory && window.reactory.api !== this) {
+      this.debug('Plugins wait until the API is published on window.reactory.api');
+      return;
+    }
     if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
       this.emitProgress('plugins', 'active', 'Loading plugins', undefined, `${this.$user.plugins.length} plugin(s) to load`);
       const failedPlugins: Array<{ plugin: Reactory.Platform.IReactoryApplicationPlugin; error: string }> = [];

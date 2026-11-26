@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { styled } from '@mui/material/styles';
-import { Icon, Popover, MenuItem, Theme } from '@mui/material';
+import { Icon, Menu, MenuItem, Theme } from '@mui/material';
 import { template } from 'lodash';
 import { compose } from 'redux';
 import { useTheme } from '@mui/material/styles';
@@ -77,7 +77,7 @@ const CustomTab = (props) => {
       {menuPrepend}
       <Icon color="primary">more_vert</Icon>
       {SelectedItem}
-      <Popover
+      <Menu
         open={anchorElm != null}
         anchorEl={anchorElm}
         onClose={closeMenu}
@@ -87,10 +87,10 @@ const CustomTab = (props) => {
       >
         {
           props.menuItems.map(menuItem => {
-            return <MenuItem onClick={() => menuItemSelectedHandler(menuItem)}>{menuItem.title}</MenuItem>
+            return <MenuItem key={menuItem.index} onClick={() => menuItemSelectedHandler(menuItem)}>{menuItem.title}</MenuItem>
           })
         }
-      </Popover>
+      </Menu>
     </Button>
   )
 }
@@ -107,7 +107,9 @@ function TabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      <Box p={3}>{children}</Box>
+      <Box sx={{
+        p: 3
+      }}>{children}</Box>
     </Typography>
   );
 }

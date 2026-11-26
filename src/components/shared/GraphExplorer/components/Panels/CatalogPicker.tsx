@@ -69,9 +69,10 @@ export default function CatalogPicker(props: CatalogPickerProps) {
               <ListItemText
                 primary={catalog.name}
                 secondary={catalog.nameSpace ? `${catalog.nameSpace}@${catalog.version ?? ''}` : undefined}
-                primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-                secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-              />
+                slotProps={{
+                  primary: { variant: 'body2', noWrap: true },
+                  secondary: { variant: 'caption', noWrap: true }
+                }} />
             </ListItemButton>
           </ListItem>
         ))}

@@ -115,7 +115,9 @@ export const UserTaskQueuePanel: React.FC<UserTaskQueuePanelProps> = ({
                           <Chip size="small" label={task.workflowId} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                         )}
                         {task.stepId && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             Step: {task.stepId}
                           </Typography>
                         )}

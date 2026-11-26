@@ -111,7 +111,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState<string>(initialPrompt || speechTranscript || '');
   const inputRef = useRef<HTMLInputElement>(null);
   const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
-  const isFirstRenderRef = useRef<boolean>(true);
   const prevTranscriptRef = useRef<string | undefined>(speechTranscript);
 
   // Seed the composer whenever the host supplies a new prompt. Only a
@@ -125,11 +124,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // Sync with speech transcript when speech services produce results, or clear input when transcript is reset/cleared
   useEffect(() => {
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      prevTranscriptRef.current = speechTranscript;
-      return;
-    }
+    // Act on changes only (prevTranscriptRef starts at the mount value), which also
+    // holds when StrictMode runs this effect twice on mount.
+    if (prevTranscriptRef.current === speechTranscript) return;
 
     if (speechTranscript !== undefined) {
       if (speechTranscript !== '') {
@@ -278,10 +275,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ))}
         </Box>
       )}
-      <Grid container spacing={1} alignItems="center">
+      <Grid container spacing={1} sx={{
+        alignItems: "center"
+      }}>
         {/* Tool Approval Mode Button */}
         {onToolApprovalModeChange && (
-          <Grid item>
+          <Grid>
             <Tooltip title={`Tool mode: ${currentMode.label}`}>
               <IconButton
                 size="small"
@@ -322,16 +321,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   <ListItemText
                     primary={opt.label}
                     secondary={opt.description}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: opt.mode === toolApprovalMode ? 'bold' : 'normal' }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
+                    slotProps={{
+                      primary: { variant: 'body2', sx: { fontWeight: opt.mode === toolApprovalMode ? 'bold' : 'normal' } },
+                      secondary: { variant: 'caption' }
+                    }} />
                 </MenuItem>
               ))}
             </Menu>
           </Grid>
         )}
         {/* Text Input Field */}
-        <Grid item xs sx={{ display: 'flex', alignItems: 'center' }}>
+        <Grid
+          sx={{ display: 'flex', alignItems: 'center' }}
+          size={{
+            xs: 'grow'
+          }}>
           <TextField
             size="small"
             fullWidth
@@ -350,134 +354,136 @@ const ChatInput: React.FC<ChatInputProps> = ({
             variant="outlined"
             disabled={disabled}
             inputRef={inputRef}
-            InputProps={{
-              sx: {
-                fontSize: 14,
-                py: 0.5,
-              },
-              endAdornment: (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
-                  {countdown != null && countdown > 0 && (
-                    <Chip
-                      size="small"
-                      icon={<span className="material-icons" style={{ fontSize: 14, color: '#ed6c02' }}>timer</span>}
-                      label={`Auto-send ${countdown}s`}
-                      onClick={onCancelCountdown}
-                      onDelete={onCancelCountdown}
-                      deleteIcon={<span className="material-icons" style={{ fontSize: 14 }}>close</span>}
-                      title="Click or edit text to cancel timer"
-                      sx={{
-                        height: 24,
-                        fontSize: '0.75rem',
-                        backgroundColor: 'rgba(237, 108, 2, 0.15)',
-                        color: theme.palette.text.primary,
-                        border: '1px solid rgba(237, 108, 2, 0.4)',
-                        cursor: 'pointer',
-                      }}
-                    />
-                  )}
-                  {/* Auto-Speech Output Toggle Button */}
-                  {onAutoSpeakToggle && (
-                    <Tooltip
-                      title={
-                        isSpeaking
-                          ? "Speaking response... (click to stop)"
-                          : autoSpeakEnabled
-                          ? "Auto-speech output enabled (click to disable)"
-                          : "Enable auto-speech output for responses"
-                      }
-                    >
-                      <IconButton
-                        aria-label={
-                          isSpeaking
-                            ? "Stop speaking"
-                            : autoSpeakEnabled
-                            ? "Disable auto-speech output"
-                            : "Enable auto-speech output"
-                        }
-                        onClick={isSpeaking && onStopSpeaking ? onStopSpeaking : onAutoSpeakToggle}
-                        disabled={disabled}
-                        size="small"
-                        sx={{
-                          p: 0.1,
-                          fontSize: '1rem',
-                          color: isSpeaking
-                            ? (theme?.palette?.primary?.main || '#1976d2')
-                            : autoSpeakEnabled
-                            ? (theme?.palette?.secondary?.main || '#dc004e')
-                            : (theme?.palette?.text?.disabled || '#888'),
-                          ...(isSpeaking && {
-                            animation: 'reactorChatPulse 1.2s ease-in-out infinite',
-                            '@keyframes reactorChatPulse': {
-                              '0%, 100%': { transform: 'scale(1)', opacity: 0.9 },
-                              '50%': { transform: 'scale(1.2)', opacity: 1 },
-                            },
-                          }),
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <span className="material-icons" style={{ fontSize: 18 }}>
-                          {isSpeaking ? 'graphic_eq' : autoSpeakEnabled ? 'volume_up' : 'volume_off'}
-                        </span>
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {/* Voice Mode Toggle Button */}
-                  {onVoiceModeToggle && (
-                    <Tooltip title={voiceModeActive ? "Voice mode on (click to disable)" : "Voice mode off (click to enable)"}>
-                      <IconButton
-                        aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}
-                        onClick={onVoiceModeToggle}
-                        disabled={disabled}
-                        size="small"
-                        sx={{
-                          p: 0.1,
-                          fontSize: '1rem',
-                          color: voiceModeActive
-                            ? theme.palette.secondary.main
-                            : theme.palette.text.disabled,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <span className="material-icons" style={{ fontSize: 18 }}>
-                          {voiceModeActive ? 'record_voice_over' : 'voice_over_off'}
-                        </span>
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {/* Recording Audio Button */}
-                  <Tooltip title={recordingPanelOpen ? "Close recording bar" : "Record audio"}>
-                    <IconButton
-                      aria-label="Record audio"
-                      onClick={onRecordingToggle}
-                      disabled={disabled}
-                      size="small"
-                      sx={{
-                        p: 0.1,
-                        fontSize: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: recordingPanelOpen ? theme.palette.primary.main : theme.palette.text.primary,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Mic fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              ),
-            }}
             sx={{
               fontSize: 14,
               pr: 0.5,
               pl: 0.1,
               py: 0.5,
+            }}
+            slotProps={{
+              input: {
+                sx: {
+                  fontSize: 14,
+                  py: 0.5,
+                },
+                endAdornment: (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
+                    {countdown != null && countdown > 0 && (
+                      <Chip
+                        size="small"
+                        icon={<span className="material-icons" style={{ fontSize: 14, color: '#ed6c02' }}>timer</span>}
+                        label={`Auto-send ${countdown}s`}
+                        onClick={onCancelCountdown}
+                        onDelete={onCancelCountdown}
+                        deleteIcon={<span className="material-icons" style={{ fontSize: 14 }}>close</span>}
+                        title="Click or edit text to cancel timer"
+                        sx={{
+                          height: 24,
+                          fontSize: '0.75rem',
+                          backgroundColor: 'rgba(237, 108, 2, 0.15)',
+                          color: theme.palette.text.primary,
+                          border: '1px solid rgba(237, 108, 2, 0.4)',
+                          cursor: 'pointer',
+                        }}
+                      />
+                    )}
+                    {/* Auto-Speech Output Toggle Button */}
+                    {onAutoSpeakToggle && (
+                      <Tooltip
+                        title={
+                          isSpeaking
+                            ? "Speaking response... (click to stop)"
+                            : autoSpeakEnabled
+                            ? "Auto-speech output enabled (click to disable)"
+                            : "Enable auto-speech output for responses"
+                        }
+                      >
+                        <IconButton
+                          aria-label={
+                            isSpeaking
+                              ? "Stop speaking"
+                              : autoSpeakEnabled
+                              ? "Disable auto-speech output"
+                              : "Enable auto-speech output"
+                          }
+                          onClick={isSpeaking && onStopSpeaking ? onStopSpeaking : onAutoSpeakToggle}
+                          disabled={disabled}
+                          size="small"
+                          sx={{
+                            p: 0.1,
+                            fontSize: '1rem',
+                            color: isSpeaking
+                              ? (theme?.palette?.primary?.main || '#1976d2')
+                              : autoSpeakEnabled
+                              ? (theme?.palette?.secondary?.main || '#dc004e')
+                              : (theme?.palette?.text?.disabled || '#888'),
+                            ...(isSpeaking && {
+                              animation: 'reactorChatPulse 1.2s ease-in-out infinite',
+                              '@keyframes reactorChatPulse': {
+                                '0%, 100%': { transform: 'scale(1)', opacity: 0.9 },
+                                '50%': { transform: 'scale(1.2)', opacity: 1 },
+                              },
+                            }),
+                            '&:hover': {
+                              backgroundColor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <span className="material-icons" style={{ fontSize: 18 }}>
+                            {isSpeaking ? 'graphic_eq' : autoSpeakEnabled ? 'volume_up' : 'volume_off'}
+                          </span>
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {/* Voice Mode Toggle Button */}
+                    {onVoiceModeToggle && (
+                      <Tooltip title={voiceModeActive ? "Voice mode on (click to disable)" : "Voice mode off (click to enable)"}>
+                        <IconButton
+                          aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}
+                          onClick={onVoiceModeToggle}
+                          disabled={disabled}
+                          size="small"
+                          sx={{
+                            p: 0.1,
+                            fontSize: '1rem',
+                            color: voiceModeActive
+                              ? theme.palette.secondary.main
+                              : theme.palette.text.disabled,
+                            '&:hover': {
+                              backgroundColor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <span className="material-icons" style={{ fontSize: 18 }}>
+                            {voiceModeActive ? 'record_voice_over' : 'voice_over_off'}
+                          </span>
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {/* Recording Audio Button */}
+                    <Tooltip title={recordingPanelOpen ? "Close recording bar" : "Record audio"}>
+                      <IconButton
+                        aria-label="Record audio"
+                        onClick={onRecordingToggle}
+                        disabled={disabled}
+                        size="small"
+                        sx={{
+                          p: 0.1,
+                          fontSize: '1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: recordingPanelOpen ? theme.palette.primary.main : theme.palette.text.primary,
+                          '&:hover': {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <Mic fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ),
+              }
             }}
           />
         </Grid>

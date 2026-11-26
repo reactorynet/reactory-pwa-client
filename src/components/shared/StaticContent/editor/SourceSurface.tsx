@@ -100,7 +100,9 @@ const MARKDOWN_ACTIONS: SyntaxAction[] = [
   {
     key: 'link',
     label: 'Link',
-    icon: <LinkIcon fontSize="small" />,
+    icon: <LinkIcon sx={{
+      fontSize: "small"
+    }} />,
     apply: (s) => ({ text: `[${s || 'link text'}](https://)` }),
   },
   {
@@ -237,9 +239,11 @@ const SourceSurface = forwardRef<SourceSurfaceHandle, SourceSurfaceProps>(
             <Stack
               direction="row"
               spacing={0.25}
-              alignItems="center"
-              sx={{ flexWrap: 'wrap', mb: 0.5 }}
-            >
+              sx={{
+                alignItems: "center",
+                flexWrap: 'wrap',
+                mb: 0.5
+              }}>
               {MARKDOWN_ACTIONS.map((action) => (
                 <Tooltip key={action.key} title={action.label}>
                   <IconButton

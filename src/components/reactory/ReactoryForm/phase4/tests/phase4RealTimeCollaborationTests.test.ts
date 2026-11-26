@@ -322,7 +322,7 @@ describe('Phase 4.1: Real-time Collaboration', () => {
 
     test('should have proper imports and dependencies', () => {
       expect(() => {
-        require('framer-motion');
+        require('motion/react');
         require('@mui/material');
         require('@mui/icons-material');
         require('uuid');
@@ -344,7 +344,7 @@ describe('Phase 4.1: Real-time Collaboration', () => {
     });
 
     test('should support Framer Motion animations', () => {
-      const { motion, AnimatePresence } = require('framer-motion');
+      const { motion, AnimatePresence } = require('motion/react');
       expect(motion).toBeDefined();
       expect(AnimatePresence).toBeDefined();
     });

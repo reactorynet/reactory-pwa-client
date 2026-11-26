@@ -32,9 +32,12 @@ export interface SettingsPanelProps {
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Typography
     variant="overline"
-    color="text.secondary"
-    sx={{ display: 'block', letterSpacing: 0.8, mb: 1 }}
-  >
+    sx={{
+      color: "text.secondary",
+      display: 'block',
+      letterSpacing: 0.8,
+      mb: 1
+    }}>
     {children}
   </Typography>
 );
@@ -93,11 +96,13 @@ const JsonEditorField: React.FC<{
       error={Boolean(error)}
       helperText={error || helperText}
       placeholder={placeholder || '{\n  \n}'}
-      InputProps={{
-        sx: {
-          fontFamily: 'monospace',
-          fontSize: '0.8125rem',
-        },
+      slotProps={{
+        input: {
+          sx: {
+            fontFamily: 'monospace',
+            fontSize: '0.8125rem',
+          },
+        }
       }}
     />
   );
@@ -263,9 +268,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               value={draft.roles}
               freeSolo
               onChange={(_, value) => onChange({ roles: value as string[] })}
-              renderTags={(value, getTagProps) =>
+              renderValue={(value, getItemProps) =>
                 value.map((role, index) => (
-                  <Chip size="small" label={role} {...getTagProps({ index })} key={role} />
+                  <Chip size="small" label={role} {...getItemProps({ index })} key={role} />
                 ))
               }
               renderInput={(params) => (

@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useReactory } from '@reactory/client-core/api';
 import { gql } from '@apollo/client';
@@ -174,7 +174,9 @@ export const WorkflowScheduleManager: React.FC<WorkflowScheduleManagerProps> = (
                           sx={{ height: 18, fontSize: '0.65rem' }}
                         />
                         {schedule.workflowId && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             {schedule.workflowId}
                           </Typography>
                         )}
@@ -206,12 +208,14 @@ export const WorkflowScheduleManager: React.FC<WorkflowScheduleManagerProps> = (
         onClose={() => !creating && setCreateDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: mode === 'dark' ? '#1a2234' : '#ffffff',
-            color: mode === 'dark' ? '#ffffff' : 'inherit',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              bgcolor: mode === 'dark' ? '#1a2234' : '#ffffff',
+              color: mode === 'dark' ? '#ffffff' : 'inherit',
+            },
+          }
         }}
       >
         <DialogTitle>Create Workflow Schedule</DialogTitle>

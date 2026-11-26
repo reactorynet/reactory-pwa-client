@@ -10,18 +10,18 @@ import * as d3cloud from "d3-cloud";
 import * as d3color from "d3-color";
 import * as d3delaunay from "d3-delaunay";
 
-import * as MaterialCore from '@mui/material'
 import * as MaterialIcons from '@mui/icons-material'
 import * as MaterialLab from '@mui/lab'
 import * as MaterialDates from '@mui/x-date-pickers';
 import * as MaterialGrid from '@mui/x-data-grid';
+import * as MaterialCore from '@mui/material';
 
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router';
 import * as ReactRouterDom from 'react-router-dom';
 import * as ReactBigCalendar from 'react-big-calendar';
 
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import IntersectionVisible from './utility/IntersectionVisible';
 
 import Loading from './shared/Loading';

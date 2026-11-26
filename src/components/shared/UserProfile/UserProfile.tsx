@@ -196,7 +196,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
             <Typography variant="h6" color="error" gutterBottom>
               Section Not Found
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               The section "{sections.currentSection}" could not be loaded.
             </Typography>
           </Paper>

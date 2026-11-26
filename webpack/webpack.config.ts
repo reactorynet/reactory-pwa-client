@@ -271,7 +271,7 @@ export default function(webpackEnv): WebpackConfiguration {
         name: false,
         cacheGroups: {
           vendor: {
-            test: /[\\/]node_modules[\\/](react|react-dom|froala-editor|react-bootstrap|redux|recharts|react-froala-wysiwyg|react-easy-chart|font-awesome)[\\/]/,
+            test: /[\\/]node_modules[\\/](react|react-dom|react-bootstrap|redux|recharts|react-easy-chart|font-awesome)[\\/]/,
             name: 'vendor',
             chunks: 'all',
           }

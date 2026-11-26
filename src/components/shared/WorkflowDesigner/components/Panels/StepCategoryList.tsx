@@ -108,9 +108,11 @@ function StepCategoryListInner({
             </ListItemIcon>
             <ListItemText
               primary="All Steps"
-              primaryTypographyProps={{
-                variant: 'body2',
-                fontWeight: !selectedCategory ? 'bold' : 'normal'
+              slotProps={{
+                primary: {
+                  variant: 'body2',
+                  sx: { fontWeight: !selectedCategory ? 'bold' : 'normal' }
+                }
               }}
             />
             <Chip
@@ -177,10 +179,12 @@ function StepCategoryListInner({
                   
                   <ListItemText
                     primary={category.name}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      fontWeight: isSelected ? 'bold' : 'normal',
-                      noWrap: true
+                    slotProps={{
+                      primary: {
+                        variant: 'body2',
+                        noWrap: true,
+                        sx: { fontWeight: isSelected ? 'bold' : 'normal' }
+                      }
                     }}
                   />
                   

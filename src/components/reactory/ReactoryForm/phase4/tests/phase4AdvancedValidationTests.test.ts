@@ -447,7 +447,7 @@ describe('Phase 4.2: Advanced Validation', () => {
     test('should have proper imports and dependencies', () => {
       expect(() => {
         require('lodash');
-        require('framer-motion');
+        require('motion/react');
         require('@mui/material');
         require('@mui/icons-material');
       }).not.toThrow();
@@ -468,7 +468,7 @@ describe('Phase 4.2: Advanced Validation', () => {
     });
 
     test('should support Framer Motion animations', () => {
-      const { motion, AnimatePresence } = require('framer-motion');
+      const { motion, AnimatePresence } = require('motion/react');
       expect(motion).toBeDefined();
       expect(AnimatePresence).toBeDefined();
     });

@@ -38,9 +38,10 @@ const SubmissionSummary: React.FC<SubmissionSummaryProps> = ({
 
   if (entries.length === 0) {
     return (
-      <Typography variant="caption" color="text.secondary">
-        No data
-      </Typography>
+      <Typography variant="caption" sx={{
+        color: "text.secondary"
+      }}>No data
+              </Typography>
     );
   }
 

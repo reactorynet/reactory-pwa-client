@@ -55,9 +55,11 @@ const MethodSelect: React.FC<{
       size="small"
       label={label}
       value={arr}
-      SelectProps={{ multiple: true, renderValue: (v: any) => (v as string[]).join(', ') }}
       onChange={(e) => onChange(e.target.value as unknown as string[])}
       sx={{ minWidth: 220 }}
+      slotProps={{
+        select: { multiple: true, renderValue: (v: any) => (v as string[]).join(', ') }
+      }}
     >
       {ACTION_HANDLER_TYPES.map((m) => (
         <MenuItem key={m} value={m}>{m}</MenuItem>
@@ -91,7 +93,13 @@ export const MappingEditor: React.FC<{
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          mb: 0.5
+        }}>
         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{label}</Typography>
         <ToggleButtonGroup
           size="small"
@@ -128,10 +136,14 @@ export const MappingEditor: React.FC<{
       ) : (
         <Stack spacing={1}>
           {rows.length === 0 && (
-            <Typography variant="caption" color="text.secondary">No mappings.</Typography>
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>No mappings.</Typography>
           )}
           {rows.map((row, i) => (
-            <Stack key={i} direction="row" spacing={1} alignItems="center">
+            <Stack key={i} direction="row" spacing={1} sx={{
+              alignItems: "center"
+            }}>
               <TextField
                 size="small" label={sourceLabel} value={row.source}
                 onChange={(e) => updateRows(rows.map((r, j) => (j === i ? { ...r, source: e.target.value } : r)))}
@@ -181,7 +193,9 @@ const EventListEditor: React.FC<{ label: string; value: any[]; onChange: (events
     <Stack spacing={1}>
       {value.map((ev, i) => (
         <Paper key={i} variant="outlined" sx={{ p: 1 }}>
-          <Stack direction="row" alignItems="center">
+          <Stack direction="row" sx={{
+            alignItems: "center"
+          }}>
             <Typography variant="caption" sx={{ flexGrow: 1 }}>Event {i + 1}</Typography>
             <IconButton size="small" color="error" onClick={() => onChange(value.filter((_, j) => j !== i))}><Delete fontSize="small" /></IconButton>
           </Stack>
@@ -199,7 +213,9 @@ const NotificationEditor: React.FC<{ value: any; onChange: (n: any) => void }> =
   const set = (patch: any) => onChange({ ...value, ...patch });
   return (
     <Stack spacing={1.5} sx={{ mt: 1 }}>
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{
+        flexWrap: "wrap"
+      }}>
         <TextField size="small" label="Title" value={value.title || ''} onChange={(e) => set({ title: e.target.value })} sx={{ flex: 1, minWidth: 160 }} />
         <TextField select size="small" label="Type" value={value.type || 'info'} onChange={(e) => set({ type: e.target.value })} sx={{ width: 140 }}>
           {NOTIFICATION_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
@@ -218,11 +234,15 @@ const ErrorHandlerEditor: React.FC<{ value: any; onChange: (e: any) => void }> =
   return (
     <Stack spacing={1.5}>
       <MethodSelect label="On error method" value={value.onErrorMethod} onChange={(v) => set({ onErrorMethod: v })} />
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{
+        flexWrap: "wrap"
+      }}>
         <TextField size="small" label="Component ref (FQN)" value={value.componentRef || ''} onChange={(e) => set({ componentRef: e.target.value })} sx={{ flex: 1, minWidth: 180 }} />
         <TextField size="small" label="Method name" value={value.method || ''} onChange={(e) => set({ method: e.target.value })} sx={{ width: 160 }} />
       </Stack>
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{
+        flexWrap: "wrap"
+      }}>
         <TextField size="small" label="Redirect URL" value={value.onErrorUrl || ''} onChange={(e) => set({ onErrorUrl: e.target.value })} sx={{ flex: 1, minWidth: 200 }} />
         <TextField size="small" type="number" label="Redirect timeout (ms)" value={value.onErrorRedirectTimeout ?? ''} onChange={(e) => set({ onErrorRedirectTimeout: e.target.value === '' ? undefined : parseInt(e.target.value, 10) })} sx={{ width: 180 }} />
       </Stack>
@@ -245,7 +265,9 @@ const ResultHandlerEditor: React.FC<{ value: any; onChange: (v: any) => void; sh
   return (
     <Stack spacing={1.5}>
       <MethodSelect label="On success method" value={value.onSuccessMethod} onChange={(v) => set({ onSuccessMethod: v })} />
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{
+        flexWrap: "wrap"
+      }}>
         <TextField size="small" label="Success redirect URL" value={value.onSuccessUrl || ''} onChange={(e) => set({ onSuccessUrl: e.target.value })} sx={{ flex: 1, minWidth: 200 }} />
         <TextField size="small" type="number" label="Redirect timeout (ms)" value={value.onSuccessRedirectTimeout ?? ''} onChange={(e) => set({ onSuccessRedirectTimeout: e.target.value === '' ? undefined : parseInt(e.target.value, 10) })} sx={{ width: 180 }} />
       </Stack>
@@ -253,7 +275,9 @@ const ResultHandlerEditor: React.FC<{ value: any; onChange: (v: any) => void; sh
       {showResultMap && (
         <MappingEditor label="Result map" value={value.resultMap} onChange={(resultMap) => set({ resultMap })} sourceLabel="Result path" targetLabel="Form data path" help="Map the query/mutation result into the form data" />
       )}
-      <Stack direction="row" spacing={1} flexWrap="wrap">
+      <Stack direction="row" spacing={1} sx={{
+        flexWrap: "wrap"
+      }}>
         <TextField select size="small" label="Merge strategy" value={value.mergeStrategy || ''} onChange={(e) => set({ mergeStrategy: e.target.value })} sx={{ width: 160 }}>
           <MenuItem value="">(default)</MenuItem>
           {MERGE_STRATEGIES.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
@@ -289,12 +313,19 @@ const ResponseHandlersEditor: React.FC<{ value: any; onChange: (v: any) => void 
   };
   return (
     <Stack spacing={1.5}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" sx={{
+        color: "text.secondary"
+      }}>
         Handle union-type results: add a handler keyed by the response __typename.
       </Typography>
       {keys.map((key) => (
         <Paper key={key} variant="outlined" sx={{ p: 1 }}>
-          <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              mb: 1
+            }}>
             <Chip label={key} size="small" sx={{ flexGrow: 1, mr: 1 }} />
             <IconButton size="small" color="error" onClick={() => removeHandler(key)}><Delete fontSize="small" /></IconButton>
           </Stack>
@@ -355,7 +386,9 @@ export const GraphElementEditor: React.FC<GraphElementEditorProps> = ({ kind, va
 
       <SectionAccordion title="Result binding">
         <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Stack direction="row" spacing={1} sx={{
+            flexWrap: "wrap"
+          }}>
             <TextField select size="small" label="Result type" value={value.resultType || ''} onChange={(e) => set({ resultType: e.target.value })} sx={{ width: 140 }}>
               <MenuItem value="">(auto)</MenuItem>
               {RESULT_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
@@ -370,11 +403,15 @@ export const GraphElementEditor: React.FC<GraphElementEditorProps> = ({ kind, va
       {kind === 'query' && (
         <SectionAccordion title="Query behaviour">
           <Stack spacing={1.5}>
-            <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Stack direction="row" spacing={2} sx={{
+              flexWrap: "wrap"
+            }}>
               <FormControlLabel control={<Switch checked={!!value.autoQuery} onChange={(e) => set({ autoQuery: e.target.checked })} />} label="Auto query on mount" />
               <FormControlLabel control={<Switch checked={!!value.useWebsocket} onChange={(e) => set({ useWebsocket: e.target.checked })} />} label="Use websocket" />
             </Stack>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Stack direction="row" spacing={1} sx={{
+              flexWrap: "wrap"
+            }}>
               <TextField size="small" type="number" label="Auto query delay (ms)" value={value.autoQueryDelay ?? ''} onChange={(e) => set({ autoQueryDelay: e.target.value === '' ? undefined : parseInt(e.target.value, 10) })} sx={{ width: 180 }} />
               <TextField size="small" type="number" label="Poll interval (ms)" value={value.interval ?? ''} onChange={(e) => set({ interval: e.target.value === '' ? undefined : parseInt(e.target.value, 10) })} sx={{ width: 160 }} />
               <TextField size="small" type="number" label="Throttle (ms)" value={value.throttle ?? ''} onChange={(e) => set({ throttle: e.target.value === '' ? undefined : parseInt(e.target.value, 10) })} sx={{ width: 140 }} />
@@ -393,7 +430,9 @@ export const GraphElementEditor: React.FC<GraphElementEditorProps> = ({ kind, va
       {kind === 'mutation' && (
         <SectionAccordion title="Mutation behaviour">
           <Stack spacing={1.5}>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Stack direction="row" spacing={1} sx={{
+              flexWrap: "wrap"
+            }}>
               <TextField select size="small" label="Handled by" value={value.handledBy || ''} onChange={(e) => set({ handledBy: e.target.value })} sx={{ width: 160 }}>
                 <MenuItem value="">(default)</MenuItem>
                 {MUTATION_HANDLED_BY.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
@@ -411,7 +450,9 @@ export const GraphElementEditor: React.FC<GraphElementEditorProps> = ({ kind, va
               <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Refetch queries</Typography>
               <Stack spacing={1}>
                 {refetchQueries.map((q, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="center">
+                  <Stack key={i} direction="row" spacing={1} sx={{
+                    alignItems: "center"
+                  }}>
                     <TextField size="small" fullWidth value={q} onChange={(e) => setOption({ refetchQueries: refetchQueries.map((x, j) => (j === i ? e.target.value : x)) })} />
                     <IconButton size="small" color="error" onClick={() => setOption({ refetchQueries: refetchQueries.filter((_, j) => j !== i) })}><Delete fontSize="small" /></IconButton>
                   </Stack>

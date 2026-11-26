@@ -8,7 +8,7 @@
  * and surfaced as an error the moment the explorer mounted.
  */
 
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook } from '@testing-library/react';
 import { useGraphData } from '../useGraphData';
 
 const mockReactory = {

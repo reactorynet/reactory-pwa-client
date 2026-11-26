@@ -139,10 +139,21 @@ export function ReactoryObjectField(props: FieldProps): React.ReactElement {
   // the component finally appears.
   const [, setBindTick] = React.useState(0);
 
+  const Widget = widget && widget !== 'hidden'
+    ? resolveObjectWidget(widget, registry, reactory)
+    : null;
+  const renderedUnbound = !Widget;
+
   React.useEffect(() => {
     if (!isLateBindableWidget(widget)) return undefined;
-    // Already available — nothing to wait for.
-    if (resolveObjectWidget(widget, registry, reactory)) return undefined;
+    if (resolveObjectWidget(widget, registry, reactory)) {
+      // The component can register between this render and its effect (React 18
+      // defers passive effects, and StrictMode runs them twice), so a render that
+      // fell back to plain fields must be redone even though there is nothing
+      // left to wait for.
+      if (renderedUnbound) setBindTick((tick) => tick + 1);
+      return undefined;
+    }
 
     let cancelled = false;
     const bump = (): void => {
@@ -173,11 +184,7 @@ export function ReactoryObjectField(props: FieldProps): React.ReactElement {
       clearInterval(interval);
       clearTimeout(giveUp);
     };
-  }, [widget, registry, reactory]);
-
-  const Widget = widget && widget !== 'hidden'
-    ? resolveObjectWidget(widget, registry, reactory)
-    : null;
+  }, [widget, registry, reactory, renderedUnbound]);
 
   if (!Widget) {
     if (typeof widget === 'string' && widget !== 'hidden' && !warned.has(widget)) {

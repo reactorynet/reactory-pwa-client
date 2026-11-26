@@ -84,15 +84,14 @@ describe('reactoryWidgets()', () => {
     }
   });
 
-  it('includes alias keys (AutoCompleteWidget, FroalaWidget, UserAvatarWidget, etc.)', () => {
+  it('includes alias keys (AutoCompleteWidget, UserAvatarWidget, etc.)', () => {
     const widgets = reactoryWidgets();
     expect(widgets).toHaveProperty('AutoCompleteWidget');
     expect(widgets).toHaveProperty('AutoCompleteDropDown');
     expect(widgets.AutoCompleteWidget).toBe(widgets.AutoCompleteDropDown);
 
-    expect(widgets).toHaveProperty('FroalaWidget');
     expect(widgets).toHaveProperty('RichEditorWidget');
-    expect(widgets.FroalaWidget).toBe(widgets.RichEditorWidget);
+    expect(widgets).not.toHaveProperty('FroalaWidget');
 
     expect(widgets).toHaveProperty('UserAvatarWidget');
     expect(widgets).toHaveProperty('UserAvatar');

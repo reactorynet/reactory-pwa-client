@@ -88,7 +88,7 @@ export const useMemoryManager = (
   const memoryHistoryRef = useRef<number[]>([]);
   const cleanupFunctionsRef = useRef<Map<string, () => void>>(new Map());
   const leakHistoryRef = useRef<MemoryLeak[]>([]);
-  const monitoringIntervalRef = useRef<NodeJS.Timeout>();
+  const monitoringIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const lastCleanupRef = useRef<number>(0);
 
   // State

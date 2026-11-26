@@ -81,13 +81,13 @@ export const TagsField: React.FC<TagsFieldProps> = ({
         onChange(Array.from(new Set(flat)));
         setInputValue('');
       }}
-      renderTags={(tagValue, getTagProps) =>
+      renderValue={(tagValue, getItemProps) =>
         (tagValue as string[]).map((option, index) => (
           <Chip
             size="small"
             variant="outlined"
             label={option}
-            {...getTagProps({ index })}
+            {...getItemProps({ index })}
             key={`${option}-${index}`}
           />
         ))

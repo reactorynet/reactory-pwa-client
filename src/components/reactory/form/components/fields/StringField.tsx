@@ -1,4 +1,5 @@
 import React from "react";
+import { applyDefaultProps } from "@reactory/client-core/components/applyDefaultProps";
 import PropTypes from "prop-types";
 
 import {
@@ -9,7 +10,8 @@ import {
   getDefaultRegistry,
 } from "../../utils";
 
-function StringField(props) {
+function StringField(rawProps) {
+  const props = applyDefaultProps(rawProps, stringFieldDefaultProps);
   const {
     schema,
     name,
@@ -83,7 +85,8 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-StringField.defaultProps = {
+// React 19 ignores defaultProps on function components.
+const stringFieldDefaultProps = {
   uiSchema: {},
   disabled: false,
   readonly: false,

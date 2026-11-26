@@ -4,7 +4,7 @@ import {
   Typography,
   Box,
   Button,
-  Grid2 as Grid,
+  Grid,
   Alert,
   Dialog,
   DialogTitle,

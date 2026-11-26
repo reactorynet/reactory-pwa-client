@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { Fragment } from 'react';
 import { styled } from '@mui/material/styles';
 import {
@@ -45,7 +46,8 @@ interface IComponents {
   [key: string]: React.Component<any, any> | React.FunctionComponent<any> | Function | Object | any
 }
 
-const SlideOutLauncher = (props: any) => {
+const SlideOutLauncher = (rawProps: any) => {
+  const props = applyDefaultProps(rawProps, slideOutLauncherDefaultProps);
   const [open, setOpen] = React.useState(false);
   const componentDefs = props.api.getComponents(['core.SpeedDial']);
 
@@ -236,7 +238,7 @@ const SlideOutLauncher = (props: any) => {
 
 const SlideOutLauncherComponent: any = compose(withReactory)(SlideOutLauncher);
 
-SlideOutLauncherComponent.defaultProps = {
+const slideOutLauncherDefaultProps = {
   componentFqn: 'core.Logo',
   slideDirection: 'right',
 };

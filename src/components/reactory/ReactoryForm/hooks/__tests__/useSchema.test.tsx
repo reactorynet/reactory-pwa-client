@@ -2,7 +2,7 @@
  * Tests for the useSchema hook.
  * Verifies schema retrieval, resolution, and transformation logic.
  */
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useSchema } from '../useSchema';
 import { createMockReactorySDK } from '../../__tests__/mockReactory';
 import { DefaultLoadingSchema } from '../../constants';

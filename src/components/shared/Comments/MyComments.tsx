@@ -50,9 +50,17 @@ export const MyComments: React.FC<MyCommentsProps> = (props) => {
   return (
     <Box sx={{ width: '100%' }}>
       {!hideTitle && (
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+            mb: 2
+          }}>
           <ForumOutlinedIcon color="primary" />
-          <Typography variant="h5" fontWeight={600}>
+          <Typography variant="h5" sx={{
+            fontWeight: 600
+          }}>
             {title}
           </Typography>
         </Stack>

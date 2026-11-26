@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { Component, Fragment, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, Typography, Button, Collapse, Paper } from "@mui/material";
@@ -249,7 +250,8 @@ function ErrorList(props) {
   );
 }
 
-function DefaultTemplate(props) {
+function DefaultTemplate(rawProps) {
+  const props = applyDefaultProps(rawProps, defaultTemplateDefaultProps);
   const utils = props.reactory?.getComponent ? props.reactory.getComponent('core.ReactoryFormUtilities') : null;
   const {
     id,
@@ -315,7 +317,7 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-DefaultTemplate.defaultProps = {
+const defaultTemplateDefaultProps = {
   hidden: false,
   readonly: false,
   required: false,

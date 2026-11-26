@@ -3,7 +3,7 @@ import { styled } from '@mui/material/styles';
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
 
-  Grid2 as Grid,
+  Grid,
   Typography,
   Button,
   IconButton,
@@ -258,10 +258,10 @@ export interface ColumnHeaderConfiguration {
 export interface MaterialTableColumn<TRow> {
   field: string,
   title: string,
-  renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => JSX.Element
-  renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
-  renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
-  renderCell?: (cellData: any, cellIndex: number, rowData: TRow[], rowIndex: number) => JSX.Element,
+  renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => React.JSX.Element
+  renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => React.JSX.Element
+  renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => React.JSX.Element
+  renderCell?: (cellData: any, cellIndex: number, rowData: TRow[], rowIndex: number) => React.JSX.Element,
   footerProps?: any,
   headerProps?: any,
   rowProps?: any,
@@ -600,6 +600,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const isMountedRef = useRef(true);
   React.useEffect(() => {
+    // Set on every mount: StrictMode mounts, unmounts and remounts in development,
+    // and a ref only cleared here would drop every later result.
+    isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
   }, []);
 
@@ -608,7 +611,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   let ToolbarComponent = null;
   let components: { [key: string]: React.ComponentType<any> } = {};
-  let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
+  let detailsPanel: (props: MaterialTableDetailPanelProps) => React.JSX.Element = null;
 
   // Track component loading state to avoid repeated polling
   const [componentsLoaded, setComponentsLoaded] = useState<{
@@ -1491,7 +1494,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }, [reactory, idSchema.$id]);
 
   const getHeader = () => {
-    let $headers: JSX.Element[] = [];
+    let $headers: React.JSX.Element[] = [];
 
     if (options.toolbar === false) return null;
 
@@ -1693,7 +1696,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return rowActions;
   }
 
-  const getRow = (row, rid: number, rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = []): JSX.Element[] => {
+  const getRow = (row, rid: number, rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = []): React.JSX.Element[] => {
     const $rState: IRowState = rowsState[rid] || { dirty: false, editing: false, expanded: false, hover: false, saving: false, selected: false }
 
     const {
@@ -1768,7 +1771,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
 
-    let rowComponents: JSX.Element[] = [(<TableRow key={rid} sx={row.sx}>
+    let rowComponents: React.JSX.Element[] = [(<TableRow key={rid} sx={row.sx}>
       {$cols}
     </TableRow>)];
 
@@ -2479,7 +2482,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             }}
           >
             <Icon sx={{ color: 'warning.main', fontSize: 18 }}>warning_amber</Icon>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               <strong>Notice:</strong> This table is currently using client-side pagination ({clientPagedTotal} total records). Consider updating the GraphQL query and resolver to support server-side pagination for optimal performance.
             </Typography>
           </Box>
@@ -2487,7 +2492,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         {getPagination()}
         {confirmDialog}
       </>
-    )
+    );
   } catch (err) {
     reactory.log(`Error rendering MaterialTable:\n${err.message}`, { error: err });
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>

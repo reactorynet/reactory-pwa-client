@@ -634,7 +634,15 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
                       </Typography>
                     )}
                     {showCaptions && item.caption && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "text.secondary",
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
                         {item.caption}
                       </Typography>
                     )}
@@ -658,15 +666,16 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
     if (uploading) {
       return (
         <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
           style={{
             width: sizeValue,
             height: sizeValue,
             ...style,
           }}
-        >
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
           <CircularProgress />
         </Box>
       );
@@ -752,12 +761,19 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
               {(singleItem.title || singleItem.caption || title || caption) && (
                 <CardContent sx={{ p: 1.5 }}>
                   {(singleItem.title || title) && (
-                    <Typography variant="subtitle1" fontWeight="bold">
+                    <Typography variant="subtitle1" sx={{
+                      fontWeight: "bold"
+                    }}>
                       {singleItem.title || title}
                     </Typography>
                   )}
                   {(singleItem.caption || caption) && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                        mt: 0.5
+                      }}>
                       {singleItem.caption || caption}
                     </Typography>
                   )}
@@ -809,24 +825,26 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
           onClose={() => setPreviewImage(null)}
           maxWidth="lg"
           fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: 'rgba(18, 24, 38, 0.88)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: 24,
-              borderRadius: 3,
-              color: '#ffffff',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              overflow: 'hidden',
+          slotProps={{
+            paper: {
+              sx: {
+                bgcolor: 'rgba(18, 24, 38, 0.88)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: 24,
+                borderRadius: 3,
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                overflow: 'hidden',
+              },
             },
-          }}
-          BackdropProps={{
-            sx: {
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(8px)',
-            },
-          }}
-        >
+
+            backdrop: {
+              sx: {
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(8px)',
+              },
+            }
+          }}>
           <DialogTitle
             sx={{
               display: 'flex',
@@ -838,7 +856,12 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
             }}
           >
             <Box>
-              <Typography variant="h6" fontWeight="bold" sx={{ color: '#ffffff' }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "bold",
+                  color: '#ffffff'
+                }}>
                 {previewImage.title || previewImage.alt || 'Image Preview'}
               </Typography>
               {previewImage.caption && (

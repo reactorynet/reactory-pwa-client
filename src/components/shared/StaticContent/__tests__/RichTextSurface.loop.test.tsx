@@ -3,13 +3,13 @@ import { render, screen } from '@testing-library/react';
 import RichTextSurface from '../editor/RichTextSurface';
 
 /**
- * RichTextSurface is a controlled component, and react-quill resolves the
+ * RichTextSurface is a controlled component, and react-quill-new resolves the
  * controlled contract by comparing the incoming `value` against the editor's
  * current HTML and overwriting the editor whenever they differ.
  *
  * That makes any lossy transform on the value path a feedback loop: the editor
  * emits HTML, the host stores a transformed version, the transform back into
- * editor form does not reproduce Quill's exact normalisation, react-quill sees
+ * editor form does not reproduce Quill's exact normalisation, react-quill-new sees
  * a difference and rewrites the editor, which emits again. React eventually
  * gives up with "Maximum update depth exceeded".
  *

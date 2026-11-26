@@ -1,5 +1,5 @@
 import React from "react";
-import { act, renderHook } from "@testing-library/react-hooks";
+import { act, renderHook } from "@testing-library/react";
 import { useExports } from "../useExports";
 
 jest.mock("localforage", () => ({

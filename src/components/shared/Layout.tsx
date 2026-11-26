@@ -9,19 +9,16 @@ import {
 
 import { useTheme } from '@mui/material/styles';
 import { Theme } from '@mui/material';
+import { toGridProps } from '@reactory/client-core/components/gridCompat';
 import { withReactory } from '../../api/ApiProvider'
 
 
 const defaultLayout = {
   main: {
     container: true,
-    md: 12,
-    sm: 12,    
     children: {
       rowMain: {
-        item: true,
-        md: 12,
-        sm: 12,
+        size: { sm: 12, md: 12 },
         component: (<p>Empty Component</p>),        
       }
     },
@@ -43,9 +40,7 @@ const Layout = (props: any) => {
     const layoutDef = layout;
     const components = Object.keys(layoutDef).map(( key ) => {
       const containerDef = layoutDef[key]
-      const gridProps = {
-        ...containerDef
-      } 
+      const gridProps = toGridProps({ ...containerDef });
       if(gridProps.args) {
         delete gridProps.args
       }
@@ -91,11 +86,15 @@ export const CenteredContainer = ( props ) => {
   attrs['children'] = undefined;
   return (
     <Grid container {...attrs}>
-      <Grid item xs={12} lg={12}>
+      <Grid
+        size={{
+          xs: 12,
+          lg: 12
+        }}>
         {props.children}
       </Grid>
     </Grid>
-  )
+  );
 };
 
 export const SingleColumnLayout = CenteredContainer;
@@ -105,14 +104,25 @@ export const TwoColumnGrid = ( props ) => {
   attrs['children'] = undefined;
 
   return (
-    <Grid container {...attrs} alignItems="center">
+    <Grid container {...attrs} sx={[{
+      alignItems: "center"
+    }, ...(Array.isArray(attrs.sx) ? attrs.sx : [attrs.sx])]}>
       {props.children.map(child => {
-        return(<Grid item xs={12} lg={6} alignItems="center">
-          {child}
-        </Grid>)
-      })}      
+        return (
+          <Grid
+            sx={{
+              alignItems: "center"
+            }}
+            size={{
+              xs: 12,
+              lg: 6
+            }}>
+            {child}
+          </Grid>
+        );
+      })}
     </Grid>
-  )
+  );
 };
 
 export const paperStyles = {  

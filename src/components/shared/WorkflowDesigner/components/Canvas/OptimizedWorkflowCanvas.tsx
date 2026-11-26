@@ -88,7 +88,9 @@ const StepCluster = memo(({ cluster, viewport, onClick }: {
         }
       }}
     >
-      <Typography variant="caption" fontWeight="bold">
+      <Typography variant="caption" sx={{
+        fontWeight: "bold"
+      }}>
         {cluster.stepCount}
       </Typography>
     </Box>

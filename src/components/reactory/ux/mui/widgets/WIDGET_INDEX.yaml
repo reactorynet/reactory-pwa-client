@@ -188,7 +188,7 @@ categories:
       type: "form-widget"
       schema_type: "string"
       ui_schema: "RichEditor"
-      dependencies: ["froala-editor"]
+      dependencies: ["react-quill-new"]
       
     - name: "ReactoryDropZone"
       path: "./ReactoryDropZone/"

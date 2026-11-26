@@ -8,8 +8,8 @@
  * extract observable signals (visible labels, surface error messages).
  *
  * Limitations (documented per fixture as `divergences` annotations):
- *   - Widgets that depend on Apollo/GraphQL or external services (Froala,
- *     Recharts, Google Maps, etc.) will not render fully under jsdom; these
+ *   - Widgets that depend on Apollo/GraphQL or external services
+ *     (Recharts, Google Maps, etc.) will not render fully under jsdom; these
  *     fixtures are expected to either skip via `divergences` or be tested
  *     with shallower assertions.
  *   - rjsf v5 default widgets (used in renderWithV5) are unstyled HTML

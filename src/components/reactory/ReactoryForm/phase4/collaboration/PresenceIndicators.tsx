@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Box,
   Avatar,
@@ -217,12 +217,14 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
           horizontal: position.includes('right') ? 'right' : 'left',
         }}
         onClose={() => setShowDetails(false)}
-        PaperProps={{
-          sx: {
-            minWidth: 250,
-            maxHeight: 400,
-            overflow: 'auto',
-          },
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 250,
+              maxHeight: 400,
+              overflow: 'auto',
+            },
+          }
         }}
       >
         <Box sx={{ p: 2 }}>
@@ -232,7 +234,9 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
           
           {onlineUsers.length > 0 && (
             <>
-              <Typography variant="subtitle2" color="success.main" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{
+                color: "success.main"
+              }}>
                 Online ({onlineUsers.length})
               </Typography>
               <List dense>
@@ -253,9 +257,10 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
                     <ListItemText
                       primary={user.name}
                       secondary={user.email}
-                      primaryTypographyProps={{ variant: 'body2' }}
-                      secondaryTypographyProps={{ variant: 'caption' }}
-                    />
+                      slotProps={{
+                        primary: { variant: 'body2' },
+                        secondary: { variant: 'caption' }
+                      }} />
                     <OnlineIcon color="success" sx={{ fontSize: 16 }} />
                   </ListItem>
                 ))}
@@ -266,7 +271,9 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
           {offlineUsers.length > 0 && (
             <>
               <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{
+                color: "text.secondary"
+              }}>
                 Offline ({offlineUsers.length})
               </Typography>
               <List dense>
@@ -288,9 +295,10 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
                     <ListItemText
                       primary={user.name}
                       secondary={`Last seen: ${user.lastSeen.toLocaleTimeString()}`}
-                      primaryTypographyProps={{ variant: 'body2' }}
-                      secondaryTypographyProps={{ variant: 'caption' }}
-                    />
+                      slotProps={{
+                        primary: { variant: 'body2' },
+                        secondary: { variant: 'caption' }
+                      }} />
                     <OfflineIcon color="disabled" sx={{ fontSize: 16 }} />
                   </ListItem>
                 ))}

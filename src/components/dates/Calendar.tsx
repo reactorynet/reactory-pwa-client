@@ -1,11 +1,16 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Calendar as BigCalendar } from 'react-big-calendar';
+import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import moment from 'moment';
 
-const Calendar = (props: any) => {
+// The localizer is created once; react-big-calendar 1.x exports it by name.
+const localizer = momentLocalizer(moment);
+
+const Calendar = (rawProps: any) => {
+  const props = applyDefaultProps(rawProps, calendarDefaultProps);
   const [selected, setSelected] = useState(null);
 
   const onDoubleClick = (eventObj, e) => {
@@ -22,7 +27,7 @@ const Calendar = (props: any) => {
     <React.Fragment>
       <BigCalendar
         popup
-        localizer={BigCalendar.momentLocalizer(moment)}
+        localizer={localizer}
         onSelectEvent={onSelectEvent}
         onDoubleClickEvent={onDoubleClick}
         events={calendarItems || []}
@@ -44,7 +49,7 @@ Calendar.propTypes = {
   onItemDoubleClick: PropTypes.func,
 }
 
-Calendar.defaultProps = {
+const calendarDefaultProps = {
   startAccessor: 'startDate',
   endAccessor: 'endDate',
   calendarItems: [],

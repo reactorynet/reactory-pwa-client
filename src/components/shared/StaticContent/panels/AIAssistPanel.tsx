@@ -176,9 +176,11 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
       // re-renders on every keystroke. Profiling a typing session showed that
       // costing ~133ms of each ~145ms commit while the panel was closed. With
       // this off, MUI renders nothing until the panel is first opened.
-      ModalProps={{ BackdropProps: { invisible: true } }}
-      PaperProps={{
-        sx: { width: { xs: '100%', sm: PANEL_WIDTH }, display: 'flex', flexDirection: 'column' },
+      slotProps={{
+        backdrop: { invisible: true },
+        paper: {
+          sx: { width: { xs: '100%', sm: PANEL_WIDTH }, display: 'flex', flexDirection: 'column' },
+        }
       }}
     >
       <Box
@@ -193,7 +195,12 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
         }}
       >
         <AutoAwesomeIcon fontSize="small" color="primary" />
-        <Typography variant="subtitle1" fontWeight={600} sx={{ flexGrow: 1 }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 600,
+            flexGrow: 1
+          }}>
           AI assistance
         </Typography>
         {targetLang && (
@@ -213,8 +220,19 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {prompt && (
             <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  mb: 0.5
+                }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    flexGrow: 1
+                  }}>
                   The request below has been placed in the chat box for you to review and send.
                 </Typography>
                 <Tooltip title={copied ? 'Copied' : 'Copy prompt'}>
@@ -252,7 +270,9 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
 
       {tab === 1 && (
         <Box sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Paste the assistant's result here to replace the body you are editing. Your current
             content stays untouched until you apply.
           </Typography>
@@ -272,7 +292,9 @@ const AIAssistPanelComponent: React.FC<AIAssistPanelProps> = ({
 
           <Divider />
 
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Stack direction="row" spacing={1} sx={{
+            justifyContent: "flex-end"
+          }}>
             <Button color="inherit" onClick={() => setApplyText('')} disabled={!applyText}>
               Clear
             </Button>

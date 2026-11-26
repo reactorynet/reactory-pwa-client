@@ -191,7 +191,7 @@ const ReactorChatButton: React.FC<ReactorChatButtonProps> = ({
             }}
           >
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6">{chatProps.title || 'Chat'}</Typography>
+              <Typography variant="h6">{(chatProps.title as string) || 'Chat'}</Typography>
             </Box>
             <IconButton
               onClick={handleClose}

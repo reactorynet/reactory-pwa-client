@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ChatList from '../hooks/useScrollToBottom';
 import { UXChatMessage } from '../types';
 import { getChatMessageCommentContextId, applyDomHighlights, ChatCommentHighlightItem } from '../utils';
@@ -219,7 +219,7 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
       });
 
       // The button has aria-label="Comments (1)"
-      const commentBtn = screen.getByLabelText(/Comments \(1\)/i);
+      const commentBtn = await screen.findByLabelText(/Comments \(1\)/i);
       expect(commentBtn).toBeInTheDocument();
     });
 
@@ -296,7 +296,9 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
       expect(addedHandler).toBeDefined();
 
       mockReactory.graphqlQuery.mockClear();
-      addedHandler({ contextId: 'reactor_chat_session-test-1_msg-assistant-1' });
+      await act(async () => {
+        addedHandler({ contextId: 'reactor_chat_session-test-1_msg-assistant-1' });
+      });
 
       expect(mockReactory.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining('GetCommentsByContext'),
@@ -316,7 +318,10 @@ describe('ReactorChat Message Commenting & Annotation (Spec Implementation)', ()
         />
       );
 
-      // Wait for comments to finish loading and DOM highlights to apply
+      // Wait for comments to finish loading and DOM highlights to apply. The
+      // highlight pass replaces text nodes, so the selection below must be
+      // taken from the DOM as it is after the comments arrive.
+      await screen.findByLabelText(/Comments \(1\)/i);
       await waitFor(() => {
         expect(container.querySelector('.reactory-chat-message-body')).toBeInTheDocument();
       });

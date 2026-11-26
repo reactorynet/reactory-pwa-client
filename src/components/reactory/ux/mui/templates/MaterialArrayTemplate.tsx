@@ -10,7 +10,7 @@ import {
   IconButton,
   Typography,
   Card,
-  Grid2 as Grid,  
+  Grid,  
   Paper,
   Toolbar,  
 } from '@mui/material'
@@ -76,8 +76,8 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
   const [selected, setSelected] = useState<boolean[]>([]);
   const [onChangeTimer, setOnChangeTimer] = useState<any>(null);
 
-  const registry = useRef<Reactory.Forms.IReactoryFormUtilitiesRegistry>();
-  const utils = useRef<ReactoryFormUtilities>();
+  const registry = useRef<Reactory.Forms.IReactoryFormUtilitiesRegistry | undefined>(undefined);
+  const utils = useRef<ReactoryFormUtilities | undefined>(undefined);
 
   useEffect(() => {
     if(props.formContext.reactory.utils.lodash.isArray(props.formData) === true) {
@@ -250,12 +250,13 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
 
     const gridProps: any = {
       key: index,
-      item: true,
-      xs: itemUiOptions?.size?.xs || 12,
-      sm: itemUiOptions?.size?.sm || 12,
-      md: itemUiOptions?.size?.md || 6,
-      lg: itemUiOptions?.size?.lg || 3,
-      xl: itemUiOptions?.size?.xl || 3,      
+      size: {
+        xs: itemUiOptions?.size?.xs || 12,
+        sm: itemUiOptions?.size?.sm || 12,
+        md: itemUiOptions?.size?.md || 6,
+        lg: itemUiOptions?.size?.lg || 3,
+        xl: itemUiOptions?.size?.xl || 3,
+      },
     };
     
     return (      
@@ -345,7 +346,9 @@ const MaterialArrayTemplate = (props: ArrayTemplateProps) => {
               }   
             });
           })}
-          <Grid size={{ xs: 12, sm: 12, md: 12 }} justifyContent={'center'}>
+          <Grid size={{ xs: 12, sm: 12, md: 12 }} sx={{
+            justifyContent: 'center'
+          }}>
             {!formData || (formData && formData.length === 0) && uiOptions?.allowAdd !== false ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
           </Grid>
         </Grid>)

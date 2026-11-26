@@ -89,27 +89,11 @@ const ConditionalIconWidget: React.FC<ConditionalIconWidgetProps> = memo(({
     [reactory]
   );
 
-  const { MaterialStyles, MaterialCore } = Material;
-  
-  // Simplified JSS styles - only create if jss is not empty
-  const jssStyles = useMemo(() => {
-    if (!jss || Object.keys(jss).length === 0) {
-      return {};
-    }
-    
-    try {
-      return MaterialStyles.makeStyles((theme) => jss)({
-        formData, 
-        idSchema: idSchema?.$id, 
-        schema: schema?.title, 
-        uiSchema: uiSchema?.['ui:options'], 
-        formContext: formContext ? 'present' : 'absent' // Only pass a simple value
-      });
-    } catch (error) {
-      console.warn('Error creating JSS styles:', error);
-      return {};
-    }
-  }, [MaterialStyles, jss, formData, idSchema?.$id, schema?.title]);
+  const { MaterialCore } = Material;
+
+  // `jss` used to go through MaterialStyles.makeStyles, which the registry has
+  // never provided since MUI 5; it always resolved to no styles.
+  const jssStyles = {};
 
   // Memoize the display label
   const displayLabel = useMemo(() => {

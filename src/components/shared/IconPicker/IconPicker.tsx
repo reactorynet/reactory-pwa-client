@@ -83,8 +83,10 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           fullWidth
           value={searchTerm}
           onChange={handleSearchChange}
-          InputProps={{
-            disableUnderline: true,
+          slotProps={{
+            input: {
+              disableUnderline: true,
+            }
           }}
         />
         {searchTerm && (
@@ -122,21 +124,23 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             disabled={disabled}
             variant={(reactory?.muiTheme?.MaterialTextField as any)?.variant || 'standard'}
             fullWidth
-            InputProps={{
-                readOnly: true,
-                startAdornment: (
-                    <InputAdornment position="start">
-                        {SelectedIconComponent ? <SelectedIconComponent /> : <AppsIcon color="disabled" />}
-                    </InputAdornment>
-                ),
-                endAdornment: value ? (
-                    <InputAdornment position="end">
-                        <IconButton size="small" onClick={handleClear} disabled={disabled}>
-                            <CloseIcon fontSize="small" />
-                        </IconButton>
-                    </InputAdornment>
-                ) : null,
-                style: { cursor: disabled ? 'default' : 'pointer' }
+            slotProps={{
+              input: {
+                  readOnly: true,
+                  startAdornment: (
+                      <InputAdornment position="start">
+                          {SelectedIconComponent ? <SelectedIconComponent /> : <AppsIcon color="disabled" />}
+                      </InputAdornment>
+                  ),
+                  endAdornment: value ? (
+                      <InputAdornment position="end">
+                          <IconButton size="small" onClick={handleClear} disabled={disabled}>
+                              <CloseIcon fontSize="small" />
+                          </IconButton>
+                      </InputAdornment>
+                  ) : null,
+                  style: { cursor: disabled ? 'default' : 'pointer' }
+              }
             }}
         />
       )}
@@ -154,7 +158,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   return (
     <>
       {renderTrigger()}
-      
+
       {variant === 'dialog' && (
         <Dialog 
             open={isOpen} 
@@ -186,8 +190,10 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             vertical: 'top',
             horizontal: 'left',
           }}
-          PaperProps={{
-              style: { width: 400, height: 400 }
+          slotProps={{
+            paper: {
+                style: { width: 400, height: 400 }
+            }
           }}
         >
           {renderPickerContent(400, 400)}

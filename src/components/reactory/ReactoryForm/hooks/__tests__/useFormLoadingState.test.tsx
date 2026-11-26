@@ -2,7 +2,7 @@
  * Tests for the useFormLoadingState hook.
  * Verifies granular loading stage tracking and progress calculation.
  */
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import {
   useFormLoadingState,
   LOADING_STAGE_KEYS,

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Box,
   Skeleton,
@@ -360,7 +360,11 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   const renderGridSkeleton = () => (
     <Grid container spacing={spacing}>
       {Array.from({ length: count }).map((_, index) => (
-        <Grid item xs={12 / columns} key={index}>
+        <Grid
+          key={index}
+          size={{
+            xs: 12 / columns
+          }}>
           <Skeleton variant="rectangular" height={height} />
         </Grid>
       ))}
@@ -413,7 +417,9 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
             size={20}
             sx={{ mr: 1 }}
           />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             {currentProgress}%
           </Typography>
         </Box>

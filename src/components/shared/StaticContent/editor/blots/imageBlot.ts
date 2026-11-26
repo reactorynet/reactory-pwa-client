@@ -1,4 +1,4 @@
-import { Quill } from 'react-quill';
+import { Quill } from 'react-quill-new';
 
 export interface ImageAttributes {
   src: string;

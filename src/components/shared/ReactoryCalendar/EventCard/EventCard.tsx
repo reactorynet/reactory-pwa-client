@@ -133,7 +133,9 @@ export const EventCard: React.FC<EventCardProps> = ({
         {showTime && !isCompact && (
           <Box sx={{ display: "flex", alignItems: "center", mt: 0.25 }}>
             <AccessTime sx={{ fontSize: 12, mr: 0.5, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography variant="caption" noWrap sx={{
+              color: "text.secondary"
+            }}>
               {timeStr}
             </Typography>
           </Box>
@@ -142,7 +144,9 @@ export const EventCard: React.FC<EventCardProps> = ({
         {showLocation && event.location && !isCompact && (
           <Box sx={{ display: "flex", alignItems: "center", mt: 0.25 }}>
             <LocationOn sx={{ fontSize: 12, mr: 0.5, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography variant="caption" noWrap sx={{
+              color: "text.secondary"
+            }}>
               {event.location}
             </Typography>
           </Box>

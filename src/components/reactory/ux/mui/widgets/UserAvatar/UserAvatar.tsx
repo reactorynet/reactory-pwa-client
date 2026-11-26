@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { useMemo, useState } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import { Chip, Avatar, Typography, Box, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
@@ -247,7 +248,8 @@ interface UserAvatarProps {
  * }
  * // Note: organizationId will be taken from formContext.organizationId
  */
-const UserAvatar: React.FC<UserAvatarProps> = (props) => {
+const UserAvatar: React.FC<UserAvatarProps> = (rawProps) => {
+  const props = applyDefaultProps(rawProps, userAvatarDefaultProps);
   const theme = useTheme();
   const {
     user: userProp,
@@ -565,10 +567,12 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
         onClose={handleDialogClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            height: '80vh',
-            maxHeight: '800px',
+        slotProps={{
+          paper: {
+            sx: {
+              height: '80vh',
+              maxHeight: '800px',
+            }
           }
         }}
       >
@@ -655,7 +659,7 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
   );
 };
 
-UserAvatar.defaultProps = {
+const userAvatarDefaultProps = {
   user: null,
   formData: null,
   value: null,

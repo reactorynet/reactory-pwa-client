@@ -62,7 +62,12 @@ export default function FilterPanel(props: FilterPanelProps) {
 
   return (
     <Box sx={{ px: 2, py: 1 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}>
         <Typography variant="overline">
           {t('reactor.client.graphExplorer.filter.nodeTypes', { defaultValue: 'Node types' })}
         </Typography>
@@ -72,14 +77,29 @@ export default function FilterPanel(props: FilterPanelProps) {
           </Button>
         )}
       </Stack>
-      <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+          mb: 1
+        }}>
         {renderChips(ALL_NODE_TYPES, presentNodeTypes, filters.nodeTypes, 'nodeTypes')}
       </Stack>
       <Typography variant="overline">Edge types</Typography>
-      <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+      <Stack direction="row" spacing={0.5} useFlexGap sx={{
+        flexWrap: "wrap"
+      }}>
         {renderChips(ALL_LINK_TYPES, presentLinkTypes, filters.linkTypes, 'linkTypes')}
       </Stack>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: 'block',
+          mt: 1
+        }}>
         Click toggles a type; double-click shows only that type.
       </Typography>
     </Box>

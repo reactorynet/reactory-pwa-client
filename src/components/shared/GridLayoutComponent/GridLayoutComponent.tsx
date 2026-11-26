@@ -129,7 +129,15 @@ const GridLayoutWidget = (props) => {
         {
           state.data.map((itemData, index) => {
             componentProps = { ...componentProps, data: itemData }
-            return (<Grid item xs={12} sm={6} md={4} key={index} ><ChildComponent {...componentProps} /></Grid>)
+            return (
+              <Grid
+                key={index}
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 4
+                }}><ChildComponent {...componentProps} /></Grid>
+            );
           })
         }
       </Grid>

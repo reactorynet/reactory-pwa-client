@@ -124,7 +124,9 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
                 {reactoryTenantName}
               </Typography>
               {secondaryLabelText && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   {secondaryLabelText}
                 </Typography>
               )}
@@ -218,7 +220,12 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
             Are you sure you want to remove the membership for{' '}
             <strong>{reactoryTenantName}</strong>?
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1
+            }}>
             This action cannot be undone.
           </Typography>
           <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>

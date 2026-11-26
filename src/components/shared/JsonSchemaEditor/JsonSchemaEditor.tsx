@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { 
   FormControl, 
   InputLabel, 
@@ -288,10 +288,12 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           {label}
         </Typography>
       )}
-      
+
       <Box className={classes.editorContainer}>
         <Box className={classes.header}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             JSON Schema Editor
           </Typography>
           <Box>
@@ -318,11 +320,13 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           maxRows={20}
           fullWidth
           variant="outlined"
-          InputProps={{
-            readOnly: readOnly,
-            className: classes.editor,
-          }}
           style={{ height: typeof height === 'number' ? `${height}px` : height }}
+          slotProps={{
+            input: {
+              readOnly: readOnly,
+              className: classes.editor,
+            }
+          }}
         />
       </Box>
 
@@ -335,7 +339,7 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           ))}
         </Box>
       )}
-      
+
       {showValidation && isValid && content.trim() && (
         <Alert severity="success" variant="outlined" sx={{ mt: 1 }}>
           Valid JSON Schema

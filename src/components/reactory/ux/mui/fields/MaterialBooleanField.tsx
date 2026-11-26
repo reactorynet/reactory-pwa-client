@@ -77,7 +77,12 @@ export default (props) => {
     const label = checked ? yesLabel : noLabel;
     if (!showLabels && !icon) return null;
     return (
-      <Box display="flex" alignItems="center" gap={1}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1
+        }}>
         {icon && renderIcon(icon, iconOptions)}
         {showLabels && <Typography component="span">{label}</Typography>}
       </Box>

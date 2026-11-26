@@ -1,4 +1,4 @@
-import { Quill } from 'react-quill';
+import { Quill } from 'react-quill-new';
 
 export const HR_BLOT_NAME = 'hr';
 export const HR_CLASS = 'reactory-hr';

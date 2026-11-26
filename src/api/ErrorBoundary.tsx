@@ -14,7 +14,7 @@ interface ErrorBoundaryPropsWithComponent {
     resetKeys: Array<unknown> | undefined,
   ) => void
   onReset?: (...args: Array<unknown>) => void
-  onError?: (error: Error, info: { componentStack: string }) => void
+  onError?: (error: Error, info: React.ErrorInfo) => void
   resetKeys?: Array<unknown>
   fallback?: never
   FallbackComponent: React.ComponentType<FallbackProps>
@@ -35,7 +35,7 @@ interface ErrorBoundaryPropsWithRender {
     resetKeys: Array<unknown> | undefined,
   ) => void
   onReset?: (...args: Array<unknown>) => void
-  onError?: (error: Error, info: { componentStack: string }) => void
+  onError?: (error: Error, info: React.ErrorInfo) => void
   resetKeys?: Array<unknown>
   fallback?: never
   FallbackComponent?: never
@@ -49,7 +49,7 @@ interface ErrorBoundaryPropsWithFallback {
     resetKeys: Array<unknown> | undefined,
   ) => void
   onReset?: (...args: Array<unknown>) => void
-  onError?: (error: Error, info: { componentStack: string }) => void
+  onError?: (error: Error, info: React.ErrorInfo) => void
   resetKeys?: Array<unknown>
   fallback: React.ReactElement<
     unknown,

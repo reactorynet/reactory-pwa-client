@@ -225,7 +225,9 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
           </TextField>
 
           {family === 'object' && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               This node uses the default object layout — fields render in schema order.
               Choose a Tabbed or Grid layout above to configure a custom arrangement.
             </Typography>
@@ -236,12 +238,20 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
             <>
               <Divider textAlign="left"><Chip label="Tabs" size="small" /></Divider>
               {tab.tabs.length === 0 && (
-                <Typography variant="body2" color="text.secondary">No tabs yet. Add one below.</Typography>
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>No tabs yet. Add one below.</Typography>
               )}
               <Stack spacing={1}>
                 {tab.tabs.map((t, index) => (
                   <Paper key={index} variant="outlined" sx={{ p: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                        flexWrap: "wrap"
+                      }}>
                       {fieldSelect(t.field, (v) => updateTab(index, { field: v }))}
                       <TextField
                         size="small"
@@ -249,8 +259,10 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
                         value={t.icon || ''}
                         onChange={(e) => updateTab(index, { icon: e.target.value })}
                         sx={{ width: 120 }}
-                        InputProps={{
-                          endAdornment: t.icon ? <Icon fontSize="small">{t.icon}</Icon> : null,
+                        slotProps={{
+                          input: {
+                            endAdornment: t.icon ? <Icon fontSize="small">{t.icon}</Icon> : null,
+                          }
                         }}
                       />
                       <TextField
@@ -270,14 +282,25 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
               <Box>
                 <Button startIcon={<Add />} onClick={addTab} size="small" variant="outlined">Add tab</Button>
                 {unassignedTab.length > 0 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      ml: 2
+                    }}>
                     Unassigned fields: {unassignedTab.join(', ')}
                   </Typography>
                 )}
               </Box>
 
               <Divider textAlign="left"><Chip label="Tab options" size="small" /></Divider>
-              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  flexWrap: "wrap"
+                }}>
                 <FormControlLabel
                   control={<Switch checked={tab.useRouter} onChange={(e) => setTab((p) => ({ ...p, useRouter: e.target.checked }))} />}
                   label="Use router (change URL on tab change)"
@@ -292,7 +315,13 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
                   sx={{ flexGrow: 1, minWidth: 240 }}
                 />
               </Stack>
-              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  flexWrap: "wrap"
+                }}>
                 <TextField
                   select size="small" label="Active tab source" value={tab.activeTab}
                   onChange={(e) => setTab((p) => ({ ...p, activeTab: e.target.value }))}
@@ -318,12 +347,20 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
             <>
               <Divider textAlign="left"><Chip label="Rows" size="small" /></Divider>
               {grid.rows.length === 0 && (
-                <Typography variant="body2" color="text.secondary">No rows yet. Add one below.</Typography>
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>No rows yet. Add one below.</Typography>
               )}
               <Stack spacing={1}>
                 {grid.rows.map((row, rowIndex) => (
                   <Paper key={rowIndex} variant="outlined" sx={{ p: 1 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                        mb: 1
+                      }}>
                       <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>Row {rowIndex + 1}</Typography>
                       <Tooltip title="Move up"><span><IconButton size="small" disabled={rowIndex === 0} onClick={() => moveRow(rowIndex, -1)}><ArrowUpward fontSize="small" /></IconButton></span></Tooltip>
                       <Tooltip title="Move down"><span><IconButton size="small" disabled={rowIndex === grid.rows.length - 1} onClick={() => moveRow(rowIndex, 1)}><ArrowDownward fontSize="small" /></IconButton></span></Tooltip>
@@ -331,7 +368,14 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
                     </Stack>
                     <Stack spacing={1}>
                       {row.cells.map((cell, cellIndex) => (
-                        <Stack key={cellIndex} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                        <Stack
+                          key={cellIndex}
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: "center",
+                            flexWrap: "wrap"
+                          }}>
                           {fieldSelect(cell.field, (v) => updateCellField(rowIndex, cellIndex, v))}
                           {BREAKPOINTS.map((bp) => (
                             <TextField
@@ -341,8 +385,10 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
                               type="number"
                               value={cell.size[bp] ?? ''}
                               onChange={(e) => updateCellSize(rowIndex, cellIndex, bp, e.target.value)}
-                              inputProps={{ min: 1, max: 12 }}
                               sx={{ width: 64 }}
+                              slotProps={{
+                                htmlInput: { min: 1, max: 12 }
+                              }}
                             />
                           ))}
                           <Tooltip title="Remove field"><IconButton size="small" color="error" onClick={() => removeCell(rowIndex, cellIndex)}><Delete fontSize="small" /></IconButton></Tooltip>
@@ -358,18 +404,31 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
               <Box>
                 <Button startIcon={<Add />} onClick={addRow} size="small" variant="outlined">Add row</Button>
                 {unassignedGrid.length > 0 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      ml: 2
+                    }}>
                     Unassigned fields: {unassignedGrid.join(', ')}
                   </Typography>
                 )}
               </Box>
 
               <Divider textAlign="left"><Chip label="Grid options" size="small" /></Divider>
-              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  flexWrap: "wrap"
+                }}>
                 <TextField
                   size="small" label="Spacing" type="number" value={grid.spacing}
                   onChange={(e) => setGrid((p) => ({ ...p, spacing: parseInt(e.target.value, 10) || 0 }))}
-                  inputProps={{ min: 0, max: 10 }} sx={{ width: 100 }}
+                  sx={{ width: 100 }} slotProps={{
+                  htmlInput: { min: 0, max: 10 }
+                }}
                 />
                 <TextField
                   select size="small" label="Container" value={grid.container}
@@ -382,8 +441,10 @@ export const LayoutDesignerDialog: React.FC<LayoutDesignerDialogProps> = ({
                 <TextField
                   size="small" label="Elevation" type="number" value={grid.elevation}
                   onChange={(e) => setGrid((p) => ({ ...p, elevation: parseInt(e.target.value, 10) || 0 }))}
-                  inputProps={{ min: 0, max: 24 }} sx={{ width: 100 }}
-                  disabled={grid.container !== 'Paper'}
+                  sx={{ width: 100 }} disabled={grid.container !== 'Paper'}
+                  slotProps={{
+                    htmlInput: { min: 0, max: 24 }
+                  }}
                 />
               </Stack>
             </>

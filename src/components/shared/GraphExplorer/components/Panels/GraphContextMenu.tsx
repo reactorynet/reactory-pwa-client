@@ -51,7 +51,9 @@ export default function GraphContextMenu(props: GraphContextMenuProps) {
       onClose={onClose}
       anchorReference="anchorPosition"
       anchorPosition={state ? { top: state.y, left: state.x } : undefined}
-      MenuListProps={{ dense: true }}
+      slotProps={{
+        list: { dense: true }
+      }}
     >
       {node?.hasChildren && (
         <MenuItem onClick={run((n) => onToggleExpand(n))}>

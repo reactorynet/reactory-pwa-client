@@ -78,7 +78,14 @@ export default function InspectorPanel(props: InspectorPanelProps) {
         <Typography variant="body2" sx={{ my: 1 }}>
           {nodeName(selectedEdge.source)} → {nodeName(selectedEdge.target)}
         </Typography>
-        <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          useFlexGap
+          sx={{
+            flexWrap: "wrap",
+            mb: 1
+          }}>
           {selectedEdge.types.map((t) => (
             <Chip key={t} size="small" label={t.toLowerCase()} />
           ))}
@@ -86,7 +93,9 @@ export default function InspectorPanel(props: InspectorPanelProps) {
         </Stack>
         {selectedEdge.title && <Typography variant="body2">{selectedEdge.title}</Typography>}
         {selectedEdge.description && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             {selectedEdge.description}
           </Typography>
         )}
@@ -107,7 +116,9 @@ export default function InspectorPanel(props: InspectorPanelProps) {
   if (!node) {
     return (
       <Box sx={{ p: 2 }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Select a node to inspect it.
         </Typography>
       </Box>
@@ -134,7 +145,14 @@ export default function InspectorPanel(props: InspectorPanelProps) {
       <Typography variant="subtitle1" noWrap title={node.name}>
         {node.name}
       </Typography>
-      <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ my: 1 }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+          my: 1
+        }}>
         <Chip size="small" label={node.type.toLowerCase()} />
         {node.data?.kind === 'symlink' && <Chip size="small" color="warning" label="symlink" />}
         {(node.origin === 'overlay' || node.origin === 'both') && (
@@ -154,7 +172,14 @@ export default function InspectorPanel(props: InspectorPanelProps) {
         </Stack>
       )}
 
-      <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+          mb: 1
+        }}>
         {node.hasChildren && (
           <Button size="small" variant="outlined" disabled={loading} onClick={() => onToggleExpand(node)}>
             {loading ? 'Loading…' : expanded ? 'Collapse' : 'Expand'}
@@ -218,9 +243,10 @@ export default function InspectorPanel(props: InspectorPanelProps) {
               <ListItemText
                 primary={value}
                 secondary={label}
-                primaryTypographyProps={{ variant: 'body2', sx: { wordBreak: 'break-all' } }}
-                secondaryTypographyProps={{ variant: 'caption' }}
-              />
+                slotProps={{
+                  primary: { variant: 'body2', sx: { wordBreak: 'break-all' } },
+                  secondary: { variant: 'caption' }
+                }} />
             </ListItem>
           ))}
       </List>
@@ -237,7 +263,9 @@ export default function InspectorPanel(props: InspectorPanelProps) {
               if (svg) {
                 return (
                   <ListItem key={key} disableGutters sx={{ py: 0.5 }}>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{
+                      alignItems: "center"
+                    }}>
                       <Box
                         sx={{
                           width: 32,
@@ -253,7 +281,9 @@ export default function InspectorPanel(props: InspectorPanelProps) {
                         // Sanitized by toSafeSvg (no scripts/handlers/URLs).
                         dangerouslySetInnerHTML={{ __html: svg }}
                       />
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         {key}
                       </Typography>
                     </Stack>
@@ -265,9 +295,10 @@ export default function InspectorPanel(props: InspectorPanelProps) {
                   <ListItemText
                     primary={typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     secondary={key}
-                    primaryTypographyProps={{ variant: 'body2', sx: { wordBreak: 'break-all' } }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
+                    slotProps={{
+                      primary: { variant: 'body2', sx: { wordBreak: 'break-all' } },
+                      secondary: { variant: 'caption' }
+                    }} />
                 </ListItem>
               );
             })}
@@ -300,9 +331,10 @@ export default function InspectorPanel(props: InspectorPanelProps) {
             <ListItemText
               primary={`${nodeName(edge.source)} → ${nodeName(edge.target)}`}
               secondary={edge.types.join(', ').toLowerCase() + (edge.title ? ` — ${edge.title}` : '')}
-              primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-              secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-            />
+              slotProps={{
+                primary: { variant: 'body2', noWrap: true },
+                secondary: { variant: 'caption', noWrap: true }
+              }} />
           </ListItem>
         ))}
       </List>

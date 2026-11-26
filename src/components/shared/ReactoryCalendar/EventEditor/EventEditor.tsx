@@ -122,7 +122,9 @@ export const EventEditor: React.FC<EventEditorProps> = ({
           value={startStr}
           onChange={(e) => setStartStr(e.target.value)}
           fullWidth
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true }
+          }}
         />
         <TextField
           label="End"
@@ -130,7 +132,9 @@ export const EventEditor: React.FC<EventEditorProps> = ({
           value={endStr}
           onChange={(e) => setEndStr(e.target.value)}
           fullWidth
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true }
+          }}
         />
       </Box>
 

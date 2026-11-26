@@ -219,7 +219,9 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <ExtensionIcon color="primary" />
-        <Typography variant="h6" component="span" fontWeight="bold">
+        <Typography variant="h6" component="span" sx={{
+          fontWeight: "bold"
+        }}>
           {initialTag ? 'Edit Reactory Component Tag' : 'Inject Reactory Component Tag'}
         </Typography>
       </DialogTitle>
@@ -255,7 +257,9 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
 
           {/* Component Props Configuration */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1 }}>
-            <Typography variant="subtitle2" fontWeight="bold">
+            <Typography variant="subtitle2" sx={{
+              fontWeight: "bold"
+            }}>
               Component Properties (Props)
             </Typography>
             <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={handleAddProp}>
@@ -270,8 +274,14 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
           ) : (
             propsList.map((prop, idx) => (
               <Paper key={idx} variant="outlined" sx={{ p: 1.5 }}>
-                <Grid container spacing={1} alignItems="center">
-                  <Grid item xs={12} sm={4}>
+                <Grid container spacing={1} sx={{
+                  alignItems: "center"
+                }}>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      sm: 4
+                    }}>
                     <TextField
                       size="small"
                       fullWidth
@@ -281,7 +291,11 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
                       onChange={(e) => handlePropChange(idx, 'key', e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      sm: 3
+                    }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Type</InputLabel>
                       <Select
@@ -297,7 +311,11 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={10} sm={4}>
+                  <Grid
+                    size={{
+                      xs: 10,
+                      sm: 4
+                    }}>
                     <TextField
                       size="small"
                       fullWidth
@@ -307,7 +325,11 @@ export const ComponentSelectorDialog: React.FC<ComponentSelectorDialogProps> = (
                       onChange={(e) => handlePropChange(idx, 'value', e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={2} sm={1}>
+                  <Grid
+                    size={{
+                      xs: 2,
+                      sm: 1
+                    }}>
                     <IconButton size="small" color="error" onClick={() => handleRemoveProp(idx)}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>

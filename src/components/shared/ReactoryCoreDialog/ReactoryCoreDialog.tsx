@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 'use strict';
 /**
  * ReactoryCoreDialog Component
@@ -42,7 +43,7 @@
  *   closeOnEvents={['form:submitted', 'form:cancelled']}
  *   appBarProps={{ color: 'primary' }}
  *   containerProps={{
- *     PaperProps: { style: { borderRadius: 16 } }
+ *     slotProps: { paper: { style: { borderRadius: 16 } } }
  *   }}
  *   onClose={() => setIsOpen(false)}
  * >
@@ -234,7 +235,8 @@ const Transition = React.forwardRef(function Transition(props: any, ref) {
  * @param props - Component props
  * @returns React component
  */
-const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
+const FullScreenDialog = (rawProps: IReactoryCoreDialogProps) => {
+  const props = applyDefaultProps(rawProps, fullScreenDialogDefaultProps);
   const theme = useTheme();
 
   const {    
@@ -320,14 +322,19 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
     BackNavigation = () => {
       return (
         <div className={classes.backNavContainer} style={containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {}}>
-          <Grid container spacing={1} alignItems="center">
-            <Grid item>
+          <Grid container spacing={1} sx={{
+            alignItems: "center"
+          }}>
+            <Grid>
               <div style={{ display: 'flex', cursor: 'pointer' }} onClick={handleClose}>
                 <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
                 <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
               </div>
             </Grid>
-            <Grid item xs>
+            <Grid
+              size={{
+                xs: 'grow'
+              }}>
               <div className={classes.linkContainer}>
                 {backNavigationItems.map((navItem, ind) => (
                   <React.Fragment key={`nav-item-${ind}`}>
@@ -342,7 +349,7 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
               </div>
             </Grid>
             {backNavComponent && (
-              <Grid item>
+              <Grid>
                 <div className={classes.backNavComponent}>
                   {backNavComponent}
                 </div>
@@ -372,7 +379,7 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
       if (reason === 'escapeKeyDown' && disableEscapeKeyDown) return;
       handleClose();
     },
-    TransitionComponent: Transition,
+    slots: { transition: Transition },
     ...containerProps,
     style: {
       overflowX: 'hidden' as const
@@ -506,7 +513,7 @@ FullScreenDialog.propTypes = {
   disableEscapeKeyDown: PropTypes.bool,
 };
 
-FullScreenDialog.defaultProps = {
+const fullScreenDialogDefaultProps = {
   open: false,
   showAppBar: true,
   slide: 'up',

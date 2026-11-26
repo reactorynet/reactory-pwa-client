@@ -940,7 +940,9 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       {loading && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
           <CircularProgress size={18} />
-          <Typography variant="body2" color="text.secondary">Loading form definition…</Typography>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>Loading form definition…</Typography>
         </Box>
       )}
 
@@ -993,7 +995,9 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           <Typography variant="h6">
             Form configuration
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             The base definition of the form. Identity fields are required before the form can be saved.
           </Typography>
         </Box>
@@ -1001,7 +1005,13 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={1}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2
+          }}>
           <ValidationStatus
             isValid={state.validationState.schema.isValid}
             errors={state.validationState.schema.errors}
@@ -1040,7 +1050,13 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={2}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2
+          }}>
           <ValidationStatus
             isValid={state.validationState.uiSchema.isValid}
             errors={state.validationState.uiSchema.errors}
@@ -1080,7 +1096,13 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={3}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2
+          }}>
           <Typography variant="h6">
             Data Configuration (GraphQL)
           </Typography>
@@ -1140,7 +1162,9 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           </Paper>
         ) : (
           <Paper elevation={1} sx={{ p: 3, mt: 2, textAlign: 'center' }}>
-            <Typography color="text.secondary">
+            <Typography sx={{
+              color: "text.secondary"
+            }}>
               Fix schema validation errors to see form preview
             </Typography>
           </Paper>

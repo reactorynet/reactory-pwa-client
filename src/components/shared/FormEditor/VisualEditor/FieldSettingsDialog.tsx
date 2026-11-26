@@ -56,7 +56,12 @@ const FieldSettingsDialog: React.FC<FieldSettingsDialogProps> = ({
       fullWidth
     >
       <DialogTitle>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}>
           <Typography variant="h6">Edit Field: {field.schema.title || field.name}</Typography>
           <IconButton onClick={onClose} size="small">
             <Close />

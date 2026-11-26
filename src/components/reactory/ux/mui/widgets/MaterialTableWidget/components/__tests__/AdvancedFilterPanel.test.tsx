@@ -488,7 +488,7 @@ describe('AdvancedFilterPanel', () => {
       await userEvent.click(saveButton);
       
       // Verify dialog is open
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: /Save Filter Preset/i })).toBeInTheDocument();
       
       // Cancel
       const cancelButton = screen.getByRole('button', { name: /Cancel/i });
@@ -496,7 +496,7 @@ describe('AdvancedFilterPanel', () => {
       
       // Wait for dialog to close
       await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: /Save Filter Preset/i })).not.toBeInTheDocument();
       });
     });
 

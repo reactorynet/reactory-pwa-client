@@ -29,7 +29,9 @@ export const HelloWorldWidget: React.FC<HelloWorldWidgetProps> = ({
         <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
           {title}
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           {message}
         </Typography>
       </Box>

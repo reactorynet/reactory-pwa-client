@@ -23,7 +23,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
 import BusinessIcon from '@mui/icons-material/Business';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 export interface WorkflowTaskApprovalProps {
@@ -207,7 +207,9 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
                 {personaName}
               </Typography>
               {sessionDisplayId && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Session: {sessionDisplayId}
                 </Typography>
               )}
@@ -229,7 +231,12 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
 
         {pendingTools && pendingTools.length > 0 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                mr: 0.5
+              }}>
               Pending Tools:
             </Typography>
             {pendingTools.map((t: string, idx: number) => (
@@ -245,14 +252,30 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
           </Box>
         )}
 
-        <Grid container spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary">Completed Iterations</Typography>
+        <Grid
+          container
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+            mb: 1.5
+          }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>Completed Iterations</Typography>
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
               {iterationsCompleted} / {maxIterations}
             </Typography>
           </Grid>
-          <Grid item xs={6} sm={4}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
             <TextField
               type="number"
               size="small"
@@ -262,8 +285,10 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
                 const val = parseInt(e.target.value, 10);
                 if (val >= 1) setNewMax(val);
               }}
-              inputProps={{ min: 1, max: 1000 }}
               sx={{ width: '100%', maxWidth: 130 }}
+              slotProps={{
+                htmlInput: { min: 1, max: 1000 }
+              }}
             />
           </Grid>
         </Grid>
@@ -339,7 +364,12 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
       </Box>
 
       {task?.description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           {task.description}
         </Typography>
       )}
@@ -347,8 +377,19 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
       {/* Structured Details */}
       <Grid container spacing={1.5} sx={{ mb: 2 }}>
         {amount !== undefined && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
               <AttachMoneyIcon fontSize="small" />
               Amount
             </Typography>
@@ -359,8 +400,19 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
         )}
 
         {annualValue !== undefined && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
               <AttachMoneyIcon fontSize="small" />
               Annual Value
             </Typography>
@@ -371,8 +423,19 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
         )}
 
         {employee && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
               <PersonIcon fontSize="small" />
               Requestor
             </Typography>
@@ -383,8 +446,19 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
         )}
 
         {vendor && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
               <BusinessIcon fontSize="small" />
               Vendor
             </Typography>
@@ -395,8 +469,19 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
         )}
 
         {category && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
               <CategoryIcon fontSize="small" />
               Category
             </Typography>
@@ -405,8 +490,14 @@ export const WorkflowTaskApproval: React.FC<WorkflowTaskApprovalProps> = (props)
         )}
 
         {releaseTag && (
-          <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary">Release Version</Typography>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 4
+            }}>
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>Release Version</Typography>
             <Chip size="small" label={releaseTag} color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
           </Grid>
         )}

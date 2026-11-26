@@ -58,7 +58,7 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
     ExpandMore,
     ExpandLess,
     Refresh,
-    CheckCircleOutline,
+    CheckCircleOutlined,
     RadioButtonUnchecked,
     HourglassEmpty,
     Error: ErrorIcon,
@@ -91,13 +91,13 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
 
   const statusIcon = React.useCallback((status: TodoStatus) => {
     switch (status) {
-      case 'completed': return <CheckCircleOutline fontSize="small" color="success" />;
+      case 'completed': return <CheckCircleOutlined fontSize="small" color="success" />;
       case 'in_progress': return <HourglassEmpty fontSize="small" color="info" />;
       case 'failed': return <ErrorIcon fontSize="small" color="error" />;
       case 'cancelled': return <Cancel fontSize="small" color="warning" />;
       default: return <RadioButtonUnchecked fontSize="small" color="disabled" />;
     }
-  }, [CheckCircleOutline, HourglassEmpty, ErrorIcon, Cancel, RadioButtonUnchecked]);
+  }, [CheckCircleOutlined, HourglassEmpty, ErrorIcon, Cancel, RadioButtonUnchecked]);
 
   return (
     <Paper

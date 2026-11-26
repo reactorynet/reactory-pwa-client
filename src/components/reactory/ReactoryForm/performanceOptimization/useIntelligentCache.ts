@@ -101,7 +101,7 @@ export const useIntelligentCache = <T = any>(
     compressionRatio: 0
   });
   const prefetchQueueRef = useRef<Set<string>>(new Set());
-  const cleanupTimeoutRef = useRef<NodeJS.Timeout>();
+  const cleanupTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // State
   const [isLoading, setIsLoading] = useState<boolean>(false);

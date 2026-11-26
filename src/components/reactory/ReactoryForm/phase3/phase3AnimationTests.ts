@@ -366,7 +366,7 @@ const testComponentIntegration = (): void => {
   console.log(`    ✅ Component imports: ModernFormField=${!!ModernFormField}, LoadingSkeleton=${!!LoadingSkeleton}`);
   
   // Test Framer Motion integration
-  const framerMotion = require('framer-motion');
+  const framerMotion = require('motion/react');
   console.log(`    ✅ Framer Motion: ${Object.keys(framerMotion).join(', ')}`);
 };
 

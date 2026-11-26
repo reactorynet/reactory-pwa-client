@@ -1,4 +1,4 @@
-import { Quill } from 'react-quill';
+import { Quill } from 'react-quill-new';
 import { buildReactoryTag, parseReactoryTag } from '@reactory/client-core/components/shared/hooks/reactoryTags';
 
 /**

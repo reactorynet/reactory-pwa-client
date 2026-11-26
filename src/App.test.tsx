@@ -608,6 +608,35 @@ describe('ReactoryHOC (App)', () => {
       jest.useRealTimers();
     });
 
+    it('runs init again, not only a status check, when retry follows a failed init', async () => {
+      jest.useFakeTimers();
+      mockReactory.init.mockRejectedValue(new Error('anonymous login failed'));
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      for (const delay of [0, 800, 1600, 2400]) {
+        await act(async () => {
+          jest.advanceTimersByTime(delay);
+          await Promise.resolve();
+        });
+      }
+
+      expect(screen.getByRole('button', { name: /retry connection/i })).toBeInTheDocument();
+      const initCallsBeforeRetry = mockReactory.init.mock.calls.length;
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /retry connection/i }));
+        await Promise.resolve();
+      });
+
+      expect(mockReactory.init.mock.calls.length).toBe(initCallsBeforeRetry + 1);
+      // A status check alone would mark the app ready without a published API,
+      // and plugins would then install against null.
+      expect(mockReactory.status).not.toHaveBeenCalled();
+
+      jest.useRealTimers();
+    });
+
     it('handles login event and refreshes forms/components', async () => {
       mockReactory.getUser.mockReturnValue({ id: '1', loggedIn: true });
       mockReactory.status.mockResolvedValue({
@@ -747,7 +776,9 @@ describe('ReactoryHOC (App)', () => {
       });
 
       // Advance timers to trigger the retry logic
-      jest.advanceTimersByTime(500);
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
       await act(async () => {
         await Promise.resolve();
       });

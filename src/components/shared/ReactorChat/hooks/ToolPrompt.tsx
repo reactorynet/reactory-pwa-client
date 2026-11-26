@@ -47,15 +47,16 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
     }
   };
 
-  const actionBtnSx = (color: 'success' | 'warning' | 'error') => ({
+  const actionBtnSx = (color: 'success' | 'warning' | 'error') => (({
     color: `${color}.main`,
     border: '1px solid',
     borderColor: `${color}.main`,
     bgcolor: 'transparent',
+
     '&:hover': {
       bgcolor: alpha(color === 'success' ? '#2e7d32' : color === 'error' ? '#d32f2f' : '#ed6c02', 0.12),
-    },
-  }) as const;
+    }
+  }) as const);
 
   return (
     <Box
@@ -224,17 +225,35 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
           </>
         )}
         {decision === 'approved' && (
-          <Typography variant="caption" color="success.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "success.main",
+              textAlign: 'right',
+              fontStyle: 'italic'
+            }}>
             Approved
           </Typography>
         )}
         {decision === 'declined' && (
-          <Typography variant="caption" color="error.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "error.main",
+              textAlign: 'right',
+              fontStyle: 'italic'
+            }}>
             Declined
           </Typography>
         )}
         {decision === 'instructed' && (
-          <Typography variant="caption" color="warning.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "warning.main",
+              textAlign: 'right',
+              fontStyle: 'italic'
+            }}>
             Instructed: {instruction}
           </Typography>
         )}

@@ -87,7 +87,7 @@ describe('ReactoryGridLayoutField', () => {
   });
 
   it('forwards the grid layout uiSchema to the ObjectField', () => {
-    const ObjectField = jest.fn(() => null);
+    const ObjectField = jest.fn((_props: Record<string, unknown>) => null);
     const uiSchema = {
       'ui:field': 'GridLayout',
       'ui:grid-layout': [{ name: { xs: 12, md: 6 } }],
@@ -99,10 +99,9 @@ describe('ReactoryGridLayoutField', () => {
       />,
     );
 
-    expect(ObjectField).toHaveBeenCalledWith(
-      expect.objectContaining({ uiSchema }),
-      expect.anything(),
-    );
+    // React 19 calls function components with (props, undefined); check the props.
+    expect(ObjectField).toHaveBeenCalled();
+    expect(ObjectField.mock.calls[0][0]).toEqual(expect.objectContaining({ uiSchema }));
   });
 
   it('surfaces a diagnostic instead of rendering nothing when ObjectField is unavailable', () => {

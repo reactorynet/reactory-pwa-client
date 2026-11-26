@@ -339,12 +339,14 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
       onClose={() => !launching && onClose()}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
-          color: mode === 'dark' ? '#ffffff' : 'inherit',
-        },
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 2,
+            bgcolor: mode === 'dark' ? '#121826' : '#ffffff',
+            color: mode === 'dark' ? '#ffffff' : 'inherit',
+          },
+        }
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -390,14 +392,17 @@ export const QuickLaunchDialog: React.FC<QuickLaunchDialogProps> = ({
               placeholder="Search accessible workflows..."
               size="small"
               required
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {loadingWorkflows ? <CircularProgress color="inherit" size={18} /> : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
+              slotProps={{
+                ...params.slotProps,
+                input: {
+                  ...params.slotProps.input,
+                  endAdornment: (
+                    <>
+                      {loadingWorkflows ? <CircularProgress color="inherit" size={18} /> : null}
+                      {params.slotProps.input.endAdornment}
+                    </>
+                  ),
+                }
               }}
             />
           )}

@@ -1,3 +1,4 @@
+import { applyDefaultProps } from '@reactory/client-core/components/applyDefaultProps';
 import React, { Fragment } from 'react';
 import { AppBar, IconButton, Toolbar, Icon, Typography } from '@mui/material';
 import { isArray } from 'lodash';
@@ -26,14 +27,15 @@ const defaultFrameProps = {
 
 export type ReactoryFormDefinition = Reactory.Forms.IReactoryForm;
 
-function FramedWindow({ containerProps, frameProps, data, method, id, reactory, header, footer }) {
+function FramedWindow(rawProps) {
+  let { containerProps, frameProps, data, method, id, reactory, header, footer } = applyDefaultProps(rawProps, framedWindowDefaultProps);
 
   if (!reactory) {
     reactory = useReactory();
   }
 
-  const _cprops = {...FramedWindow.defaultProps.containerProps, id, ...containerProps}
-  const _fprops = {...FramedWindow.defaultProps.frameProps, ...frameProps }    
+  const _cprops = {...framedWindowDefaultProps.containerProps, id, ...containerProps}
+  const _fprops = {...framedWindowDefaultProps.frameProps, ...frameProps }    
   const frameid = reactory.utils.hashCode(_fprops.url || 'about:blank')
   
   if(method === 'post') {    
@@ -69,7 +71,7 @@ function FramedWindow({ containerProps, frameProps, data, method, id, reactory, 
   }    
 }
 
-FramedWindow.defaultProps = {
+const framedWindowDefaultProps = {
   containerProps: {
     style: {
       position: 'fixed',
@@ -171,7 +173,7 @@ function ReportViewer({
         reactory={reactory}
         containerProps={{
           id: `reactory-report-window-container`,
-          ...FramedWindow.defaultProps.containerProps,
+          ...framedWindowDefaultProps.containerProps,
         }} header={undefined} footer={undefined}        />);
     }     
   }

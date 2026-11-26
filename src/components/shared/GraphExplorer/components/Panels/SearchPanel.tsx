@@ -54,16 +54,20 @@ export default function SearchPanel(props: SearchPanelProps) {
         size="small"
         placeholder="Search graph…"
         onChange={handleChange}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Icon fontSize="small">search</Icon>
-            </InputAdornment>
-          ),
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <Icon fontSize="small">search</Icon>
+              </InputAdornment>
+            ),
+          }
         }}
       />
       {searching && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Searching…
         </Typography>
       )}
@@ -73,9 +77,10 @@ export default function SearchPanel(props: SearchPanelProps) {
             <ListItemText
               primary={node.name}
               secondary={`${node.type}${node.data?.relativePath ? ` — ${node.data.relativePath}` : ''}`}
-              primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-              secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-            />
+              slotProps={{
+                primary: { variant: 'body2', noWrap: true },
+                secondary: { variant: 'caption', noWrap: true }
+              }} />
           </ListItemButton>
         ))}
       </List>

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Box,
   Toolbar,
@@ -260,7 +260,7 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
             </Typography>
           </Box>
         </DialogTitle>
-        
+
         <DialogContent>
           {state.conflicts.length === 0 ? (
             <Alert severity="success">
@@ -275,17 +275,25 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
                       primary={`Conflict #${index + 1}`}
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                          }}>
                             Change ID: {conflict.changeId}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                          }}>
                             Resolved by: {conflict.resolvedBy}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                          }}>
                             Time: {conflict.timestamp.toLocaleString()}
                           </Typography>
                           {conflict.comment && (
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{
+                              color: "text.secondary"
+                            }}>
                               Comment: {conflict.comment}
                             </Typography>
                           )}
@@ -341,7 +349,7 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
             </List>
           )}
         </DialogContent>
-        
+
         <DialogActions>
           <Button onClick={() => setShowConflicts(false)}>
             Close
@@ -372,7 +380,7 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
             </IconButton>
           </Box>
         </DialogTitle>
-        
+
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
@@ -392,13 +400,19 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
                   primary={`${change.type} - ${change.fieldId}`}
                   secondary={
                     <Box>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                      }}>
                         User: {change.userId}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                      }}>
                         Time: {change.timestamp.toLocaleString()}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                      }}>
                         Version: {change.version}
                       </Typography>
                     </Box>
@@ -408,7 +422,7 @@ export const CollaborationToolbar: React.FC<CollaborationToolbarProps> = ({
             ))}
           </List>
         </DialogContent>
-        
+
         <DialogActions>
           <Button onClick={() => setShowHistory(false)}>
             Close

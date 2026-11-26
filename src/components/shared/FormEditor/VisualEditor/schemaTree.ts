@@ -2,7 +2,7 @@
  * Helpers for treating a JSON Schema as a tree for the visual schema editor.
  *
  * The editor renders the schema as a single flat, depth-indented list inside one
- * react-beautiful-dnd Droppable. rbd cannot reliably resolve nested Droppables
+ * @hello-pangea/dnd Droppable. it cannot reliably resolve nested Droppables
  * (when several overlap it falls back to an arbitrary distance heuristic) and it
  * forbids nested Draggables, so a flat list + `combine` (drop onto a container)
  * is the only reliable way to support arbitrary-depth nesting.
@@ -43,7 +43,7 @@ export const createFieldSchema = (type: string) => ({
 
 /**
  * Depth-first flatten of the schema into an ordered list of rows. The order
- * matches the rendered order, so a row's array index equals its rbd Draggable
+ * matches the rendered order, so a row's array index equals its Draggable
  * index.
  */
 export const flattenSchema = (schema: any): FlatRow[] => {

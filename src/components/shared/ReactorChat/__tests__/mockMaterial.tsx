@@ -21,19 +21,23 @@ const PassthroughIcon: React.FC<any> = ({ children, sx }) => (
   <span role="img" aria-label={typeof children === 'string' ? children : undefined}>{children}</span>
 );
 
-const PassthroughTextField: React.FC<any> = ({ label, value, onChange, inputProps, InputProps, fullWidth, multiline, maxRows, inputRef, ...rest }) => (
-  <div>
-    {InputProps?.startAdornment}
-    <input
-      aria-label={label}
-      value={value}
-      onChange={onChange}
-      {...inputProps}
-      {...rest}
-    />
-    {InputProps?.endAdornment}
-  </div>
-);
+const PassthroughTextField: React.FC<any> = ({ label, value, onChange, inputProps, InputProps, slotProps, fullWidth, multiline, maxRows, inputRef, ...rest }) => {
+  const input = slotProps?.input ?? InputProps;
+  const htmlInput = slotProps?.htmlInput ?? inputProps;
+  return (
+    <div>
+      {input?.startAdornment}
+      <input
+        aria-label={label}
+        value={value}
+        onChange={onChange}
+        {...htmlInput}
+        {...rest}
+      />
+      {input?.endAdornment}
+    </div>
+  );
+};
 
 const PassthroughIconButton: React.FC<any> = ({ children, onClick, sx, size, ...rest }) => (
   <button onClick={onClick} data-size={size} {...rest}>{children}</button>

@@ -74,9 +74,9 @@ export const UserListItemCompact: React.FC<UserListItemProps> = ({
           checked={selected}
           onChange={handleCheckboxChange}
           onClick={(e) => e.stopPropagation()}
-          inputProps={{
+          slotProps={{ input: {
             'aria-label': `Select ${user.fullName}`,
-          }}
+          } }}
         />
       )}
 
@@ -91,7 +91,7 @@ export const UserListItemCompact: React.FC<UserListItemProps> = ({
       </ListItemAvatar>
 
       <ListItemText
-        primary={user.fullName || `${user.firstName} ${user.lastName}`}
+        primary={(user.fullName as unknown as string) || `${user.firstName} ${user.lastName}`}
         secondary={
           <Box component="span" sx={styles.userItemSecondary}>
             <span>{user.email}</span>

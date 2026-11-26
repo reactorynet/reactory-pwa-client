@@ -89,7 +89,11 @@ const SubmissionDetail: React.FC<SubmissionDetailProps> = (props) => {
 
   const renderValue = (value: unknown): React.ReactNode => {
     if (value === null || value === undefined || value === '') {
-      return <Typography variant="body2" color="text.secondary">—</Typography>;
+      return (
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>—</Typography>
+      );
     }
     if (typeof value === 'boolean') {
       return <Typography variant="body2">{value ? 'Yes' : 'No'}</Typography>;
@@ -148,7 +152,9 @@ const SubmissionDetail: React.FC<SubmissionDetailProps> = (props) => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
         <Box>
           <Typography variant="subtitle2">{submitter}</Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             {submission.createdAt ? new Date(submission.createdAt).toLocaleString() : ''}
             {submission.ipAddress ? ` · ${submission.ipAddress}` : ''}
             {` · ${submission.id}`}
@@ -174,12 +180,25 @@ const SubmissionDetail: React.FC<SubmissionDetailProps> = (props) => {
 
       {tab === 0 && (
         entries.length === 0
-          ? <Typography variant="body2" color="text.secondary">This submission has no data.</Typography>
+          ? <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>This submission has no data.</Typography>
           : (
             <Grid container spacing={1}>
               {entries.map(([key, value]) => (
-                <Grid item xs={12} sm={6} md={4} key={key}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid
+                  key={key}
+                  size={{
+                    xs: 12,
+                    sm: 6,
+                    md: 4
+                  }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: "block"
+                    }}>
                     {titles[key] || key}
                   </Typography>
                   {renderValue(value)}

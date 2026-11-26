@@ -1033,7 +1033,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
           }}
         >
           {/* Left: Diagram type chip, Auto-repair chip, and Status */}
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{
+            alignItems: "center"
+          }}>
             <Chip
               icon={<SchemaIcon fontSize="small" />}
               label={diagramType}
@@ -1064,14 +1066,18 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
                 variant="filled"
               />
             ) : isDirty ? (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 (Modified)
               </Typography>
             ) : null}
           </Stack>
 
           {/* Right: Mode Switcher and Actions */}
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{
+            alignItems: "center"
+          }}>
             {editable && !readOnly && (
               <Tooltip title="Auto-fix common syntax issues (quote parentheses and special characters in node labels)">
                 <IconButton size="small" onClick={handleAutoFix} aria-label="Auto-fix syntax">
@@ -1123,7 +1129,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 
             {/* Zoom controls in toolbar when in visual mode */}
             {mode === 'visual' && allowZoom && (
-              <Stack direction="row" spacing={0.5} alignItems="center">
+              <Stack direction="row" spacing={0.5} sx={{
+                alignItems: "center"
+              }}>
                 <Tooltip title="Zoom in">
                   <span>
                     <IconButton size="small" onClick={handleZoomIn} aria-label="Zoom in" disabled={zoom >= 4}>
@@ -1308,11 +1316,23 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
                 />
               </Box>
             ) : isRendering ? (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  py: 2,
+                  textAlign: 'center'
+                }}>
                 Rendering diagram...
               </Typography>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  py: 2,
+                  textAlign: 'center'
+                }}>
                 No diagram content to render.
               </Typography>
             )}
@@ -1330,32 +1350,62 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
               onChange={(e) => handleCodeChange(e.target.value)}
               placeholder="Enter Mermaid diagram syntax (e.g. flowchart TD\n  A --> B)"
               variant="outlined"
-              inputProps={{
-                style: {
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.5,
-                },
-                'data-testid': `${instanceId}-editor-input`,
-              }}
               sx={{
                 backgroundColor: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+              }}
+              slotProps={{
+                htmlInput: {
+                  style: {
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    fontSize: '0.875rem',
+                    lineHeight: 1.5,
+                  },
+                  'data-testid': `${instanceId}-editor-input`,
+                }
               }}
             />
 
             {/* Live Syntax Feedback in Code Mode */}
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                mt: 1.5,
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1
+              }}>
               <Box>
                 {errorMessage ? (
-                  <Typography variant="caption" color="error.main" sx={{ fontFamily: 'monospace' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "error.main",
+                      fontFamily: 'monospace'
+                    }}>
                     ⚠️ {errorMessage}
                   </Typography>
                 ) : isAutoRepaired ? (
-                  <Typography variant="caption" color="info.main" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "info.main",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5
+                    }}>
                     <AutoFixHighIcon fontSize="inherit" /> Syntax auto-repaired for visual display
                   </Typography>
                 ) : (
-                  <Typography variant="caption" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "success.main",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5
+                    }}>
                     <CheckIcon fontSize="inherit" /> Diagram syntax valid
                   </Typography>
                 )}
@@ -1396,13 +1446,15 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
           open={isFullscreen}
           onClose={() => setIsFullscreen(false)}
           aria-labelledby={`${instanceId}-fullscreen-title`}
-          PaperProps={{
-            sx: {
-              backgroundColor: isDarkMode ? '#121212' : '#fafafa',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            },
+          slotProps={{
+            paper: {
+              sx: {
+                backgroundColor: isDarkMode ? '#121212' : '#fafafa',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              },
+            }
           }}
         >
           {/* Fullscreen Header */}
@@ -1419,7 +1471,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
               flexShrink: 0,
             }}
           >
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} sx={{
+              alignItems: "center"
+            }}>
               <Chip
                 icon={<SchemaIcon fontSize="small" />}
                 label={diagramType}
@@ -1440,7 +1494,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
               </Typography>
             </Stack>
 
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} sx={{
+              alignItems: "center"
+            }}>
               <Tooltip title="Zoom in">
                 <IconButton size="small" onClick={handleZoomIn} aria-label="Zoom in (fullscreen)" disabled={zoom >= 4}>
                   <ZoomInIcon fontSize="small" />
@@ -1561,7 +1617,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
                 dangerouslySetInnerHTML={{ __html: svgContent }}
               />
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 No diagram content to render.
               </Typography>
             )}

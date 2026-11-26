@@ -74,35 +74,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       fullWidth={fullWidth}
       size="small"
       variant="outlined"
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <Icon>search</Icon>
-          </InputAdornment>
-        ),
-        endAdornment: (
-          <InputAdornment position="end">
-            {isSearching && <CircularProgress size={20} />}
-            {!isSearching && searchValue && (
-              <IconButton size="small" onClick={handleClear} edge="end">
-                <Icon>clear</Icon>
-              </IconButton>
-            )}
-            {showSearchButton && (
-              <IconButton size="small" onClick={handleSearch} edge="end">
-                <Icon>search</Icon>
-              </IconButton>
-            )}
-            {showHelpTooltip && (
-              <Tooltip title={helpText} arrow>
-                <IconButton size="small" edge="end">
-                  <Icon fontSize="small">help_outline</Icon>
-                </IconButton>
-              </Tooltip>
-            )}
-          </InputAdornment>
-        ),
-      }}
       sx={{
         '& .MuiOutlinedInput-root': {
           transition: 'all 0.2s',
@@ -113,6 +84,37 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             boxShadow: 2,
           },
         },
+      }}
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <Icon>search</Icon>
+            </InputAdornment>
+          ),
+          endAdornment: (
+            <InputAdornment position="end">
+              {isSearching && <CircularProgress size={20} />}
+              {!isSearching && searchValue && (
+                <IconButton size="small" onClick={handleClear} edge="end">
+                  <Icon>clear</Icon>
+                </IconButton>
+              )}
+              {showSearchButton && (
+                <IconButton size="small" onClick={handleSearch} edge="end">
+                  <Icon>search</Icon>
+                </IconButton>
+              )}
+              {showHelpTooltip && (
+                <Tooltip title={helpText} arrow>
+                  <IconButton size="small" edge="end">
+                    <Icon fontSize="small">help_outline</Icon>
+                  </IconButton>
+                </Tooltip>
+              )}
+            </InputAdornment>
+          ),
+        }
       }}
     />
   );

@@ -115,9 +115,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
             <ListItemText
               primary="Reset to persona default"
               secondary={personaModelId || 'Default'}
-              primaryTypographyProps={{ fontSize: '0.85rem' }}
-              secondaryTypographyProps={{ fontSize: '0.75rem' }}
-            />
+              slotProps={{
+                primary: { sx: { fontSize: '0.85rem' } },
+                secondary: { sx: { fontSize: '0.75rem' } }
+              }} />
           </MenuItem>
         )}
         {availableProviders.map((provider) => [
@@ -146,9 +147,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                       ? `${(model.contextLength / 1024).toFixed(0)}K context`
                       : undefined
                   }
-                  primaryTypographyProps={{ fontSize: '0.85rem' }}
-                  secondaryTypographyProps={{ fontSize: '0.7rem' }}
-                />
+                  slotProps={{
+                    primary: { sx: { fontSize: '0.85rem' } },
+                    secondary: { sx: { fontSize: '0.7rem' } }
+                  }} />
                 {model.supportsStreaming && (
                   <Chip label="stream" size="small" variant="outlined" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} />
                 )}
@@ -177,7 +179,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         ])}
         {availableProviders.length === 0 && !loading && (
           <MenuItem disabled>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               No providers available
             </Typography>
           </MenuItem>

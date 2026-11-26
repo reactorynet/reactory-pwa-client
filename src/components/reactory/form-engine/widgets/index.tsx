@@ -148,7 +148,6 @@ export function reactoryWidgets(): Record<string, React.ComponentType<WidgetProp
     ImageWidget: AdaptedReactoryImageWidget,
     RecordLookupWidget: AdaptedRecordLookupWidget,
     RichEditorWidget: AdaptedRichEditorWidget,
-    FroalaWidget: AdaptedRichEditorWidget,
     SchemaSelectorWidget: AdaptedSchemaSelectorWidget,
     SearchWidget: AdaptedSearchWidget,
     SelectWidget: AdaptedSelectWidget,

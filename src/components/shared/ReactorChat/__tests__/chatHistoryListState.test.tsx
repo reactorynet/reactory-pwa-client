@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { ChatState, ToolApprovalMode } from '../types';
 import { CHAT_LIST_MAX_ROWS, CHAT_LIST_PAGE_SIZE } from '../chatListQuery';
 

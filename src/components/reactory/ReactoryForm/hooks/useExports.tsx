@@ -31,7 +31,8 @@ import {
 interface ExportComponents {
   FullScreenModal: React.FC<{ 
     open: boolean,
-    onClose: () => void 
+    onClose: () => void,
+    children?: React.ReactNode
   }>;
   Material: Reactory.Client.Web.IMaterialModule;
 }

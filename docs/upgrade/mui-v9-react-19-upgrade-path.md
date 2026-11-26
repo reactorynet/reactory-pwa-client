@@ -1,0 +1,604 @@
+# Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
+
+Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) merged (2026-11-24). All phases are merged; the wrap-up to `master` is in progress (see "Wrap-up" at the end of section 4). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+
+## 0. Branching and upstream flow
+
+The whole migration lives on one long-running feature branch per affected repository. Nothing reaches `master` until every phase is done and the full migration has been signed off.
+
+```
+reactorynet/master ──┬──────────────(merge master in regularly)──────────────┬──> PR: feature -> master
+                     │                                                        │
+                     └─ feature/mui-v9-react-19 ─┬─ phase-0 ─┬─ phase-1 ─ ... ─┘
+                                                 PR (into feature branch)
+                                                                   then, once master is green:
+                                                                   reactory-repos sync --to <enterprise> --pr  (merge commit)
+```
+
+1. **Start level with upstream.** Before cutting the branch, and again before every phase, bring each repository level with `reactorynet` using reactory-workspace:
+   - `bin/reactory-repos status --fetch --repo <r> ...`
+   - `bin/reactory-repos pull -n --repo <r> ...`, then `pull` without `-n`
+
+   This only fast-forwards; it never merges or rebases.
+2. **One feature branch per repository**, all with the same name: `feature/mui-v9-react-19`. Cut each one from `reactorynet/master`. Repositories join when a phase first touches them:
+   - `reactory-pwa-client`, `reactory-core` and `reactory-data` from Phase 0
+   - `reactory-express-server` and the module repos under `src/modules/*` from Phase 1
+3. **Each phase gets its own branch off the feature branch:** `feature/mui-v9-react-19-phase-<n>`. Each one is reviewed as a PR **into the feature branch**, not into `master`. When a phase spans several repositories, all of its PRs merge together.
+4. **Keep the feature branch current.** At the start of each phase, merge `reactorynet/master` into the feature branch. Use a merge, not a rebase, because the branch is shared and pushed.
+5. **Finish on upstream first.** After the last phase:
+   - Run the full gate on the feature branch: tests, the tsc ratchet, the plugin smoke harness and the visual baselines.
+   - Pin the tested combination of all repository SHAs with `bin/reactory-repos lock`.
+   - Open the feature → `master` PR on `reactorynet` in every repository.
+   - Merge them together as **merge commits**, not squash (decided 2026-11-25). The workspace default for feature PRs is squash, so choose the merge commit explicitly.
+     - Squashing drops the `master` commits that the feature branch has merged, so `master` and the feature branch conflict again.
+     - The client's submodule pointers name plugin commits. Once a squashed plugin branch is deleted, those commits are on no branch.
+   - The same applies to any PR into the feature branch that carries a `master` merge or moves a submodule pointer. A single-commit PR into the feature branch can be squashed.
+6. **Then the enterprise mirrors.** Only after `reactorynet/master` is green, with everything working, bring each enterprise mirror level:
+   - `bin/reactory-repos sync --to <enterprise> -n`, then `--pr`
+   - Sync PRs must land as a **merge commit**, never squash or rebase, so the two organisations keep a common ancestor.
+   - Enterprise-owned paths (`org_specific_paths` in the enterprise profile) do not cross.
+
+This file lives in the public upstream repository, so it names no enterprise organisation. That follows the reactory-workspace rule.
+
+## 1. Facts that shape the plan
+
+| Fact | Source | Consequence |
+|---|---|---|
+| There is no Material UI v8. Core went from 7 to 9 (9.0.0 on 2026-04-07) so it shares a major version with MUI X v9. Latest stable is **9.5.0** (2026-10-09). | npm registry, mui.com/blog/introducing-mui-v9 | The path is 6 → 7 → 9. |
+| `@mui/material` 7.x and 9.x both allow **React `^17 \|\| ^18 \|\| ^19`**, @emotion 11 and TypeScript 4.9 or later. | npm peerDependencies | **The MUI upgrade does not require the React upgrade.** They can be run and released as separate tracks. |
+| MUI 7 and later depend on `react-is@19`. On React 17 or 18 you must pin `react-is` to the React version with a yarn `resolutions` entry. | MUI v7 migration guide | Add this pin when moving to MUI 7. Remove it when React reaches 19. |
+| MUI X v9 (`@mui/x-data-grid` / `@mui/x-date-pickers` 9.18.0) peers on `@mui/material ^7.3 \|\| ^9`. X v8 stops at material ^7. | npm | Move the X packages straight to v9 once core is on 7.3. Do not stop at X v8. |
+| `@mui/styles` (makeStyles/withStyles, JSS) ended at 6.4.8 and is deprecated. | npm | Any `makeStyles` path is dead. This client does not install `@mui/styles`, so the existing calls are already no-ops behind guards. |
+| MUI 9 browser floor: Chrome 117, Edge 121, Firefox 121, Safari 17. | MUI `.browserslistrc` | Our browserslist is `>0.2%, not dead`. This is a product decision, see section 8. |
+| MUI 9 replaced the `./*` export wildcard with explicit subpaths. Each one ships CJS (`require`) and ESM (`import`). | npm `exports` | Jest 29 still gets CJS. No deep imports (`@mui/material/X/Y`) were found in any repo. |
+| Node 20 reached end of life on 2026-04-30. Node 24 is Active LTS. The server is already pinned to **24.22.3**. | nodejs.org, server `.nvmrc` | The Node upgrade is a prerequisite, not a phase. React itself has no Node requirement. |
+| The React path is 17 → 18.3 → 19. 18.3 adds warnings for everything 19 removes. Latest is 19.3.1. | react.dev upgrade guide | Two React phases. |
+
+## 2. What we found in the code
+
+### 2.1 MUI and React reach plugins through the registry
+
+`src/components/index.tsx` registers the following, and plugins receive them by dependency injection (`reactory.getComponents([...])`):
+
+- `react.React`
+- `material-ui.MaterialCore` (the whole `@mui/material` namespace)
+- `material-ui.MaterialIcons`, `MaterialLab`, `MaterialDates` and `MaterialGrid`
+- `material-ui.Material`, a bundle of all of the above. It also aliases **`MaterialTable` to `@mui/x-data-grid`**.
+- `react-beautiful-dnd`'s `DragDropContext`
+
+Plugins are built in other repos and type against `Reactory.Client.Web.IMaterialModule` from `reactory-core`. Nothing typechecks them against the MUI version the client actually ships. **A breaking MUI change shows up as a runtime failure inside a plugin, not as a build error.** That makes plugin migration and a plugin smoke harness first-class work in every phase.
+
+| Codebase | Source files | Notes |
+|---|---|---|
+| `reactory-pwa-client/src` | 1,578 | |
+| `reactory-data/plugins/__runtime__/src` | 116 (106 plugins) | **Generated and gitignored.** The server compiles these from widget sources in its modules (`src/modules/*/forms/**`), then rollup bundles them. They receive `React` and `Material` by DI. Migrate the server module sources, never these copies. |
+| `reactory-data/plugins/reactory-client-core/src` | 71 | Legacy. Imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Probably partly dead, see section 8. |
+| `reactory-express-server/src/modules/*/forms` | about 90 widget files using MUI | 78 form files configure `MaterialTableWidget`. |
+
+### 2.2 Impact scan
+
+These are grep heuristics. Treat them as upper bounds for sizing, not exact work lists. Each cell is files / occurrences. The script is reproducible: the `scan.sh` patterns are listed in Appendix A.
+
+| Pattern | Breaks at | Client | Runtime plugins | client-core plugin | Server forms |
+|---|---|---|---|---|---|
+| Legacy `Grid` with `item` / `xs=` | v7 (semantics), v9 (removed) | 25 / 113 | 21 / 76 | 5 / 25 | 18 / 90 |
+| `Grid2` import | v7 (renamed to `Grid`) | 13 / 31 | 1 / 1 | 1 / 2 | 1 / 1 |
+| TextField-style `InputProps`, `inputProps`, `InputLabelProps`, `SelectProps`, `FormHelperTextProps` | v9 | 68 / 140 | 25 / 33 | 6 / 15 | 24 / 35 |
+| `PaperProps`, `PopperProps`, `BackdropProps`, `MenuListProps` | v9 | 27 / 32 | 3 / 3 | 0 | 3 / 3 |
+| `primaryTypographyProps` / `secondaryTypographyProps` | v9 | 11 / 35 | 6 / 8 | 0 | 4 / 4 |
+| `components=` / `componentsProps=` | v9 | 1 / 4 | 1 / 2 | 2 / 2 | 0 |
+| System props on Box, Stack, Typography or Link (for example `mt=`) | v9 | 184 / 534 | 79 / 299 | 9 / 28 | 70 / 282 |
+| `disableEscapeKeyDown`, `renderTags`, Typography `paragraph`, Divider `light` | v9 | 8 / 13 | 4 / 5 | 0 | 4 / 4 |
+| `*Outline` icon names (23 removed in v9; check against the list) | v9 | 15 / 24 | 0 | 0 | 0 |
+| `makeStyles` / `withStyles` (dead today) | already broken | 4 / 4 | 0 | 6 / 10 | 0 |
+| `ReactDOM.render` / `unmountComponentAtNode` | React 19 (deprecated in 18) | 3 / 6 (incl. plugin-facing `reactory.mountComponent`) | 0 | 0 | 0 |
+| `@testing-library/react-hooks` | React 18 | 45 / 45 | | | |
+| `.defaultProps =` / `.propTypes =` | React 19 | 15 / 16 and 14 / 15 | 0 | 3 / 3 and 3 / 5 | 0 |
+| `UNSAFE_*` lifecycles | React 19 | 2 / 4 (`form/components/FormClass.tsx`, tracked as WP-B6) | 0 | 2 / 3 | 0 |
+| Global `JSX.*` namespace | React 19 types | 3 / 10 | 0 | 4 / 17 | 0, but `reactory-core` types use it |
+| `react-beautiful-dnd` | React 19 | 9 / 12 (and registry export) | | | |
+| `react-quill` (calls `findDOMNode`) | React 19 | 10 / 16 | | | |
+| `framer-motion` 10 | already peers on React 18 | 15 / 21 | | | |
+| `react-measure` / `react-draggable` | React 19 (draggable needs `nodeRef`) | 6 / 8 and 1 / 1 | | | |
+
+No string refs, legacy context, `findDOMNode`, or deep `@mui/*/*/*` imports were found in any repo.
+
+### 2.3 Peer violations that already exist today
+
+These show that the dependency tree is already out of policy. Fix them as part of the phases below; do not treat them as new risk.
+
+- `@mui/x-data-grid` 5.17 peers on `@mui/material ^5` and React 18 or lower. It is installed against material 6.
+- `framer-motion` 10.18 and `react-window` 2.2.7 peer on React 18 or higher. They are installed against React 17.
+- `reactory-core` dev-depends on `@types/react` 18.3.3. The client uses 17.0.2.
+- The client repo has both `package-lock.json` and `yarn.lock`, while `packageManager` says yarn 4. Delete `package-lock.json` in Phase 0.
+
+## 3. MaterialTableWidget
+
+`src/components/reactory/ux/mui/widgets/MaterialTableWidget/` is **a custom table built on MUI primitives**: `Table*`, `TablePagination`, `Grid2`, `Toolbar`, `Checkbox` and so on. It does not use the `material-table` npm package or `@mui/x-data-grid`.
+
+- Size: 2,497 lines in the main file plus hooks and sub-components.
+- Consumers: 78 server form files configure it through `uiSchema`.
+- Tests: 8 suites, 215 tests. All passed on 2026-11-17 on MUI 6.5 / React 17. This is the baseline.
+
+**Recommendation: keep it on MUI primitives and keep its `uiSchema` contract frozen. Do not rebase it onto the free DataGrid.**
+
+- Table primitives barely change from v7 to v9. The widget is already on `Grid2` with `size`, uses `onPageChange` / `onRowsPerPageChange`, and passes `component="div"` to `TablePagination`. MUI work is small.
+- The free (MIT) DataGrid lacks features the widget relies on or exposes:
+  - detail panels (master/detail is Pro)
+  - multi-column sort, column pinning and tree data (Pro)
+  - row grouping and Excel export (Premium)
+  - pages larger than 100 rows (the MIT grid is capped at 100)
+- Rebasing would mean re-implementing those features on top of DataGrid, or dropping them for 78 forms.
+
+Work inside the widget, by phase:
+
+| Phase | Change |
+|---|---|
+| MUI 7 | `Grid2 as Grid` becomes `Grid`. Check `ReactoryMaterialTablePagination`, which spreads caller `{...props}` into `TablePagination`. Make sure no caller sends `SelectProps` or `backIconButtonProps` (both move to `slotProps` in v9). |
+| MUI 9 | Run `deprecations/all` over the folder. Visual diff of the toolbar, pagination and footer totals. |
+| React 18 | `App.tsx` wraps the tree in `<React.StrictMode>`, so React 18 will mount, unmount and remount every effect in development. The widget has 12 `useEffect`s: event bind/unbind for refresh and fetch-on-query. Make sure cleanup is correct so dev does not double-fetch or leak listeners. Automatic batching can also merge the `setQuery` / `setData` / `setRowState` sequences. Re-run the 215 tests and add tests for refresh events. |
+| React 19 | `PureComponent` import (unused). Toolbar, detail-panel and action components resolved from the registry are plugins, so they follow the plugin rules in section 5. |
+
+**Separately: the `material-ui.Material.MaterialTable` alias that points at `@mui/x-data-grid` is misleading.** No code in the client, the runtime plugins or the server forms renders `DataGrid`. The graphql-editor `ResultDataGrid` is also built on `Table` primitives. Deprecate the alias (log a warning on access) and remove it after one release.
+
+## 4. Recommended sequence
+
+The two tracks are independent because MUI 9 supports React 17. **Do the MUI track first**, because it is the stated goal and most of its work is mechanical. Then do React. Each phase merges into the feature branch (section 0), never into `master`. Where a phase below says "Exit", that means the phase PR merges into `feature/mui-v9-react-19`.
+
+```
+Phase 0  Foundations         Node 24, lockfile, baselines, plugin smoke harness
+Phase 1  MUI 6 cleanup       Clear v9 removals while still on v6 (ships on 6.5)
+Phase 2  MUI 7 + X v9        Grid rename, react-is pin, data-grid/pickers to 9
+Phase 3  MUI 9               Version bump + leftovers, lab 9, browser floor   <- MUI goal reached
+Phase 4  React 18.3          Test stack, createRoot, types, deps
+Phase 5  React 19            dnd/quill replacements, nodeRef, FormClass, types
+```
+
+Phase 4 can start in parallel with Phases 2 and 3 on a branch, if staffing allows. It touches different files: tests, entry point and third-party libs.
+
+### Phase 0: Foundations
+
+- Set `.nvmrc` to `24.22.3` to match the server. CI already reads `.nvmrc` (`ci.yml`, `build-smoke-test.yml`). The `Dockerfile` is nginx-only and needs no change. Do the same in `reactory-core` and `reactory-data/plugins/__runtime__`.
+- Yarn 4 is the only package manager: `yarn.lock` is tracked and `package-lock.json` is gitignored. Delete any local `package-lock.json`. Add `engines.node >=24` to `package.json`, as the server has.
+- **Remove Froala (client).** Drop the `froala-editor` and `react-froala-wysiwyg` dependencies, the webpack vendor-chunk entries and the `WIDGET_INDEX.yaml` dependency.
+  - The `FroalaWidget` widget *name* stays for now. It is already an alias of `RichEditorWidget` and does not load Froala.
+  - Five server `uiSchema`s still reference that name. Phase 1 moves them over, then removes the alias.
+- Baselines:
+  - full `jest` run
+  - `npx tsc --noEmit` error count, to use as a ratchet
+  - Playwright screenshots of key screens (a MaterialTableWidget list, a form with grid layout, dialogs, date picker)
+- **Plugin smoke harness**, run with `yarn test:plugins`. Code is in `test/plugin-smoke/` and the config is `jest.plugins.config.ts`. It catches runtime breakage in plugins that nothing else sees, and it gates every later phase.
+  - **Discovery:** it reads each `rollup.<fqn>.js` config in `reactory-data/plugins/__runtime__` (override the location with `REACTORY_PLUGINS_DIR`) and loads that plugin's entry the way the browser does.
+  - **Host:** each plugin gets a `window.reactory.api` whose `getComponent(s)` resolves against the client's **real** `componentRegistery`, using the client's own FQN resolution. It renders every component the plugin registers with two generic prop sets.
+  - **Baseline:** outcomes are recorded in `test/plugin-smoke/baseline.json` as a ratchet. A plugin that loaded or rendered before must still do so. Plugins that fail on generic props are recorded but do not fail the run.
+  - **Refresh:** after an intended change, run `UPDATE_PLUGIN_BASELINE=1 yarn test:plugins`.
+- Exit: Node 24 green in CI, baselines recorded, harness green on the feature branch.
+
+#### Phase 0 record (2026-11-17, Node 24.22.3, MUI 6.5 / React 17.0.2)
+
+| Baseline | Result |
+|---|---|
+| `jest -c jest.ci.config.ts` | 255 / 255 suites, 3,581 / 3,581 tests passing. The quarantine list is empty. |
+| `tsc --noEmit -p tsconfig.json` | 0 errors |
+| MaterialTableWidget suites | 8 suites, 215 tests passing |
+| Plugin smoke harness | 106 / 106 plugins load. 64 / 106 components render; 38 fail on generic props; 4 are non-components and are skipped. A deliberately broken `Typography` in the registry made 29 of them fail, which confirms the ratchet catches regressions. |
+| Visual baselines (`yarn test:visual`) | 10 screens recorded with no uncaught page errors. Repeated runs matched them exactly. |
+
+The 10 screens are: `login`, `home`, `organizations-list`, `support-open-tickets`, `support-request-form`, `my-comments`, `workflow-registry`, `ai-models-admin`, `profile-form` and `app-menu-open`.
+
+**Running the visual baselines**
+
+- **Stack:** Mongo, Postgres, Redis and Meilisearch containers; the API on :4000; the client on :3000 (`bin/start.sh reactory local`).
+- **Login:** set `VISUAL_USER_EMAIL` / `VISUAL_USER_PASSWORD` to a local test account with a membership on the `reactory` client. Without them only `login` runs.
+- **Pinned rendering:** 1440x900, 1x scale, `en-US`, UTC, light theme and reduced motion. The browser clock is frozen at 2026-11-17T08:00Z, so relative dates do not drift.
+- **Masked regions:** emails, Mongo ids, the client build hash and cache size, and `<time>`. Masking keeps the screenshots stable, and keeps personal data out of this public repository.
+- **Page errors fail the run.** An uncaught page error fails that screen, so the webpack error overlay can never become a baseline.
+- **The screenshots depend on the local dataset.** Do not change those records between phases, or re-record with a reviewed diff.
+
+**Local stack notes** found while bringing it up:
+
+- **Install the pinned Node before pulling a branch that changes `.nvmrc`.** The server rebuilds runtime plugins on demand by running `nvm use` in `reactory-data/plugins/__runtime__`, and `.nvmrc` is part of every plugin's checksum. Bumping the pin therefore triggers a rebuild of every plugin. On a machine without that Node version, each rebuild fails.
+- **Pre-existing server bug.** A failed rebuild writes an error stub with the compiler message unescaped inside a string. That stub is invalid JS, and the page throws `SyntaxError: missing ) after argument list`. The bug is in `ReactoryModuleCompilerService.ts` around line 657; fix it in Phase 1.
+- **Recovering broken bundles.** Install the Node version, then restart the API. Bundles still broken after that can be rebuilt with `./build.sh rollup.<fqn>.js` from `__runtime__`.
+- **Node 24 needs `corepack enable`** before `bin/start.sh`, because `scripts/start.ts` spawns `yarn`. Run it with `node_modules/.bin` on `PATH`, or through `yarn exec`.
+- **The anonymous account must match.** `REACT_APP_ANONUSER_EMAIL` / `PASSWORD` in the client's local `config/env/<key>/.env.local` must match the anonymous account the server seeds for that client. Otherwise every boot-time login gets `user_not_found` and the app shows "System Unavailable".
+
+Open Phase 0 items:
+
+- **Harness and visual baselines in CI.** The client CI job needs a checkout of `reactorynet/reactory-data` next to the client. The visual baselines also need a seeded stack.
+- **The harness already covers the server form widgets.** The runtime plugins it loads are the compiled server widgets, so this is no longer an open item. After changing widget source, restart the API and resolve `ReactoryForms { uiResources }` so the bundles are rebuilt.
+- **Plugin fixtures.** Adding per-plugin fixture props would raise the 64 / 106 coverage.
+
+Pre-existing plugin bug found by the harness, and left out of scope here: 9 plugins return JSX in an early "no data" guard **before** they destructure `React` from the registry. Those plugins are the `core.SupportTicket*` panels and the `socialeyes.*DetailPanel`s. That path throws in production too.
+
+### Phase 1: Clear the v9 removals while still on MUI 6.5
+
+Every v9 removal has a replacement that already works in v6. Doing this on 6.5 means it ships behind no version change, the diffs can be reviewed per area, and Phases 2 and 3 become version bumps.
+
+- `npx @mui/codemod@latest deprecations/all <path>`. Covers the `slots` / `slotProps` migrations for TextField, Dialog, Popover, Autocomplete, ListItemText and TablePagination.
+- `npx @mui/codemod@latest v9.0.0/system-props <path>` (system props to `sx`). Check that the codemod runs against a v6 tree. If it does not, convert by hand per area.
+- Legacy `Grid` (`item` / `xs`) to `Grid2` with `size={{ xs, md }}`. Use `v7.0.0/grid-props` as a guide; most hits are mechanical. Migrating to `Grid2` now, while v6 still has both, avoids `GridLegacy` entirely.
+- Remove the dead `makeStyles` paths: `ContentRenderer`, `ConditionalIconWidget`, `ReactoryColorPicker`, the `D3` renderer, and the `MaterialStyles.makeStyles` callers in the client-core plugin.
+- Replace removed `*Outline` icon names with `*Outlined`.
+- **Finish removing Froala:**
+  - Change `ui:widget: 'FroalaWidget'` to `RichEditorWidget` in the server forms: `TemplateEditor`, `ReactoryAdmin/dashboard`, `HelpEditor`, `SupportTicket.view.model` and `BasicFormTemplate`. Update the classroom contract test.
+  - Then remove the `FroalaWidget` alias from both widget maps and their tests.
+  - Remove the `froala_key` / `REACT_APP_FROALA_KEY` prompts from the reactor config CLI.
+  - Remove `components/Froala/*` and its use in `EmailTemplateEditor` from the `reactory-client-core` plugin, or retire that plugin (section 8).
+- Run all of the above over the client, the client plugin repos (`src/components/plugins/*`) and the server module widget sources. Then rebuild the runtime plugins: restart the API and resolve `ReactoryForms { uiResources }`.
+- Exit: scan rows marked v7/v9 in 2.2 at zero, except `Grid2`. Tests, tsc ratchet and plugin harness green. Visual diffs reviewed.
+
+#### Phase 1 record (2026-11-17, in progress)
+
+Done on `feature/mui-v9-react-19-phase-1` in the client, the client plugin repos (`reactory-core`, `reactory-communicator`, `reactory-telemetry`) and the server modules `reactory-classroom`, `reactory-reactor` and `reactory-socialeyes`.
+
+- **Tooling.** `@mui/codemod@6.5.0 deprecations/all`, then three local transforms that bind by element name, so they also catch components destructured from the registry's `MaterialCore`: legacy `Grid` to `Grid2` (`size` / `offset`), `*Props` to `slotProps` (only slots that exist in 6.5), and system props to `sx`.
+- **Recast reprints whole files.** The MUI codemods rewrite every file they parse, including files with no MUI in them (extra parens around `await`, dropped trailing commas). Only widget sources were kept; reprint-only changes in services, CLIs and tests were reverted.
+- **Gates.** Client tsc 0, lint clean, jest unchanged at 255 suites / 3581 tests. Plugin smoke 112 / 112 with no regressions. `reactory-core` plugin suite 834 / 834. Visual baselines pixel-identical at zero tolerance, after both the client changes and the module changes plus a full runtime plugin recompile (174 forms, 113 bundles, 0 broken). Module jest suites, run before and after: no new failures (classroom 315 tests, reactor 3270, socialeyes 143).
+- **Deferred to Phase 2** (no replacement exists in 6.5): 17 `inputProps` on `Checkbox` / `Switch` / `InputBase`, and Autocomplete `renderTags` to `renderValue`.
+- **Server root and `reactory-core` module** (branch cut from master after it was fast-forwarded to reactorynet):
+  - Widgets migrated with the same transforms (21 files). Module jest: no new failures (2713 tests).
+  - Froala removed. The five `uiSchema`s now name `RichEditorWidget`, the dead `froalaOptions` blocks and `ReactoryContentCapture/froala` are gone, and the support ticket description no longer sends partner keys to the client.
+  - The `froala_key` prompt is removed from both copies of the client config CLI.
+  - The `FroalaWidget` alias is removed from both client widget maps. Client jest: 3580 tests; the one fewer is the per-key validity case for the alias.
+  - The compile-failure stub now escapes compiler messages, with a regression test.
+  - After an API restart and a full recompile, all 113 bundles were healthy, the smoke harness passed 112 / 112, and the visual baselines were pixel-identical at zero tolerance.
+- **The server types widgets against its own MUI.** At runtime the registry hands widgets the client's MUI, but the server typecheck used `@mui/material` 5.6.1, which has no `Grid2` and no `TextField` `slotProps`. The server's `@mui/material` / `@mui/icons-material` are now 6.5.0, matching the client. MUI is type-only in the server (widget typings, one `ThemeOptions` import, one `@mui/lab` type import), so the bump has no runtime effect.
+  - **Every later phase bumps the server's MUI together with the client's.**
+  - Against MUI 6.5 types, no Phase 1 file is over its ratchet baseline except one whose errors predate Phase 1. No file got worse from the bump, and 34 improved.
+  - Generate the server lockfile change in a clean checkout of the branch, so that it only records the workspaces upstream has. A lock produced in a workspace that also holds the gitignored module repos picks up thousands of unrelated entries.
+- **Multi-line props escape single-line scans.** A `<ListItem` whose `button` prop sat on its own line passed the Appendix A scan and only surfaced in the typecheck. Re-run the removal scans with a multi-line matcher in every phase.
+- **Enterprise-only modules** (no reactorynet remote) get the same transforms on the enterprise path, after the upstream sync.
+- **Pre-existing, out of scope:** `ReactoryColorPicker` reads `MaterialStyles` / `MaterialUIColor`, which the registry no longer provides, so it is broken today.
+- **Local stack notes.** Server jest holds open handles. Run it with `--forceExit`, or it never exits after writing results.
+
+### Phase 2: MUI 7.3 and MUI X v9
+
+- `@mui/material`, `system`, `icons-material` and `utils` to `^7.3`. `@mui/lab` to its 7 beta, or drop it (see section 8).
+- Add `resolutions: { "react-is": "17.0.2" }`. Change it to 18.x in Phase 4 and remove it in Phase 5.
+- `npx @mui/codemod@latest v7.0.0/all src`. Covers the Grid rename (`Grid2` to `Grid`), the `InputLabel` `size="normal"` to `"medium"` change, lab-removed components and theme colour functions.
+- **Registry compat for plugins.** Export `Grid2` as an alias of the new `Grid` in `material-ui.MaterialCore` and `material-ui.Material` for one release, so a plugin that destructures `Grid2` keeps working. Log a deprecation warning.
+- Theme: if the theme uses `cssVariables` / `colorSchemes`, `theme.palette.mode` no longer re-renders on mode change. 28 client files read `palette.mode`. Use `theme.applyStyles('dark', …)` or `forceThemeRerender`.
+- MUI X, taken straight to 9.x:
+  - `@mui/x-date-pickers` 6 to 9. Run the `v7.0.0/pickers/preset-safe`, `v8.0.0/pickers/preset-safe` and `v9.0.0/preset-safe` codemods in order.
+    - Consumers: `DateSelector`, `App.tsx` (`LocalizationProvider` with `AdapterMoment`, which is still supported) and the `MaterialDates` registry export.
+    - The v8 section-based field DOM breaks tests that query `<input>`.
+  - `@mui/x-data-grid` 5 to 9, or remove it (see section 8). It has no direct consumers, so the codemod chain only matters for plugins outside these repos.
+  - X v8+ imports CSS. Add a `moduleNameMapper` entry for `@mui/x-*` CSS in `jest.config.ts` if needed.
+- Update `reactory-core` (`IMaterialModule` types, `@mui/*` devDeps), publish it, and bump it in the client and plugins.
+- Exit: tests, harness and visual diffs green, then release.
+
+#### Phase 2 record (2026-11-18, merged 2026-11-19)
+
+Done on `feature/mui-v9-react-19-phase-2` in the client, the `reactory-core` client plugin, `reactory-core` (types), the server root and the server modules `reactory-classroom`, `reactory-reactor` and `reactory-socialeyes`. The reactor branch merges `reactorynet/master` (one commit behind).
+
+- **Versions.**
+  - Client: `@mui/material`, `system`, `utils` and `icons-material` 7.3.11. `@mui/x-date-pickers` and `@mui/x-data-grid` 9.18.0. `@mui/lab` 7.0.1-beta.25. `@mui/types` 7.4.12.
+  - `resolutions: { "react-is": "17.0.2" }` added.
+  - Server MUI types 7.3.11 (lockfile generated in a clean worktree). The server keeps `@mui/lab` 5.0.0-alpha.77 for one type-only import.
+  - `reactory-core` devDependencies match the client. **No `reactory-core` publish is needed for this phase**: `IMaterialModule` is `typeof import('@mui/...')`, so the published 1.1.10 types already resolve against whatever MUI the consumer installs.
+- **Section 8 decisions 2 and 4 are still open.** `@mui/x-data-grid` and `@mui/lab` were upgraded rather than removed, so external plugins that reach them through the registry keep working. Removing either is still possible in Phase 3.
+- **`Grid2` is gone in MUI 7, not just renamed.** `@mui/material` 7 has no `Grid2` export, so a plugin that destructures `Grid2` from `MaterialCore` gets `undefined` and crashes on render.
+  - Every `Grid2` in the client, the plugin and the module widgets is now `Grid`. That covers 55 files, mostly `Grid2 as Grid` and `Grid2: Grid`.
+  - The registry's `material-ui.MaterialCore` (and `Material.MaterialCore`) is wrapped in a proxy that resolves `Grid2` to `Grid` and warns once (`src/components/materialCompat.ts`). Remove it in Phase 3.
+  - The plugin smoke harness passed 112 / 112 against the Phase 1 runtime builds, which still destructure `Grid2`. That proves the alias works.
+- **A legacy `Grid` that Phase 1 missed.** `ClassRoomMarkbook` destructures `Grid = 'div'` with a default value, which the Phase 1 transform did not bind. Its 9 `<Grid item xs>` were silently ignored by the v7 `Grid`. They are now `size={{ ... }}`. A multi-line scan over all trees now finds no `item` / breakpoint props on any `Grid`.
+- **Deferred Phase 1 items are done**, because 7.3 has the replacements:
+  - 17 `inputProps` on `Checkbox` / `Switch` / `InputBase` are now `slotProps={{ input: ... }}`.
+  - 6 Autocomplete `renderTags` are now `renderValue` (and `getTagProps` is now `getItemProps`).
+- **Breakages the codemods did not cover:**
+  - `import { Menu } from "@mui/material/"`: the trailing slash fails webpack against the v7 `exports` map. Neither tsc nor jest catches it; only the dev build does.
+  - `@mui/x-data-grid` 9 calls `new TextEncoder()` at import. `src/setupTests.ts` now polyfills it from `util`, which the plugin harness needs.
+  - Stricter `SxProps`: `ConditionalIconComponent` and `SpeedDialWidget` pass `CSSProperties`-typed objects to `sx`. They are cast at the boundary. Only the dev-server checker (full tsconfig) reports these, not the scoped CI tsc.
+  - Tests that hard-coded v6 DOM:
+    - `MuiGrid2-*` class names
+    - `Switch` now exposes `role="switch"`, not `checkbox`
+    - the `Drawer` paper now has `role="dialog"`, so dialog queries must be scoped by name
+- **No-ops:** the `v7.0.0` and MUI X `v7` / `v8` / `v9` pickers codemods changed nothing (`DateSelector` and `App.tsx` were already compatible). No `InputLabel size="normal"`, no lab-removed components and no `cssVariables` theme, so the `palette.mode` concern does not apply.
+- **Gates so far:**
+  - Client tsc 0, lint clean, jest 256 suites / 3583 tests (3 new, for the alias).
+  - The dev build compiles with no type issues.
+  - Plugin smoke 112 / 112.
+  - Server tsc: no upstream file changed its error count. Module jest suites that render the changed widgets: no new failures. The one failing classroom suite fails identically without this phase.
+  - Runtime plugins recompiled from the Phase 2 sources (173 forms, 187 resources, 0 errors, no compile-failure stubs, no `Grid2` left in the runtime copies). Plugin smoke 112 / 112 again against those builds, with no `Grid2` deprecation warnings.
+  - **Visual baselines (strict, zero tolerance), 9 signed-in screens.** The local API answered the PWA's anonymous sign-in with `user_not_found` on 2026-11-18, so a fresh browser stops at "System Unavailable". That is local database state, not this phase: neither the client's anonymous-login code nor the server's auth and seed code changed. The run was seeded instead with a real user token, injected into `localStorage` before the app boots, with tracing off so the token is not persisted.
+    - 5 screens are pixel-identical: `home`, `support-request-form`, `ai-models-admin`, `profile-form`, `app-menu-open`.
+    - 4 differ only in Chip label text: `organizations-list`, `support-open-tickets`, `my-comments`, `workflow-registry`. MUI 7.3 adds `lineHeight: 1.5` to the Chip root, which moves the label by a sub-pixel amount. Whether a given chip changes depends on where its row sits on the pixel grid. No layout, row height or other element moved. Those 4 baselines were refreshed to MUI 7, and a strict re-run passed 9 / 9.
+    - **`login` was not re-checked**, because it needs the anonymous session. Re-run it once the local anonymous account is restored.
+- **Enterprise-only module.** It still uses legacy `<Grid item xs>`, which is a type error against the v7 types (19 new errors in 5 widget files) and silently ignored at runtime. It must get the same conversion on the enterprise path before that module moves to this branch.
+- **Local stack.** Every server `yarn install` in this workspace re-resolves `@temporalio/*` to 1.26 (breaking `protobufjs/ext/protojson`) unless `reactory-temporal` is temporarily pinned to 1.23.0. Pin it, install, then revert the pin and restore the committed lock.
+
+
+### Phase 3: MUI 9 (the MUI goal)
+
+- `@mui/material` and friends to `^9.5`, `@mui/lab` to `9.0.0-beta.x` or dropped.
+- Run `deprecations/all` and `v9.0.0/system-props` again to catch anything added since Phase 1.
+- Changes the codemods do not cover:
+  - `disableEscapeKeyDown` on Dialog and Modal is removed. Handle `onClose(reason === 'escapeKeyDown')` instead. 7 files across the repos.
+  - `MenuItem` / `Tab` rendered outside `Menu` / `Tabs` now throws. Check `DropDownMenu` and any custom menus. The plugin harness will catch these.
+  - `ButtonBase` `nativeButton` and its event semantics.
+  - `Stepper` renders `ol` / `li`.
+  - `ListItemIcon` min-width is now 36px. Check visual diffs.
+  - Autocomplete `renderTags` becomes `renderValue`.
+  - MUI's `NODE_ENV === 'test'` branches are replaced by feature detection, which can change jsdom snapshots and transitions.
+- Remove the `Grid2` registry alias.
+- Browserslist: align with MUI's floor or accept the risk (section 8).
+- Exit: the same gates, then release. **MUI v9 is done at this point, still on React 17.**
+
+#### Phase 3 record (2026-11-19)
+
+- **Versions:** `@mui/material`, `system`, `icons-material`, `utils` and `types` 9.5.0; `@mui/lab` 9.0.0-beta.10; MUI X stays on 9.18.0 (it already peers on `^7.3 || ^9`). React stays on 17.0.2: MUI 9 peers on `^17 || ^18 || ^19`, and the `react-is` 17.0.2 resolution still holds. Every MUI package resolves to a single 9.5.0 copy. The server's type-only `@mui/material` and `@mui/icons-material` are pinned to 9.5.0, and the `reactory-core` devDependencies follow.
+- **Codemods.** `deprecations/all` and `v9.0.0/system-props` were not run this phase. Instead every tree was scanned for each removed prop, removed class key and system prop listed in the v9 migration guide, including multi-line JSX tags, `React.createElement` calls and props passed as object literals. The scanners cover the client, its plugin submodules, the server module widgets and the legacy `reactory-client-core` plugin.
+- **The `Grid2` registry alias is removed.** The only remaining consumer was the legacy `reactory-client-core` plugin's `LoginCard`, which renders `/login`. It now uses `Grid`.
+- **Autocomplete `renderInput` params are `slotProps`-only in v9.** `params.InputProps`, `params.inputProps` and `params.InputLabelProps` no longer exist. A `renderInput` that sets its own `slotProps` without spreading `params.slotProps` drops the input's ref and handlers, which breaks the field. Four were fixed: `AutoCompleteDropDown`, `QuickLaunchDialog` and the two demographic widgets. The other 12 spread `params` and set no `slotProps`, so they are unaffected. `AutoCompleteDropDown`'s `renderTags` became `renderValue`, passed only when `multiSelect` is on, because in v9 `renderValue` also applies to single selections.
+- **`MenuItem`, `Tab` and `StepButton` now throw outside their parents** (`MUI: MenuListContext is missing` / `RovingTabIndexContext is missing`). A nesting scan found one case: `TabbedNavigation` rendered `MenuItem`s inside a `Popover`. It is now a `Menu`.
+- **Legacy `Grid` props reach the DOM in v9.** MUI 7 ignored `item` and `xs`/`md`; MUI 9 no longer strips them, so they become invalid DOM attributes. Changes:
+  - Breakpoint props in `MaterialArrayTemplate` and the `item` flag in `MaterialDefaultArrayField` are now `size`.
+  - Props that reach a `Grid` from uiSchema data or layout objects go through `toGridProps` (`src/components/gridCompat.ts`), which drops `item` and folds `xs`…`xl` into `size`: `ArrayFieldTemplate` / `MaterialDefaultArrayField` `itemsContainerProps`, `Layout`, the `MaterialGridField` render branch and `ReactoryForm`'s `grid` container.
+  - Phase 2 misses fixed: `reactor.UserBudgetAdminWidget` built 17 legacy `Grid` items with `createElement`, which the JSX scans could not see. The `item: true` in the Applications uiSchema was also removed.
+- **Removed props fixed:**
+  - `Dialog` `TransitionComponent` (`ReactoryCoreDialog`) → `slots.transition`
+  - `Drawer` `ModalProps.BackdropProps` → `slotProps.backdrop`
+  - `SpeedDialAction` `tooltipTitle` → `slotProps.tooltip.title`
+  - `TextField` `InputProps` / `InputLabelProps` (`MaterialStringField`, `GeneralSection`) → `slotProps.input` / `inputLabel`
+  - `Select` `MenuProps.PaperProps` → `MenuProps.slotProps.paper`
+  - `disableEscapeKeyDown` removed from the three socialeyes dialogs, whose `onClose` already ignores closing while submitting
+- **Typography system props in `slotProps`.** `ListItemText` `slotProps.primary` / `secondary` objects that set `fontWeight` / `fontSize` / `fontFamily` directly now put them in `sx`: 10 in the client and 4 in the core workflow bulk-action widgets. A `Box`-based `core.TimelineOppositeContent` call passed `color=` as a prop; it is now in `sx`.
+- **Legacy `reactory-client-core` plugin (section 8, decision 5).** It is still the only provider of `core.Login`, `core.Register`, `core.ForgotPassword`, `core.TwoFactorAuth` and `core.Logout`, and it takes MUI from the registry. It was therefore migrated in place rather than retired. Changes:
+  - `Grid2` → `Grid`
+  - 25 legacy `<Grid item xs>` and 2 `item: true` objects → `size`
+  - 13 `TextField` `InputProps` / `inputProps` / `InputLabelProps` / `FormHelperTextProps` → `slotProps`
+  - 13 system props → `sx`
+  
+  The bundle (`lib/`, built locally and not tracked) builds with the same 14 pre-existing TypeScript parse diagnostics as before. Its `OrganizationSelector` still calls `makeStyles` from an unregistered `material-ui.MaterialStyles`; that was already broken before this phase and is out of scope.
+- **Test changes:** the v9 `Button` no longer emits the compound `MuiButton-containedError` class (`QuickFilters` test now checks `MuiButton-contained` + `MuiButton-colorError`). 5 new tests cover `toGridProps`; the 3 alias tests were removed with the alias.
+- **No hits** for: removed theme `styleOverrides` keys, removed or compound class selectors in app code, `Divider light`, `Typography paragraph`, `Grid direction="column"`, `GridLegacy`, `MuiTouchRipple`, `*Outline` icons, Slider `onMouseDown`. `nativeButton` warnings only fire for non-string `component`s that render a `<button>`; none appeared in tests.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 256 suites / 3585 tests.
+  - The jest warning set matches the Phase 2 code on MUI 9, minus the `BackdropProps` and `item` warnings this phase removes.
+  - Plugin smoke 112 / 112 (69 / 111 render) against the existing runtime builds. That confirms already-built plugins survive the MUI 9 host and the alias removal.
+  - Server tsc: no upstream file changed its error count.
+  - `reactory-core` type errors: the 556 pre-existing ones only, none new.
+- **Runtime plugins recompiled** from the Phase 3 sources: 173 forms, 187 resources, 0 errors, no compile-failure stubs. The 13 changed widgets were rebuilt, and none still carries a removed prop. Plugin smoke against those builds: 112 / 112 (69 / 111 render). Three legacy-prop warnings remain:
+  - 2 come from local builds whose sources were deleted upstream (`core.ApplicationOrganizationsToolbar`, `reactory.ApplicationOverviewPanel`, both July builds). They are stale artifacts in the gitignored `__runtime__`.
+  - 1 is the enterprise-only module.
+- **Visual baselines (strict, zero tolerance), 9 signed-in screens, seeded sign-in as in Phase 2.**
+  - 8 are pixel-identical to the MUI 7 baselines.
+  - `app-menu-open` differs only in the menu label positions: MUI 9 changed the `ListItemIcon` default min-width from 56px to 36px. Decision (2026-11-19): accept MUI's default rather than pin 56px in the theme. The baseline was refreshed, and a strict re-run passed 9 / 9.
+  - `login` is still unchecked; it needs the local anonymous account.
+- **Browser floor (section 8, decision 3).** Decision (2026-11-19): align with MUI. The production `browserslist` is now `chrome >= 117`, `edge >= 121`, `firefox >= 121`, `safari >= 17` and `ios_saf >= 17`. The development list is unchanged.
+- **Enterprise-only module.** Against the v9 types it gains 7 errors in 5 widget files (`TextField` `InputLabelProps` / `inputProps`). Those props also stop working at runtime. Convert them on the enterprise path, with the Phase 2 `Grid` items.
+
+### Phase 4: React 18.3
+
+- `react` and `react-dom` 18.3.x. `@types/react` and `@types/react-dom` 18. Change the `react-is` pin to 18.
+- Types: `npx types-react-codemod@latest preset-18 ./src`. The main issue is that `React.FC` no longer has implicit `children`; 346 files use `FC`. `strict: false` limits the fallout, but the tsc ratchet will still move.
+- Entry and mounting:
+  - `src/index.tsx` moves to `createRoot`.
+  - `reactory.mountComponent` / `unmountComponent` (`api/ReactoryApi.tsx` around line 2160) and `attachComponent` (`components/util.tsx`) are part of the **plugin-facing API**. Re-implement them on `createRoot` with a `Map<Element, Root>` registry so `unmountComponent(node)` keeps its signature.
+- Test stack:
+  - `@testing-library/react` 12 to **16.3.x**, which supports both 18 and 19, so there is only one migration.
+  - Migrate 45 files off `@testing-library/react-hooks` to `renderHook` from `@testing-library/react`.
+  - Fix `act` warnings.
+- StrictMode: `App.tsx` already uses it, so the effect double-invoke applies in development. Fix cleanup bugs as they show up. MaterialTableWidget is the priority (section 3).
+- Dependencies, moved to versions that accept 18 and 19 so Phase 5 does not touch them again:
+
+  | Package | Target | Note |
+  |---|---|---|
+  | `@apollo/client` | 3.14 | 4.x is a separate project |
+  | `react-redux` | 9.x | |
+  | `framer-motion` | `motion` 11+ | Already needs 18 |
+  | `recharts` | 3.x | Check charts in visual diff |
+  | `react-router` / `react-router-dom` | 6.30 | 7 later; 8 needs React 19.2 and Node 22 |
+  | `react-dropzone` | 19.x | 20 needs Node 22, which is fine on 24 |
+  | `react-markdown` | 10 | ESM only, so add it to `transformIgnorePatterns` |
+  | `react-i18next` | stays | |
+  | `react-window` | stays | Already 18 or higher |
+
+- rjsf: `@rjsf/core` 5.24.13 accepts React 17 or later. We do not use `@rjsf/mui` (ADR-0004), so no rjsf change is forced. Revisit ADR-0008 (the rjsf 6 move) as its own decision, not as part of this phase.
+- Run on 18.3 and fix every React 19 deprecation warning in the console and in tests. That list is the Phase 5 worklist.
+- Exit: the same gates, with zero React 19 deprecation warnings in the test run. Then release.
+
+#### Phase 4 record (2026-11-23)
+
+- **Versions:**
+  - `react` and `react-dom` are 18.3.1.
+  - `@types/react` 18.3.31 and `@types/react-dom` 18.3.7 are pinned through `resolutions` to one copy.
+  - The `react-is` resolution is 18.3.1.
+  - The server's `react`, `react-dom` and React types follow, so server widget sources typecheck against what they run on. The server lock was generated in a clean worktree and only the React entries changed.
+  - `reactory-core`'s React peer is widened to `^17.0.2 || ^18.0.0 || ^19.0.0`. It is pinned to `17.0.2` in the published 1.1.10, which causes the client's only new peer warning. 1.2.0, published in the wrap-up, removes it.
+- **Entry and mounting:**
+  - `index.tsx` renders through `createRoot`.
+  - `reactory.mountComponent`, `reactory.unmountComponent` and `attachComponent` keep their node-addressed, plugin-facing signatures. They now use a per-node root registry (`src/api/domRoots.tsx`, 3 tests).
+  - `unmountComponent(node)` still returns whether something was mounted, and the render callback still fires after commit.
+  - The pre-existing no-op `theme = true` branch of `mountComponent` is unchanged.
+- **Test stack:**
+  - `@testing-library/react` is 16.3.3. `@testing-library/react-hooks` is removed, and its 45 test files now use `renderHook` from `@testing-library/react`.
+  - Only two files needed more than the import change:
+    - `waitForNextUpdate` became `waitFor`.
+    - `result.all` became a render counter.
+  - `act` warnings in the test run went from 178 on React 17 to 12. The rest are 10 asynchronous `App` initialisation updates that land after those tests end, and 2 MUI focus-ripple animations.
+- **Types:** 12 React 18 type errors in the client, all from narrower types:
+  - `ErrorInfo`.
+  - No implicit `children` on `FC`.
+  - `ReactNode` no longer accepts `{}`, functions or `unknown`.
+  - SVG `textAnchor`.
+
+  Three server widgets had the same kind of error and were cast where the value is a string at runtime. Server tsc: no file got worse, and two improved (3394 errors, was 3396).
+- **React 19 deprecations in our code:**
+  - `defaultProps` on 11 function components now goes through `applyDefaultProps` (`src/components/applyDefaultProps.ts`, 2 tests). Like React, it fills only `undefined` props.
+  - The 4 in the legacy form fork (`src/components/reactory/form/`) were left as they are, because `AGENTS.md` forbids changing the fork. They go with the fork's retirement, or in Phase 5.
+  - No other removed API is used (string refs, legacy context, `findDOMNode`, `react-dom/test-utils`).
+- **StrictMode bugs found on React 18.** These surfaced in development only: StrictMode now mounts, unmounts and remounts every component, and React 18 runs passive effects later than React 17 did.
+  - **Lists were empty.** `MaterialTableWidget` cleared `isMountedRef` on unmount and never set it back, so every query result was dropped after the StrictMode remount. Fixed; a StrictMode regression test fails without the fix.
+  - **Object widgets did not bind.** `ObjectWidgetField` (for example `core.ApplicationCard` on the home page) skipped re-rendering when its widget registered between the render and the binding effect. Seen on a third warm load of `/`. Fixed; a regression test fails without the fix.
+  - **Two first-run guards** (`MyCommentsToolbar` search debounce, `ChatInput` speech transcript) now compare with the previous value instead of a "first run" flag.
+- **Dependencies:**
+  - `react-router` / `react-router-dom` 6.30.6. The v7 future-flag warnings stay until the Router 7 move, because `v7_relativeSplatPath` changes link resolution in server-configured splat routes.
+  - `react-redux` 9.3.1.
+  - `@apollo/client` 3.14.1. Its dev build warned about the `typeDefs` option, which is removed for 4.0. It was always an empty array and is dropped.
+  - `react-markdown` 10.1.0. No removed props are used, and it brings unified 11, which `remark-gfm` 4 expects.
+  - `motion` 14.14.0 replaces `framer-motion` 10. Imports and test requires now use `motion/react`.
+  - `react-dropzone` 20.2.1. Our use (`onDrop` only, no `accept` / `maxFiles`) avoids the 15–19 behaviour changes.
+  - `recharts` 3.11.0:
+    - `PieChartWidget`'s `activeIndex` is removed in 3.x. The widget now draws its active sector from its own state through `Pie`'s `shape` renderer.
+    - `ResponsiveContainer` `width` is narrower in 3.x and is cast at the shared chart wrappers.
+    - The usage dashboard's line and bar charts were checked in the browser. The pie widget's active sector was not exercised on any page.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 258 suites / 3592 tests.
+  - The dev build reports no issues.
+  - Plugin smoke 112 / 112 (69 / 111 render) against builds recompiled from these sources (173 forms, 0 errors).
+  - Server module jest for the changed widgets: 10 suites / 104 tests.
+  - `reactory-core` 7 / 7 tests, tsc unchanged.
+  - **Strict visuals 9 / 9 (twice), pixel-identical to the React 17 baselines, with no baseline refreshed.**
+- **Phase 5 worklist (React 19 deprecations still in the test run, all third-party):**
+  - `react-quill` calls `findDOMNode`.
+  - `react-beautiful-dnd`'s `Droppable` uses memo `defaultProps`.
+  - `@rjsf/core` 5's `TextareaWidget` uses function `defaultProps` (ADR-0008, the rjsf 6 move).
+  - Also: the legacy fork's 4 `defaultProps`, `FormClass`'s `UNSAFE_` lifecycle, and a `reactory-core` publish with the widened peer range.
+
+### Phase 5: React 19
+
+- `react` and `react-dom` 19.x. `@types/react` 19. Remove the `react-is` pin.
+- Codemods: `npx codemod@latest react/19/migration-recipe` and `npx types-react-codemod@latest preset-19 ./src`. These cover `useRef()` needing an argument, `JSX` becoming `React.JSX`, and ref-callback implicit returns.
+- Library replacements:
+  - `react-beautiful-dnd` (9 files) to `@hello-pangea/dnd` 18. Its API is the same. **The registry exports `DragDropContext`, `Droppable` and `Draggable` to plugins**, so swap the implementation behind the same registry names.
+  - `react-quill` (10 files) to `react-quill-new` 3.x. It is ESM-only, so add it to the jest transform list.
+  - `react-draggable`: pass `nodeRef`. Every direct `react-transition-group` `Transition` / `CSSTransition`: pass `nodeRef`.
+  - `react-measure` is unmaintained. It uses a callback ref and is probably fine. Verify it in the visual diff, and if it breaks, replace it with a `ResizeObserver` hook.
+- Code:
+  - `.defaultProps` on function components moves to default parameters: 15 client files and 3 client-core plugin files.
+  - `propTypes` are silently ignored. Delete them or convert them to TS types.
+  - `FormClass.tsx` `UNSAFE_componentWillReceiveProps` is forms-engine WP-B6. Convert it to `componentDidUpdate` if the fork has not been retired by then.
+  - `reactory-core` types move from global `JSX.Element` to `React.JSX.Element`. Republish and bump.
+- Exit: the same gates, then release.
+
+#### Phase 5 record (2026-11-23)
+
+- **Versions:**
+  - `react` and `react-dom` are 19.3.1. `@types/react` and `@types/react-dom` 19.3.0 stay pinned through `resolutions` to one copy, and so does `react-is` (19.3.1), so every library resolves the same one.
+  - `@types/react-redux` is removed; `react-redux` 9 ships its own types.
+  - The server's `react`, `react-dom` and React types follow. The server lock was generated in a clean worktree and only the React entries changed. Server tsc is unchanged (3394), with no file different: the server widgets use none of the removed types.
+  - `reactory-core` dev React is 19. Its types use `React.JSX.Element` instead of the removed global `JSX`, and `Array<React.ReactNode>` instead of the removed `React.ReactNodeArray`. Its tsc matches the React 18 baseline exactly (556, all pre-existing). Until 1.2.0 was published in the wrap-up, the client read the 1.1.10 types, whose `JSX.Element` resolves to nothing under `skipLibCheck`.
+- **Library replacements:**
+  - `react-beautiful-dnd` 13 became `@hello-pangea/dnd` 18.0.1. Only the import path changed; the registry still exports `DragDropContext`, `Droppable` and `Draggable` under the same names.
+  - `react-quill` 2 (which calls `findDOMNode`) became `react-quill-new` 3.8.3, which brings Quill 2 and Parchment 3. The custom style attributors looked for Parchment 1's `Attributor.Style` and silently registered nothing on Quill 2, so alignment and font size would have fallen back to Quill's CSS classes. They now use `StyleAttributor`. A new test loads content through a real Quill instance and checks that alignment, colour, image attributes, rules, tables and component tags survive; the alignment case fails without the fix. `quill-delta` 5.1.0 is added for the editor's peer, and the Quill stack is in both jest transform lists.
+  - `react-big-calendar` 1.13 (which calls `findDOMNode`) became 1.20.0. `core.Calendar` built its localizer from `Calendar.momentLocalizer`, which the 1.x API does not have, so it threw on every render before this phase too. It now uses the named `momentLocalizer` export; a new render test fails without the fix.
+  - `react-image-crop` 11.1.2.
+  - `RadialFab`'s `CSSTransition` items pass `nodeRef`; without it `react-transition-group` falls back to `findDOMNode`. `react-draggable` is imported by `MaterialArrayTemplate` but never rendered, so it is left at 4.4.6.
+  - `react-measure` has no `findDOMNode` use and is unchanged. `react-prism` is unchanged; its React 15–16 peer range was already violated.
+- **Code:**
+  - Ten `useRef<T>()` calls now pass `undefined`; `MaterialTableWidget` uses `React.JSX.Element` and the D3 renderer imports `JSX` from `react`; `IntersectionVisible`'s ref callback no longer returns a value; `MaterialNumberfield` drops its unused legacy-context parameter.
+  - The legacy fork's four function-component `defaultProps` (`StringField`, `BooleanField`, `NumberField`, `SchemaField`'s `DefaultTemplate`) now go through `applyDefaultProps`, as listed for this phase. Without it, `uiSchema` reaches those fields as `undefined` on React 19. The class components' static `defaultProps` still work and are unchanged.
+  - `FormClass`'s `UNSAFE_componentWillReceiveProps` still works on React 19 and is left for forms-engine WP-B6.
+  - `propTypes` are ignored by React 19 and are left in place; removing them changes no behaviour.
+  - No string refs, legacy context, `element.ref` reads, `ReactDOM.render` or `findDOMNode` remain in the client, the plugins or the server widgets.
+- **Legacy plugin (`reactory-client-core`):** its rollup build bundles React 17, and three components created their elements with that copy. React 19 rejects elements from another React (`Objects are not valid as a React child`). `ReactoryBusinessUnitSelector`, `ReactoryClientSelector` and `ReactoryUserProfileGeneral` now render with the registry's React. The rebuilt bundle creates no elements with its own copy; the two class components still extend its `Component`, which React 19 accepts.
+- **Tests:**
+  - React 19 calls function components with `(props, undefined)`, so four tests that expected a second argument now assert on the props alone.
+  - Two chat comment tests read the comment count before the mocked fetch's state update landed. They now wait for it.
+- **Gates:**
+  - Client tsc 0, lint clean, jest 260 suites / 3599 tests, the dev build reports no issues.
+  - `act` warnings went from 12 to 20. The 8 new ones are MUI `Tooltip` timers in `lazyCommentLoading.test.tsx` that fire after the test ends.
+  - Plugin smoke 112 / 112 (69 / 111 render), the same as Phase 4. The server form sources did not change, and runtime builds use the registry's React, so they were not recompiled.
+  - Server module jest for the widgets and the module compiler: 13 suites / 120 tests. `reactory-core` 7 / 7 tests.
+  - **Strict visuals 9 / 9 (twice), pixel-identical to the React 17 baselines, with no baseline refreshed.**
+  - In the browser, signed in: the static content editor opens on Quill 2 with its toolbar and takes input, and the application Menus panel renders its `@hello-pangea/dnd` list. Neither logged a React 19 error. The console still shows the DOM-nesting, key and unknown-prop warnings that React 18 reported.
+
+### Wrap-up: feature branch to `master`
+
+All five phases are merged into the feature branches. Section 0, steps 5 and 6, finish the migration.
+
+#### Wrap-up record
+
+- **`master` merged into the feature branch (2026-11-24).** The server, the client and Reactor were behind `master`. Their Phase 4 `master` merges had been squashed, so the feature branches held copies of `master`'s files without its commits.
+  - Server #150: history only. No file changed.
+  - Client #90: brings in the nginx base-image build argument and the private submodule checkout. `Dockerfile`, `config/env/reactory/Dockerfile` and `nginx/default.conf` conflicted. The feature-branch copies were byte-identical to an older `master` commit, and no phase had changed them, so `master`'s versions were taken.
+  - Reactor #87: brings in the ProcessAITicket workflow changes. Two files conflicted for the same reason and were resolved the same way. The workflow suites pass on the merge: 12 suites, 551 tests.
+  - All three landed as merge commits. Every feature branch is now level with `master`.
+- **`reactory-core` 1.2.0 (published 2026-11-24).**
+  - A minor release for the React 19 types (`React.JSX.Element`, `Array<React.ReactNode>`) and the widened React peer. The runtime bundle is unchanged since 1.1.10.
+  - `.version` is now `1.2.${buildNumber}` (`reactory-core` #21). `build:clean` no longer fails under zsh when there are no `.tgz` files to remove (`reactory-core` #22).
+  - Publish with `yarn publish:current`. It neither increments the version nor runs `prepublishOnly`. `publish:patch` and a plain `npm publish` run the version script twice, so the published version would not match the commit.
+- **The client and server use 1.2.0 (#91 and server #151, 2026-11-26).**
+  - Only `package.json` and the one lock entry changed. The server lock was generated in a clean worktree.
+  - Client tsc reports 0 errors and lint is clean.
+  - Server tsc reports the same 3394 errors as with 1.1.10, identical by file, line and code.
+
+#### Remaining steps
+
+1. Run the full gate on the feature tips:
+   - Client: tsc, lint, jest and plugin smoke.
+   - Server: the tsc ratchet and module jest.
+   - `reactory-core` tests.
+   - Strict visuals.
+2. Pin the tested SHAs with `bin/reactory-repos lock`.
+3. Open feature → `master` PRs in every repository that has the feature branch:
+   - the client, the server, `reactory-core` and `reactory-data`
+   - the four client plugins: core, the legacy core plugin, communicator and telemetry
+   - the classroom, Reactor and socialeyes modules
+
+   Merge them together, as merge commits (section 0, step 5).
+4. Release the client and the server. Send a release note for plugins outside these repositories (section 5, rule 5). It should cover:
+   - `Grid2` is gone.
+   - `*Props` moved to `slotProps`.
+   - Function-component `defaultProps` are ignored.
+   - A plugin that creates elements with its own bundled React crashes on React 19.
+5. Delete the feature and phase branches. Close or rebase the dependency PRs against `master` that the merge supersedes.
+6. Bring the enterprise mirrors level (section 0, step 6). Enterprise-only modules migrate on the enterprise side after the sync.
+
+**Deferred, not blocking:**
+- The `login` visual baseline, which needs the local anonymous account.
+- `FormClass`'s `UNSAFE_componentWillReceiveProps`, planned for forms-engine WP-B6.
+- Removing `propTypes`.
+- The MUI `Tooltip` `act` warnings in `lazyCommentLoading.test.tsx`.
+- Retiring the legacy plugin (section 8, decision 5).
+
+## 5. Plugin rules for every phase
+
+1. The plugin source in `reactory-data/plugins` and the server `forms/**/Widgets` is migrated in the **same phase** as the client, on the same-named feature branch in each repository. The codemods run over those trees too.
+2. Every phase bumps and publishes `reactory-core` types before the client consumes them.
+3. The registry is where compatibility shims live: aliases with deprecation warnings that last one release. Prop renames (`slotProps`) cannot be shimmed, which is why Phase 1 migrates plugins up front.
+4. The plugin smoke harness gates merge.
+5. Any third-party or tenant plugin outside these repos gets the codemod commands and a release note one release ahead of each breaking phase.
+
+## 6. Effort (rough, to be refined after Phase 0)
+
+| Phase | Size | Driver |
+|---|---|---|
+| 0 Foundations | M | Building the plugin harness and visual baselines |
+| 1 MUI 6 cleanup | L | Volume: about 1,000 system-prop and `slotProps` sites across 4 trees. Mostly codemod plus review. |
+| 2 MUI 7 + X v9 | M | Grid rename, pickers codemod chain, theme `palette.mode` |
+| 3 MUI 9 | S–M | Throws inside Menu/Tabs, ButtonBase, visual review |
+| 4 React 18.3 | L | 45 hook tests, RTL 16, types, mount API, StrictMode effect bugs, dependency bumps |
+| 5 React 19 | M | dnd/quill swaps, `defaultProps`, `reactory-core` JSX types |
+
+## 7. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Plugin breakage is runtime-only and invisible to tsc | Plugin smoke harness, lockstep releases, registry shims |
+| Legacy `Grid` props ignored silently by the new `Grid`: layouts collapse without errors | Phase 1 converts every legacy `Grid` while v6 still has both. Grep gate: zero `<Grid item` |
+| Visual regressions (`ListItemIcon` width, Stepper markup, picker field DOM) | Playwright screenshot baselines from Phase 0 |
+| StrictMode double effects expose latent cleanup bugs | Fix in Phase 4. They are real bugs that StrictMode only makes visible. |
+| MUI 9 running on React 17 is supported but less common | Short phases. Phase 4 can start right after Phase 3 |
+| `@mui/lab` is still beta at v9 | Keep lab usage to the registry export only, or drop it |
+| The long-running feature branch drifts from `master` and the final merge is painful | Merge `reactorynet/master` into the feature branch at the start of every phase (section 0) |
+| The client, plugins and server go out of step across repositories | Use the same branch name everywhere, merge each phase's PRs together, and pin the tested combination with `reactory-repos lock` before the final merge |
+
+## 8. Decisions needed
+
+1. **Order.** MUI first (recommended above) or React 18 first. Both work, because MUI 9 supports 17.
+2. **`@mui/x-data-grid`.** Upgrade to 9 and keep it only as a registry export, or remove it. Nothing in these repos renders it. Keeping it costs bundle size and a codemod chain for unknown external plugins. **Settled in Phases 2 and 3: upgraded to 9.18.0 and kept as a registry export.** Removing it is a separate change after the migration.
+3. **Browser floor.** MUI 9 targets Safari 17, Chrome 117 and Firefox 121. Accept that and update browserslist, or keep `>0.2%, not dead` and test the older browsers ourselves. **Decided 2026-11-19: aligned with MUI's floor (Phase 3).**
+4. **`@mui/lab`.** Keep it (Timeline, Masonry, TabContext) on the beta, or drop it from the registry. Nothing in the client imports it directly. **Settled in Phases 2 and 3: kept on `9.0.0-beta.10` as a registry export.** Dropping it is a separate change after the migration.
+5. **Legacy `reactory-client-core` plugin.** It imports the npm `material-table` package and an unregistered `material-ui.MaterialTable` FQN. Either retire it or migrate it as part of Phase 1. **Phase 3 migrated it in place**, because it is still the only provider of the login, registration and password-reset screens. Retiring it is still open.
+
+## Appendix A: scan patterns
+
+These are extended regex over `*.ts`, `*.tsx`, `*.js` and `*.jsx`. They exclude `node_modules`, `build`, `dist`, `lib`, `coverage` and `.d.ts` files.
+
+- Legacy Grid: `<Grid[^>]*\b(item|xs=|sm=|md=|lg=)`
+- TextField props: `\b(InputProps|inputProps|InputLabelProps|SelectProps|FormHelperTextProps)=\{`
+- System props: `<(Box|Stack|Typography|Link)\b[^>]*\s(m|mt|mb|ml|mr|mx|my|p|pt|pb|pl|pr|px|py|color|bgcolor|display|fontWeight|textAlign|width|height)=`. This over-counts, because `color` on Typography is a real prop.
+- React: `ReactDOM\.(render|hydrate|unmountComponentAtNode)`, `\.defaultProps *=`, `\.propTypes *=`, `UNSAFE_|componentWill(Mount|ReceiveProps|Update)\b`, `\bJSX\.[A-Z]`

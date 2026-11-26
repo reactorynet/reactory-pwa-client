@@ -1,4 +1,4 @@
-import { Quill } from 'react-quill';
+import { Quill } from 'react-quill-new';
 
 let registered = false;
 
@@ -15,32 +15,35 @@ export const registerStyleAttributors = (): void => {
 
   try {
     const Parchment: any = Quill.import('parchment');
-    if (!Parchment || !Parchment.Attributor || !Parchment.Attributor.Style) return;
+    // Quill 2 (Parchment 3) exports `StyleAttributor`; Quill 1 nested it as
+    // `Attributor.Style`.
+    const StyleAttributor = Parchment?.StyleAttributor || Parchment?.Attributor?.Style;
+    if (!StyleAttributor || !Parchment.Scope) return;
 
     // Block text alignment
-    const AlignStyle = new Parchment.Attributor.Style('align', 'text-align', {
+    const AlignStyle = new StyleAttributor('align', 'text-align', {
       scope: Parchment.Scope.BLOCK,
       whitelist: ['left', 'center', 'right', 'justify'],
     });
 
     // Inline text color
-    const ColorStyle = new Parchment.Attributor.Style('color', 'color', {
+    const ColorStyle = new StyleAttributor('color', 'color', {
       scope: Parchment.Scope.INLINE,
     });
 
     // Inline background color (highlight)
-    const BackgroundStyle = new Parchment.Attributor.Style('background', 'background-color', {
+    const BackgroundStyle = new StyleAttributor('background', 'background-color', {
       scope: Parchment.Scope.INLINE,
     });
 
     // Inline font size
-    const SizeStyle = new Parchment.Attributor.Style('size', 'font-size', {
+    const SizeStyle = new StyleAttributor('size', 'font-size', {
       scope: Parchment.Scope.INLINE,
       whitelist: ['0.75rem', '0.875rem', '1rem', '1.125rem', '1.25rem', '1.5rem', '2rem', '2.5rem', 'small', 'normal', 'large', 'huge'],
     });
 
     // Text direction (LTR / RTL)
-    const DirectionStyle = new Parchment.Attributor.Style('direction', 'direction', {
+    const DirectionStyle = new StyleAttributor('direction', 'direction', {
       scope: Parchment.Scope.BLOCK,
       whitelist: ['rtl', 'ltr'],
     });
