@@ -39,7 +39,6 @@ import {
 import ReactoryApi, { ReactoryApiEventNames } from './api'
 import { INIT_STEPS, InitProgressEvent, InitProgressStatus } from './api/ApiEventNames';
 import { deepEquals } from './components/reactory/form/utils';
-import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { writeAuthToken, isTokenUsable, isTokenForClient } from './api/local';
 import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
@@ -256,6 +255,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       const apiStatus = await reactory.status({ emitLogin, forceLogout: false });
       setIsValidated(true);
       setOfflineStatus(false);
+      // A previous failure must not outlive the recovery: `error` and `offline`
+      // are sticky state, and the unavailable screen matches on them. Clearing
+      // them here is what lets the automatic retry (below) actually restore the
+      // application instead of leaving the user on "Retry Connection" until a
+      // manual page reload.
+      setError(null);
       setUser(apiStatus);
 
       // Only an authenticated session may fetch the role-scoped form list. On a
@@ -689,6 +694,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const willMount = () => {
     let failedCount = 0;
+    // Set when init() resolves. The retry below is a timer, so it must know when
+    // it has nothing left to do - otherwise a slow boot would keep re-running
+    // init() over a live application.
+    let bootSucceeded = false;
+    let bootRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const onInitProgress = (evt: InitProgressEvent) => {
       setLoadingSteps(prev => prev.map(step => {
@@ -710,7 +720,61 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.on(ReactoryApiEventNames.onInitProgress, onInitProgress);
 
     const doInit = async () => {
+      // ── Session handoff ──────────────────────────────────────────────────
+      //
+      // External identity providers (Google/GitHub/Microsoft/Okta/...) hand the
+      // session back to us as `<siteUrl>?auth_token=<token>` - see the callback
+      // routes on the API. Password-reset and activation links use the same
+      // channel.
+      //
+      // Adopt that token *before* `reactory.init()`, not after. init() validates
+      // whatever token is already in storage, so running it first means this
+      // boot validates the token of the session that just expired: the SDK
+      // signs out and re-bootstraps anonymously (clearing the token, minting an
+      // ANON token, recreating the Apollo client and fetching the anonymous
+      // form list) while the handoff token is still sitting untouched in the
+      // URL. The handoff then has to win a race against that teardown, and when
+      // it loses, the shell is stranded on the terminal "System Unavailable"
+      // screen until the user reloads the page. Writing the token first gives
+      // the boot exactly one identity to validate and removes the race.
+      const query = queryString.parse(window.location.search);
+      const handoffToken = query.auth_token;
+
+      if (handoffToken) {
+        // Adopt only a well-formed, unexpired token minted for *this*
+        // application. A stale or foreign token must never overwrite a
+        // working session.
+        if (isTokenUsable(handoffToken) && isTokenForClient(handoffToken, REACT_APP_CLIENT_KEY)) {
+          writeAuthToken(handoffToken, REACT_APP_CLIENT_KEY);
+        } else {
+          reactory.log(
+            'Ignoring auth_token handoff that is expired or was minted for another application',
+            { clientKey: REACT_APP_CLIENT_KEY },
+            'warn'
+          );
+        }
+
+        // The handoff is single-use: strip it from the address bar before the
+        // first await, so a reload, a back navigation or a copied URL cannot
+        // replay a token that has already been adopted.
+        delete (query as any).auth_token;
+        try {
+          window.history.replaceState(
+            {},
+            document.title,
+            `${window.location.pathname}${window.location.hash || ''}`
+          );
+        } catch (replaceStateError) {
+          reactory.log('Could not strip the auth token from the address bar', { replaceStateError }, 'warn');
+        }
+      }
+
+      reactory.queryObject = query;
+      reactory.queryString = window.location.search;
+      reactory.objectToQueryString = queryString.stringify;
+
       reactory.init().then(() => {
+        bootSucceeded = true;
         //register built-in components
         onInitProgress({ step: 'component-registration', status: 'active', label: 'Registering components' });
         componentRegistery.forEach((componentDef) => {
@@ -787,47 +851,33 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           }
         }
 
-        const query = queryString.parse(window.location.search);
-        reactory.queryObject = query;
-        reactory.queryString = window.location.search;
-        reactory.objectToQueryString = queryString.stringify;
-
         window.reactory.api = reactory;
 
-
-        if (query.auth_token) {
-          // Adopt the handoff token only when it is well-formed and unexpired, and
-          // store it under *this* application's own key. A stale or malformed
-          // token must not overwrite a working session, and a token minted for
-          // another client must never be adopted here.
-          if (isTokenUsable(query.auth_token) && isTokenForClient(query.auth_token, REACT_APP_CLIENT_KEY)) {
-            writeAuthToken(query.auth_token, REACT_APP_CLIENT_KEY);
-          } else {
-            reactory.log(
-              'Ignoring auth_token handoff that is expired or was minted for another application',
-              { clientKey: REACT_APP_CLIENT_KEY },
-              'warn'
-            );
+        // A handoff means the identity changed, so this session must not inherit
+        // cached data restored for the previous one. The Apollo client init()
+        // built already carries the handoff token (request headers are read per
+        // request), so there is no second client to create here - only the
+        // restored cache to drop.
+        if (handoffToken) {
+          try {
+            if (typeof (reactory as any).clearCache === 'function') {
+              (reactory as any).clearCache();
+            }
+          } catch (cacheClearError) {
+            reactory.log('Could not clear the restored cache after a session handoff', { cacheClearError }, 'warn');
           }
-          ReactoryApolloClient().then((cli) => {
-            //@ts-ignore
-            reactory.client = cli.client;
-            reactory.ws_link = cli.ws_link;
-            cli.clearCache();
-            void getApiStatus();
-            // strip the auth token from the url bar
-            setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
-          });
-          setIsAuthenticating(true);
-        } else {
-          setIsAuthenticating(true);
-          void getApiStatus();
         }
+
+        setIsAuthenticating(true);
+        void getApiStatus();
       }).catch((err) => {
         reactory.log('Error initializing Reactory', { err }, 'error');
+
+        if (bootSucceeded === true) return;
+
         if (failedCount < 3) {
           failedCount++;
-          setTimeout(() => { doInit() }, 750 * failedCount);
+          bootRetryTimer = setTimeout(() => { void doInit() }, 750 * failedCount);
         } else {
           reactory.log('Failed to initialize Reactory', { err },
             'error');
@@ -835,13 +885,22 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setIsReady(false);
           setIsAuthenticating(false);
           setOfflineStatus(true);
+          // The unavailable screen tells the user the connection is retried
+          // automatically, so keep that promise: giving up after the three fast
+          // attempts made a boot that failed once terminal, and the only way
+          // out was a manual page reload. A slow, steady retry recovers on its
+          // own as soon as the service is reachable again.
+          bootRetryTimer = setTimeout(() => { void doInit() }, 15000);
         }
       });
     }
 
     void doInit();
 
-    return willUnmount;
+    return () => {
+      if (bootRetryTimer !== null) clearTimeout(bootRetryTimer);
+      willUnmount();
+    };
   };
 
   useEffect(willMount, []);

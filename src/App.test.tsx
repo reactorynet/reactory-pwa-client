@@ -288,6 +288,7 @@ const localStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
+const originalWindowLocation = window.location;
 global.localStorage = localStorageMock as any;
 
 // Mock window methods
@@ -337,6 +338,20 @@ describe('ReactoryHOC (App)', () => {
     localStorageMock.getItem.mockReturnValue(null);
     localStorageMock.setItem.mockImplementation(() => {});
     localStorageMock.removeItem.mockImplementation(() => {});
+  });
+
+  // One suite below replaces `window.location` with a partial stub to drive the
+  // session-expiry redirect. Leaving that stub in place breaks every later
+  // suite that reads the address bar (or lets jsdom's history update it), so
+  // put the real Location object back after every test.
+  afterEach(() => {
+    if ((window as any).location !== originalWindowLocation) {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        writable: true,
+        value: originalWindowLocation,
+      });
+    }
   });
 
   describe('Initial Loading State', () => {
@@ -1549,5 +1564,182 @@ describe('Form list fetch sequencing (auth-scoped)', () => {
       // ...and the unhealthy organization theme never reached createTheme.
       expect(applied.some((options) => options?.palette?.primary?.main === '#ff0000')).toBe(false);
     });
+  });
+});
+
+/**
+ * A provider handoff (`?auth_token=<token>`) is how every external identity
+ * provider returns the session to the application: the OAuth callback routes on
+ * the API answer with a redirect to `<siteUrl>?auth_token=...`.
+ *
+ * Regression cover for the re-login flow: after a session expired, signing in
+ * again (Google et al.) reloaded the shell with a valid token in the URL and the
+ * user landed on "System Unavailable" until they manually refreshed.
+ *
+ * The token has to be adopted *before* `ReactoryApi.init()`: init() validates
+ * whatever token is already in storage. Adopting it afterwards makes the boot
+ * validate the dead session first, which signs the SDK out and re-bootstraps
+ * anonymously while the handoff token is still untouched in the URL - and a
+ * handoff that was never adopted is lost for the lifetime of that document.
+ *
+ * These tests drive the real `window.localStorage` (jsdom's Storage) rather than
+ * the `localStorageMock` used by the older suites in this file: that mock is a
+ * detached object assigned to `global`, so writes from `src/api/local.ts` never
+ * reach it and an assertion on it would pass no matter what the app did.
+ */
+describe('Session handoff via ?auth_token', () => {
+  const tokenStorageKey = 'auth_token:test';
+
+  const base64url = (value: unknown): string =>
+    Buffer.from(JSON.stringify(value))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+  const tokenWithExpiry = (exp: number, client = 'test'): string =>
+    `header.${base64url({ exp, client })}.signature`;
+
+  /** Puts a provider handoff in the address bar, exactly as the OAuth callback does. */
+  const openWithHandoff = (token: string) => {
+    window.history.replaceState({}, '', `/?auth_token=${token}`);
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.localStorage.clear();
+    window.history.replaceState({}, '', '/');
+    (window as any).reactory = {};
+    mockReactory.status.mockReset().mockResolvedValue({ ready: false, authenticated: false });
+    mockReactory.init.mockReset().mockResolvedValue(undefined);
+    mockReactory.forms.mockReset().mockResolvedValue(undefined);
+    mockReactory.registerComponent.mockReset();
+    mockReactory.getTheme.mockReset().mockReturnValue({ options: { palette: { mode: 'light' } } });
+    mockReactory.getUser.mockReset();
+    mockReactory.getUser.mockReturnValue(null);
+    mockReactory.getSizeSpec.mockReset().mockReturnValue({ width: 1440, height: 900, size: 'lg' });
+    mockReactory.log.mockReset();
+    mockReactory.warning.mockReset();
+    mockReactory.debug.mockReset();
+    mockReactory.error.mockReset();
+    mockReactory.emit.mockReset();
+    mockReactory.createNotification.mockReset();
+    mockReactory.on.mockReset().mockImplementation(function () { return this; });
+    mockReactory.off.mockReset().mockImplementation(function () { return this; });
+    mockReactory.graphqlQuery.mockReset().mockResolvedValue({ data: { CoreOrganization: null } });
+    mockReactory.graphqlMutation.mockReset().mockResolvedValue({
+      data: { setActiveOrganization: { id: 'org-1', name: 'Acme' } },
+    });
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('adopts the handoff token before ReactoryApi.init runs', async () => {
+    const token = tokenWithExpiry(Date.now() + 60 * 60 * 1000);
+    openWithHandoff(token);
+
+    // What the SDK sees at the moment it starts booting.
+    let tokenSeenByInit: string | null = 'init-never-ran';
+    mockReactory.init.mockImplementation(() => {
+      tokenSeenByInit = window.localStorage.getItem(tokenStorageKey);
+      return Promise.resolve(undefined);
+    });
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.init).toHaveBeenCalled();
+    });
+
+    // init() validates the session we were handed, not the one that expired.
+    expect(tokenSeenByInit).toBe(token);
+    expect(window.localStorage.getItem(tokenStorageKey)).toBe(token);
+
+    // The single-use token is stripped from the address bar, so a reload or a
+    // back navigation cannot replay it.
+    expect(window.location.search).toBe('');
+
+    // The token must not leak into the query object components read.
+    expect((window as any).reactory.api.queryObject).toEqual({});
+  });
+
+  it('refuses an expired handoff token and keeps the current session', async () => {
+    window.localStorage.setItem(tokenStorageKey, 'previous-session-token');
+    const expired = tokenWithExpiry(Date.now() - 60 * 60 * 1000);
+    openWithHandoff(expired);
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.init).toHaveBeenCalled();
+    });
+
+    expect(window.localStorage.getItem(tokenStorageKey)).toBe('previous-session-token');
+    expect(mockReactory.log).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring auth_token handoff'),
+      expect.anything(),
+      'warn',
+    );
+  });
+
+  it('refuses a handoff token minted for another application', async () => {
+    window.localStorage.setItem(tokenStorageKey, 'previous-session-token');
+    const foreign = tokenWithExpiry(Date.now() + 60 * 60 * 1000, 'some-other-app');
+    openWithHandoff(foreign);
+
+    render(<ReactoryHOC appTheme={{}} />);
+
+    await waitFor(() => {
+      expect(mockReactory.init).toHaveBeenCalled();
+    });
+
+    expect(window.localStorage.getItem(tokenStorageKey)).toBe('previous-session-token');
+    expect(mockReactory.log).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring auth_token handoff'),
+      expect.anything(),
+      'warn',
+    );
+  });
+
+  it('keeps retrying a failed boot instead of becoming terminal', async () => {
+    jest.useFakeTimers();
+    try {
+      mockReactory.init.mockRejectedValue(new Error('service unavailable'));
+
+      render(<ReactoryHOC appTheme={{}} />);
+
+      // Each attempt settles a promise before it schedules the next timer, so
+      // the clock is advanced in small steps and the microtask queue is drained
+      // after every step.
+      const settle = async (ms: number) => {
+        await act(async () => {
+          jest.advanceTimersByTime(ms);
+          for (let flush = 0; flush < 5; flush += 1) await Promise.resolve();
+        });
+      };
+
+      const settleFor = async (steps: number) => {
+        for (let step = 0; step < steps; step += 1) await settle(1000);
+      };
+
+      await settle(1000);
+      expect(mockReactory.init).toHaveBeenCalledTimes(1);
+
+      // The three fast retries (750/1500/2250ms) keep the boot alive...
+      await settleFor(10);
+      const afterFastRetries = mockReactory.init.mock.calls.length;
+      expect(afterFastRetries).toBeGreaterThanOrEqual(2);
+
+      // ...and, unlike before, the shell does not give up for good once they
+      // are spent: a steady retry keeps going, which is what the unavailable
+      // screen promises the user.
+      await settleFor(20);
+      expect(mockReactory.init.mock.calls.length).toBeGreaterThan(afterFastRetries);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
