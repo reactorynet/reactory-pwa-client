@@ -1,6 +1,6 @@
 # Upgrade path: MUI 6.5 to MUI 9, React 17 to 19, Node 20 to 24
 
-Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) merged (2026-11-24). All phases are merged; the wrap-up to `master` is in progress (see "Wrap-up" at the end of section 4). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
+Status: accepted. Phases 0 to 3 merged into the feature branch (MUI 9 reached, 2026-11-23); Phase 4 (React 18.3) merged (2026-11-23); Phase 5 (React 19) merged (2026-11-24). All phases are merged into `master` and released as client and server 1.2.0 (2026-11-26). Only the enterprise mirror sync remains (see "Wrap-up" at the end of section 4). Scope: `reactory-pwa-client` plus everything that renders inside it at runtime: the runtime plugins in `reactory-data/plugins`, the form widgets in `reactory-express-server/src/modules/*/forms`, and the `@reactorynet/reactory-core` types. Free (MIT) MUI packages only. The Froala editor is no longer used and is removed as part of this work (section 4, Phases 0 and 1).
 
 ## 0. Branching and upstream flow
 
@@ -525,27 +525,23 @@ All five phases are merged into the feature branches. Section 0, steps 5 and 6, 
   - Client tsc reports 0 errors and lint is clean.
   - Server tsc reports the same 3394 errors as with 1.1.10, identical by file, line and code.
 
+- **Plugins wait for the published API (#93, 2026-11-26).** When the anonymous login failed at start-up, Retry only re-checked the API status, and plugins installed against an API that was never published. Retry now runs the full start-up again, and plugins do not load until `window.reactory.api` is set.
+- **Gate on the feature tips (2026-11-26).**
+  - Client: tsc 0, lint clean, jest 260 suites / 3601 tests, plugin smoke 112 / 112.
+  - Server: tsc unchanged apart from three errors in `master`'s own Reactor tests; module jest 18 suites / 267 tests; Reactor workflow jest 12 suites / 551 tests.
+  - `reactory-core`: 7 / 7.
+  - Strict visuals: 9 / 9, pixel-identical to the React 17 baselines.
+- **Merged into `master` (2026-11-26).** Eleven PRs, all merge commits: client #94, server #152, `reactory-core` #23, `reactory-data` #16, the client-core plugin #33, communicator #4 (into `main`), telemetry #3, the legacy client-core plugin #23, Reactor #88, classroom #12 and socialeyes #11. The server's `master` also had #149, which touches none of the migration's files, so it was not synced into the feature branch first.
+- **Released as 1.2.0 (2026-11-26).**
+  - The client (#97) and the server (#155) are tagged `v1.2.0` with GitHub releases.
+  - The client release notes carry the plugin-author section (section 5, rule 5). It covers React from the registry, `Grid2`, `slotProps`, the React 19 removals and the library swaps.
+  - `bin/bit.sh` tags images with the server's `version`, so images built from `master` are tagged `1.2.0`.
+  - `reactorynet/reactory-workspace#10` pins the release commits in `locks/upstream.lock.json`.
+- **Branches.** Every repository deletes the head branch on merge except communicator. Its three remaining migration branches were deleted by hand. No open dependency PR was made obsolete by the merge. Dependabot replaced the client's two group PRs (#73 and #76) with #95 and #96.
+
 #### Remaining steps
 
-1. Run the full gate on the feature tips:
-   - Client: tsc, lint, jest and plugin smoke.
-   - Server: the tsc ratchet and module jest.
-   - `reactory-core` tests.
-   - Strict visuals.
-2. Pin the tested SHAs with `bin/reactory-repos lock`.
-3. Open feature → `master` PRs in every repository that has the feature branch:
-   - the client, the server, `reactory-core` and `reactory-data`
-   - the four client plugins: core, the legacy core plugin, communicator and telemetry
-   - the classroom, Reactor and socialeyes modules
-
-   Merge them together, as merge commits (section 0, step 5).
-4. Release the client and the server. Send a release note for plugins outside these repositories (section 5, rule 5). It should cover:
-   - `Grid2` is gone.
-   - `*Props` moved to `slotProps`.
-   - Function-component `defaultProps` are ignored.
-   - A plugin that creates elements with its own bundled React crashes on React 19.
-5. Delete the feature and phase branches. Close or rebase the dependency PRs against `master` that the merge supersedes.
-6. Bring the enterprise mirrors level (section 0, step 6). Enterprise-only modules migrate on the enterprise side after the sync.
+1. Bring the enterprise mirrors level (section 0, step 6). Enterprise-only modules migrate on the enterprise side after the sync.
 
 **Deferred, not blocking:**
 - The `login` visual baseline, which needs the local anonymous account.
